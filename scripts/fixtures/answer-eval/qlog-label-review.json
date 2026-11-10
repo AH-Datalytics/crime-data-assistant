@@ -20791,6 +20791,4867 @@
 "outcome": "answer",
 "source": "shr"
 }
+},
+"QL-ct-00d6ef79d8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The November 9 owner decision declines chart styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-02b44c7323": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-04c9066477": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-05207d6b44": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-06c5027747": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-084e3f8648": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0cb8a0cb8a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0ccd6c0caf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0d06140046": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0d990e4a7d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0debb79b8f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous safety question declines under P13, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-0e4b90e4b9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0eb5443d53": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0f18b9a418": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-0f74f666f7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-12f15235ed": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This requests display formatting under the owner styling limit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart and table styling is not supported."
+}
+},
+"QL-ct-12f485cb71": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1305299c43": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-14e5b50b8c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-16392dbe5e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-16392f7180": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1737e4220e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-177da9c642": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing annual state murders to YTD changes the source to Current Trends.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-183946f67e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-184df53f25": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-19c581255b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1a0306c0cc": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This is a standalone coverage question under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-ct-1aa7e66e54": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1b2d76416e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1b5a01bb7b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1b91a86f27": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1c4d9b26a7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1c9559404b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-1cf7213052": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner explicitly declines politics questions.",
+"expected": {
+"outcome": "decline",
+"reason": "Political effects and causal claims are outside the data."
+}
+},
+"QL-ct-1eb75a538d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-2160450d72": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Overlaying a graphic requests chart presentation.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-21fe4efdbf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-2236487546": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-2269cfeb2e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-249ec87b80": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-24a435412b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-24d1c6575c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-258f3497f9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-262e8d9738": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Ward 4 is below agency level under D02.",
+"expected": {
+"outcome": "decline",
+"reason": "Data stops at the agency level, not wards."
+}
+},
+"QL-ct-2774790f53": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding causal question declines, making this F5.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-279d3df6f2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-29099ad027": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding killed question asks whether murder is meant under P40, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-ct-295bc295bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-295bcae801": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-2d72b9380a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-2fa949bdcb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-30250f897c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-32fbcddd0d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-34857400d3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up asks to insert a number rather than retrieve published data.",
+"expected": {
+"outcome": "decline",
+"reason": "Published crime data cannot be changed to a supplied value."
+}
+},
+"QL-ct-35e2c48baf": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This stands alone with its own crime and places under F1.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles",
+"New York city or state",
+"period"
+]
+}
+},
+"QL-ct-3631a99f8c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-3ccaa71c53": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-3de7528ee4": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up explicitly requests comparable metros under P70.",
+"expected": {
+"outcome": "decline",
+"reason": "Metro-area aggregations are not supported yet."
+}
+},
+"QL-ct-3f3662d72b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-41aded977d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A comparison with one Oregon agency does not establish the scope of a Chicago ranking.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"ranking scope"
+]
+}
+},
+"QL-ct-4220e201fe": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-423708a798": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-4245f75e5b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-4248ac3777": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-4394f9fbeb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-43d535f982": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This standalone agency assault trend uses all available years under D5.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-ct-49f500e4b9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-49f506c8de": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-4a77c08ec4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-4aa4b1eb75": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-4db1535e2c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-50279382e5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-505642e61c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This supplies crime and comparison details to the preceding clarification under F4.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-ct-50d728af73": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous chart-overlay request declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-5222707d0f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-52c6912f48": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5412b7e0f9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-54a8e28127": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-54d8d89f0c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The requested crime types and analysis have not been supplied.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which crimes and analysis"
+]
+}
+},
+"QL-ct-5542966d93": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "An agency-name lookup is independently answerable under R07.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-5556f5ef5e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-57f749b5c6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-59517e7a56": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5b14c64a3a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5b406c0960": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5bc3865d7c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5cb71b8fb1": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Raw monthly Chicago murder counts remain a Current Trends question.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-5dc402783f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5dd3551b96": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-5f98260d1c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6017ef7180": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-60476f13d0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-606967630f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-60df4a79f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-62092073ec": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6299c2269c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-62e88295bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6416ed160d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-64a3a40046": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-64e028de73": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The DC murder rolling-12-month question stands alone under F1.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-654ec3c51b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-66d93d73d2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-66e54ce3e4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-67587d03cd": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks what location-type data is available under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-ct-6b0cc6b0cc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6b0cc9b4f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6c8defa95d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6c9966c996": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6db04c943d": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The Baltimore calculation refers to a different analysis from the linked Kansas City question."
+},
+"QL-ct-6e5e91bb7b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6ecc721604": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner styling limit covers overlaying chart series.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-6f0233f366": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6f67e8a798": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-6fee48474f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous turn identifies the covered states being counted.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-71d24ff2a8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines chart-type changes.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-71e109892a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-726d6caee5": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding political grouping question declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-7337b5b406": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-7368829463": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-779ba9362b": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This follows an agency-coverage lookup and asks its denominator.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-784dadc8f1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-7affcee70f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-7e0f97e0f9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-7eef94394f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8474f4a77c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks which states the current dataset lacks under R07.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-86106cc226": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8726e95ced": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-87546de45e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8754b1b91a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8754b70c34": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8881cd7319": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-89efaf51a3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8a79862e88": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8a79897928": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8af73cdccd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8e241d6b44": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8f3a9d3240": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-90d3b6c215": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing lines to bars is chart styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-90f530e25a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-912083d7f2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-927e98881c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous metro-area request declines under P70, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-9350f4fd73": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9626d6ecc7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9892ae2c0c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-99c4384738": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-99f8c883e0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing chart type is declined by the owner decision.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-9a00615c14": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9a418e9dae": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9b4f60cb8a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9b4f69b4f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9b90cc3777": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9c64264e02": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9cb30a49e9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9d33036833": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing the crime to hate crime requires the Hate Crime source.",
+"expected": {
+"outcome": "answer",
+"source": "hate_crime"
+}
+},
+"QL-ct-9d330726d6": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision explicitly declines politics questions.",
+"expected": {
+"outcome": "decline",
+"reason": "Political analyses are outside the supported crime-data questions."
+}
+},
+"QL-ct-9d3307eef9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9d330bc14c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9efa27e0e5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-9f4ce6e9fb": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up requests unsupported non-crime data.",
+"expected": {
+"outcome": "decline",
+"reason": "Health data is outside the crime datasets."
+}
+},
+"QL-ct-9fcc45ceae": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a38af6d165": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Retail theft is shoplifting, a NIBRS-only offense.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-ct-a49e922364": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a4e70d1f92": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding policy-and-causes request declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-a538d36bd7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a68c70e4b9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a79f65348b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a8ec255429": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a9f1764663": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-aa01ca68c7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Adding a chart annotation is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-ab73cfbf69": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-abde465377": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-ae801ae801": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-ae801b7a84": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-af663d3240": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-b0405654ec": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Separating the plotted series is a presentation-only edit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-b0ba662092": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-b15d9af663": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding question asks about crime trends in named states but needs a crime choice, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-ct-b1870d6b44": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-b26a7abde4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-b3d401aa7e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-b99e2f5e1f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-bb7f4fd783": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-bd498932b3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-be3f51c4d9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-bff29c3777": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c09600f18b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c0caf04c90": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c1b37d36ad": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c27f9470a4": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This is a presentation-only graph request under the owner limit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-c377762ef7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c377789efa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c3c55b3d40": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c4071f7180": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c51eb8e398": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c6dcc06c50": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c7323b1870": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c943d8ccda": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding question needs Baltimore disambiguation, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-ct-cd20c54a8e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-ce6b0662a9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-cf80cf79af": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-d48435556f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous oceanfront question is below agency level and declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-d6b446416e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-d731952227": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-dbe5e42370": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-de45e3de75": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-deb9e8a798": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The Garden District is below agency level, making the preceding question a decline.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-df6f2c3777": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-e4a7dd75a2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-e7a566a30f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This asks a counting-method definition under D1.",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
+},
+"QL-ct-e8b8ec1b37": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-e9356d20e0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-e9dae11a62": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-ebe98590be": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-ed97a52c69": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The Baltimore monthly calculation plainly refers to a different analysis from the linked annual comparison."
+},
+"QL-ct-ee70f1c8b6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f3b1e27137": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f454708e88": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f5e1f71d24": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f67ae1cf72": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner explicitly declines politics questions.",
+"expected": {
+"outcome": "decline",
+"reason": "Political effects are outside the supported data questions."
+}
+},
+"QL-ct-f6c0eee8bb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f6dd5084e3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous color-and-line edit declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-ct-f7180184df": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f7180295bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f7180cf80c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f79af73bb5": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous state murder ranking is answerable, but surprising does not specify a new analysis.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"what comparison or measure"
+]
+}
+},
+"QL-ct-f86484b0cf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f897c27712": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A vertical annotation is chart styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-ct-f955b59517": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-fb83ed6e54": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-fbf69f4116": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-fe1384b0cf": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing the comparison to annual murder figures routes it to Historical.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-ct-feb2e7337b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-feec075715": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A standalone FBI definition is answered under D1.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-ct-ff2a81c955": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding chart-style change declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-hc-67bd3bcd49": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-03131d6a21": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This only requests a chart display change.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart presentation requests are not supported."
+}
+},
+"QL-hist-03b3a18b08": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-05db76f624": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-065857a748": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Houston staffing is a standalone question with only the period missing.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
+},
+"QL-hist-067ce8cd52": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A dual-axis chart request is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-06ad765b03": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-06b776b86b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-08de9765d3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The question requests separate chart lines.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-094b0094b0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-0c299d0e9b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-0da15fcd07": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "An agency-name lookup is independently answerable under R07.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-0fe53d82a8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous comparison needs Los Angeles disambiguation, making this an F4 reply.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-hist-19af47c250": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-1b7110cff2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-1f256ebf87": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Removing a chart label is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-1f8af0da15": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-20e37b7bf6": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The prior question lacks a place, and adding state grouping is a substantive F4 reply.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-hist-25f657c9a9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-27757f71d2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-290bf6a1b5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-2983cb6aca": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Most recent does not specify a period for the count under P37.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
+},
+"QL-hist-2db0936d57": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "KC staffing is a new question and requires Kansas City disambiguation.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Kansas City"
+]
+}
+},
+"QL-hist-2e066b40ff": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-2f9705aaf8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Swapping chart axes is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-2f99558da0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-2fccc1744f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Correcting the Chicago typo yields a standalone staffing series under F1 and D5.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-3280e5bdc0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-333579c589": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-33b9adde4f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing series colors is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-357588df46": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3576699dc6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-359e084bc8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The causal question independently declines under D12.",
+"expected": {
+"outcome": "decline",
+"reason": "Crime data cannot explain why people commit crimes."
+}
+},
+"QL-hist-35c9ecce01": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-360d7b31a4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-36936911bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-369f88d63e": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This only changes how the series appear in a chart.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-36bef61f3c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-36d57e5908": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3969161815": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3bf787d1a7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The new city ranking also lacks a geographic scope under P12.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"place"
+]
+}
+},
+"QL-hist-3c422b45ca": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3c6d7fafe6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3e9c6360d7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3efb61983d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3ffaf0a55f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The District is not established by the Houston context.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which district"
+]
+}
+},
+"QL-hist-41c66c3506": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-424400c6ae": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4248a06b77": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4248a6b86b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4267b0ee70": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-433092fccc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4524b15a44": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4599e290bf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-466ef7f1a4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-475a753e04": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-48e338cfeb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-48f3560319": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-490951d835": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4b2b61051a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4c7bd9c5a3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4c7bded68b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-4d6d62356f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The staffing question supplies no crime measure for the requested correlation.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both"
+]
+}
+},
+"QL-hist-4e45003131": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding presentation-only request declines and supplies no actual data or chart.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-hist-4f463abecd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-53e04c7ba4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-55c493ef23": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently requests staffing advice rather than historical figures.",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing recommendations are outside the crime datasets."
+}
+},
+"QL-hist-5d8db4e450": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up requests a presentation-only trend-line chart.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-64c0b9bf7a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-65ae92fccc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-65ae96b86b": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "No numbered choice is supplied in the preceding question."
+},
+"QL-hist-65b0333e40": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6a1b5f1a55": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6b6bd1f1a6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6b6bded68b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6e40ed00f4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6e70375e46": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6fa24fdddd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-6fae4365d8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-71e10edccd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-72f7fbaa0b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-74353369f8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Adding ambiguous places requires disambiguation under P26 and P28.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"New York city or state",
+"which Los Angeles"
+]
+}
+},
+"QL-hist-74c5b6da32": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-7998fcd2c6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-79a7d81437": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-7b59825a1a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Marijuana legalization effects are independently a causal policy question.",
+"expected": {
+"outcome": "decline",
+"reason": "Policy effects and real-world causes are outside the data."
+}
+},
+"QL-hist-7c25036bef": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-7d1a77ea80": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This requests different chart lines.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-7ea808b832": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This requests different chart lines.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-804193e9c6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-82abc74c5b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-84bc820e37": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-85c1c11a62": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-86186f8b8d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-8917db8375": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-89461bf81b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-8b77b9aabb": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding per-capita definition is answerable, but a national count or rate still needs a period.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
+},
+"QL-hist-8cb71c2dfa": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Overlaying chart series is a presentation edit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-92d12e041c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-935f48fe8a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-97658a361a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-99c1099c10": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The misspelled question clearly names violent crime, two states, and a period.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-99dc619af4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-9c58906585": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-9c93bf1774": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-9d2db2a5da": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-9fca4572f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a0c6da2f87": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a1337d4b78": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a361a6e40e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a450b8c6a9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a56277dfef": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a6c0f33b9a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a77b167dab": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-a780a5f56b": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The Raleigh-Durham area is a metro-area request under P70.",
+"expected": {
+"outcome": "decline",
+"reason": "Metro-area aggregations are not supported yet."
+}
+},
+"QL-hist-a95b99a29f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ab7178cd70": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ac601d0e9b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ad70dc7746": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous question needs a crime-category clarification under D09, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-hist-adcbeb0a2c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b1ba327e59": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b29a1babc7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b45caf1392": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b45caf41a5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b7bf67e62d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b8b368cb71": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b9808094b0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-baa0bbaa0b": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This is an independently answerable agency-reporting lookup under R07.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-bf81b3c422": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-c2dfa351ba": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous chart-overlay request declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-hist-c3fccd4e1c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-c4be264c0b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-c4f892f970": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Adding chart labels is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-c7746c7746": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-c78060e8fe": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ca0a713eb6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-cd2c680419": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ce9b935c9e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ceef45ef5e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-cf73c50a64": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing to a bar chart is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-d00f4ff4c2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-d0e9b6b86b": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The preceding staffing series supplies no numbered choice."
+},
+"QL-hist-d215e94423": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-d279beb2a0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Home robbery specifies a robbery location, which requires NIBRS.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-hist-d3c385190f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-d425c9d2db": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-d82a8d82a8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-db7813d614": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-dc881aec90": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-dd420a5627": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-dd420b2b2f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ddbcee3c8b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-dde4f46b28": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding color edit declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-hist-df3e4ad70d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-dfaeb4cfe2": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This standalone St. Louis homicide series must be disambiguated under F1.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which St. Louis"
+]
+}
+},
+"QL-hist-e041cfc933": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-e2833044d0": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The homicide-race question appears unrelated to the linked police-staffing question."
+},
+"QL-hist-e3b03b45ca": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-e3c8b9c93b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-e49bf2207a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ebf87b69a1": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing graph color is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-hist-ed68b99c10": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The misspelled standalone question names violent crime, two states, and a period.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-ef039d1a98": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding NYC murder series is answerable and this asks its data caveats.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-f17746bf2e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f41a589461": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f41a5f1392": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f5eb44267b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f63c789718": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f688d354bb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f71d2b8b36": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding national violent-crime trend is answerable and supplies the national scope.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-f82770ac00": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-f9eec3d01b": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The Salem staffing series is a standalone question under F1.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-hist-fafe60da15": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-fdddd79a7d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-ff4c2ad6c9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-00b7ca2e4d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-00c75d6fd2": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Gunshot victimization is unsupported under P31 and P41.",
+"expected": {
+"outcome": "decline",
+"reason": "The datasets do not count all people shot."
+}
+},
+"QL-nibrs-00d207be22": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0222f0222f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0222f78724": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-02d90b7d09": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0667d54ee0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-068b53aebc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0690339114": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-06cfb7ca31": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-073e09bf54": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-081fa4b0cf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-083bba8cc1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0a54ad71a1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0adacc00cd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0b0ac18256": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0b6c271b73": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0c0251f11f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0c15f0c15f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0c4b9c33e8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0c735e0680": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This is an independent coverage question under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-0d8d11f93f": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The garbled county staffing question appears unrelated to the preceding state-clearance question."
+},
+"QL-nibrs-0db95c3bba": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0e3920827c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0f5d18610e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0fc76b66cd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-0ff6f9740b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-11c647c6bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1214f950ee": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-12452a384c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The request concerns defendants rather than recorded offenders or arrestees.",
+"expected": {
+"outcome": "decline",
+"reason": "Court defendants are outside the datasets."
+}
+},
+"QL-nibrs-1291363a33": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-12ac444927": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-147e119e59": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P47 explicitly declines case counts.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-147e149ae8": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The female-population reference is not explained by the preceding homicide question."
+},
+"QL-nibrs-152930f41d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing category colors is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-156988d206": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-16fc2bffe9": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Illegal-immigrant crime cannot be identified in the sources.",
+"expected": {
+"outcome": "decline",
+"reason": "The datasets do not record immigration status."
+}
+},
+"QL-nibrs-18ac34cd23": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The standalone coverage request explicitly asks for census-tract data.",
+"expected": {
+"outcome": "decline",
+"reason": "Data stops at the agency level, not census tracts."
+}
+},
+"QL-nibrs-195f84e08d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-197beee8fa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-197fc07e30": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-19e59267c0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The national female arrest rate is a group-population rate under D03.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates for demographic groups are not supported."
+}
+},
+"QL-nibrs-19ed48f5ce": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1aa9206903": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1b773b2cb3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1bd95e25b8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1c517ee9f0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1c6a942179": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding LA question needs city-versus-county disambiguation, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-1c6ab068b5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1c6ab1c6ab": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1d07d69131": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up only requests a chart display change.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart presentation changes are not supported."
+}
+},
+"QL-nibrs-1d4140adac": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1f11f06572": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-1f93f6bf6c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-22364ce953": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-258b71d07d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The simple-assault definition is independently answerable under D1.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-267c039114": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The shoplifting-value question appears unrelated to the linked female-arrest-rate question."
+},
+"QL-nibrs-268850f5d1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-26c983615e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-26de9e6e5e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-2706f4edfc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-272e00c15f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous method question is answerable but supplies no place or period.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"period"
+]
+}
+},
+"QL-nibrs-2868af6f78": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-2986f2986f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly retains the decline for rolling breakdowns.",
+"expected": {
+"outcome": "decline",
+"reason": "Rolling demographic breakdowns are not supported."
+}
+},
+"QL-nibrs-2986f81823": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding rolling-age breakdown declines under P89, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-2b849272e0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks the drug-possession counting method under D1.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-2c53f6bc1e": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The linked single-place question does not establish any selected list of cities."
+},
+"QL-nibrs-2e4d190635": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-2f26dcb21f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-2f4a59639e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-304ce304ce": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-31b2ab1c5a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding gang question declines by owner decision, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-31b2ab81c4": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding gang question declines by owner decision, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-326655afd9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-32721d291d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-32cd845eb1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3387bf3fdf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3469c4dd4d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3481c5af4f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-34f7015698": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-35c1d26de9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-35c1d79505": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3615eb1d90": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-38d54beedd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-391141aa92": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-395f945bdb": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changes in the definition of violent crime are independently answerable under D1.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-3abf51cabf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3d963ad8ea": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3e63b16fc2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3ef0819ed4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-3f9abc4f29": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing to a line chart is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-410d016d92": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4114e4b844": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-42be4447ac": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding metro-based aggregation declines under P70, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-447ac980fd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-44a94b6b52": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-456e6d30b6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-45bdb7ac80": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The linked definition question does not identify the referenced Denver analysis."
+},
+"QL-nibrs-45d5908939": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The personal-weapons definition is independently answerable under D1.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-476e0b7424": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing bars to lines is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-47fafef151": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-48874ba853": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A specified state-and-period reporting-agency lookup is answerable under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-496447a6fa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-49ae819e59": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P47 explicitly declines case counts.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-4b0cf18da3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4b0cf1b773": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4b0cf714d7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4b2121d414": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding shoplifting-value series lacks a place, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-4b57354ee0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4b771ed3d7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4b8449c847": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4bc5734f76": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4c9d64c712": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4cd095279f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4dc8aca6b8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous clearance-type ranking needs scope and place level, rather than a decline.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-4dd4d3469c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Adding a vertical chart annotation is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-4deea63ed0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4e08d89230": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4e5204e520": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The misspelled shoplifting series stands alone and needs Baltimore disambiguation.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Baltimore"
+]
+}
+},
+"QL-nibrs-4edfcefdc4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4ee74421d9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4ee744f73c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4f73c00c75": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4f73c4f73c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4f73c78583": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4fb3d381c6": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "Neither turn identifies the data or supplies the referenced CSV."
+},
+"QL-nibrs-4fb4aa8d49": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-500fb4f389": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-505063a9ac": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up explicitly requests cases, which P47 declines.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-5075500d20": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-51fea9552c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-524d763582": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A UCR-code lookup is independently answerable under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-5279fdf21c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The question fully specifies an agency-attribute lookup under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-52cf347faf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-53cc662fc2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5403ec9ac1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5445e74a1a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-54ee05106b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-54ee082c38": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-54ee0c33e8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-54ee0e4e46": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-54f2c938b4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-55fe2e719c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-560d5c4945": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-56da31a155": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-57ac17a6fa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5807b0d13a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Comparing juvenile and adult population rates is barred by D03.",
+"expected": {
+"outcome": "decline",
+"reason": "Rates for demographic groups are not supported."
+}
+},
+"QL-nibrs-5858fa4f8d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding state-clearance-rate request declines under P18, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-58c73e8fd4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5af4f5af4f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5af4facb09": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks whether ethnicity information is recorded under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-5b333973bd": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The supplied pair never identifies the population whose Hispanic share is requested."
+},
+"QL-nibrs-5b33b28490": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5b33b4fb4a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The changed crime introduces the shooting ambiguity under D14.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"fatal or non-fatal shootings"
+]
+}
+},
+"QL-nibrs-5b33b6a029": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5b33be533f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5b68e78de0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5cf193c661": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-5e57df537a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P47 explicitly declines case counts.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-5ee2c0d8d1": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The question explicitly requests cases under P47.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-601056ac0b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6029e7993f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-61a09fc5fb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-61ce3c4cec": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-63840d82bb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-65a7dc224e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-670f19b418": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-679ba4b0cf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-67b9854ee0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-67cbb54ee0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-683fe38d54": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6869ba81ac": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-68c488d704": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6913152cf3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding chart-display request declines and supplies no underlying data question.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-6996e4b573": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6a1bd500fb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6a318e6981": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6ac0b1337d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6bf6cebc59": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The standalone request explicitly asks for cases under P47.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-6ef0d45d59": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6ef4f87a68": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6fd5126c98": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-712a1d0fa7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-71b7335c1d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-71f4f4ebb1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-73507395f9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-74bea68921": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-75c0842be4": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The request groups agencies by metro-county membership under P70.",
+"expected": {
+"outcome": "decline",
+"reason": "Metro-based aggregations are not supported yet."
+}
+},
+"QL-nibrs-7691ada0c5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-76a04ae514": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-785834f73c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-78de0a7b33": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-78de0c4f29": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing to a line chart is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-78de0f3c00": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-79062a6528": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding lethal-and-nonlethal shooting request declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-7950535c1d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7967c3481c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7993f887ed": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The offense-code lookup is independently answerable under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-79c75c9e8a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7a033ca5dc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7a6fa54ee0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7a6fa670f1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7ac80f21a5": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This standalone Denver violent-crime question lacks a period under F1.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
+},
+"QL-nibrs-7b56640b45": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7be22a5c81": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7ca317ca31": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7ca31ae7de": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7d32c75c08": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks about agency-classification coverage under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-7d723851eb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7e16ebdbc5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-818231c517": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-826f4d1c9a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-82c3854ee0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-82cfa6029e": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The prior exceptional-clearance ranking lacks scope and place level rather than requiring a decline.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-8431468c48": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The malformed follow-up cannot be interpreted reliably."
+},
+"QL-nibrs-846990c077": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous request needs offender occupation, which the listed datasets do not supply.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-84a57a6bb8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-84f612f4a5": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding fragment is a clarification and this question has no independent place under F4.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-8610e7a033": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-8610ea7c2e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-870de26885": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-87d6987d69": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This is an independently answerable coverage question under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-87fc80b6c2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-882478eec0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P19 explicitly declines fentanyl-specific figures.",
+"expected": {
+"outcome": "decline",
+"reason": "Fentanyl is not separately identified in the data."
+}
+},
+"QL-nibrs-88a018610e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-892302706f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-89a2d84f61": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-8a7980667d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-8b1a9b2e66": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-8d2067b711": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Combining existing series on one chart is a presentation edit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-8e3c2c78bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-8f18fdcf57": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-8fec18605e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-90ca784dd1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-911a59e3fd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9151132665": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-915d444a94": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks whether marijuana-arrest data is available under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-9184cf5e57": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding age series lacks a place and this is an F4 reply without its own place.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-9304c2d7a0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding comparison needs St. Louis disambiguation, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-9327022364": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding incident-rate question lacks a crime, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-93755df265": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-938b42986f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly declines rolling age breakdowns.",
+"expected": {
+"outcome": "decline",
+"reason": "Rolling demographic breakdowns are not supported."
+}
+},
+"QL-nibrs-950ee6fd51": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9552c342a8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "New Jersey dataset completeness is an independent coverage lookup under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-95983cb75d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9639e4b0cf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-96453c33e8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-965e04f73c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-973bd683fe": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This asks how ethnicity shares are determined, a method question under D1.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-9740b7e1cd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9740bf2624": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-99a9184dcf": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P03 does not supply race populations and D03 declines demographic rates.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates by race are not supported."
+}
+},
+"QL-nibrs-9a8b79a8b7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9a8b7c7070": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9b41804d8e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9bf54a5e87": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9cf72b4c26": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9d3ea4deea": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding offense-code lookup is answerable but supplies no place or period.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"period"
+]
+}
+},
+"QL-nibrs-9dbe0a765f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9e3fd5e21c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9ef760dfff": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9efd6c2ba3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks a causal why question under D12.",
+"expected": {
+"outcome": "decline",
+"reason": "The data cannot explain real-world causes of crime changes."
+}
+},
+"QL-nibrs-9fb6ae5183": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a2e4d6cc73": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a384c15293": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a3b0087dc9": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a4158d20d3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a5c81ec7ee": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a5e8784a57": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a5e93af509": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a606842452": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing national homicide details to vehicle-theft arrests requires NIBRS.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-a6528c4237": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a6bb84b771": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a6bb8a6bb8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a6fbd1bd95": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a6fdd91f7b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a765fbbf80": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Stacking bars and changing colors is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-a7c2e88a01": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-aa446dd1ef": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ab4e25d9e3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ab4ebf6839": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ac9a3081fa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-acb09b3dfe": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding coverage question supplies neither place nor period for arrest counts.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"period"
+]
+}
+},
+"QL-nibrs-ad8ea9ef76": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ae5147d32c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ae7de7e16e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-aee9fd3f11": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b0228ab4eb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b099b073e0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b1c5ad64d0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b1d900fc76": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b2cb39cf72": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b2e6648874": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The state-and-period reporting-agency lookup is independently answerable under R07.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-b311393755": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b3d1465da4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b3dfeb3dfe": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b3dfeef24c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b47f9a3b00": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b4c267d8cc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b66cd476e0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b688de82ee": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b6b52b6b52": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b865f96e29": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b865fb865f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-b878bf6b83": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Video evidence is not recorded, so the preceding request declines and F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-b8ecd9247d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-babb384699": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-babc78a798": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-bbf8012452": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up asks for Detroit racial population data rather than crime data.",
+"expected": {
+"outcome": "decline",
+"reason": "The sources do not provide demographic population shares."
+}
+},
+"QL-nibrs-bc26e50755": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-bdbc534f70": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-beedd06cfb": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This requests adjacent placement of chart series.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-bffe90691b": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 explicitly declines demographic population rates.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates by race are not supported."
+}
+},
+"QL-nibrs-c02f2abb04": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c0cbf5cf19": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c16324b0cf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c33e8bc26e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c423789b07": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c494557b2a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up itself explicitly requests case counts under P47.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-c4f294edfc": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding line-chart edit declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-c74ce2bbf2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c78bc4bc57": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c80497b566": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c8b195af45": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Correcting Florida yields a standalone shoplifting question missing its period.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
+},
+"QL-nibrs-c9e5712fb0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The added places require disambiguation under P26 and P28.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles",
+"New York city or state"
+]
+}
+},
+"QL-nibrs-ca17c915d4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ca5dc0a54a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ca6b86b79d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-cb21f2f26d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-cbd013ef08": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-cc676215a2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ccf6fcedca": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-cd5148fec1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-cd6a58409b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ce95382713": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d120b73507": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d1c9a63ed0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d20d30c076": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d28806377d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The request for the SRS murder definition is independently answerable under D1.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-nibrs-d291d826f4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d30b6a5e6c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding misdemeanor question requires an offense choice, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-d3f117a6fa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d45324a0ee": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d47352e4d1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d5595723b8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d5a0d96453": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d633782914": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up explicitly asks for NIBRS reporting coverage.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-d6337ea382": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d64d08a781": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d6e36f8ff6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d6fd2098e3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding gunshot-victimization question declines, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-d71a132721": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d75d578de0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d9c34b901e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-d9f7cae801": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing to juvenile vehicle-theft arrests requires NIBRS.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-da0c599a91": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 explicitly declines demographic population rates.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates by race are not supported."
+}
+},
+"QL-nibrs-da9df78de0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-dd1efe09c0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ddc18078f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-de180d4735": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-df21cc1de8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-df2657967c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-e0680870de": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding marijuana-coverage lookup is answerable but supplies no shooting scope.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"fatal or non-fatal shootings",
+"place",
+"period"
+]
+}
+},
+"QL-nibrs-e2159911a5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-e2af68ed77": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing the chart title is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-e2f5569166": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-e6981f4ce8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing the chart to stacked columns is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-e6dca24114": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 explicitly declines demographic population rates.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates by sex are not supported."
+}
+},
+"QL-nibrs-e78532868a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-e7ec7e2af6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-e8fd402d90": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ea006eb87c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ea0b17c302": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding request needs a housing-type distinction the listed data does not provide.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-nibrs-ea38282914": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ea382ea382": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ea8121c6ab": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding robbery question needs New York disambiguation and a period, so F4 applies.",
+"expected": {
+"outcome": "exclude"
+}
+},
+"QL-nibrs-ebb4ce6dca": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ebc59524d7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P47 explicitly declines cases.",
+"expected": {
+"outcome": "decline",
+"reason": "Cases are not a supported counting unit."
+}
+},
+"QL-nibrs-ec7ee6996e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ee9f0f90c7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing chart axes and line arrangement is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-ef151573a0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-ef24c5b333": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f089d54f2c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f21a5258b7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f26247e1cd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f3c0019036": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f3f9fcb21f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f4ce8a46a1": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Replacing chart labels is a presentation-only edit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-nibrs-f683912ac4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f6b83f6ce2": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "No listed source identifies clearances supported by video evidence.",
+"expected": {
+"outcome": "decline",
+"reason": "The datasets do not record video evidence."
+}
+},
+"QL-nibrs-f6f7800b7c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f6f8e0ff6f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f6f8e9740b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f7692dd1ef": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f8a374dd4d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f8b0b21b36": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-f8b0b2bdd5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-fade96fd9f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-fd0aa67b98": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "A national consistent-reporting-agency subset requires NIBRS agency data rather than Historical estimates.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-nibrs-ffd63c0438": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-04b1742a19": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-08b3484fb3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The new city ranking lacks geographic scope and cannot inherit it from the declined district request.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place"
+]
+}
+},
+"QL-shr-0b443a4064": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-0d25c08c05": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-0e40ca4035": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-106cea4286": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-10d1e5d1fa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-10f2708b34": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-11513b2b2f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-12acbb4b78": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding gang question declines by owner decision, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-shr-146d6b0ca2": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks a causal why question under D12.",
+"expected": {
+"outcome": "decline",
+"reason": "The data cannot explain real-world causes of murder trends."
+}
+},
+"QL-shr-1c538d8680": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The request explicitly ranks metro areas under P70.",
+"expected": {
+"outcome": "decline",
+"reason": "Metro-area aggregations are not supported yet."
+}
+},
+"QL-shr-1f8722ea37": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-20473b0083": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-213f6105cd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-213f6213f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-23e36e3640": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The available months in the source are independently answerable coverage information.",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
+},
+"QL-shr-25ec695384": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-26893137de": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-2bf816d3c3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-2d724d0574": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-2d9260b25c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-2da3fa7355": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-337c015395": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-34739a2909": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-34939827e0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-34ce14f74f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-38c556663c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-42a195b5de": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-4350543505": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-47bbfc8538": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-49312d33fc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-493485f96d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Correcting the murder typo yields a standalone DC question with a stated year.",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
+},
+"QL-shr-4996b54523": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-4d6d66d213": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-4f74fc2a84": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 explicitly declines demographic population rates.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates by race and sex are not supported."
+}
+},
+"QL-shr-508fbb26b3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-570ab43505": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-59ebe0f231": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-5e789b7405": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-5e789c0001": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-5e789fdd45": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-5ef6378ece": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-63722395ac": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-641f8cf33b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-6446d46575": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The standalone Tulsa population question needs a period rather than exclusion.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
+},
+"QL-shr-66dee83915": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-67604c6d44": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-6949866dee": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-69d31799db": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "Adding offender ages does not belong to the linked police-staffing question."
+},
+"QL-shr-6d3c38ced1": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-6d8a3ba4f7": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-6eafb7e2b9": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding rolling demographic breakdown declines under P89, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-shr-7319326893": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-76207b419f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-78ecec2b66": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-7e2b94f5fd": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-7ef4cc0793": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines gang questions.",
+"expected": {
+"outcome": "decline",
+"reason": "Gang crime is poorly reported to the FBI."
+}
+},
+"QL-shr-823cbfa211": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-827e054167": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing to stacked columns is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-shr-838067915f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-83915213f6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-8836176207": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-8af20a63a4": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "This independently asks whether age data covers the specified years.",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
+},
+"QL-shr-8ce83f493f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing the axis maximum is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-shr-9415d8ce83": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The request includes an unsupported axis-setting edit.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-shr-990fba6f5b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-9a6a35158f": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-9c5d73a699": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-9c5d75dc9d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-9d31aa387d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-9e03f5de33": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The datasets cannot answer a general organized-crime share.",
+"expected": {
+"outcome": "decline",
+"reason": "Organized-crime involvement is not generally identified in the data."
+}
+},
+"QL-shr-9e4ac2281b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-a25d0db770": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "DUI/DWI trends are answered from NIBRS, not Homicide Reports.",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
+},
+"QL-shr-a290910d1e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-a546e3d41c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing the axis baseline is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-shr-a6f5b9dfb0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-a73556eafb": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly declines rolling age breakdowns.",
+"expected": {
+"outcome": "decline",
+"reason": "Rolling demographic breakdowns are not supported."
+}
+},
+"QL-shr-a9435a25d0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-aa6633151a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-abd3cd9da4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-ad21c20473": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding political comparison declines by owner decision, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-shr-b07980e40c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The repeated court-outcome question independently declines under R03.",
+"expected": {
+"outcome": "decline",
+"reason": "Court fines and fees are outside the datasets."
+}
+},
+"QL-shr-b1bc5187cc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-b226611513": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-b26b3d7e41": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-b27f088361": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-b2b2f04715": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-b2e2afe772": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The request explicitly specifies a below-agency geography under D02.",
+"expected": {
+"outcome": "decline",
+"reason": "Data stops at the agency level, not ZIP codes."
+}
+},
+"QL-shr-ba4f71c538": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-bd7446446d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-c10ab93adb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-c11a93ecf6": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-c1b00129ce": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Adding race to sworn-officer staffing does not turn it into NIBRS offender data.",
+"expected": {
+"outcome": "decline",
+"reason": "The listed staffing data does not provide officers by race."
+}
+},
+"QL-shr-c2a84b2266": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 explicitly declines demographic population rates.",
+"expected": {
+"outcome": "decline",
+"reason": "Population rates by race and sex are not supported."
+}
+},
+"QL-shr-c2b66f1be6": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding gang question declines by owner decision, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-shr-c5a77486bc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-c8538990fb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-d0574ab258": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-d095047bbf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-d33fcbd744": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-d40685dc49": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding gang question declines by owner decision, so F5 applies.",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"the whole question"
+]
+}
+},
+"QL-shr-db7707f723": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-e11ae75e46": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-e27f7d12ee": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-e5657266ef": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-ea2e7c8c80": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-ea2e7f5ece": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-f075970e16": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-f493f0c808": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "Changing axis limits is styling.",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling is not supported."
+}
+},
+"QL-shr-f5febc0c8c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The listed sources do not include law-enforcement line-of-duty death data.",
+"expected": {
+"outcome": "decline",
+"reason": "Officers killed in action are outside the listed datasets."
+}
+},
+"QL-shr-f684fbd946": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-fd1ead99e0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-fdd4573d85": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-fe772d0776": {
+"status": "reviewed",
+"by": "codex-second-3"
 }
 }
 }
