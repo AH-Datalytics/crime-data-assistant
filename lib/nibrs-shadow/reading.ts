@@ -279,7 +279,10 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   });
   // Jeff 2026-11-10: a bare "top N cities" (no "by ...", no "highest", "most"...) is the N largest cities by population.
   let topAsLargest: string | null = null;
-  if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*)\b/i.test(text)) {
+  // "By" a crime anywhere ("top 10 cities in Texas by murder in 2024") ranks by it (Codex rankings review 03.1); "by
+  // population", "by size", "by year" or "by month" don't.
+  if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*)\b/i.test(text)
+    && !/\bby\s+(?!(?:population|size|year|month|years|months)\b)/i.test(text)) {
     text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|with|ranked|in\s+terms))/i,
       (m, n: string, qual: string | undefined) => {
         const k = Number(n);

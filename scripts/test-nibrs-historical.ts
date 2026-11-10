@@ -594,5 +594,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.equal(readQuestion("Homicide rate for top 100 U.S. cities in 2024", 2026, "2026-09").topAsLargest, "top 100 U.S. cities");
   assert.equal(readQuestion("top 10 cities by murder in Texas 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities with the highest murder rate in 2024", 2026, "2026-09").largestSet, null);
+  // "By" a crime after a place or a year still ranks by it (Codex rankings review 03.1).
+  assert.equal(readQuestion("top 10 cities in Texas by murder in 2024", 2026, "2026-09").largestSet, null);
+  assert.equal(readQuestion("top 10 cities in 2024 by murder rate", 2026, "2026-09").largestSet, null);
+  assert.equal(readQuestion("top 10 cities by population murder rate 2024", 2026, "2026-09").largestSet, 10);
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");
