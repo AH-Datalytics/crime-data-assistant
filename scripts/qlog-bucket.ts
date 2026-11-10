@@ -8,7 +8,7 @@ import path from "node:path";
 export type Label = { id: string; tab: string; kind: "first" | "follow-up"; times: number; question: string; previous: string | null;
   expected: { outcome: "answer" | "clarify" | "decline" | "exclude"; source: string | null; about?: string; about_any?: string[]; source_any?: string[]; reason?: string };
   label: { status: string; rule: string; notes?: string } };
-export type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number; digest?: string };
+export type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number; digest?: string; via?: string; read?: string };
 /** The part a clarify asks about, in the label's words. */
 export function aboutClass(s: string): string {
   const t = s.toLowerCase();

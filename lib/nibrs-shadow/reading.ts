@@ -25,7 +25,8 @@
  *              knife or cutting instrument. The weapon is the composite's (`composite`), applied by the shadow.
  *   arrested   P48: "people (were) arrested for <crime>" -> "<crime> arrests".
  *   undefined  terms the data does not define, declined by decided policy: "shooters" (P45), "gun violence" (P31: the
- *              data has no counts of non-fatal shootings).
+ *              data has no counts of non-fatal shootings), "gang" in any form (P38, Jeff 2026-11-09: gang involvement is
+ *              loosely defined and inconsistently reported, so a count would mislead; for every source).
  *   comparison a change between two periods, asked in any of these forms, is recorded as `comparison` (its earlier and
  *              later periods), and the question is passed on as the same count over the whole span; the shadow
  *              attaches the comparison:
@@ -51,10 +52,10 @@ export type Span = { from: string; to: string };
 /** A change between two periods (the shadow attaches it as a period_comparison). `matched`: the same months each year. */
 export type Comparison = { earlier: Span; later: Span; matched: boolean };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
-  undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
+  undefinedTerm: "shooters" | "gun violence" | "gang" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
   /** A Census region named ("the Northeast"): read as the nation, flagged; only Current Trends answers it (current.ts REGIONS). */
   region: "noe" | "mdw" | "sth" | "wst" | null;
-  /** A circumstance named ("gang-related murders"): element 31's codes, a filter on the victims (null when none). */
+  /** A circumstance named ("murders during an argument"): element 31's codes, a filter on the victims (null when none). */
   circumstance: string[] | null;
   /** "According to NIBRS": the source asked for in words is used and labelled (P01). */
   nibrsAsked: boolean;
@@ -153,6 +154,8 @@ const yearSpan = (y: number): Span => ({ from: `${y}-01`, to: `${y}-12` });
 const lead = (t: string) => t.replace(/^\s*([a-z])/, (_, c: string) => c.toUpperCase());
 const SHOOTERS = /\bshooters?\b/i;
 const GUN_VIOLENCE = /\bgun\s+violence\b/i;
+/** P38 (Jeff 2026-11-09): any gang wording ("gang-related", "gangland", "gang members", "gangs"), declined for every source. */
+export const GANG = /\bgang(?:s|land|sters?|related|involved|motivated)?\b/i;
 const YTD = /\b(?:so\s+far\s+this\s+year|this\s+year\s+so\s+far|year\s+to\s+date|ytd|this\s+year)\b|\bso\s+far\s+in\s+(\d{4})\b/gi;
 const NEXT_YEAR = /\bnext\s+year\b/gi;
 const FORECAST_WORDS = /\b(?:forecast\w*|predict\w*|projection\w*|projected|expected\s+to)\b|\bgoing\s+to\s+(?:go\s+up|go\s+down|rise|increase|fall|drop|decrease|decline)\b/i;
@@ -258,7 +261,6 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // DV gap note); "drug-related" is left to the drug crimes.
   let circumstance: string[] | null = null;
   for (const [re, codes, name] of [
-    [/\b(?:gang[-\s]?(?:related|involved|motivated)|gangland)\s*/gi, ["04", "05"], "gang-related"],
     [/\bdrug[-\s]?deal(?:ing|er)[-\s]?related\s*|\bdrug[-\s]?dealing[-\s]related\s*|\bin\s+drug\s+deals?\b|\bover\s+drug\s+deals?\b/gi, ["03"], "drug dealing"],
     // Whole words, and only "from", "during" or "over" an argument (Codex circumstance review 01.2: "arrests in arguments",
     // "argumentative").
@@ -316,7 +318,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const forecast = FORECAST_WORDS.test(own) || (WILL.test(own) && (!years.length || futureYear));
   const court = COURT.test(own);
   const offenders = BY_GROUP.test(own);
-  const undefinedTerm = SHOOTERS.test(own) ? "shooters" : GUN_VIOLENCE.test(own) ? "gun violence" : null;
+  const undefinedTerm = GANG.test(own) ? "gang" : SHOOTERS.test(own) ? "shooters" : GUN_VIOLENCE.test(own) ? "gun violence" : null;
   // A future year with nothing predicting is a period after the data (P24), read as that year.
   if (!forecast) text = text.replace(NEXT_YEAR, (m) => (readings.push({ kind: "period", from: m, to: `in ${currentYear + 1}` }), `in ${currentYear + 1}`));
   // "Combined" is the flag's (one total of the named agencies); the reader is not asked to apply it.
