@@ -64,6 +64,11 @@ assert.equal(replacementText({ span: "murdered", kind: "measure", measure: "murd
 // A word for the person is another term (Codex review 19.1).
 for (const [span, measure] of [["arsonist", "arson"], ["murderer", "murder"], ["murderers", "murder"], ["robber", "robbery"], ["burglar", "burglary"]])
   assert.equal(replacementText({ span, kind: "measure", measure }), null, span);
+// Nor by spelling (Codex review 20).
+for (const [span, spelling] of [["murderer", "murders"], ["arsonist", "arsons"], ["robber", "robbery"], ["burglar", "burglary"], ["murders", "murderers"]])
+  assert.equal(replacementText({ span, kind: "spelling", spelling }), null, span);
+for (const [span, spelling] of [["assualts", "assaults"], ["robberys", "robbery"], ["comparied", "compared"]])
+  assert.equal(replacementText({ span, kind: "spelling", spelling }), spelling, span);
 // Codex review 02: a measure span carrying a condition, a place swallowing a qualifier, a rate or unit that isn't what
 // the words count: all refused.
 no(P({ span: "murdered near schools", kind: "measure", measure: "murder" }), "murdered near schools in Memphis in 2024", /measure/);

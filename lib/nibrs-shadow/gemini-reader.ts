@@ -147,9 +147,22 @@ export function editDistance(a: string, b: string): number {
   return d[a.length][b.length];
 }
 
+/**
+ * One word names the person and the other the crime: the crime's word plus -er, -ist, -or, -ar or -ian ("murderer",
+ * "arsonist"), or the crime's word without its last "y" ("robber", "burglar"); plurals aside.
+ */
+function personSwap(a: string, b: string): boolean {
+  const st = (w: string) => w.replace(/ies$/, "y").replace(/s$/, "");
+  const one = (p: string, q: string) => (q.endsWith("y") && p === q.slice(0, -1)) || (p.startsWith(q) && /^(?:er|ist|or|ar|ian)$/.test(p.slice(q.length)));
+  const x = st(a), y = st(b);
+  return x !== y && (one(x, y) || one(y, x));
+}
 /** A spelling correction of one word: letters only, four or more, the first two kept, within two edits and a quarter of its length. */
 function closeSpelling(from: string, to: string): boolean {
   if (!/^[a-z]{4,}$/.test(from) || !/^[a-z]+$/.test(to) || from === to || from.slice(0, 2) !== to.slice(0, 2)) return false;
+  // A word for a person and a word for the crime are different words, never a typo of each other ("murderer" ->
+  // murders, "arsonist" -> arsons, "robber" -> robbery: Codex reviews 19.1, 20).
+  if (personSwap(from, to)) return false;
   const d = editDistance(from, to);
   return d <= 2 && d <= Math.max(1, Math.floor(from.length / 4));
 }
@@ -161,7 +174,7 @@ export function shorthandOf(span: string, measureWords: string): boolean {
   const a = span.replace(/[^a-z ]/g, " ").split(/\s+/).filter(Boolean), b = norm(measureWords).split(/\s+/).filter(Boolean);
   if (a.length !== b.length) return false;
   // A word for a person who commits the crime is another term (Codex review 19.1: "arsonist" is not arsons).
-  if (a.some((w, i) => w !== b[i] && /(?:er|ers|ist|ists|or|ors|ar|ars)$/.test(w))) return false;
+  if (a.some((w, i) => personSwap(w, b[i]))) return false;
   return a.every((w, i) => w === b[i] || (w.length >= 3 && b[i].startsWith(w)) || closeSpelling(w, b[i]) || closeSpelling(w, b[i].replace(/s$/, "")));
 }
 
@@ -211,13 +224,11 @@ export function replacementText(r: Replacement): string | null {
     case "spelling": {
       // One word for one word, letters only, at least four of them, within two edits and a quarter of its length
       // ("aggravates" -> "aggravated", "comparied" -> "compared"); never the same word.
-      const from = span, to = norm(r.spelling ?? "");
-      if (!/^[a-z]{4,}$/.test(from) || !/^[a-z]+$/.test(to) || from === to) return null;
       // The first two letters stay: a prefix added, dropped or changed turns a word into another ("unreported" ->
-      // "reported", "deported" -> "reported", "unrelated" -> "related": Codex review 08), never a typo of it.
-      if (from.slice(0, 2) !== to.slice(0, 2)) return null;
-      const d = editDistance(from, to);
-      return d <= 2 && d <= Math.max(1, Math.floor(from.length / 4)) ? to : null;
+      // "reported", "deported" -> "reported", "unrelated" -> "related": Codex review 08), never a typo of it; nor is a
+      // word for a person a typo of the crime (closeSpelling).
+      const from = span, to = norm(r.spelling ?? "");
+      return closeSpelling(from, to) ? to : null;
     }
     case "breakdown": {
       const b = r.breakdown;
