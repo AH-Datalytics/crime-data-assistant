@@ -118,7 +118,11 @@ cleanup() {
   # ROLLBACK NOT CONFIRMED (or any state not recorded) the previous release may be the only good one left, so its pin
   # stays until a person clears it.
   if (( PINNED_BY_US )) && [[ "$FINAL_STATE" =~ ^(LIVE|ROLLED\ BACK|NOT\ DEPLOYED)$ ]] && [[ -f "$PINNED_FILE" ]]; then
-    grep -vxF "$(basename "$TARGET")" "$PINNED_FILE" > "$PINNED_FILE.tmp"; mv -f "$PINNED_FILE.tmp" "$PINNED_FILE"
+    # grep exits 1 when nothing is left (fine: an empty list); any higher status is a read error, and then the pin file is
+    # left exactly as it is, never replaced by a partial or empty copy that would drop every other pin.
+    local pin_rc=0
+    grep -vxF "$(basename "$TARGET")" "$PINNED_FILE" > "$PINNED_FILE.tmp" || pin_rc=$?
+    if (( pin_rc <= 1 )); then mv -f "$PINNED_FILE.tmp" "$PINNED_FILE"; else rm -f "$PINNED_FILE.tmp"; fi
   fi
   [[ -n "$STUDIO_TOKEN" ]] && $STUDIO_CTL unlock "$STUDIO_TOKEN" > /dev/null 2>&1 8>&- 9>&-
 }
@@ -255,9 +259,13 @@ TARGET_COMMIT=$(sed -n 's/^commit=//p' "$TARGET/RELEASE_INFO" 2>/dev/null)
 [[ "$TARGET_COMMIT" =~ ^[0-9a-f]{40}$ ]] || finish "NOT DEPLOYED" "the live release $TARGET has no readable commit" 2
 [[ "$TARGET_COMMIT" != "$SHA" ]] || finish "NOT DEPLOYED" "$SHA is already live ($TARGET)" 0
 UTIL_PRIOR=$(readlink "$UTIL_LINK" 2>/dev/null || echo "")
-if ! prune_is_pinned "$(basename "$TARGET")" "$(prune_read_pinned "$PINNED_FILE")"; then
+# The pin list is read and checked on its own: a read error must not look like "not pinned" (the run would then add a
+# duplicate pin, claim it, and cleanup would remove every matching line, the pre-existing pin included).
+PIN_LIST=$(prune_read_pinned "$PINNED_FILE") || finish "NOT DEPLOYED" "cannot read the pin file $PINNED_FILE" 2
+if ! prune_is_pinned "$(basename "$TARGET")" "$PIN_LIST"; then
   echo "$(basename "$TARGET")" >> "$PINNED_FILE" && PINNED_BY_US=1
-  prune_is_pinned "$(basename "$TARGET")" "$(prune_read_pinned "$PINNED_FILE")" || finish "NOT DEPLOYED" "could not pin the rollback target in $PINNED_FILE" 2
+  PIN_LIST=$(prune_read_pinned "$PINNED_FILE") || finish "NOT DEPLOYED" "cannot read the pin file $PINNED_FILE after pinning" 2
+  prune_is_pinned "$(basename "$TARGET")" "$PIN_LIST" || finish "NOT DEPLOYED" "could not pin the rollback target in $PINNED_FILE" 2
 fi
 log "rollback target $TARGET ($TARGET_COMMIT), pinned; scheduler link -> ${UTIL_PRIOR:-none}"
 

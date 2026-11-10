@@ -190,6 +190,68 @@ function toBashPath(value: string): string {
   }
 }
 
+// An empty (or comment-only) pin file must not abort the deploy. The helper's grep exits 1 when nothing is listed; under
+// the deploy's `set -euo pipefail` an unguarded `PINNED_NAMES="$(prune_read_pinned ...)"` then stops the script after
+// the switch, and release.sh reads that as a failed deploy and rolls back. Runs the SHIPPED line from the deploy script.
+{
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "deploy-empty-pin-"));
+  try {
+    const helper = toBashPath(path.join(repoRoot, "scripts", "lib", "prune-releases.sh"));
+    const deploy = fs.readFileSync(path.join(repoRoot, "scripts", "deploy-zero-downtime.sh"), "utf8");
+    const readLine = deploy.split(/\r?\n/).find((l) => l.startsWith("PINNED_NAMES="));
+    assert.ok(readLine, "the deploy script must read the pin list into PINNED_NAMES");
+    const cases: [string, string | null][] = [["empty-file", ""], ["comments-and-blanks-only", "# nothing pinned\n\n"], ["no-file", null]];
+    for (const [label, content] of cases) {
+      const pinned = path.join(workDir, `pinned-${label}`);
+      if (content !== null) fs.writeFileSync(pinned, content);
+      const script = `
+        set -euo pipefail
+        source "${helper}"
+        PINNED_FILE="${toBashPath(pinned)}"
+        ${readLine}
+        echo "reached:[$PINNED_NAMES]"
+      `;
+      const out = execFileSync(BASH, ["-c", script], { encoding: "utf8" });
+      assert.match(out, /reached:\[\]/, `${label}: the deploy's pin read must not abort and must yield an empty list`);
+    }
+    // prune_releases reads the pin file itself; with nothing pinned it must still prune (the deploy runs it in a process
+    // substitution, where an abort would silently stop the pruning while the deploy carried on).
+    const releasesDir = path.join(workDir, "releases");
+    fs.mkdirSync(releasesDir);
+    const rel = ["20260801_000000", "20260802_000000", "20260803_000000", "20260804_000000", "20260805_000000", "20260806_000000", "20260807_000000"];
+    for (const name of rel) fs.mkdirSync(path.join(releasesDir, name));
+    fs.writeFileSync(path.join(releasesDir, ".pinned"), "");
+    const pruneOut = execFileSync(BASH, ["-c", `
+      set -euo pipefail
+      source "${helper}"
+      prune_releases "${toBashPath(releasesDir)}" "${toBashPath(path.join(releasesDir, "20260807_000000"))}" 5 "${toBashPath(path.join(releasesDir, ".pinned"))}"
+    `], { encoding: "utf8" });
+    assert.match(pruneOut, /remove 20260801_000000/, "an empty pin file: the oldest surplus release is still pruned");
+    assert.ok(!fs.existsSync(path.join(releasesDir, "20260801_000000")) && !fs.existsSync(path.join(releasesDir, "20260802_000000")), "an empty pin file: surplus releases are removed");
+    assert.ok(rel.slice(2).every((n) => fs.existsSync(path.join(releasesDir, n))), "an empty pin file: the newest five survive");
+    // A pin file that cannot be read (grep status 2) must stop the prune, never read as "nothing pinned".
+    const stubDir = path.join(workDir, "stub-bin");
+    fs.mkdirSync(stubDir);
+    fs.writeFileSync(path.join(stubDir, "grep"), "#!/usr/bin/env bash\nexit 2\n", { mode: 0o755 });
+    const failDir = path.join(workDir, "releases-unreadable");
+    fs.mkdirSync(failDir);
+    for (const name of rel) fs.mkdirSync(path.join(failDir, name));
+    fs.writeFileSync(path.join(failDir, ".pinned"), "20260801_000000\n");
+    assert.throws(
+      () => execFileSync(BASH, ["-c", `
+        set -euo pipefail
+        source "${helper}"
+        PATH="${toBashPath(stubDir)}:$PATH"
+        prune_releases "${toBashPath(failDir)}" "${toBashPath(path.join(failDir, "20260807_000000"))}" 5 "${toBashPath(path.join(failDir, ".pinned"))}"
+      `], { encoding: "utf8", stdio: "pipe" }),
+      "an unreadable pin file must stop prune_releases",
+    );
+    assert.ok(rel.every((n) => fs.existsSync(path.join(failDir, n))), "an unreadable pin file: nothing is removed, the pinned baseline included");
+  } finally {
+    removeDir(workDir);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 3. Deploy script: RELEASE_INFO provenance
 // ---------------------------------------------------------------------------

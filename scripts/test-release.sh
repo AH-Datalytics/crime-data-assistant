@@ -259,6 +259,18 @@ setup same; touch "$T/unhealthy-R2"; run FAKE_PRUNE=1
 has "the pruning helper kept it as pinned" "$T/prune.out" "keep-pinned R1"
 ok "result" "$RES" "ROLLED BACK"; ok "live" "$LIVE" R1
 
+echo "19b. an unreadable pin file stops the release before any change and keeps the existing pin"
+setup same; printf 'R1\n' > "$R/releases/.pinned"
+printf '#!/usr/bin/env bash\ncase "$*" in *.pinned*) exit 2 ;; esac\nexec "$(PATH=/usr/bin:/bin command -v grep)" "$@"\n' > "$T/bin/grep"; chmod +x "$T/bin/grep"
+run; ok "result" "$RES" "NOT DEPLOYED"; ok "exit" "$RC" 2; ok "live (nothing switched)" "$LIVE" R1
+has "says why" "$T/logs/$SHA.latest" "cannot read the pin file"
+ok "the existing pin is untouched" "$(grep -cxF R1 "$R/releases/.pinned")" 1
+
+echo "19c. a read error while the run releases its own pin leaves the pin file as it is (other pins kept)"
+setup same; printf 'R0\n' > "$R/releases/.pinned"
+printf '#!/usr/bin/env bash\ncase "$*" in *-vxF*) exit 2 ;; esac\nexec "$(PATH=/usr/bin:/bin command -v grep)" "$@"\n' > "$T/bin/grep"; chmod +x "$T/bin/grep"
+run; ok "result" "$RES" "LIVE"; ok "the unrelated pin survives" "$(grep -cxF R0 "$R/releases/.pinned")" 1
+
 echo "20. a site with a password: health checks send the auth cookie"
 setup same; echo "AUTH_PASSWORD=test-secret" > "$R/shared/.env"; touch "$T/auth-required"; run
 ok "result" "$RES" "LIVE"
