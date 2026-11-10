@@ -90,3 +90,13 @@ condition or request it couldn't map. Gemini never returns a number to show.
   alone can't show it is the question asked): the rewritten question against the user's words, then their numbers by
   the blind verification tool.
 - The key: `GEMINI_API_KEY` in the runner's environment, typed in by Jeff.
+
+### After the step 1 run (Jeff, 2026-11-09)
+- Gemini fixes spelling and shorthand only, never one term for another. A measure replacement is accepted only when its
+  span is the measure's own words, word for word: the word itself, its start ("agg") or a close misspelling
+  ("murdered"). "Felony assaults" is never aggravated assaults, and "slayings" is never murders. The prompt is
+  unchanged, so the cached readings stay valid; the validator refuses these replacements.
+- Gang wording is declined for every source (P38). Gang involvement is loosely defined and inconsistently reported to
+  the FBI, so a count would mislead. The engine no longer reads it as a circumstance filter, and the question is never
+  sent to Gemini. The next step offered is the same question without the gang words, where they qualify a crime and
+  the question answers; otherwise the usual example.

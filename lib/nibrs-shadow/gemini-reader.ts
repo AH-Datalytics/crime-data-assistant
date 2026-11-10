@@ -147,14 +147,38 @@ export function editDistance(a: string, b: string): number {
   return d[a.length][b.length];
 }
 
+/** A spelling correction of one word: letters only, four or more, the first two kept, within two edits and a quarter of its length. */
+function closeSpelling(from: string, to: string): boolean {
+  if (!/^[a-z]{4,}$/.test(from) || !/^[a-z]+$/.test(to) || from === to || from.slice(0, 2) !== to.slice(0, 2)) return false;
+  const d = editDistance(from, to);
+  return d <= 2 && d <= Math.max(1, Math.floor(from.length / 4));
+}
+/**
+ * The span is the measure's own words, word for word in order, each the word itself, its start (three letters or
+ * more: "agg" for aggravated) or a close misspelling of it or its singular ("murdered" for murders).
+ */
+export function shorthandOf(span: string, measureWords: string): boolean {
+  const a = span.replace(/[^a-z ]/g, " ").split(/\s+/).filter(Boolean), b = norm(measureWords).split(/\s+/).filter(Boolean);
+  if (a.length !== b.length) return false;
+  // A word for a person who commits the crime is another term (Codex review 19.1: "arsonist" is not arsons).
+  if (a.some((w, i) => w !== b[i] && /(?:er|ers|ist|ists|or|ors|ar|ars)$/.test(w))) return false;
+  return a.every((w, i) => w === b[i] || (w.length >= 3 && b[i].startsWith(w)) || closeSpelling(w, b[i]) || closeSpelling(w, b[i].replace(/s$/, "")));
+}
+
 /** The words a replacement puts in place of its span; null when its value isn't in the vocabulary or not grounded. */
 export function replacementText(r: Replacement): string | null {
   const span = norm(r.span ?? "");
   if (!span) return null;
   switch (r.kind) {
-    // A measure's span is the crime's own word or two ("slayings", "agg assaults"), never a phrase that could carry a
-    // condition ("slayings near schools": Codex review 02.1).
-    case "measure": return r.measure && MEASURE_WORDS[r.measure] && wordCount(span) <= 2 ? MEASURE_WORDS[r.measure][1] : null;
+    // A measure's span is the crime's own word or two, never a phrase that could carry a condition ("slayings near
+    // schools": Codex review 02.1), and only shorthand or a misspelling of the measure's own words, word for word ("agg
+    // assaults", "murdered"): never another term for it ("slayings"), nor a legal category for another ("felony
+    // assaults" is not aggravated assaults; Jeff 2026-11-09).
+    case "measure": {
+      if (!r.measure || !MEASURE_WORDS[r.measure] || wordCount(span) > 2) return null;
+      const words = MEASURE_WORDS[r.measure][1];
+      return shorthandOf(span, words) ? words : null;
+    }
     case "unit": return r.unit && wordCount(span) <= 2 && UNIT_WORDS[r.unit]?.test(r.span) ? r.unit : null;
     case "statistic": {
       if (!r.statistic || !STAT_WORDS[r.statistic]?.test(r.span) || wordCount(span) > 4) return null;

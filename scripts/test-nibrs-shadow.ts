@@ -266,7 +266,7 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
   const keyed = new Set<string>([...Object.values(ANSWER_STATEMENTS), ...Object.values(NOTE_TEXT)]);
   for (const q of ["robberies rate in Memphis in 2025 by month", "Murder rate in Memphis in June 2025", "Carjacking rate in Houston by month from 2023 to 2024",
     "Shoplifting rate in Wichita this year", "murder rate in Memphis this year", "Which Texas cities had the most aggravated assaults in 2024?", "Tarrant County, Texas murders 2024",
-    "murder rate in Ohio and Texas in 2023", "gangland assaults in Houston in 2024", "Houston murders by year 2015 to 2024", "murders in the United States in 2023",
+    "murder rate in Ohio and Texas in 2023", "assaults during an argument in Houston in 2024", "Houston murders by year 2015 to 2024", "murders in the United States in 2023",
     "robberies in Memphis by month in 2025", "rape rate in Memphis from 1990 to 1995", "Houston murder clearance rate in 2025", "violent crimes in the United States, rolling 12-month average"]) {
     const o = ask(q) as ShadowOutcome & { delivered?: { text: string[] } };
     if (!o.delivered) continue;
@@ -348,13 +348,13 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.deepEqual(MEASURE_CODES.assault_offenses, ["13A", "13B", "13C"]);
   assert.deepEqual(MEASURE_CODES.intimidation, ["13C"]);
   // Codex ties/P75 review 01: "assault offenses" is all three, never "offenses" read as the unit; a weapon is not a crime;
-  // the user's own words survive the rewrite ("gangland" keeps its circumstance).
+  // the user's own words survive the rewrite ("during an argument" keeps its circumstance).
   assert.ok(readQuestion("assault offenses in Houston in 2024", 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault_offenses"));
   for (const q of ["assault rifle in Houston in 2024", "assault weapons in Houston in 2024"])
     assert.ok(!readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault"), q);
-  assert.equal(JSON.stringify(ask("gangland assaults in Houston in 2024")), JSON.stringify(ask("gangland aggravated assaults in Houston in 2024")));
+  assert.equal(JSON.stringify(ask("assaults during an argument in Houston in 2024")), JSON.stringify(ask("aggravated assaults during an argument in Houston in 2024")));
   // Codex ties/P75 review 02: a misspelling the reader corrects keeps the user's other words too.
-  assert.equal(JSON.stringify(ask("gangland assualts in Houston in 2024")), JSON.stringify(ask("gangland assaults in Houston in 2024")));
+  assert.equal(JSON.stringify(ask("assualts during an argument in Houston in 2024")), JSON.stringify(ask("assaults during an argument in Houston in 2024")));
   // Scorecard 2026-11-06: an "assault" already qualified earlier in the question is left alone; the rewrite is made
   // once, never again on its own result (these ran without end); a decline is of the user's words.
   for (const q of ["What is the count of felony assaults and simply assaults in New York City between 2018 and 2025",
@@ -1180,15 +1180,36 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       assert.ok(!/lover|domestic|intimate|partner/i.test(JSON.stringify(d)), "no DV wording, no FBI name for 06");
       assert.ok(!("06" in CIRCUMSTANCE));
     }
-    const f = as(ask("Gang-related murders in Memphis in 2024"), "answer");
+    const f = as(ask("Murders during an argument in Memphis in 2024"), "answer");
     assert.ok(f.plan.filters.some((x) => x.kind === "exists" && x.entity === "victim_circumstance"));
-    assert.ok(f.delivered.text[0].includes("where the circumstance was gangland (organized crime involvement) or juvenile gang"));
+    assert.ok(/where the circumstance was argument/i.test(f.delivered.text[0]), JSON.stringify(f.delivered.text));
     assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
-    assert.match(as(ask("Gang-related robberies in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
-    assert.equal(as(ask("Gang-related murders in Tennessee in 2024"), "route").source, "shr");
+    assert.match(as(ask("Robberies during an argument in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
+    assert.equal(as(ask("Murders during an argument in Tennessee in 2024"), "route").source, "shr");
     // Codex circumstance review 01.1: an offered question keeps the circumstance, or none is offered.
-    const fb = ask("Gang-related aggravated assaults in Memphis by sex and race in 2024");
-    if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /gang-related/i);
+    const fb = ask("Aggravated assaults during an argument in Memphis by sex and race in 2024");
+    if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /argument/i);
+    // P38 (Jeff 2026-11-09): gang wording is declined for every source (NIBRS, Homicide Reports, Crime Index, Current
+    // Trends), in plain words; a next step never keeps the gang words, and drops only them where it can.
+    assert.equal(as(ask("Gang-related murders in Tennessee in 2024"), "decline").alternative?.question, "murders in Tennessee in 2024");
+    // Follow-ups in gang words are declined the same way, with no follow-up reading offered (Codex review 19.2, 19.3).
+    for (const fu of ["only gang-related", "what about gangs?", "gang murders in Los Angeles"]) {
+      const d = shadowFollowUp("murders in Memphis in 2024", fu, deps);
+      assert.equal(d.kind, "decline", fu);
+      if (d.kind === "decline") {
+        assert.ok(d.explanation.startsWith("Gang involvement is loosely defined"), fu);
+        assert.ok(!/gang/i.test(d.alternative?.question ?? "") && !/follow-up/i.test(d.alternative?.label ?? ""), `${fu}: ${JSON.stringify(d.alternative)}`);
+      }
+    }
+    for (const q of ["Gang-related murders in Memphis in 2024", "Gang-related murders in Tennessee in 2024", "Gang related murders in Chicago over time",
+      "gang murders in Chicago over time", "gangland killings in the United States since 2010", "gangs in Houston", "gang homicides in Chicago by year since 1990",
+      "How many gang members were arrested in Dallas in 2023", "gang violence in Los Angeles this year",
+      // Codex review 19: before a place is asked ("LA") or a forecast declined; joined forms.
+      "gang murders in LA in 2024", "Will gang murders in Houston rise next year?", "gangrelated murders in Memphis in 2024"]) {
+      const d = as(ask(q), "decline");
+      assert.ok(d.explanation.startsWith("Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."), q);
+      assert.ok(!/gang/i.test(d.alternative?.question ?? "") && !/gang/i.test(d.explanation.slice(130)), q);
+    }
   }
   // P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for a state or the nation, NIBRS not
   // named, is Homicide Reports'; named, NIBRS sums it.

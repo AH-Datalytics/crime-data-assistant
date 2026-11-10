@@ -32,7 +32,7 @@
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
 import type { Part, RequestLedger } from "../request-accounting";
-import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
+import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
@@ -206,6 +206,14 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     const gun = tidy(said.replace(/\bgun\s+violence\b/i, (m) => (/^G/.test(m) ? "Gun crime" : "gun crime")).replace(/[?.!]+$/, ""));
     if (gun !== tidy(said.replace(/[?.!]+$/, "")) && keeps(gun, said, year, ["undefinedTerm", "composite"]) && offerable(gun)) return { ...o, alternative: { label: `Ask instead: "${gun}"`, question: gun } };
   }
+  // P38 (Jeff 2026-11-09): gang wording is declined and the reason said. The next step is the same question without the
+  // gang words, only where they qualify a crime named ("gang-related murders" -> murders) and it answers; otherwise the
+  // usual example below (every decline a next step).
+  if (o.explanation === UNDEFINED_TERM.gang) {
+    const plain = tidy(said.replace(/\b(?:gang[-\s]?(?:related|involved|motivated)|gangland|gang)\s+(?=(?:murder|homicide|killing|aggravated|assault|robber))/gi, "").replace(/[?.!]+$/, ""));
+    const ok = !/\bgang/i.test(plain) && [...asks].some((x) => x.startsWith("measure:")) && keeps(plain, said, year, ["undefinedTerm"]) && offerable(plain);
+    if (ok) return { ...o, alternative: { label: `Ask instead: "${plain}"`, question: plain } };
+  }
   const level = said.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
   if (level !== said && keeps(level, said, year) && offerable(tidy(level))) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
   // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
@@ -351,6 +359,12 @@ function inOriginal(question: string, ledger: RequestLedger, part: Part, to: str
 /** An "assault" with a kind before it: the reader's bare-assault rule leaves these to their own measures. */
 const ASSAULT_QUALIFIED = /\b(?:aggravated|simple|sexual|sex|agg\.?|felony)[\s-]+$/i;
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+  // P38 (Jeff 2026-11-09): gang wording is declined first, before any place is asked or a forecast declined (Codex
+  // review 19.2), with its reason; the next step never keeps the gang words.
+  if (GANG.test(question)) {
+    const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+    return withNextStep(decline("not_recorded_in_nibrs", UNDEFINED_TERM.gang), ledger, deps, question);
+  }
   // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
   if (LA.test(question)) {
     const as = (name: string) => question.replace(LA, name);
@@ -491,6 +505,9 @@ function everyBreakdown(question: string, o: ShadowOutcome): ShadowOutcome {
 export type ProposalOutcome = { kind: "proposal"; question: string; proposed: string; how: string; rewrite: string; rewriteKind: "propose" };
 export type FollowUpOutcome = (ShadowOutcome & { rewrite: string | null; rewriteKind: Exclude<Rewrite["kind"], "propose">; presentation?: true }) | ProposalOutcome;
 export function shadowFollowUp(previous: string, followUp: string, deps: ShadowDeps, rewriter: FollowUpRewriter = deterministicRewriter): FollowUpOutcome {
+  // P38: a follow-up in gang words ("only gang-related", "what about gangs?") is declined as a first question would be,
+  // with no follow-up reading offered (Codex review 19.2, 19.3).
+  if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
   // A turn that stands on its own (its own crime and place, nothing pointing back) is a new question: answered as a
   // first question would be, the previous turn ignored (Jeff 2026-11-01). When the rules would have read it as a
   // follow-up meaning something else, that reading is offered as a button, run only when chosen.
@@ -548,6 +565,7 @@ const COURT_SENTENCE = "NIBRS covers crimes reported to police, arrests and clea
 const UNDEFINED_TERM: Record<string, string> = {
   shooters: "The data lists offenders and the weapons used, not who fired a gun, so \"shooters\" can't be counted.",
   "gun violence": "The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm.",
+  gang: "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading.",
 };
 /** P31's weapons, as the reader writes them. */
 const WEAPON_CODES: Record<string, string[]> = { firearm: ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"], knife: ["20"] };
@@ -1192,7 +1210,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const circ = flags(ledger0).circumstance;
   if (circ) {
     if (plan.measures.length !== 1 || plan.measures[0].unit !== "victim" || !/\.(?:murder|homicide|aggravated_assault)$/.test(plan.measures[0].id))
-      return decline("unsupported_capability", "Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those.");
+      return decline("unsupported_capability", "Circumstances (such as an argument or another felony) are recorded for murder and aggravated assault victims; ask for those.");
     plan.filters.push({ kind: "exists", scope: "victim", entity: "victim_circumstance", where: [{ kind: "attribute", dimension: "victim_circumstance.circumstance", op: "in", values: circ }] });
   }
   const prop = flags(ledger0).property;
