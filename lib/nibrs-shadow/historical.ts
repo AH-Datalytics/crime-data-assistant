@@ -466,3 +466,68 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
     read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
 }
+
+/**
+ * "The N largest cities" (Jeff 2026-11-10, ranking decisions 1 and 2): the N city agencies (Crime Index's geography type
+ * "city") with the most residents as published for the last year asked, in a state or the nation, and their figure for
+ * each year asked. Ties at the cut by population are ordered by name. A city with no figure for a year shows a blank.
+ */
+export type HistoricalSetQuestion = { measure: string; state: string; from: number; to: number; statistic: "count" | "rate"; n: number };
+export function answerHistoricalSet(sq: HistoricalSetQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
+  const m = HISTORICAL_MEASURE[sq.measure];
+  if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
+  if (sq.from < build.firstYear || sq.to > build.lastYear)
+    return { kind: "historical-decline", explanation: `Historical city figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${sq.from === sq.to ? sq.from : `${sq.from} through ${sq.to}`} is outside them.` };
+  const national = sq.state === "US";
+  const file = q(`${build.root}/agency_crime.parquet`);
+  const inState = national ? "" : `state = ${q(sq.state)} AND `;
+  const set = execute(`SELECT ori, name, state, population FROM read_parquet(${file}) WHERE ${inState}type = 'city' AND year = ${sq.to} AND population IS NOT NULL `
+    + `ORDER BY population DESC, name LIMIT ${Math.floor(sq.n)}`);
+  const where = national ? "the United States" : stateName(sq.state);
+  if (!set.length) return { kind: "historical-decline", explanation: `Crime Index has no city populations in ${where} for ${sq.to}.` };
+  const oris = set.map((r) => String(r[0]));
+  const got = execute(`SELECT ori, year, ${m.col}_total, ${m.col}_capita, population FROM read_parquet(${file}) WHERE ori IN (${oris.map(q).join(", ")}) `
+    + `AND year BETWEEN ${sq.from} AND ${sq.to} ORDER BY ori, year`);
+  const rate = sq.statistic === "rate";
+  const byKey = new Map(got.map((r) => [`${String(r[0])}:${Number(r[1])}`, r]));
+  const label = (r: unknown[]) => (national ? `${String(r[1])}, ${String(r[2])}` : String(r[1]));
+  const years = Array.from({ length: sq.to - sq.from + 1 }, (_, i) => sq.from + i);
+  let computed = 0;
+  const rows: (string | number | null)[][] = [];
+  for (const c of set) for (const y of years) {
+    const r = byKey.get(`${String(c[0])}:${y}`);
+    let v: number | null = null;
+    if (r) {
+      if (rate) { const x = historicalRate(num(r[3]), num(r[2]), num(r[4])); v = x.rate; if (x.computed) computed++; } else v = num(r[2]);
+    }
+    rows.push(years.length > 1 ? [label(c), String(y), v] : [label(c), v]);
+  }
+  const what = rate ? `${m.name} rate per 100,000` : m.words;
+  const span = sq.from === sq.to ? `${sq.from}` : `${sq.from} through ${sq.to}`;
+  const text = [`The ${set.length} largest cities in ${where} by population (${sq.to}): ${what}, ${span}.`,
+    `The cities are Crime Index's city agencies with the most residents as published for ${sq.to}, largest first; "city" is the geography, whatever the agency.`];
+  const blanks = rows.filter((r) => r[r.length - 1] === null).length;
+  if (blanks) text.push(`A blank means Crime Index has no ${m.name} ${rate ? "rate" : "figure"} for that city that year.`);
+  if (rate) {
+    text.push("Rates are per 100,000 of each agency's population as published by Crime Index.");
+    if (computed) text.push(`Where Crime Index publishes no ${m.name} rate, the rate is the count per 100,000 of the published population.`);
+  }
+  if (sq.from < 1960) text.push("Data before 1960 may reflect incomplete or limited reporting.");
+  text.push(SRS_SOURCE);
+  const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;
+  const period = { from: `${sq.from}-01`, to: `${sq.to}-12` };
+  const columns = [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "City" },
+    ...(years.length > 1 ? [{ binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }] : []),
+    { binding: { kind: "statistic" as const, as: "x" }, header }];
+  const agencies = set.map((c) => ({ ori: String(c[0]), label: label(c), name: String(c[1]), state: String(c[2]) }));
+  return {
+    kind: "historical", period,
+    question: { measure: sq.measure, agencies, from: sq.from, to: sq.to, byYear: years.length > 1, statistic: sq.statistic, comparison: null },
+    meaning: { source: "historical", places: [national ? { kind: "national", name: "United States" } : { kind: "state", name: where, state: sq.state }],
+      filters: [`the ${set.length} largest city agencies by population (${sq.to})`], measures: [{ name: m.name, unit: m.unit }], period,
+      groupings: ["agency", ...(years.length > 1 ? ["year"] : [])], statistic: rate ? "rate" : "count",
+      ...(rate ? { denominator: "the agency's residents as published by Crime Index, per 100,000" } : {}) },
+    delivered: { table: { columns, rows }, text },
+    read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
+  };
+}

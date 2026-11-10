@@ -3,7 +3,8 @@
  * Offline: a stub executor stands in for DuckDB over the build (scripts/build-crimeindex.py), and its SQL is checked.
  */
 import assert from "node:assert/strict";
-import { answerBeside, answerHistorical, answerHistoricalRanking, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
+import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
 import { shadowAnswer, shadowFollowUp, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { standsAlone } from "../lib/nibrs-shadow/follow-up";
@@ -469,5 +470,50 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   rsql.length = 0;
   shadowAnswer("Big cities with most murder victims in 2024", base as never);
   assert.ok(rsql.some((s) => /population >= 250000/.test(s)), "murder victims are the murders a ranking counts");
+}
+// "The N largest cities" (Jeff 2026-11-10, ranking decisions 1-2): the N city agencies by the population published for
+// the last year asked, largest first, and their figure each year; never a national or state total in their place.
+{
+  const ssql: string[] = [];
+  const SET: unknown[][] = [["NY0303000", "New York City", "NY", 8_300_000], ["CA0194200", "Los Angeles", "CA", 3_800_000]];
+  const VALS: unknown[][] = [["NY0303000", 2023, 391, 4.7, 8_300_000], ["NY0303000", 2024, 356, null, 8_300_000], ["CA0194200", 2024, 268, 7, 3_800_000]];
+  const sexec = (sql: string) => { ssql.push(sql); return /ORDER BY population DESC/.test(sql) ? SET : /ori IN/.test(sql) ? VALS : []; };
+  const one = answerHistoricalSet({ measure: "murder", state: "US", from: 2024, to: 2024, statistic: "count", n: 2 }, build, sexec);
+  assert.ok(one.kind === "historical", JSON.stringify(one));
+  if (one.kind === "historical") {
+    assert.deepEqual(one.delivered.table.rows, [["New York City, NY", 356], ["Los Angeles, CA", 268]]);
+    assert.equal(one.delivered.text[0], "The 2 largest cities in the United States by population (2024): murders, 2024.");
+    assert.match(ssql[0], /WHERE type = 'city' AND year = 2024 AND population IS NOT NULL ORDER BY population DESC, name LIMIT 2/);
+  }
+  // Several years: one row a city a year; a year with no figure is blank and said; the rate is computed where none is published.
+  const two = answerHistoricalSet({ measure: "murder", state: "US", from: 2023, to: 2024, statistic: "rate", n: 2 }, build, sexec);
+  assert.ok(two.kind === "historical");
+  if (two.kind === "historical") {
+    assert.deepEqual(two.delivered.table.rows, [["New York City, NY", "2023", 4.7], ["New York City, NY", "2024", 4.3], ["Los Angeles, CA", "2023", null], ["Los Angeles, CA", "2024", 7]]);
+    assert.ok(two.delivered.text.some((t) => /A blank means Crime Index has no murder rate/.test(t)));
+    assert.ok(two.delivered.text.some((t) => /the rate is the count per 100,000/.test(t)));
+  }
+  // A state's: the state in the query.
+  ssql.length = 0;
+  answerHistoricalSet({ measure: "robbery", state: "TX", from: 2023, to: 2023, statistic: "count", n: 5 }, build, sexec);
+  assert.match(ssql[0], /WHERE state = 'TX' AND type = 'city' AND year = 2023/);
+  assert.ok(answerHistoricalSet({ measure: "murder", state: "US", from: 2026, to: 2026, statistic: "count", n: 5 }, build, sexec).kind === "historical-decline");
+  // Through the shadow: the set is read, the place is the nation or the state named, and nothing else answers in its place.
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: sexec, historical: build };
+  for (const [q, n] of [["murder rate for the 10 largest cities in 2024", 10], ["Murder counts for the four largest U.S. cities, 2010-2024", 4], ["the 20 most populous cities ranked by their 2024 murder rate", 20]] as const) {
+    assert.equal(readQuestion(q, 2026, "2026-09").largestSet, n, q);
+  }
+  ssql.length = 0;
+  const viaShadow = shadowAnswer("murder rate for the 2 largest cities in 2024", base as never);
+  assert.ok(viaShadow.kind === "historical" && ssql.some((x) => /LIMIT 2/.test(x)), JSON.stringify(viaShadow).slice(0, 300));
+  const tx = shadowAnswer("murders for the 5 largest Texas cities in 2023", base as never);
+  assert.ok(ssql.some((x) => /state = 'TX' AND type = 'city' AND year = 2023/.test(x)), JSON.stringify(tx).slice(0, 300));
+  const ask = shadowAnswer("Compare violent crime rates in the 5 biggest Texas cities", base as never);
+  assert.ok(ask.kind === "clarify" && ask.about === "which period", JSON.stringify(ask).slice(0, 300));
+  for (const q of ["Show me the homicide rate for the 100 largest US cities in 2026", "drug arrests in the 10 largest cities in 2024"]) {
+    const o = shadowAnswer(q, base as never);
+    assert.equal(o.kind, "decline", `${q}: never a total in the set's place: ${JSON.stringify(o).slice(0, 200)}`);
+  }
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

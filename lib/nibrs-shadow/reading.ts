@@ -53,6 +53,8 @@ export type Span = { from: string; to: string };
 export type Comparison = { earlier: Span; later: Span; matched: boolean };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
   undefinedTerm: "shooters" | "gun violence" | "gang" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
+  /** "The 100 largest US cities", "the 5 biggest Texas cities", "the 20 most populous cities": a set of city agencies by population (Jeff 2026-11-10, ranking decision 1). */
+  largestSet: number | null;
   /** A Census region named ("the Northeast"): read as the nation, flagged; only Current Trends answers it (current.ts REGIONS). */
   region: "noe" | "mdw" | "sth" | "wst" | null;
   /** A circumstance named ("murders during an argument"): element 31's codes, a filter on the victims (null when none). */
@@ -253,6 +255,26 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest. Jeff 2026-11-10 (ranking
   // decision 2): "Major/big/large cities should assume 250k+", and "larger", "largest" with no number too; "the 10
   // largest cities" is a set by population, read elsewhere.
+  // Jeff 2026-11-10 (ranking decision 1): "the N largest cities" is the N city agencies with the most residents; the
+  // words are taken out and the place (a state named, or the nation) is read as usual.
+  let largestSet: number | null = null;
+  const NUM: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, fifteen: 15, twenty: 20, thirty: 30, fifty: 50, hundred: 100 };
+  text = text.replace(/\b(?:the\s+)?(?:top\s+)?(\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred)\s+(?:largest|biggest|most\s+populous)\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?:\s+(?:in\s+the\s+(?:country|nation|dataset|usa?|united\s+states)|in\s+the\s+u\.s\.?|by\s+(?:size|population)))?/i,
+    (m, n: string, qual: string | undefined) => {
+      const k = /^\d+$/.test(n) ? Number(n) : NUM[n.toLowerCase()];
+      if (!k || k < 2 || k > 300) return m;
+      largestSet = k;
+      readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+      // A state's name before "cities" stays to be read as the place ("the 5 biggest Texas cities").
+      return qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) ? ` in ${qual.trim()} ` : " ";
+    });
+  text = text.replace(/\b(?:the\s+)?(?:top\s+)?(\d{1,3})\s+cities\s+by\s+population\b/i, (m, n: string) => {
+    const k = Number(n);
+    if (k < 2 || k > 300) return m;
+    largestSet = k;
+    readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+    return " ";
+  });
   let largeCities = false;
   text = text.replace(/(?<!\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred|top)\s+)\b(?:the\s+)?(?:large|larger|largest|big|bigger|biggest|major)\s+(?=(?:u\.?s\.?\s+|[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
   // A Census region (Current Trends' groups; coordinator 2026-11-03): "the Northeast", "the midwest US", "southern
@@ -388,7 +410,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, largestSet, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
