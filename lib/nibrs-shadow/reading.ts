@@ -250,9 +250,11 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // "Memphis vs Nashville": places compared are places side by side, as with "and" (coordinator, 2026-11-01). A period
   // comparison ("2024 vs 2023") was read just above; a "vs" next to a year is left to it.
   text = text.replace(/(?<!\b(?:19|20)\d{2})\s+(?:vs\.?|versus|compared (?:to|with))\s+(?!(?:19|20)\d{2}\b)/gi, " and ");
-  // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest.
+  // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest. Jeff 2026-11-10 (ranking
+  // decision 2): "Major/big/large cities should assume 250k+", and "larger", "largest" with no number too; "the 10
+  // largest cities" is a set by population, read elsewhere.
   let largeCities = false;
-  text = text.replace(/\b(?:large|big)\s+(?=(?:[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
+  text = text.replace(/(?<!\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred|top)\s+)\b(?:the\s+)?(?:large|larger|largest|big|bigger|biggest|major)\s+(?=(?:u\.?s\.?\s+|[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
   // A Census region (Current Trends' groups; coordinator 2026-11-03): "the Northeast", "the midwest US", "southern
   // states". Read as the nation and flagged, so the shadow answers it from Current Trends or says it can't; never "the
   // South Side", "South Carolina" or "West Memphis".

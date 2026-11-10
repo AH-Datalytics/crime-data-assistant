@@ -971,6 +971,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return options[0].continuation;
   }
   if (!clause0("place").length) {
+    // "Big cities" with no place named are the nation's cities of 250,000 or more (Jeff 2026-11-10: "Major/big/large
+    // cities should assume 250k+"), never asked.
+    if (flags(ledger0).largeCities) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+    // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
+    if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
       { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
       { label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }] };
@@ -1271,18 +1276,24 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
   }
-  // A state's cities ranked for one year before NIBRS's years: from Crime Index (Jeff 2026-11-10, option A: "any year
-  // from 1930 to 2025, counts and rates"). A year NIBRS holds keeps the NIBRS ranking; a population floor other than
-  // "large" (P08), a count threshold, a clearance or a detail stays on its own path.
-  if (deps.historical && d.spec.type === "rank" && d.spec.entity === "city" && d.spec.scope.kind === "state" && isHistoricalMeasure(d.spec.measure)
-    && (d.spec.statistic === "count" || d.spec.statistic === "rate") && !d.spec.min && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
+  // Part I rankings from Crime Index for one year (Jeff 2026-11-10: option A, "any year from 1930 to 2025, counts and
+  // rates"; ranking decision 3, "Part I city rankings in NIBRS years come from Crime Index", which every reporting city
+  // is in; decision 5, states 1960-2025 without DC): a state's cities or the nation's, or the states. A population floor
+  // is "large" (P08: 250,000) or one named; a clearance or a detail stays on its own path (NIBRS ranks NIBRS-only detail).
+  const floorOf = (sp: Extract<typeof d.spec, { type: "rank" }>) => (sp.min ? (sp.min.op === ">" ? sp.min.amount + 1 : sp.min.amount) : flags(ledger0).largeCities ? 250000 : null);
+  if (deps.historical && d.spec.type === "rank" && (d.spec.entity === "city" || d.spec.entity === "state" || d.spec.entity === "agency")
+    && (d.spec.scope.kind === "state" ? d.spec.entity !== "state" : d.spec.scope.kind === "national") && isHistoricalMeasure(d.spec.measure)
+    && (d.spec.statistic === "count" || d.spec.statistic === "rate") && !(d.spec.entity === "state" && (d.spec.min || flags(ledger0).largeCities))
+    && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
     && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite
     && !flags(ledger0).arrestsThrough && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
-    const sp = d.spec, scope = sp.scope as Extract<NPlace, { kind: "state" }>;
+    const sp = d.spec;
     const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
-    if (yrs && yrs[0] === yrs[1] && yrs[0] < Number(release.firstMonth.slice(0, 4))) {
-      const r = answerHistoricalRanking({ measure: sp.measure, state: scope.code.toUpperCase(), year: yrs[0], statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top",
-        limit: sp.rank?.n ?? 20, minPopulation: flags(ledger0).largeCities ? 250000 : null }, deps.historical, deps.execute);
+    // A year past Crime Index's last (2026) is Current Trends' (decision 4), on its own path.
+    if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear) {
+      const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
+        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation: floorOf(sp),
+        entity: sp.entity }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }

@@ -426,8 +426,48 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const one = shadowAnswer(q, base as never);
     assert.ok(one.kind === "historical" && one.delivered.table.rows.length === 1 && one.delivered.table.rows[0][0] === "Houston", `${q}: ${JSON.stringify(one).slice(0, 300)}`);
   }
-  let nibrsYear: ShadowOutcome | null = null;
-  try { nibrsYear = shadowAnswer("Which Texas cities had the most murders in 2024?", base as never); } catch { /* the stub has no NIBRS rows */ }
-  assert.ok(!(nibrsYear && nibrsYear.kind === "historical"), "a NIBRS year keeps the NIBRS ranking");
+  // Jeff 2026-11-10, ranking decision 3: Part I city rankings in NIBRS years are Crime Index's too.
+  rsql.length = 0;
+  shadowAnswer("Which Texas cities had the most murders in 2024?", base as never);
+  assert.ok(rsql.some((s) => /agency_crime\.parquet'\) WHERE state = 'TX' AND type = 'city' AND year = 2024/.test(s)), rsql.join("\n"));
+}
+// The nation's cities, every agency, and the states (Jeff 2026-11-10, ranking decisions 1-5).
+{
+  const rsql: string[] = [];
+  const US: unknown[][] = [["ILCPD0000", "Chicago", 2_700_000, 461, 17.1, "IL"], ["NY0303000", "New York City", 8_300_000, 356, 4.3, "NY"],
+    ["TXHPD0000", "Houston", 2_300_000, 334, 14.5, "TX"], ["OHCOP0000", "Columbus", 900_000, 120, 13.3, "OH"], ["GACPD0000", "Columbus", 200_000, 40, 20, "GA"]];
+  const ST: unknown[][] = [["LA", "Louisiana", 4_600_000, 760, 16.5, "LA"], ["MS", "Mississippi", 2_900_000, 420, 14.4, "MS"], ["AL", "Alabama", 5_000_000, 600, 12, "AL"]];
+  const rexec = (sql: string) => { rsql.push(sql); return /state_crime/.test(sql) ? ST : /agency_crime/.test(sql) ? US : []; };
+  // The nation's cities: named with their state, so two Columbuses stay apart; no state in the query.
+  const us = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "count", direction: "top", limit: 3, minPopulation: 250000 }, build, rexec);
+  assert.ok(us.kind === "historical", JSON.stringify(us));
+  if (us.kind === "historical") {
+    assert.deepEqual(us.delivered.table.rows, [["Chicago, IL", 461], ["New York City, NY", 356], ["Houston, TX", 334]]);
+    assert.equal(us.delivered.text[0], "United States city agencies with a population of 250,000 or more: the 3 with the most murders, 2024.");
+    assert.match(rsql[0], /agency_crime\.parquet'\) WHERE type = 'city' AND year = 2024 AND population >= 250000/);
+  }
+  // Every agency, city and county: no type in the query.
+  rsql.length = 0;
+  answerHistoricalRanking({ measure: "murder", state: "CA", year: 2020, statistic: "count", direction: "top", limit: 10, minPopulation: null, entity: "agency" }, build, rexec);
+  assert.match(rsql[0], /WHERE state = 'CA' AND year = 2020 ORDER BY ori/);
+  // The states: 1960 on, without DC.
+  rsql.length = 0;
+  const st = answerHistoricalRanking({ measure: "murder", state: "US", year: 2022, statistic: "rate", direction: "top", limit: 1, minPopulation: null, entity: "state" }, build, rexec);
+  assert.ok(st.kind === "historical" && JSON.stringify(st.delivered.table.rows) === '[["Louisiana",16.5]]', JSON.stringify(st));
+  assert.match(rsql[0], /state_crime\.parquet'\) WHERE year = 2022 AND state <> 'DC'/);
+  if (st.kind === "historical") assert.ok(st.delivered.text.some((t) => /the District of Columbia is not a state/.test(t)));
+  const early = answerHistoricalRanking({ measure: "murder", state: "US", year: 1958, statistic: "rate", direction: "top", limit: 1, minPopulation: null, entity: "state" }, build, rexec);
+  assert.ok(early.kind === "historical-decline" && /cover 1960 through/.test(early.explanation));
+  // Through the shadow: states ranked need no place; "big cities" with none are the nation's of 250,000 or more.
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
+  const s1 = shadowAnswer("Which state had the highest murder rate in 2022", base as never);
+  assert.ok(s1.kind === "historical" && s1.delivered.table.rows[0][0] === "Louisiana", JSON.stringify(s1).slice(0, 300));
+  rsql.length = 0;
+  const big = shadowAnswer("Which big cities had the most murders in 2024?", base as never);
+  assert.ok(big.kind === "historical" && rsql.some((s) => /type = 'city' AND year = 2024 AND population >= 250000/.test(s)), JSON.stringify(big).slice(0, 300));
+  rsql.length = 0;
+  shadowAnswer("Big cities with most murder victims in 2024", base as never);
+  assert.ok(rsql.some((s) => /population >= 250000/.test(s)), "murder victims are the murders a ranking counts");
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");
