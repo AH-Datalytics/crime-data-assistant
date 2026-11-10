@@ -408,7 +408,9 @@ for r in rows:
         continue
     if r["n"] == 1 or not r.get("previous"):
         k = (tab, qhash(q))
-        firsts.setdefault(k, {"q": q, "times": 0})["times"] += 1
+        f = firsts.setdefault(k, {"q": q, "times": 0, "sessionless": 0})
+        f["times"] += 1
+        f["sessionless"] += r.get("session_id") is None
     else:
         k = (tab, qhash(r["previous"]), qhash(q))
         follows.setdefault(k, {"q": q, "prev": r["previous"].strip(), "times": 0})["times"] += 1
@@ -482,6 +484,56 @@ if os.path.exists(REVIEW):
             lab.update(status="reviewed", reviewed_by=v["by"])
         else:
             lab.update(status="draft")
+
+# No guessed links (Jeff 2026-11-10, replacing the 5-minute link of #144): rows logged before sessions were recorded
+# (March to August 2026: no session id) are each scored on their own, as first questions. One that can't be read
+# without an earlier turn is left out with the reason "no earlier question", never scored: the owner's 51 "clear
+# follow-ups" (bad-declines review 2026-11-09, by id), and any other that points back at a turn before ("the same",
+# "instead of", "add ... to the chart", "that's murder, not shootings") or opens as a follow-up ("how about ...",
+# "now add ...") without naming its own crime and place. Follow-ups stay tested through rows with real session ids.
+# It comes after the review: a verdict given to the question read on its own doesn't apply to a reply.
+REFERS_BACK = R(r"\b(?:the same|same (?:chart|prompt|thing|data|stats|for|as)|instead of|rather than|as previous|previous (?:chart|prompt|question|answer|one)|take me back|layer(?:ed)? on|overlay|(?:to|on|in|from) (?:the|this|that|your) (?:chart|graph|graphic|list|comparison|table|map)|narrow (?:it|the data|this|that)|i said|that'?s (?:the|murder|not|wrong)|this (?:chart|graph|graphic|looks|is wrong)|these (?:numbers|results|figures|cities|places|agencies))\b")
+# Back-references that make a reply of a question even when it names its crime and place ("the clearance rate on
+# carjackings in these cities", "layer on top the national homicide rate", "same chart but ... Charlotte").
+STRONG_BACK = R(r"\b(?:(?:these|those)\b(?![^:]*:)|previous (?:chart|prompt|question|answer|one)|same (?:chart|prompt|figure)|i said|that'?s (?:the|murder|not|wrong)|take me back|layer(?:ed)? on|instead of)\b")
+# "Can you show/break/graph ..." also opens first questions; as a follow-up opening it needs a pronoun or nothing named.
+CAN_YOU = R(r"^can you (?:make|change|show|put|do|add|remove|switch|break|split|graph|chart|plot)\b")
+POINTS = R(r"\b(?:it|this|that|these|those|them|both)\b")
+NO_EARLIER = "scripts/fixtures/answer-eval/qlog-no-earlier-question.json"
+owner_left_out = set(json.load(open(NO_EARLIER, encoding="utf-8"))["owner_ids"])
+def names_own(q):
+    # Its crime and its place, said in the question (stands_alone without its follow-up-opening test).
+    return bool(CRIME.search(q)) and not clearance_only(q) and (bool(places(q)) or has_state(q) or bool(NATIONAL.search(q)) or bool(REGION.search(q)) or bool(PLACE_SET.search(q)))
+def needs_earlier_turn(q):
+    q = q.strip()
+    # A long question's "these" or "those" is usually its own ("... Texas, Florida and New York ... those states").
+    m = STRONG_BACK.search(q)
+    if m and (m.group(0).lower() not in ("these", "those") or len(q.split()) <= 15):
+        return "refers-back"
+    if names_own(q) or complete(q):
+        return None
+    if REFERS_BACK.search(q):
+        return "refers-back"
+    if FOLLOW_LEAD.search(q) and (not CAN_YOU.search(q) or POINTS.search(q) or not (CRIME.search(q) or places(q) or has_state(q))):
+        return "follow-up-opening"
+    return None
+left_out = collections.Counter()
+for r in repo:
+    if r["kind"] != "first":
+        continue
+    f = firsts[(r["tab"], r["hash"])]
+    # The owner's verdict on the question read on its own stands (a styling request declines however it is read); only
+    # the owner's 51 leave a row out over it.
+    owners = (r["label"].get("reviewed_by") or "").startswith("jeff")
+    why = "owner-2026-11-09" if r["id"] in owner_left_out else (needs_earlier_turn(r["question"]) if f["sessionless"] and not owners else None)
+    if not why:
+        continue
+    left_out[why] += 1
+    r["expected"] = {"outcome": "exclude", "source": None, "reason": f"no-earlier-question:{why}"}
+    r["label"].update(status="reviewed" if why == "owner-2026-11-09" else "draft", rule="X1",
+                      reviewed_by="jeff-2026-11-10" if why == "owner-2026-11-09" else None,
+                      notes="no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)")
+print("left out, no earlier question", sorted(left_out.items()), sum(left_out.values()))
 
 # Ids are unique (a follow-up id joins both hashes; a clash is a bug, never silently merged).
 ids = collections.Counter(r["id"] for r in repo)
