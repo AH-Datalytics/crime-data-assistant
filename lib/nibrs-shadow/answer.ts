@@ -1050,8 +1050,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // "So far in 2025": the year's months to date, from Current Trends (decision 4), never Crime Index's full year (01.3).
       const toDate = saysToDate(ledger0);
       const statistic = one.statistic === "rate" ? "rate" as const : "count" as const;
-      // The set ranked: one year only, ordered by the figure (blanks last), said.
+      // The set ranked: one year only, ordered by the figure (blanks last), said; "top N cities" with no "by ..." read as
+      // the N largest is said too (Jeff 2026-11-10: "Top 100 cities in that case I guess could be the 100 biggest").
       const order = <T extends { delivered: { table: { rows: unknown[][] }; text: string[] } }>(r: T): T => {
+        const top = flags(ledger0).topAsLargest;
+        if (top) r.delivered.text.splice(1, 0, `"${top}" is read as the ${setN} largest cities by population; ask "by" a crime to rank by it instead.`);
         if (!one.ordered || !yrs || yrs[0] !== yrs[1]) return r;
         const v = (row: unknown[]) => row[row.length - 1] as number | null;
         r.delivered.table.rows.sort((a, b) => (v(a) === null ? 1 : v(b) === null ? -1 : one.ordered === "top" ? v(b)! - v(a)! : v(a)! - v(b)!) || String(a[0]).localeCompare(String(b[0])));
@@ -1369,6 +1372,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && !flags(ledger0).arrestsThrough && !flags(ledger0).region && !flags(ledger0).combined && !flags(ledger0).column
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec;
+    // Jeff 2026-11-10 ("Agreed when no pop request is given"): a rate ranking with no population named ranks agencies of
+    // 100,000 or more, said; a population or size named overrides it (replaces D05 for rate rankings). States: none.
+    const defaultFloor = sp.statistic === "rate" && sp.entity !== "state" && floorOf(sp) === null ? 100000 : null;
+    const minPopulation = floorOf(sp) ?? defaultFloor;
+    const saidFloor = <T extends { delivered: { text: string[] } }>(r: T): T => {
+      if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
+      return r;
+    };
     const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
     // "So far in 2025" is the year's months to date, from Current Trends (decision 4), never Crime Index's full year
     // (Codex rankings review 01.3).
@@ -1376,9 +1387,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // A year past Crime Index's last (2026) is Current Trends' (decision 4), on its own path.
     if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear && !toDate) {
       const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
-        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation: floorOf(sp),
+        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation,
         entity: sp.entity }, deps.historical, deps.execute);
-      if (r.kind === "historical") return r;
+      if (r.kind === "historical") return saidFloor(r);
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
     // Past Crime Index's last year (2026): Current Trends' sample agencies, January through its latest month (Jeff
@@ -1388,9 +1399,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (toDate && !ctSpan) return decline("outside_release_coverage", "Year-to-date rankings come from Current Trends, which covers 2025 and 2026.");
     if (ctSpan && cur && sp.entity !== "state") {
       const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: ctSpan[0], to: ctSpan[1],
-        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation: floorOf(sp),
+        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation,
         entity: sp.entity === "agency" ? "agency" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
-      if (r.kind === "current") return r;
+      if (r.kind === "current") return saidFloor(r);
       return decline("unsupported_capability", r.explanation);
     }
   }

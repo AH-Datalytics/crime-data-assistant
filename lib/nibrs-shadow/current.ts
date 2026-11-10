@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
 import type { Meaning } from "../answer-eval/case";
-import { HISTORICAL_MEASURE } from "./historical";
+import { CITY_AS, cityNameSql, citySql, HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
 import { fmt } from "./deliver";
 import { aboutPeople } from "./presentation";
@@ -339,8 +339,8 @@ export function currentEntries(b: CurrentBuild, historicalRoot: string, rq: Curr
   const rows = execute(`WITH a AS (SELECT ori, any_value(state) AS state, sum(${col}_total) AS v, count(${col}_total) AS known, `
     + `max(CASE WHEN year * 100 + month = ${t} THEN population END) AS pop FROM read_parquet(${q(`${b.root}/current_crime.parquet`)}) `
     + `WHERE sample AND year * 100 + month BETWEEN ${f} AND ${t}${national ? "" : ` AND state = ${q(rq.state)}`} GROUP BY ori), `
-    + `n AS (SELECT ori, name, type, row_number() OVER (PARTITION BY ori ORDER BY year DESC) AS k FROM read_parquet(${q(`${historicalRoot}/agency_crime.parquet`)})) `
-    + `SELECT a.ori, n.name, a.state, a.pop, a.v, a.known FROM a JOIN n ON n.ori = a.ori AND n.k = 1${rq.entity === "city" ? " WHERE n.type = 'city'" : ""} ORDER BY a.ori`);
+    + `n AS (SELECT ori, ${cityNameSql()} AS name, type, row_number() OVER (PARTITION BY ori ORDER BY year DESC) AS k FROM read_parquet(${q(`${historicalRoot}/agency_crime.parquet`)})) `
+    + `SELECT a.ori, n.name, a.state, a.pop, a.v, a.known FROM a JOIN n ON n.ori = a.ori AND n.k = 1 WHERE ${rq.entity === "city" ? citySql("n") : `n.ori NOT IN (${CITY_AS.drop.map(q).join(", ")})`} ORDER BY a.ori`);
   const entries = rows.map((r) => {
     const pop = num(r[3]), total = num(r[4]), known = Number(r[5]) === ms.length;
     const value = !known ? null : rq.statistic === "rate" ? currentRate(total, pop, ms.length) : total;

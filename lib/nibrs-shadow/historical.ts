@@ -107,6 +107,24 @@ const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const yearsWords = (a: number, b: number) => (a === b ? String(a) : `${a} through ${b}`);
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+/**
+ * Cities whose figures sit under another agency (Jeff 2026-11-10), until nibrs-model's crosswalk carries them: the
+ * Jacksonville Sheriff's Office (consolidated with the city, typed "county") is the city of Jacksonville; the empty
+ * duplicate city rows (Jacksonville's own, St. Louis's MO0956800, Louisville's KY0560200) are dropped, the reporting
+ * departments (MOSPD0000, KY0568000) being those cities. Used by every city ranking and "largest cities" set.
+ */
+export const CITY_AS = { asCity: { FL0160000: "Jacksonville" } as Record<string, string>, drop: ["FL0160200", "MO0956800", "KY0560200"] };
+/** SQL: a row is a city (Crime Index's type, or one of CITY_AS's), and not a dropped duplicate. */
+export function citySql(col = ""): string {
+  const c = col ? `${col}.` : "";
+  return `(${c}type = 'city' OR ${c}ori IN (${Object.keys(CITY_AS.asCity).map((o) => `'${o}'`).join(", ")})) AND ${c}ori NOT IN (${CITY_AS.drop.map((o) => `'${o}'`).join(", ")})`;
+}
+/** SQL: an agency's name, with CITY_AS's city names. */
+export function cityNameSql(col = ""): string {
+  const c = col ? `${col}.` : "";
+  return `CASE ${Object.entries(CITY_AS.asCity).map(([o, n]) => `WHEN ${c}ori = '${o}' THEN '${n.replace(/'/g, "''")}'`).join(" ")} ELSE ${c}name END`;
+}
+
 const ucFirst = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
 /** The answer's lines: the title, the agencies named, then the rest. */
 const lines = (hq: HistoricalQuestion, title: string, ...rest: string[]) => [title, ...(hq.agencyLine ? [hq.agencyLine] : []), ...(hq.agencyNote ? [hq.agencyNote] : []), ...rest];
@@ -414,8 +432,8 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const got = states
     ? execute(`SELECT state, name, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
       + `WHERE year = ${rq.year} AND state <> 'DC' ORDER BY state`)
-    : execute(`SELECT ori, name, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
-      + `WHERE ${national ? "" : `state = ${q(rq.state)} AND `}${cities ? "type = 'city' AND " : ""}year = ${rq.year}${floorSql} ORDER BY ori`);
+    : execute(`SELECT ori, ${cities ? cityNameSql() : "name"}, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
+      + `WHERE ${national ? "" : `state = ${q(rq.state)} AND `}${cities ? `${citySql()} AND ` : `ori NOT IN (${CITY_AS.drop.map(q).join(", ")}) AND `}year = ${rq.year}${floorSql} ORDER BY ori`);
   const entries = got.map((r) => {
     const total = num(r[3]), capita = num(r[4]), population = num(r[2]);
     const v = rate ? historicalRate(capita, total, population) : { rate: total, computed: false };
@@ -482,7 +500,7 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
   const file = q(`${build.root}/agency_crime.parquet`);
   const inState = national ? "" : `state = ${q(sq.state)} AND `;
   // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
-  const base = `SELECT ori, name, state, population FROM read_parquet(${file}) WHERE ${inState}type = 'city' AND year = ${sq.to} AND population IS NOT NULL`;
+  const base = `SELECT ori, ${cityNameSql()} AS name, state, population FROM read_parquet(${file}) WHERE ${inState}${citySql()} AND year = ${sq.to} AND population IS NOT NULL`;
   const set = execute(`WITH c AS (${base}), cut AS (SELECT population FROM c ORDER BY population DESC LIMIT 1 OFFSET ${Math.floor(sq.n) - 1}) `
     + `SELECT * FROM c WHERE population >= coalesce((SELECT population FROM cut), 0) ORDER BY population DESC, name`);
   const where = national ? "the United States" : stateName(sq.state);
@@ -507,7 +525,8 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
   const what = rate ? `${m.name} rate per 100,000` : m.words;
   const span = sq.from === sq.to ? `${sq.from}` : `${sq.from} through ${sq.to}`;
   const text = [`The ${set.length} largest cities in ${where} by population (${sq.to}): ${what}, ${span}.`,
-    ...(set.length > sq.n ? [`${set.length - sq.n + 1} cities tie at the ${ordinal(sq.n)} largest population, so ${set.length} are shown.`] : []),
+    // Every city with the Nth city's population, wherever the tie starts (Codex rankings review 02.1).
+    ...(set.length > sq.n ? [`${set.filter((r) => num(r[3]) === num(set[sq.n - 1][3])).length} cities tie at the ${ordinal(sq.n)} largest population, so ${set.length} are shown.`] : []),
     `The cities are Crime Index's city agencies with the most residents as published for ${sq.to}, largest first; "city" is the geography, whatever the agency.`];
   const blanks = rows.filter((r) => r[r.length - 1] === null).length;
   if (blanks) text.push(`A blank means Crime Index has no ${m.name} ${rate ? "rate" : "figure"} for that city that year.`);
