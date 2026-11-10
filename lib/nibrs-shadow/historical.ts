@@ -481,8 +481,10 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
   const national = sq.state === "US";
   const file = q(`${build.root}/agency_crime.parquet`);
   const inState = national ? "" : `state = ${q(sq.state)} AND `;
-  const set = execute(`SELECT ori, name, state, population FROM read_parquet(${file}) WHERE ${inState}type = 'city' AND year = ${sq.to} AND population IS NOT NULL `
-    + `ORDER BY population DESC, name LIMIT ${Math.floor(sq.n)}`);
+  // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
+  const base = `SELECT ori, name, state, population FROM read_parquet(${file}) WHERE ${inState}type = 'city' AND year = ${sq.to} AND population IS NOT NULL`;
+  const set = execute(`WITH c AS (${base}), cut AS (SELECT population FROM c ORDER BY population DESC LIMIT 1 OFFSET ${Math.floor(sq.n) - 1}) `
+    + `SELECT * FROM c WHERE population >= coalesce((SELECT population FROM cut), 0) ORDER BY population DESC, name`);
   const where = national ? "the United States" : stateName(sq.state);
   if (!set.length) return { kind: "historical-decline", explanation: `Crime Index has no city populations in ${where} for ${sq.to}.` };
   const oris = set.map((r) => String(r[0]));
@@ -505,6 +507,7 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
   const what = rate ? `${m.name} rate per 100,000` : m.words;
   const span = sq.from === sq.to ? `${sq.from}` : `${sq.from} through ${sq.to}`;
   const text = [`The ${set.length} largest cities in ${where} by population (${sq.to}): ${what}, ${span}.`,
+    ...(set.length > sq.n ? [`${set.length - sq.n + 1} cities tie at the ${ordinal(sq.n)} largest population, so ${set.length} are shown.`] : []),
     `The cities are Crime Index's city agencies with the most residents as published for ${sq.to}, largest first; "city" is the geography, whatever the agency.`];
   const blanks = rows.filter((r) => r[r.length - 1] === null).length;
   if (blanks) text.push(`A blank means Crime Index has no ${m.name} ${rate ? "rate" : "figure"} for that city that year.`);
@@ -530,4 +533,8 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
     delivered: { table: { columns, rows }, text },
     read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
+}
+
+function ordinal(n: number): string {
+  return `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
 }

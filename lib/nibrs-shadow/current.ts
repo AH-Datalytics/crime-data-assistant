@@ -370,7 +370,11 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     lead = `Current Trends' sample ${kindWord}${floor} in ${where}: the ${shown.length} with the ${most} ${rate ? `${SINGULAR[col]} rates per 100,000` : WORDS[col]}, ${span}.`;
     if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
   } else {
-    const byPop = entries.filter((e) => e.population !== null).sort((x, y) => (y.population! - x.population!) || x.name.localeCompare(y.name)).slice(0, rq.pick.n);
+    // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
+    const sorted = entries.filter((e) => e.population !== null).sort((x, y) => (y.population! - x.population!) || x.name.localeCompare(y.name));
+    const n = rq.pick.n;
+    const cutPop = sorted[Math.min(n, sorted.length) - 1]?.population ?? 0;
+    const byPop = sorted.filter((e, i) => i < n || e.population === cutPop);
     shown = byPop.filter((e) => e.known); leftOut = byPop.filter((e) => !e.known);
     shown = byPop;
     lead = `The ${byPop.length} largest cities in Current Trends' sample in ${where} by population (${monthWords(rq.to)}): ${rate ? `${SINGULAR[col]} rate per 100,000` : WORDS[col]}, ${span}.`;

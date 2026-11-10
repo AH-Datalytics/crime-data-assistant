@@ -16241,14 +16241,10 @@
 "QL-shr-cf22c622eb": {
 "status": "reviewed",
 "by": "jeff-2026-11-10",
-"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2); a Part I city ranking is Crime Index's (ranking decision 3; Codex rankings review 01.5)",
 "expected": {
 "outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"shr"
-]
+"source": "historical"
 }
 },
 "QL-shr-cf33be2943": {

@@ -485,7 +485,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   if (one.kind === "historical") {
     assert.deepEqual(one.delivered.table.rows, [["New York City, NY", 356], ["Los Angeles, CA", 268]]);
     assert.equal(one.delivered.text[0], "The 2 largest cities in the United States by population (2024): murders, 2024.");
-    assert.match(ssql[0], /WHERE type = 'city' AND year = 2024 AND population IS NOT NULL ORDER BY population DESC, name LIMIT 2/);
+    assert.match(ssql[0], /WHERE type = 'city' AND year = 2024 AND population IS NOT NULL\), cut AS \(SELECT population FROM c ORDER BY population DESC LIMIT 1 OFFSET 1\)/);
   }
   // Several years: one row a city a year; a year with no figure is blank and said; the rate is computed where none is published.
   const two = answerHistoricalSet({ measure: "murder", state: "US", from: 2023, to: 2024, statistic: "rate", n: 2 }, build, sexec);
@@ -508,7 +508,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   }
   ssql.length = 0;
   const viaShadow = shadowAnswer("murder rate for the 2 largest cities in 2024", base as never);
-  assert.ok(viaShadow.kind === "historical" && ssql.some((x) => /LIMIT 2/.test(x)), JSON.stringify(viaShadow).slice(0, 300));
+  assert.ok(viaShadow.kind === "historical" && ssql.some((x) => /OFFSET 1\)/.test(x)), JSON.stringify(viaShadow).slice(0, 300));
   const tx = shadowAnswer("murders for the 5 largest Texas cities in 2023", base as never);
   assert.ok(ssql.some((x) => /state = 'TX' AND type = 'city' AND year = 2023/.test(x)), JSON.stringify(tx).slice(0, 300));
   const ask = shadowAnswer("Compare violent crime rates in the 5 biggest Texas cities", base as never);
@@ -545,5 +545,25 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const st = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "count", pick: { kind: "largest", n: 2 },
     minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
   assert.ok(st.kind === "current" && JSON.stringify(st.delivered.table.rows) === '[["Houston",null],["San Antonio",58]]', JSON.stringify(st));
+}
+// Codex rankings review 01: the set and the ranking never drop what was asked.
+{
+  const xsql: string[] = [];
+  const TIE: unknown[][] = [["A1", "Alpha", "TX", 500_000], ["B1", "Beta", "TX", 400_000], ["C1", "Gamma", "TX", 400_000]];
+  const xexec = (sql: string) => { xsql.push(sql); return /ORDER BY population DESC, name$/.test(sql) ? TIE : []; };
+  // 01.4: cities tied at the Nth population are all in the set, said.
+  const tied = answerHistoricalSet({ measure: "murder", state: "TX", from: 2024, to: 2024, statistic: "count", n: 2 }, build, xexec);
+  assert.ok(tied.kind === "historical" && tied.delivered.table.rows.length === 3 && tied.delivered.text.some((t) => /2 cities tie at the 2nd largest population, so 3 are shown/.test(t)), JSON.stringify(tied));
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: xexec, historical: build };
+  // 01.1: a unit Crime Index doesn't count, and 01.2: a region or "combined", keep their own paths (never a set answer).
+  for (const q of ["robbery victims in the 5 largest Texas cities in 2024", "murders for the 5 largest Texas cities in 2024 combined", "murders for the 5 largest cities in the Northeast in 2024"]) {
+    const o = shadowAnswer(q, base as never);
+    assert.notEqual(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  // 01.3: "so far in 2025" is never Crime Index's full year.
+  xsql.length = 0;
+  const ytd = shadowAnswer("Which Texas cities had the most murders so far in 2025?", base as never);
+  assert.ok(ytd.kind !== "historical" && !xsql.some((x) => /agency_crime\.parquet'\) WHERE state = 'TX' AND type = 'city' AND year = 2025/.test(x)), JSON.stringify(ytd).slice(0, 200));
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

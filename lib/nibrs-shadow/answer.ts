@@ -444,6 +444,20 @@ function fillerRewrite(question: string, ledger: RequestLedger): { rest: string;
   if (!ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure"))) return null;
   return { rest: cut(ledger.question, unread), left: unread.filter((p) => meaningful(p.text)).map((p) => p.text.trim()) };
 }
+/** "So far this year", "year to date", "YTD": the reader keeps only the year, so the words are looked for here. */
+const YEAR_TO_DATE = /\bso\s+far\b|\byear[-\s]to[-\s]date\b|\bytd\b/i;
+/** The reader rewrites "so far in 2025" to "in 2025" and keeps the words as a reading: both are looked at. */
+const saysToDate = (ledger0: RequestLedger) => YEAR_TO_DATE.test(ledger0.question) || (flags(ledger0).readings ?? []).some((r) => YEAR_TO_DATE.test(r.from));
+/**
+ * A year's months in Current Trends for a ranking past Crime Index (decision 4): the current year's January through the
+ * latest month; with "so far", any year Current Trends holds, January through its latest month that year. Null otherwise.
+ */
+function currentYearSpan(year: number, cur: CurrentBuild, toDate: boolean): [string, string] | null {
+  const last = Number(cur.lastMonth.slice(0, 4));
+  if (year === last) return [`${year}-01`, cur.lastMonth];
+  if (toDate && `${year}-01` >= cur.firstMonth && year < last) return [`${year}-01`, `${year}-12`];
+  return null;
+}
 /** For tests: the ask-instead rule's checks and rewrites, which read no data. */
 export const askInsteadChecks = {
   fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
@@ -1014,9 +1028,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // A series of the set, or the set ranked ("the 20 most populous cities ranked by their murder rate"): one crime, a
     // count or a rate, the nation or a state; a ranking orders the set by the figure, highest first.
     const one = sp0.type === "series" ? (sp0.measures.length === 1 && !sp0.filters.length && !sp0.window && sp0.places.length === 1
-        ? { measure: sp0.measures[0], statistic: sp0.statistic, place: sp0.places[0], period: sp0.period, ordered: rankDir as null | "top" | "bottom" } : null)
-      : sp0.type === "rank" && !sp0.min && sp0.entity !== "state" ? { measure: sp0.measure, statistic: sp0.statistic, place: sp0.scope, period: sp0.period, ordered: sp0.rank?.dir ?? "top" } : null;
+        ? { measure: sp0.measures[0], unit: sp0.unit, statistic: sp0.statistic, place: sp0.places[0], period: sp0.period, ordered: rankDir as null | "top" | "bottom" } : null)
+      : sp0.type === "rank" && !sp0.min && sp0.entity !== "state" ? { measure: sp0.measure, unit: null, statistic: sp0.statistic, place: sp0.scope, period: sp0.period, ordered: sp0.rank?.dir ?? "top" } : null;
+    // The unit asked must be the one Crime Index counts ("robbery victims" isn't; Codex rankings review 01.1); a region,
+    // "combined" or a supporting column is never dropped (01.2).
     const fits = !!deps.historical && !!one && isHistoricalMeasure(one.measure) && (one.statistic === "count" || one.statistic === "rate")
+      && historicalUnitFits(one.measure, one.unit) && !flags(ledger0).region && !flags(ledger0).combined && !flags(ledger0).column
       && (one.place.kind === "national" || one.place.kind === "state")
       && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
       && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).arrestsThrough && !flags(ledger0).largeCities
@@ -1030,6 +1047,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       }
       const yrs = yearSpan({ period: one.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
       const state = one.place.kind === "state" ? one.place.code.toUpperCase() : "US";
+      // "So far in 2025": the year's months to date, from Current Trends (decision 4), never Crime Index's full year (01.3).
+      const toDate = saysToDate(ledger0);
       const statistic = one.statistic === "rate" ? "rate" as const : "count" as const;
       // The set ranked: one year only, ordered by the figure (blanks last), said.
       const order = <T extends { delivered: { table: { rows: unknown[][] }; text: string[] } }>(r: T): T => {
@@ -1041,15 +1060,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         return r;
       };
       if (one.ordered && yrs && yrs[0] !== yrs[1]) return decline("unsupported_capability", "This isn't available yet: the largest cities ranked over several years. Ask for one year.");
-      if (yrs && yrs[1] <= hb.lastYear) {
+      if (yrs && yrs[1] <= hb.lastYear && !toDate) {
         const r = answerHistoricalSet({ measure: one.measure, state, from: yrs[0], to: yrs[1], statistic, n: setN }, hb, deps.execute);
         if (r.kind === "historical") return order(r);
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
       }
       // Past Crime Index's last year (2026): Current Trends' sample cities, January through its latest month (decision 4).
       const cur = deps.current;
-      if (yrs && yrs[0] === yrs[1] && cur && yrs[0] === Number(cur.lastMonth.slice(0, 4))) {
-        const r = answerCurrentRanking({ measure: one.measure, state, from: `${yrs[0]}-01`, to: cur.lastMonth, statistic, pick: { kind: "largest", n: setN },
+      const ctSpan = yrs && yrs[0] === yrs[1] && cur ? currentYearSpan(yrs[0], cur, toDate) : null;
+      if (ctSpan && cur) {
+        const r = answerCurrentRanking({ measure: one.measure, state, from: ctSpan[0], to: ctSpan[1], statistic, pick: { kind: "largest", n: setN },
           minPopulation: null, entity: "city" }, cur, hb.root, deps.execute, rankAgencies);
         if (r.kind === "current") return order(r);
         return decline("unsupported_capability", r.explanation);
@@ -1346,11 +1366,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && (d.spec.statistic === "count" || d.spec.statistic === "rate") && !(d.spec.entity === "state" && (d.spec.min || flags(ledger0).largeCities))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
     && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite
-    && !flags(ledger0).arrestsThrough && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
+    && !flags(ledger0).arrestsThrough && !flags(ledger0).region && !flags(ledger0).combined && !flags(ledger0).column
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec;
     const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+    // "So far in 2025" is the year's months to date, from Current Trends (decision 4), never Crime Index's full year
+    // (Codex rankings review 01.3).
+    const toDate = saysToDate(ledger0);
     // A year past Crime Index's last (2026) is Current Trends' (decision 4), on its own path.
-    if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear) {
+    if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear && !toDate) {
       const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
         statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation: floorOf(sp),
         entity: sp.entity }, deps.historical, deps.execute);
@@ -1360,8 +1384,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Past Crime Index's last year (2026): Current Trends' sample agencies, January through its latest month (Jeff
     // 2026-11-10, ranking decision 4), said; states aren't ranked from its sample.
     const cur = deps.current;
-    if (yrs && yrs[0] === yrs[1] && cur && yrs[0] === Number(cur.lastMonth.slice(0, 4)) && sp.entity !== "state") {
-      const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: `${yrs[0]}-01`, to: cur.lastMonth,
+    const ctSpan = yrs && yrs[0] === yrs[1] && cur ? currentYearSpan(yrs[0], cur, toDate) : null;
+    if (toDate && !ctSpan) return decline("outside_release_coverage", "Year-to-date rankings come from Current Trends, which covers 2025 and 2026.");
+    if (ctSpan && cur && sp.entity !== "state") {
+      const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: ctSpan[0], to: ctSpan[1],
         statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation: floorOf(sp),
         entity: sp.entity === "agency" ? "agency" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
       if (r.kind === "current") return r;
