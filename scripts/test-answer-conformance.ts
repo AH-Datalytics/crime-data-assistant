@@ -169,7 +169,9 @@ const FIXTURES: Record<string, string[]> = {
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.
-    "Memphis murders since 1930", "Memphis homicides by year", "Memphis murders over the past 3 years"],
+    "Memphis murders since 1930", "Memphis homicides by year", "Memphis murders over the past 3 years",
+    // Jeff 2026-11-11: a state over time "and how it compares to other states" is the state beside the United States.
+    "violent crime per capita in Tennessee over time and how it compares to other states"],
   // Current Trends (design note 2026-11-03): an agency by month (a blank month), the nation by month, a state's month.
   rtci: ["Memphis murders by month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
   // Homicide Reports (Jeff S1, S2, 2026-11-11): a state's murder victims by weapon; a city's firearm murders reaching
