@@ -520,7 +520,9 @@ function otherStates(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const measure = l.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value !== "unspecified");
   if (states.length !== 1 || !measure || l.parts.some((p) => p.state === "not-interpreted")) return null;
   const st = states[0];
-  const beside = answerAsked(`${base.slice(0, st.span[1])} and the United States${base.slice(st.span[1])}`, { ...deps, rewritten: true });
+  // The reader's spans are in its own text (Codex comparison review 01.2), so the place is added there.
+  const lq = l.question;
+  const beside = answerAsked(`${lq.slice(0, st.span[1])} and the United States${lq.slice(st.span[1])}`, { ...deps, rewritten: true });
   if (beside.kind !== "historical" && beside.kind !== "srs") return null;
   const year = Number(deps.release.lastMonth.slice(0, 4)) - 1;
   const rate = /\b(?:per\s+capita|rates?)\b/i.test(question);
