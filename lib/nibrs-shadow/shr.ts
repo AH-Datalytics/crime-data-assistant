@@ -199,6 +199,8 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   const first = `${SHR_FIRST_YEAR}-01`;
   const to = period.to > build.latestMonth ? build.latestMonth : period.to;
   if (to < first) return { why: "before 1985" };
+  // A period after the release's latest month is declined by the usual path, never answered as no filing.
+  if (period.from > build.latestMonth) return { why: "after the latest month" };
   const from = period.from < first ? first : period.from;
   const grain = time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };

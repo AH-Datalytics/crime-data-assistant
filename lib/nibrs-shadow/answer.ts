@@ -498,6 +498,11 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 }
 
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
+  // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
+  // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
+  // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
+  if (deps.shr && /\b(?:murders?|homicides?|killings?)\b/i.test(question) && /\bvictim[-\s]offender\s+relationships?\b/i.test(question))
+    question = question.replace(/\bvictim[-\s]offender\s+(relationships?)\b/gi, "$1");
   // P38 (Jeff 2026-11-09): gang wording is declined first, before any place is asked or a forecast declined (Codex
   // review 19.2), with its reason; the next step never keeps the gang words.
   if (GANG.test(question)) {
@@ -1060,15 +1065,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
-  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked) {
-    // With a release, "by victim-offender relationship" is the relationship breakdown: asked again without the words
-    // the reader reads as two counting units (Codex SHR-A confirmation 01.7); otherwise routed, as before.
-    if (deps.shr && !deps.rewritten) {
-      const again = shadowAnswer(ledger0.question.replace(/\bvictim[-\s]offender\s+(relationships?)\b/gi, "$1"), { ...deps, rewritten: true });
-      if (again.kind === "shr") return again;
-    }
+  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked && !deps.shr)
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
-  }
   // Item 11 (bad-decline audit 2026-11-06): population on its own, for agencies, states or the nation.
   const list = agencyListQuestion(ledger, ledger0, deps);
   // A list is for one year: the year is asked with buttons that run (Codex population review 02.3: "Every year

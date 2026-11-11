@@ -43,6 +43,7 @@ const early = shrQuestionOf(plan({ filters: [firearm] }), { from: "1976-01", to:
 assert.equal(early.from, "1985-01");
 assert.equal(early.askedFrom, "1976");
 assert.deepEqual(shrQuestionOf(plan({}), { from: "1970-01", to: "1984-12" }, build), { why: "before 1985" });
+assert.deepEqual(shrQuestionOf(plan({}), { from: "2027-01", to: "2027-12" }, build), { why: "after the latest month" });
 // Murders are counted by victim even when the plan counts offenses.
 assert.equal((shrQuestionOf(plan({ measures: [{ id: "offenses.murder", as: "murder" }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion).unit, "victims");
 // Relationships: SHR names the side.
