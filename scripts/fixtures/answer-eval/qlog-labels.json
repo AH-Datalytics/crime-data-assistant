@@ -22414,19 +22414,15 @@
    "question": "sworn officers per capita in big cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "period"
-    ],
-    "about": "period"
+    "outcome": "decline",
+    "source": null
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-10",
-    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
+    "drafted_by": "jeff-2026-11-11",
+    "reviewed_by": "jeff-2026-11-11",
+    "notes": "Big cities with no place are the whole country's (Jeff 2026-11-11); police staffing is answered for agencies only, so it is declined, and a set never turns that decline into an ask (coordinator 2026-11-11)"
    }
   },
   {

@@ -4905,13 +4905,10 @@
 },
 "QL-hist-07bf6d2063": {
 "status": "reviewed",
-"by": "jeff-2026-11-10",
-"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"by": "jeff-2026-11-11",
+"why": "Big cities with no place are the whole country's (Jeff 2026-11-11); police staffing is answered for agencies only, so it is declined, and a set never turns that decline into an ask (coordinator 2026-11-11)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"period"
-]
+"outcome": "decline"
 }
 },
 "QL-hist-07d4308fda": {

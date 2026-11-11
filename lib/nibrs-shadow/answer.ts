@@ -998,6 +998,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         return nation;
       }
       if (nation.kind === "clarify") return { ...nation, question: ledger0.question, note: "No place was named, so these are cities across the United States." };
+      // A set never turns a decline the question gets anyway into a place ask (coordinator 2026-11-11: "Chart domestic
+      // violence calls over time in the four largest cities"): read without the set, a decline stands.
+      const plain = fromLedger(Object.assign(filled(ledger, "place", "national", "the United States"), { largestSet: null, largeCities: false, topAsLargest: null }), deps, pins);
+      // Not the reader's own "cities" left over from the set's words, which only the set explains.
+      if (plain.kind === "decline" && !(plain.reason === "reader" && /["“]\s*(?:the\s+)?(?:\w+\s+)?cit(?:y|ies)\b/i.test(plain.explanation))) return plain;
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
