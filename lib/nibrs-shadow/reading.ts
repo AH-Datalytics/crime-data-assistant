@@ -103,6 +103,9 @@ const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California
 const PHRASES: [RegExp, string][] = [
   // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
+  // "Homicide totals in top 15 cities", "tell me about murder rates in the largest cities" (job S5).
+  [/\b(murders?|homicides?|robberies|robbery|burglar(?:y|ies)|rapes?|assaults?|thefts?|crimes?)\s+totals\b/gi, "$1 count"],
+  [/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i, ""],
   // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
   [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b(?!\s+(?:the\s+)?(?:years?|months?|dates?|names?|city|cities|states?|population|size|alphabet\w*))/gi, "ranked by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],

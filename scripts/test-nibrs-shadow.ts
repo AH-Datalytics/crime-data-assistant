@@ -358,7 +358,8 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     // reader's unread words alone don't stop the place being asked as before.
     assert.equal(ask("Chart domestic violence calls over time in the four largest cities in the country").kind, "decline");
     assert.equal((ask("homicide totals in top 15 cities") as { about?: string }).about, "which place");
-    assert.equal((ask("Other large cities and violent crime") as { about?: string }).about, "which place");
+    // No place: the whole country's ask (the period), said (Jeff 2026-11-11).
+    assert.equal((ask("Other large cities and violent crime") as { about?: string }).about, "which period");
   }
   // 3. A crime named once per place is one crime.
   const sp = (q: string) => (matchNibrsType(readQuestion(q, 2026, "2026-09").ledger, { allowExplanation: false } as never) as { spec?: { measures: string[] } }).spec;

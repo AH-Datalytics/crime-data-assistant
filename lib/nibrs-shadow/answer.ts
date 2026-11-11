@@ -991,21 +991,37 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // The whole country's answer, or what it still asks (the period: job S2, the labels Jeff's decision moved); a
     // decline keeps the place asked, as before.
     if (flags(ledger0).largeCities || flags(ledger0).largestSet) {
-      const nation = fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+      // "Big cities" that rank nothing ("Other large cities and violent crime"): the leftover "cities" and "other" aren't
+      // a question of their own, so the whole country's is read without them (job S4).
+      const ranks = ledger.parts.some((p) => p.clause === 0 && p.concept === "rank");
+      const leftover = (p: Part) => p.clause === 0 && !ranks && ((p.concept === "entity" && p.value === "city") || /^(?:other|the\s+other)$/i.test(p.text.trim()));
+      const nation = fromLedger(filled(withParts(ledger, ledger.parts.filter((p) => !leftover(p))), "place", "national", "the United States"), deps, pins);
       if (["historical", "current", "srs", "answer"].includes(nation.kind)) {
         const said = nation as unknown as { delivered?: { text: string[] } };
         said.delivered?.text.splice(1, 0, "No place was named, so these are cities across the United States.");
         return nation;
       }
       if (nation.kind === "clarify") return { ...nation, question: ledger0.question, note: "No place was named, so these are cities across the United States." };
+      // Another source's question (Homicide Reports details) is routed there, never asked about a place.
+      if (nation.kind === "route") return nation;
       // A set never turns a capability decline into a place ask (coordinator 2026-11-11: "Chart domestic violence calls
       // over time in the four largest cities"): a topic the data doesn't record, or crimes named of which none is one the
       // sets answer (Part I), keep the decline. Words the reader left unread don't: before this PR the place was asked
       // first (job S4: "homicide totals in top 15 cities" declined instead of asking).
       const measures0 = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "measure" && p.value !== "unspecified");
-      const capability = ledger0.parts.some((p) => p.clause === 0 && p.state === "not-recorded")
+      // Police staffing is answered for agencies, never sets of cities (QL-hist-07bf6d2063).
+      const capability = ledger0.parts.some((p) => p.clause === 0 && p.state === "not-recorded") || STAFFING.test(ledger0.question)
         || (measures0.length > 0 && !measures0.some((p) => isHistoricalMeasure(String(p.value))));
       if (nation.kind === "decline" && capability) return nation;
+      // Big cities ranked by a Homicide Reports detail (a weapon, a share, a victim's age, race or sex, a relationship or
+      // circumstance): Homicide Reports' question, routed until they answer here (coordinator 2026-11-11).
+      const murderish = measures0.length > 0 && measures0.every((p) => ["murder", "homicide"].includes(String(p.value)));
+      const detail = ledger0.parts.some((p) => p.clause === 0 && ((p.concept === "filter" && /^weapon:/.test(String(p.value))) || p.concept === "share"))
+        || /\b(?:teen\w*|juvenile|age|race|sex|gender|relationship|circumstance)\b/i.test(ledger0.question)
+        // The reader sets people ("teenage victims") and circumstances aside from its words.
+        || !!flags(ledger0).people || !!flags(ledger0).shrDetail || !!flags(ledger0).circumstance;
+      if (nation.kind === "decline" && murderish && detail)
+        return { kind: "route", source: "shr", explanation: "Cities ranked by a homicide detail (a weapon, a share, the victims' age, race or sex) come from Homicide Reports (FBI SHR). Homicide Reports aren't available here yet; the Homicide Reports tab has them." };
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
