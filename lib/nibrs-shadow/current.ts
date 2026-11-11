@@ -389,7 +389,8 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
   const header = rate ? `${ucFirst(SINGULAR[col])} rate per 100,000` : ucFirst(WORDS[col]);
   const period = { from: rq.from, to: rq.to };
   return {
-    kind: "current", question: { measure: rq.measure, place: { kind: "group", states: rq.state === "US" ? null : [rq.state], label: where }, from: rq.from, to: rq.to, form: "total", statistic: rq.statistic },
+    kind: "current", question: { measure: rq.measure, place: { kind: "group", states: rq.state === "US" ? null : [rq.state], label: where }, from: rq.from, to: rq.to, form: "total", statistic: rq.statistic,
+      agencies: shown.map((e) => ({ ori: e.ori, label: e.name, state: e.state })) } as CurrentQuestion,
     period,
     meaning: { source: "rtci", places: [rq.state === "US" ? { kind: "national", name: "United States" } : { kind: "state", name: where, state: rq.state }],
       filters: [`Current Trends' sample ${kindWord}`, ...(floor ? [`population ${rq.minPopulation!.toLocaleString("en-US")} or more`] : [])],

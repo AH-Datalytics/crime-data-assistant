@@ -268,7 +268,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/\b(?:the\s+)?(?:top\s+)?(\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred)\s+(?:largest|biggest|most\s+populous)\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?:\s+(?:in\s+the\s+(?:country|nation|dataset|usa?|united\s+states)|in\s+the\s+u\.s\.?|by\s+(?:size|population)))?/i,
     (m, n: string, qual: string | undefined) => {
       const k = /^\d+$/.test(n) ? Number(n) : NUM[n.toLowerCase()];
-      if (!k || k < 2 || k > 300) return m;
+      if (!k || k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !/^[A-Z]/.test(qual))) return m;
       largestSet = k;
       readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
       // A state's name before "cities" stays to be read as the place ("the 5 biggest Texas cities").
@@ -290,10 +290,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // review 01: "the homicide change ... in the top 100 cities" is still the 100 largest).
   if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*|slowest|fastest|steepest)\b/i.test(text)
     && !/\bby\s+(?!(?:population|size|year|month|years|months)\b)/i.test(text)) {
-    text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|for|with|ranked|in\s+terms|sorted|ordered|over|under|above|below|that|where|having|whose))/i,
+    text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|for|with|ranked|in\s+terms|sorted|ordered|over|under|above|below|that|where|having|whose|of\s+[\d,]+))/i,
       (m, n: string, qual: string | undefined) => {
         const k = Number(n);
-        if (k < 2 || k > 300) return m;
+        // Only a state's name (capitalized as written), "US" or "American" between "top N" and "cities": "top 5 murder
+        // cities" picks by murder (job S4, QL-nibrs-f8b0bd256e).
+        if (k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !/^[A-Z]/.test(qual))) return m;
         largestSet = k;
         topAsLargest = m.trim();
         readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });

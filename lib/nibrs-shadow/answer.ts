@@ -998,14 +998,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         return nation;
       }
       if (nation.kind === "clarify") return { ...nation, question: ledger0.question, note: "No place was named, so these are cities across the United States." };
-      // A set never turns a decline the question gets anyway into a place ask (coordinator 2026-11-11: "Chart domestic
-      // violence calls over time in the four largest cities"): read without the set, a decline stands.
-      const plain = fromLedger(Object.assign(filled(ledger, "place", "national", "the United States"), { largestSet: null, largeCities: false, topAsLargest: null }), deps, pins);
-      // Not the reader's own "cities" left over from the set's words, which only the set explains.
-      // Every word the reader left unread is "cities" or "city", and nothing else (Codex rankings review 09.2).
-      const unreadWords = plain.kind === "decline" ? [...plain.explanation.replace(/\b(?:Try|For example|for example)\b[\s\S]*$/, "").matchAll(/["“]([^"”]+)["”]/g)].map((m) => m[1].trim()) : [];
-      const onlyCities = plain.kind === "decline" && plain.reason === "reader" && unreadWords.length > 0 && unreadWords.every((w) => /^(?:the\s+)?cit(?:y|ies)$/i.test(w));
-      if (plain.kind === "decline" && !onlyCities) return plain;
+      // A set never turns a capability decline into a place ask (coordinator 2026-11-11: "Chart domestic violence calls
+      // over time in the four largest cities"): a topic the data doesn't record, or crimes named of which none is one the
+      // sets answer (Part I), keep the decline. Words the reader left unread don't: before this PR the place was asked
+      // first (job S4: "homicide totals in top 15 cities" declined instead of asking).
+      const measures0 = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "measure" && p.value !== "unspecified");
+      const capability = ledger0.parts.some((p) => p.clause === 0 && p.state === "not-recorded")
+        || (measures0.length > 0 && !measures0.some((p) => isHistoricalMeasure(String(p.value))));
+      if (nation.kind === "decline" && capability) return nation;
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
