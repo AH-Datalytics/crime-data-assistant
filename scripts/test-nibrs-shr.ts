@@ -116,6 +116,8 @@ const many = answerShr({ ...chi, from: "2017-01", to: "2021-12" }, build, chiStu
 assert.ok(many.kind === "shr" && many.delivered.text.includes("Chicago's Homicide Reports cover less than 90% of the murders reported to the FBI in 2017 (79%) and 2021 (46%)."), JSON.stringify(many));
 const one = answerShr({ ...chi, from: "2021-01", to: "2021-12", grain: "total" }, build, chiStub, hist);
 assert.ok(one.kind === "shr" && one.delivered.text.includes("Chicago's Homicide Reports for 2021 cover 370 of the 804 murders reported to the FBI."), JSON.stringify(one));
+const half = answerShr({ ...chi, from: "2021-01", to: "2021-06", grain: "total" }, build, chiStub, hist);
+assert.ok(half.kind === "shr" && half.delivered.text.includes("Chicago's Homicide Reports for 2021 cover 370 of the 804 murders reported to the FBI."), "part of a short year (03.1)");
 const fine = answerShr({ ...chi, from: "2018-01", to: "2019-12" }, build, chiStub, hist);
 assert.ok(fine.kind === "shr" && !fine.delivered.text.some((t) => /Homicide Reports (?:for d{4} )?cover/.test(t)) && !fine.delivered.text.some((t) => /Crime Index/.test(t)));
 // A total over a gap is blank.

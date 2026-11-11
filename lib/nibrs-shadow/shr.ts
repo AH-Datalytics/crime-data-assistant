@@ -380,9 +380,8 @@ function partialNote(sq: ShrQuestion, build: ShrBuild, execute: (sql: string) =>
   const fromY = Number(sq.from.slice(0, 4)), toY = Number(sq.to.slice(0, 4));
   const years = Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).filter((y) => filed.has(y) && y <= hist.lastYear);
   if (!years.length) return null;
-  // Whole years only: a part of a year isn't compared with the year's count.
-  const whole = years.filter((y) => sq.from <= `${y}-01` && sq.to >= `${y}-12`);
-  if (!whole.length) return null;
+  // Each year shown is compared as a whole year, even when the answer shows part of it (Codex SHR-A review 03.1).
+  const whole = years;
   const all: ShrQuestion = { ...sq, measure: "murder", unit: "victims", filters: [], breakdown: null, share: false, grain: "year", from: `${whole[0]}-01`, to: `${whole[whole.length - 1]}-12` };
   const shr = new Map(execute(shrSql(all, build)).map((r) => [Number(r[0]), Number(r[1])]));
   const ci = new Map(execute(`SELECT year, murder_total FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE ori = ${q(sq.place.ori)} AND year IN (${whole.join(", ")}) AND murder_total IS NOT NULL`)
