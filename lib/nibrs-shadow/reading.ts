@@ -103,6 +103,22 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
+  // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
+  // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
+  // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.
+  [/^\s*(?:(?:can\s+you\s+)?show\s+me\s+)?how\s+(?:has|have)\s+(.+?)\s+(?:changed|trended|fared|moved|evolved)(?:\s+over\s+time)?\b/gi, "$1 by year"],
+  [/^\s*(?:(?:can\s+you\s+)?show\s+me\s+)?how\s+(.+?)\s+(?:has|have)\s+(?:changed|trended|fared|moved|evolved)(?:\s+over\s+time)?\b/gi, "$1 by year"],
+  [/^\s*(?:by\s+year,\s*)?how\s+(?:does|do|did)\s+(.+?)\s+(?:compare|stack\s+up)\s+(?:to|with|against)\s+/gi, "$1 and "],
+  [/\bin\s+the\s+state\s+of\s+/gi, "in "],
+  [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|state\s+total|as\s+a\s+whole)\b/gi, "$1"],
+  [/\band\s+(?:to\s+)?(?:the\s+)?(?:national(?:\s+(?:rate|average|total|level|figures?|trend))?|nation(?:\s+as\s+a\s+whole)?|U\.?S\.?\s+(?:rate|average|total)|nationally)\b/gi, "and the United States"],
+  // Time words read, never dropped: "by months", "year-to-date", "over 5 years", "going back to 1980".
+  [/\b(by|per)\s+months\b/gi, "$1 month"],
+  [/\byear[-\s]to[-\s]date\b/gi, "year to date"],
+  [/\bover\s+(?:the\s+)?(\d+|two|three|four|five|six|seven|eight|nine|ten)\s+years\b/gi, "over the past $1 years"],
+  [/\bgoing\s+back\s+to\s+((?:19|20)\d{2})\b/gi, "since $1"],
+  // Fatal shootings are firearm murders (Homicide Reports' firearm homicides, Jeff S1; NIBRS's murders with a firearm).
+  [/\b(?:fatal\s+shootings?|shooting\s+deaths?|people\s+(?:shot\s+and\s+)?killed\s+(?:by|with)\s+(?:guns?|firearms?))\b/gi, "firearm murders"],
   // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
   // "Homicide totals in top 15 cities", "tell me about murder rates in the largest cities" (job S5).
@@ -234,9 +250,16 @@ function readComparison(text: string, currentYear: number): { comparison: Compar
     return { comparison: { earlier: { from: `${earlier}-${two(a)}`, to: `${earlier}-${two(b)}` }, later: { from: `${later}-${two(a)}`, to: `${later}-${two(b)}` }, matched: true },
       from: m[0], text: text.replace(m[0], `from ${earlier} to ${later}`) };
   }
-  // "X in 2024 compared with 2023"
-  if ((m = new RegExp(String.raw`\bin\s+(\d{4})\s+${VS}\s+(?:in\s+)?(\d{4})\b`, "i").exec(text)) && Number(m[2]) < Number(m[1]))
-    return { comparison: { earlier: yearSpan(Number(m[2])), later: yearSpan(Number(m[1])), matched: false }, from: m[0], text: text.replace(m[0], `from ${m[2]} to ${m[1]}`) };
+  // "X in 2024 compared with 2023", and the earlier year first: "in 2022 vs 2025", "in 1960 vs 2020" (comparison
+  // wording, Jeff 2026-11-11).
+  if ((m = new RegExp(String.raw`\bin\s+(\d{4})\s+${VS}\s+(?:in\s+)?(\d{4})\b`, "i").exec(text)) && Number(m[2]) !== Number(m[1])) {
+    const [e, l] = Number(m[2]) < Number(m[1]) ? [m[2], m[1]] : [m[1], m[2]];
+    return { comparison: { earlier: yearSpan(Number(e)), later: yearSpan(Number(l)), matched: false }, from: m[0], text: text.replace(m[0], `from ${e} to ${l}`) };
+  }
+  // "How has violent crime changed in the last year in Washington D.C.?": the last complete year against the one before.
+  if ((m = /^\s*(?:show\s+me\s+)?how\s+(?:has|have)\s+(.+?)\s+changed\s+(?:in|over)\s+the\s+(?:last|past)\s+year\b\s*(.*?)\s*\??\s*$/i.exec(text)))
+    return { comparison: { earlier: yearSpan(currentYear - 2), later: yearSpan(currentYear - 1), matched: false }, from: m[0],
+      text: lead(`${m[1]}${m[2] ? ` ${m[2]}` : ""} from ${currentYear - 2} to ${currentYear - 1}`) };
   // "is X up this year compared with last year" (P54/D06: the same months, through the latest reported month)
   if ((m = new RegExp(String.raw`^\s*(?:is|are|has|have)\s+(.+?)\s+(?:been\s+)?(?:up|down|higher|lower|rising|falling)\s+this\s+year\s+(?:${VS}|than)\s+last\s+year\s*\??\s*$`, "i").exec(text)))
     return { comparison: { earlier: yearSpan(currentYear - 1), later: yearSpan(currentYear), matched: true }, from: m[0], text: lead(`${m[1]} from ${currentYear - 1} to ${currentYear}`) };

@@ -141,4 +141,23 @@ const l = read("Shoplfting in Tulsa so far this year").ledger;
 assert.deepEqual(l.readings.map((r) => r.kind), ["period", "spelling"]);
 assert.equal(l.question, "Shoplifting in Tulsa in 2026");
 
+// Comparison and change wording (Jeff 2026-11-11: "a lack of understanding of the word 'how'"): read in full, never a
+// word of place, crime or time dropped.
+const unreadOf = (q: string) => readQuestion(q, 2026, "2026-09").ledger.parts.filter((p) => p.state === "not-interpreted").map((p) => p.text.trim());
+assert.equal(readQuestion("Show me how rape offenses have changed in Texas over the past 10 years", 2026).text, "rape offenses by year in Texas over the past 10 years");
+assert.equal(readQuestion("How have robberies in Nashville changed since 2020?", 2026).text, "robberies in Nashville by year since 2020?");
+assert.equal(readQuestion("How does Chicago murder count compare to Illinois statewide?", 2026).text, "Chicago murder count and Illinois?");
+assert.equal(readQuestion("Compare Houston's murder rate to the Texas state average", 2026).text, "Compare Houston's murder rate and Texas");
+assert.match(readQuestion("Baltimore violent crime rate compared to the national rate since 2015", 2026).text, /and the United States since 2015/);
+const lastYear = readQuestion("How has violent crime changed in the last year in Washington D.C.?", 2026);
+assert.deepEqual(lastYear.comparison, { earlier: { from: "2024-01", to: "2024-12" }, later: { from: "2025-01", to: "2025-12" }, matched: false });
+const early = readQuestion("Homicide rates in Kansas City MO in 2022 vs 2025", 2026);
+assert.deepEqual([early.comparison?.earlier.from, early.comparison?.later.to], ["2022-01", "2025-12"], "the earlier year first");
+for (const q of ["homicide in philadelphia by months since 2015", "Houston carjackings per months since 2019", "homicides in Memphis, TN 2026 year-to-date",
+  "Show me the homicide rate in Macon Georgia over 5 years", "Show me the number of murders in Nashville going back to 1935", "fatal shootings in Chicago by year since 2020"])
+  assert.deepEqual(unreadOf(q), [], q);
+assert.match(readQuestion("fatal shootings in Houston since 2015", 2026).text, /^firearm murders in Houston/);
+// Jeff's example: only the pure filler "me the" is left, so the rest is answered as asked.
+assert.deepEqual(unreadOf("plot me the number of assaults in Glassboro NJ from 2010 to 2024"), ["me the"]);
+
 console.log("nibrs shadow reading: general wording forms read; boundaries keep their meaning");
