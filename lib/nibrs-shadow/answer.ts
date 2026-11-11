@@ -57,6 +57,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { answerShr, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild } from "./shr";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -68,6 +69,8 @@ export type ShadowDeps = {
   historical?: HistoricalBuild;
   /** The Crime Index build's Current Trends tables (current.ts): with them, Part I questions by month are Current Trends' answers. */
   current?: CurrentBuild;
+  /** The SHR release (shr.ts): with it, murder details are Homicide Reports' answers (Jeff S1, 2026-11-11); without it, routed. */
+  shr?: ShrBuild;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
   /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
@@ -179,7 +182,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     if (![...asks].every((x) => got.has(x))) return false;
     if (kept(q) !== kept(asked)) return false;
     const r = shadowAnswer(q, { ...deps, checkingOffer: true });
-    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current";
+    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr";
   };
   const question = ledger.question;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
@@ -253,7 +256,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
   if (/\bfor example\b/i.test(o.explanation)) return o;
   const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
-  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current"; };
+  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr"; };
   const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
     .map(tidy).find((q) => readsWhole(q, year) && answers(q));
   return { ...o, explanation: `${o.explanation} ${related ? `For example: "${related}".` : EXAMPLE}` };
@@ -269,6 +272,8 @@ export type ShadowOutcome =
   | HistoricalAnswer
   /** A Part I figure by month for an agency, a state, a region or the nation, from Current Trends (current.ts). */
   | CurrentAnswer
+  /** Murder by a detail (weapon, relationship, circumstance, a person's sex, race, ethnicity or age) from Homicide Reports (shr.ts). */
+  | ShrAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[]; /** Said with the ask (what the choices leave out). */ note?: string }
@@ -719,7 +724,28 @@ const WEAPON_CODES: Record<string, string[]> = { firearm: ["11", "11A", "12", "1
 /** P29/P49: "by men and women" (both sexes) names the offenders' sexes. */
 const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/i;
 /** Homicide Reports' (FBI SHR) first year. */
-const SHR_FIRST_YEAR = 1976;
+/**
+ * A murder detail answered from Homicide Reports (Jeff S1, 2026-11-11), or null when there is no SHR build or the plan
+ * asks for something SHR doesn't record the same way (the caller keeps its own path). Periods resolve against the SHR
+ * release's latest month; a span starting before 1985 is answered from 1985 and says so (J1, option A).
+ */
+function shrOutcome(plan: NibrsPlan, deps: ShadowDeps): ShadowOutcome | null {
+  if (!deps.shr) return null;
+  let period: { from: string; to: string };
+  try {
+    const r = resolvePeriod(plan.period, { ...deps.release, lastMonth: deps.shr.latestMonth });
+    if (r.kind === "years") {
+      const ys = [...r.years].sort((a, b) => a - b);
+      // Only whole runs of years: "2019 and 2024" stays on its own path.
+      if (ys.some((y, i) => i > 0 && y !== ys[i - 1] + 1)) return null;
+      period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
+    } else period = { from: r.from, to: r.to };
+  } catch { return null; }
+  const sq = shrQuestionOf(plan, period, deps.shr);
+  if ("why" in sq) return null;
+  const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
+}
 const FORECAST_SENTENCE = "The data records past crime and cannot predict the future.";
 
 /** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
@@ -1884,7 +1910,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const detailSelected = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim))
     && plan.measures.every((m) => /^victims\.(?:murder|homicide)/.test(m.id));
   if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
-    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
+    return shrOutcome(plan, deps) ?? { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
   if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
@@ -1967,7 +1993,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
       && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
     if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
-      return { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
+      return shrOutcome(plan, deps) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
     // Never "the data" for NIBRS's years alone: Crime Index has yearly figures for cities and counties back to its first
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);

@@ -63,6 +63,28 @@ export function latestShownMonth(released: string): string {
   return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`;
 }
 
+// Homicide Reports (the FBI's Supplementary Homicide Reports; Jeff S1-S5, 2026-11-11): murder details from 1985.
+// The vocabulary names only murder: SHR's details are read by the shared reader as NIBRS's are.
+export const SHR_PROFILE: SourceProfile = {
+  units: ["victims", "offenders"],
+  grain: { finest: "month", partial: "named_by_months" },
+  coverage: { published: false, cohortView: null },
+  rateBasis: "computed",
+  breakdowns: [
+    { dimension: "shr.victim.sex", exclusive: true, ordinal: false }, { dimension: "shr.victim.race", exclusive: true, ordinal: false },
+    { dimension: "shr.victim.ethnicity", exclusive: true, ordinal: false }, { dimension: "shr.victim.age", exclusive: true, ordinal: true },
+    { dimension: "shr.offender.sex", exclusive: true, ordinal: false }, { dimension: "shr.offender.race", exclusive: true, ordinal: false },
+    { dimension: "shr.offender.age", exclusive: true, ordinal: true },
+    // S5: the record's (first offender's) weapon, relationship and circumstance: one per victim.
+    { dimension: "shr.weapon", exclusive: true, ordinal: false }, { dimension: "shr.relationship", exclusive: true, ordinal: false },
+    { dimension: "shr.circumstance", exclusive: true, ordinal: false },
+  ],
+  caveats: [],
+  latestMonth: "month_before_release",
+  vocabulary: { terms: { murder: ["murders", "homicides", "killings"] }, not: { murder: ["shootings"] } },
+  name: { short: "Homicide Reports", long: "the FBI's Supplementary Homicide Reports", reportedToShort: "the FBI", reportedToLong: "the FBI's Supplementary Homicide Reports",
+    asPublished: null, sourceLine: "Source: FBI Supplementary Homicide Reports." },
+};
 /** The live sources (NIBRS and Historical, which includes the historical file's state and national figures). */
 export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
   nibrs: {
@@ -126,6 +148,7 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
     name: { short: "Current Trends", long: "Crime Index's Current Trends data", reportedToShort: "Crime Index", reportedToLong: "Crime Index",
       asPublished: null, sourceLine: "Source: Crime Index." },
   },
+  shr: SHR_PROFILE,
 };
 
 export const NOTE_TEXT: Record<Exclude<NoteKey, "blank_not_available">, string> = {

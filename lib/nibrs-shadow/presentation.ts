@@ -13,6 +13,7 @@ import { CATEGORY, fmt, measureWords, monthName, periodWords } from "./deliver";
 import { HISTORICAL_MEASURE, type HistoricalAnswer } from "./historical";
 import { STAFF_MEASURE, type StaffKind } from "./staffing";
 import type { CurrentAnswer } from "./current";
+import type { ShrAnswer } from "./shr";
 import { agencyName, reportedBy, STATE_NAMES, type PlaceIndex } from "./places";
 import { CONSISTENT_WORDS, NIBRS_WORDS } from "./reading";
 import { SRS_MEASURE, type SrsAnswer } from "./srs";
@@ -49,7 +50,7 @@ const orderedOf = (t: ResultTable) => t.columns.flatMap((c) => (c.binding.kind =
 
 /** The source an outcome comes from. A clarify or decline is the engine's, whose live source here is NIBRS. */
 export function sourceOf(o: ShadowOutcome): SourceId {
-  return o.kind === "historical" || o.kind === "srs" ? "historical" : o.kind === "current" ? "rtci" : o.kind === "route" ? o.source : "nibrs";
+  return o.kind === "historical" || o.kind === "srs" ? "historical" : o.kind === "current" ? "rtci" : o.kind === "shr" ? "shr" : o.kind === "route" ? o.source : "nibrs";
 }
 
 /** When, for the lead: "each year from 2021 to 2025", "in 2024", "each month from January 2024 to June 2025". */
@@ -328,11 +329,31 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
     chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table), series: {} };
 }
 
+/** Homicide Reports (shr.ts): a place's murder victims or offenders, by year or month, with a detail. */
+function shrPresentation(o: ShrAnswer, places: PlaceIndex): Presentation {
+  const q = o.question;
+  const what = o.delivered.table.columns.find((c) => c.binding.kind === "statistic")?.header.toLowerCase() ?? "murder victims";
+  const placeTitle = [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.kind === "state" ? (STATE_NAMES[q.place.code] ?? q.place.code) : "United States"];
+  const groupings = [...(q.grain !== "total" ? [q.grain] : []), ...(q.breakdown ? [q.breakdown.dim.replace(".", " ")] : [])];
+  const titleParts: TitleParts = { places: placeTitle, measure: what, ratePer: null, groupings, period: titlePeriod(o.period, q.grain === "year"),
+    partialLastYear: null, rollingMonths: null, ranking: null };
+  const who = q.place.kind === "agency" ? reporter(places, [q.place.ori]) : `the agencies of ${q.place.kind === "state" ? (STATE_NAMES[q.place.code] ?? q.place.code) : "the United States"} that filed Homicide Reports`;
+  const table = o.delivered.table;
+  const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
+  const when = whenWords(o.period, q.grain === "total" ? null : q.grain);
+  const lead: Lead = single ? { kind: "single", who, quantity: `${fmt(table.rows[0][0] as number)} ${what}`, when, countedAs: null }
+    : { kind: "described", what, who, when, countedAs: null, brokenDownBy: q.breakdown ? q.breakdown.dim.replace(".", " ") : null };
+  const known = restated(o.delivered, []);
+  return { source: "shr", titleParts, lead, offers: [], ...notesFrom("shr", [], o.delivered.text, known), coverage: { requested: false },
+    chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table), series: {} };
+}
+
 /** The presentation of an answer; a clarify's, decline's or route's buttons, each with its role and source. */
 export function presentationOf(o: ShadowOutcome, places: PlaceIndex, at: Reached = {}): Presentation | ChoicePresentation {
   if (o.kind === "answer") return nibrsPresentation(o, places, at);
   if (o.kind === "historical" || o.kind === "srs") return historicalPresentation(o, places);
   if (o.kind === "current") return currentPresentation(o, places);
+  if (o.kind === "shr") return shrPresentation(o, places);
   const source = sourceOf(o);
   if (o.kind === "clarify") return { source, buttons: o.options.map((x) => offerOf(x, source, true, at)) };
   if (o.kind === "decline") return { source, buttons: [...(o.alternative ? [o.alternative] : []), ...(o.more ?? [])].map((x) => offerOf(x, source, false, at)) };
