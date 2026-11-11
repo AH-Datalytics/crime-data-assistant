@@ -164,7 +164,8 @@ const FIXTURES: Record<string, string[]> = {
     // A state sum by category (coordinator 2026-11-04): each category over the reporting agencies, the button's view too.
     "Simple assault victims in Kansas by sex in 2024", "Simple assault victims in Kansas by sex by year from 2023 to 2024",
     // Element 31 (coordinator 2026-11-04): a breakdown by circumstance, and a filter on one.
-    "Murder victims in Memphis by circumstance in 2024", "Murders during an argument in Memphis in 2024",
+    // A murder detail is Homicide Reports' unless NIBRS is named (Jeff S1, 2026-11-11).
+    "Murder victims in Memphis by circumstance in 2024 according to NIBRS", "Murders during an argument in Memphis in 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.
@@ -173,7 +174,7 @@ const FIXTURES: Record<string, string[]> = {
   rtci: ["Memphis murders by month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
   // Homicide Reports (Jeff S1, S2, 2026-11-11): a state's murder victims by weapon; a city's firearm murders reaching
   // back before NIBRS's years.
-  shr: ["Murder victims in Texas by weapon in 2024", "Firearm murders in Memphis by year since 2010"],
+  shr: ["Murder victims in Texas by weapon in 2024", "Firearm murders in Memphis by year since 2010", "Memphis murders by weapon in 2024"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
 const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",

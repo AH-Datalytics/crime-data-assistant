@@ -1909,6 +1909,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const filterDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
   const detailSelected = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim))
     && plan.measures.every((m) => /^victims\.(?:murder|homicide)/.test(m.id));
+  // Jeff S1 (2026-11-11, "NIBRS years included"): a murder detail for one agency is Homicide Reports' when a release is
+  // loaded, whatever the years; NIBRS when it is named, or for a clearance, a location, property or arrests (which SHR
+  // doesn't record: shrQuestionOf leaves those, and any code SHR records differently, on this path).
+  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected)
+    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
+    && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
+  if (!stateMode && murderDetail) {
+    const s = shrOutcome(plan, deps);
+    if (s) return s;
+  }
   if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
     return shrOutcome(plan, deps) ?? { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length

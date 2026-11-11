@@ -9140,7 +9140,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -9149,10 +9153,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -10349,7 +10353,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -10358,10 +10366,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -16455,7 +16463,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -16464,10 +16476,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -30472,7 +30484,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -30481,10 +30497,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -31082,7 +31098,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -31090,11 +31110,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency homicide demographic detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -43648,7 +43668,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -43657,10 +43681,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -44910,7 +44934,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -44919,10 +44947,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -46475,7 +46503,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -46484,10 +46516,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -48016,7 +48048,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -48025,10 +48061,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -48222,7 +48258,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -48230,11 +48270,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Robbery and assault offender ages are outside SHR."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -48398,7 +48438,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -48407,10 +48451,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -50226,7 +50270,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -50235,10 +50283,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -51141,7 +51189,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -51150,10 +51202,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -51698,7 +51750,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -51707,10 +51763,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -51775,7 +51831,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -51784,10 +51844,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -52128,7 +52188,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -52137,10 +52201,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -53258,7 +53322,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -53267,10 +53335,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -53653,7 +53721,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -53662,10 +53734,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -54047,7 +54119,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -54056,10 +54132,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -54123,8 +54199,12 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -54132,10 +54212,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R07",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "rule": "R07>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -54582,7 +54662,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -54591,10 +54675,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -54877,7 +54961,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -54886,10 +54974,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -56138,7 +56226,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -56147,10 +56239,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -56811,7 +56903,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -56820,10 +56916,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -59107,7 +59203,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -59116,10 +59216,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -59133,7 +59233,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -59142,10 +59246,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -60008,7 +60112,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -60017,10 +60125,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -61909,7 +62017,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -61918,10 +62030,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -62108,7 +62220,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -62117,10 +62233,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -66276,7 +66392,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -66285,10 +66405,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -66997,7 +67117,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -67006,10 +67130,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -68865,7 +68989,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -68874,10 +69002,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -69043,7 +69171,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -69052,10 +69184,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -69146,7 +69278,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -69155,10 +69291,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -69421,7 +69557,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -69430,10 +69570,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -69649,7 +69789,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -69657,11 +69801,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Single-agency firearm homicide detail routes to NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -69903,7 +70047,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -69912,10 +70060,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -69954,7 +70102,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -69963,10 +70115,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -70466,7 +70618,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -70475,10 +70631,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -70740,7 +70896,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -70749,10 +70909,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -70910,7 +71070,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -70919,10 +71083,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -70936,7 +71100,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -70944,11 +71112,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Comparing offense records with victims requires incident detail."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -71827,7 +71995,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -71836,10 +72008,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -71853,7 +72025,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -71861,11 +72037,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Single-agency firearm homicide detail routes to NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -71879,7 +72055,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -71887,11 +72067,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Single-agency firearm homicide detail routes to NIBRS, with unavailable years named."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -72083,7 +72263,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -72092,10 +72276,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -72331,7 +72515,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -72340,10 +72528,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -72765,7 +72953,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -72774,10 +72966,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -72864,7 +73056,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -72873,10 +73069,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73093,7 +73289,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73102,10 +73302,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73145,7 +73345,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73153,11 +73357,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency homicide demographic detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73222,7 +73426,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73231,10 +73439,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73574,7 +73782,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73583,10 +73795,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73902,7 +74114,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73911,10 +74127,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73954,7 +74170,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73962,11 +74182,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -73980,7 +74200,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -73989,10 +74213,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -74006,7 +74230,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -74015,10 +74243,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -74101,7 +74329,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -74109,11 +74341,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail routes to NIBRS with unavailable periods named."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -74127,7 +74359,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -74136,10 +74372,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -74230,7 +74466,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -74238,11 +74478,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -75090,7 +75330,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -75099,10 +75343,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -75116,7 +75360,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -75125,10 +75373,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -75493,7 +75741,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -75501,11 +75753,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -76402,7 +76654,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -76411,10 +76667,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -76525,7 +76781,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -76533,11 +76793,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "DC agency victim demographic detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -76727,7 +76987,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -76736,10 +77000,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77051,7 +77315,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77059,11 +77327,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77127,7 +77395,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77136,10 +77408,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77319,7 +77591,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77328,10 +77604,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77447,7 +77723,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77456,10 +77736,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77473,7 +77753,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77482,10 +77766,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77550,7 +77834,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77558,11 +77846,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77753,7 +78041,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77762,10 +78054,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -77976,7 +78268,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -77984,11 +78280,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78120,7 +78416,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78128,11 +78428,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78323,7 +78623,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78332,10 +78636,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78375,7 +78679,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78384,10 +78692,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78705,7 +79013,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78714,10 +79026,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78731,7 +79043,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78740,10 +79056,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78757,7 +79073,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78766,10 +79086,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -78963,7 +79283,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -78972,10 +79296,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -84105,7 +84429,11 @@
    "previous": "do you track shootings?",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -84113,11 +84441,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "As long as available supplies the period."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -85576,7 +85904,11 @@
    "previous": "show me gun murders in denver for as long as you have them",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -85584,11 +85916,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "As long as available supplies the period."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -86031,7 +86363,11 @@
    "previous": "Murder rate in Miami-Dade County 2022–2026?",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -86040,10 +86376,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -96345,7 +96681,11 @@
    "previous": "Washington State",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -96354,10 +96694,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -98110,7 +98450,11 @@
    "previous": "now add murders and aggravated assaults",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -98118,11 +98462,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Robbery and assault offender ages are outside SHR."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -98748,7 +99092,11 @@
    "previous": "Murders by weapon in Houston in 2025",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -98757,10 +99105,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -98867,7 +99215,11 @@
    "previous": "Show carjacking trend by month/year",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -98876,10 +99228,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -99615,7 +99967,11 @@
    "previous": "1",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -99624,10 +99980,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -100741,7 +101097,11 @@
    "previous": "domestic violence by city in the state of washington",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -100750,10 +101110,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -101679,7 +102039,11 @@
    "previous": "number homicides by year",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -101687,11 +102051,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Robbery and assault offender ages are outside SHR."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -101921,7 +102285,11 @@
    "previous": "crime in san bernardino, ca",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -101930,10 +102298,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -102931,7 +103299,11 @@
    "previous": "top 10 cities by robbery in 2024",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -102940,10 +103312,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -103444,7 +103816,11 @@
    "previous": "how is IPV defined?",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -103453,10 +103829,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -104422,7 +104798,11 @@
    "previous": "compare murder trends in Houston, Dallas, and San Antonio from 2019 to 2024",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -104430,11 +104810,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Robbery and assault offender ages are outside SHR."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -104718,7 +105098,11 @@
    "previous": "domestic homicides in California since 1980",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -104727,10 +105111,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -104744,7 +105128,11 @@
    "previous": "domestic homicides in California since 1980",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -104753,10 +105141,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -104851,7 +105239,11 @@
    "previous": "What is the number of homicides per year in Little Rock, Arkansas?",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -104860,10 +105252,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -105290,7 +105682,11 @@
    "previous": "Memphis fatal shootings per month",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -105298,11 +105694,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -105367,7 +105763,11 @@
    "previous": "firearm murders in Philadelphia",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -105376,10 +105776,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -105519,7 +105919,11 @@
    "previous": "people shot in Dallas",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -105528,10 +105932,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -106034,7 +106438,11 @@
    "previous": "homicide offender race in Texas",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -106043,10 +106451,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -106215,7 +106623,11 @@
    "previous": "Big cities with highest share of murders via firearm in 2024",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -106224,10 +106636,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -106493,7 +106905,11 @@
    "previous": "fatal shootings in Houston from 1950 to 2026",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -106501,11 +106917,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail routes to NIBRS with unavailable years named."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -106663,7 +107079,11 @@
    "previous": "Houston fatal shootings per math since 2000",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -106671,11 +107091,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -106715,7 +107135,11 @@
    "previous": "birmingham fatal shootings",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -106723,11 +107147,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -107178,8 +107602,12 @@
    "previous": "gun murders in New York City since 2022",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the earlier question, changed as asked",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -107187,10 +107615,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "rule": "F3>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -107399,7 +107827,11 @@
    "previous": "how has gun violence changed in New York State since 2022?",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -107408,10 +107840,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -107519,7 +107951,11 @@
    "previous": "shootings in Chicago since 2015",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -107527,11 +107963,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency firearm homicide detail requires NIBRS."
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -108231,7 +108667,11 @@
    "previous": "firearm murders in Chicago since 2010",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -108240,10 +108680,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -108376,8 +108816,12 @@
    "previous": "firearm murders in Houston since 2010",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the earlier question, changed as asked",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -108385,10 +108829,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "rule": "F3>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
@@ -108402,7 +108846,11 @@
    "previous": "firearm murders in Houston since 2010",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -108411,10 +108859,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-11-S1",
+    "reviewed_by": "jeff-2026-11-11-S1",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
    }
   },
   {
