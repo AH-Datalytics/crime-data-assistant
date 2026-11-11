@@ -4916,11 +4916,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-934b5b59e7": {
-   "digest": "37a47a34cc2c75ed",
-   "by": "model-canonical",
-   "batch": "nibrs-ties-2026-11-07",
-   "numbers": 11,
-   "date": "2026-11-07"
+   "digest": "e2c5c3f63946d114",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 11
   },
   "QL-ct-a73742de37": {
    "digest": "5fab216e478e4c5a",
