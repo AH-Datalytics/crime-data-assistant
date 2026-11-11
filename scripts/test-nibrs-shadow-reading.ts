@@ -147,7 +147,7 @@ const unreadOf = (q: string) => readQuestion(q, 2026, "2026-09").ledger.parts.fi
 assert.equal(readQuestion("Show me how rape offenses have changed in Texas over the past 10 years", 2026).text, "rape offenses by year in Texas over the past 10 years");
 assert.equal(readQuestion("How have robberies in Nashville changed since 2020?", 2026).text, "robberies in Nashville by year since 2020?");
 assert.equal(readQuestion("How does Chicago murder count compare to Illinois statewide?", 2026).text, "Chicago murder count and Illinois?");
-assert.equal(readQuestion("Compare Houston's murder rate to the Texas state average", 2026).text, "Compare Houston's murder rate and Texas");
+assert.equal(readQuestion("Compare Houston's murder rate to the Texas state average", 2026).text, "Houston's murder rate and Texas");
 assert.match(readQuestion("Baltimore violent crime rate compared to the national rate since 2015", 2026).text, /and the United States since 2015/);
 const lastYear = readQuestion("How has violent crime changed in the last year in Washington D.C.?", 2026);
 assert.deepEqual(lastYear.comparison, { earlier: { from: "2024-01", to: "2024-12" }, later: { from: "2025-01", to: "2025-12" }, matched: false });

@@ -109,6 +109,9 @@ const PHRASES: [RegExp, string][] = [
   [/^\s*(?:(?:can\s+you\s+)?show\s+me\s+)?how\s+(?:has|have)\s+(.+?)\s+(?:changed|trended|fared|moved|evolved)(?:\s+over\s+time)?\b/gi, "$1 by year"],
   [/^\s*(?:(?:can\s+you\s+)?show\s+me\s+)?how\s+(.+?)\s+(?:has|have)\s+(?:changed|trended|fared|moved|evolved)(?:\s+over\s+time)?\b/gi, "$1 by year"],
   [/^\s*(?:by\s+year,\s*)?how\s+(?:does|do|did)\s+(.+?)\s+(?:compare|stack\s+up)\s+(?:to|with|against)\s+/gi, "$1 and "],
+  // "Compare Houston's murder rate to the Texas state average": the two places side by side (never a year: "compare
+  // 2024 to 2023" is a period comparison).
+  [/^\s*compare\s+(.+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!(?:19|20)\d{2}\b)/gi, "$1 and "],
   [/\bin\s+the\s+state\s+of\s+/gi, "in "],
   [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|state\s+total|as\s+a\s+whole)\b/gi, "$1"],
   [/\band\s+(?:to\s+)?(?:the\s+)?(?:national(?:\s+(?:rate|average|total|level|figures?|trend))?|nation(?:\s+as\s+a\s+whole)?|U\.?S\.?\s+(?:rate|average|total)|nationally)\b/gi, "and the United States"],
