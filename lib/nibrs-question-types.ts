@@ -244,7 +244,11 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (rank && rank.n === null && /\bwhich\s+(?:[a-z]+\s+){0,2}(?:state|city|agency)\s+(?:(?:in|of)\s+(?:the\s+)?[a-z.]+(?:\s+[a-z.]+){0,2}\s+)?(?:has|had)\b/i.test(ledger.question)) rank.n = 1;
     const thresholds = thresholdParts.map(thresholdOf);
     if (thresholds.some((t) => t === null) || thresholds.length > 1) return declineParts(thresholdParts, (p) => cannot(p, "I can apply one minimum population (\"at least\" or \"over\"), not a maximum."));
-    const notInRank = [...of("filter"), ...of("clearance-reason"), ...unitParts, ...monthPeriodParts, ...grainParts, ...of("rolling"), ...of("combine")];
+    // "Murder victims", "rape victims": the unit rankings already count for crimes against persons, so it is read.
+    const personOnly = (MEASURE_CODES[measures[0]] ?? []).length > 0 && (MEASURE_CODES[measures[0]] ?? []).every((c) => PERSON_CODES.has(c));
+    const standardUnit = unitParts.filter((p) => p.value === "victims" && personOnly);
+    take(standardUnit);
+    const notInRank = [...of("filter"), ...of("clearance-reason"), ...unitParts.filter((p) => !standardUnit.includes(p)), ...monthPeriodParts, ...grainParts, ...of("rolling"), ...of("combine")];
     if (notInRank.length) return declineParts(notInRank, (p) => cannot(p, p.concept === "unit"
       ? "rankings count each offense in its standard unit (victims for crimes against persons, offenses otherwise); a ranking in another unit isn't built."
       : p.concept === "period" ? "a ranking covers a full year."

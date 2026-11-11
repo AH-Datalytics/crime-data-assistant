@@ -53,6 +53,10 @@ export type Span = { from: string; to: string };
 export type Comparison = { earlier: Span; later: Span; matched: boolean };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
   undefinedTerm: "shooters" | "gun violence" | "gang" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
+  /** "The 100 largest US cities", "the 5 biggest Texas cities", "the 20 most populous cities": a set of city agencies by population (Jeff 2026-11-10, ranking decision 1). */
+  largestSet: number | null;
+  /** The words "top N cities" when read as the N largest (no "by", no "highest"): said in the answer. */
+  topAsLargest: string | null;
   /** A Census region named ("the Northeast"): read as the nation, flagged; only Current Trends answers it (current.ts REGIONS). */
   region: "noe" | "mdw" | "sth" | "wst" | null;
   /** A circumstance named ("murders during an argument"): element 31's codes, a filter on the victims (null when none). */
@@ -94,7 +98,15 @@ export type People = {
 };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
+/** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
+const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
+  // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
+  [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
+  // "Homicide totals in top 15 cities", "tell me about murder rates in the largest cities" (job S5).
+  [/\b(murders?|homicides?|robberies|robbery|burglar(?:y|ies)|rapes?|assaults?|thefts?|crimes?)\s+totals\b/gi, "$1 count"],
+  // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
+  [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b(?!\s+(?:the\s+)?(?:years?|months?|dates?|names?|city|cities|states?|population|size|alphabet\w*))/gi, "ranked by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
@@ -250,9 +262,52 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // "Memphis vs Nashville": places compared are places side by side, as with "and" (coordinator, 2026-11-01). A period
   // comparison ("2024 vs 2023") was read just above; a "vs" next to a year is left to it.
   text = text.replace(/(?<!\b(?:19|20)\d{2})\s+(?:vs\.?|versus|compared (?:to|with))\s+(?!(?:19|20)\d{2}\b)/gi, " and ");
-  // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest.
+  // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest. Jeff 2026-11-10 (ranking
+  // decision 2): "Major/big/large cities should assume 250k+", and "larger", "largest" with no number too; "the 10
+  // largest cities" is a set by population, read elsewhere.
+  // Jeff 2026-11-10 (ranking decision 1): "the N largest cities" is the N city agencies with the most residents; the
+  // words are taken out and the place (a state named, or the nation) is read as usual.
+  let largestSet: number | null = null;
+  const NUM: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, fifteen: 15, twenty: 20, thirty: 30, fifty: 50, hundred: 100 };
+  text = text.replace(/\b(?:the\s+)?(?:top\s+)?(\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred)\s+(?:largest|biggest|most\s+populous)\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?:\s+(?:in\s+the\s+(?:country|nation|dataset|usa?|united\s+states)|in\s+the\s+u\.s\.?|by\s+(?:size|population)))?/i,
+    (m, n: string, qual: string | undefined) => {
+      const k = /^\d+$/.test(n) ? Number(n) : NUM[n.toLowerCase()];
+      if (!k || k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !STATE_WORD.test(qual.trim()))) return m;
+      largestSet = k;
+      readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+      // A state's name before "cities" stays to be read as the place ("the 5 biggest Texas cities").
+      return qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) ? ` in ${qual.trim()} ` : " ";
+    });
+  text = text.replace(/\b(?:the\s+)?(?:top\s+)?(\d{1,3})\s+cities\s+by\s+population\b/i, (m, n: string) => {
+    const k = Number(n);
+    if (k < 2 || k > 300) return m;
+    largestSet = k;
+    readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+    return " ";
+  });
+  // Jeff 2026-11-10: a bare "top N cities" (no "by ...", no "highest", "most"...) is the N largest cities by population.
+  let topAsLargest: string | null = null;
+  // "By" a crime anywhere ("top 10 cities in Texas by murder in 2024") ranks by it (Codex rankings review 03.1); "by
+  // population", "by size", "by year" or "by month" don't.
+  // Nor when the cities are picked by anything else ("with the slowest decline", "sorted by"): job S, QL-ct-20af00a1f6.
+  // Ranking words anywhere pick the cities by a figure; the words right after "cities" are checked below (Codex job-S
+  // review 01: "the homicide change ... in the top 100 cities" is still the 100 largest).
+  if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*|slowest|fastest|steepest)\b/i.test(text)
+    && !/\bby\s+(?!(?:population|size|year|month|years|months)\b)/i.test(text)) {
+    text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|for|with|ranked|in\s+terms|sorted|ordered|over|under|above|below|that|where|having|whose|of\s+[\d,]+))/i,
+      (m, n: string, qual: string | undefined) => {
+        const k = Number(n);
+        // Only a state's name (capitalized as written), "US" or "American" between "top N" and "cities": "top 5 murder
+        // cities" picks by murder (job S4, QL-nibrs-f8b0bd256e).
+        if (k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !STATE_WORD.test(qual.trim()))) return m;
+        largestSet = k;
+        topAsLargest = m.trim();
+        readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+        return qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) ? ` in ${qual.trim()} ` : " ";
+      });
+  }
   let largeCities = false;
-  text = text.replace(/\b(?:large|big)\s+(?=(?:[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
+  text = text.replace(/(?<!\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred|top)\s+)\b(?:the\s+)?(?:large|larger|largest|big|bigger|biggest|major)\s+(?=(?:u\.?s\.?\s+|[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
   // A Census region (Current Trends' groups; coordinator 2026-11-03): "the Northeast", "the midwest US", "southern
   // states". Read as the nation and flagged, so the shadow answers it from Current Trends or says it can't; never "the
   // South Side", "South Carolina" or "West Memphis".
@@ -286,6 +341,10 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     text = text.replace(L12, (m) => { const to = `from ${first} to ${lastName}`; readings.push({ kind: "period", from: m, to }); return to; });
     last12 = true;
   }
+  // "Tell me about murder rates in the largest cities" (job S5): filler before a crime named; applied here, not in PHRASES,
+  // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
+  text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });
@@ -386,7 +445,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, largestSet, topAsLargest, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }

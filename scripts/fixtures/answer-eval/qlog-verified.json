@@ -4916,11 +4916,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-934b5b59e7": {
-   "digest": "37a47a34cc2c75ed",
-   "by": "model-canonical",
-   "batch": "nibrs-ties-2026-11-07",
-   "numbers": 11,
-   "date": "2026-11-07"
+   "digest": "e2c5c3f63946d114",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 11
   },
   "QL-ct-a73742de37": {
    "digest": "5fab216e478e4c5a",
@@ -5313,6 +5313,223 @@
    "batch": "pr139-2026-11-09",
    "numbers": 66,
    "date": "2026-11-10"
+  },
+  "QL-ct-6242a16819": {
+   "digest": "7741a4b20ce0b346",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-ct-6242ad5b34": {
+   "digest": "7741a4b20ce0b346",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-ct-b99e212b28": {
+   "digest": "fdac2c10b50af05c",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 64
+  },
+  "QL-ct-d5b345b9dc": {
+   "digest": "7741a4b20ce0b346",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-ct-ea8fcf985b": {
+   "digest": "4d7ef3367d257e0e",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 98
+  },
+  "QL-ct-f79af00f76": {
+   "digest": "52b9b36f642476f3",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 1
+  },
+  "QL-hist-5b8ade42d5": {
+   "digest": "e3a9293be595a33b",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-hist-6fa243b641": {
+   "digest": "6540b87eeaa25228",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 4
+  },
+  "QL-hist-9442372ab6": {
+   "digest": "15e46cc8cacbc8e3",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 1
+  },
+  "QL-hist-9c58989da2": {
+   "digest": "190a45758f9def6c",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-hist-a7b9e6df81": {
+   "digest": "766eccfbebcc3d3b",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 10
+  },
+  "QL-hist-b69cb3e2ec": {
+   "digest": "bc6e70ecdcf56a95",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 10
+  },
+  "QL-hist-e2e93aa479": {
+   "digest": "766eccfbebcc3d3b",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 10
+  },
+  "QL-nibrs-ea8fcea8fc": {
+   "digest": "4d7ef3367d257e0e",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 98
+  },
+  "QL-nibrs-ea8fcf985b": {
+   "digest": "4d7ef3367d257e0e",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 98
+  },
+  "QL-shr-cf22c622eb": {
+   "digest": "d1b7ebf451fb0512",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-shr-f79af00f76": {
+   "digest": "52b9b36f642476f3",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 1
+  },
+  "QL-ct-2ea3534901": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-ct-37616fd7c5": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-ct-d99b4f6ccc": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-ct-ea8fcd7e68": {
+   "digest": "c5596c883734c45e",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 93
+  },
+  "QL-ct-f6ccc2ea35": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-nibrs-2ea3534901": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-nibrs-3761637616": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-nibrs-37616fd7c5": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-nibrs-d99b4f6ccc": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-nibrs-f6ccc2ea35": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-nibrs-f6cccf6ccc": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-shr-37616fd7c5": {
+   "digest": "4e3723ab0245bdbb",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11b",
+   "date": "2026-11-11",
+   "numbers": 100
+  },
+  "QL-ct-9f18f436a0": {
+   "digest": "48bf6a9135c3d8d0",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11c",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-shr-9f18f436a0": {
+   "digest": "48bf6a9135c3d8d0",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11c",
+   "date": "2026-11-11",
+   "numbers": 20
   }
  }
 }

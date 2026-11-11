@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
 import type { Meaning } from "../answer-eval/case";
-import { HISTORICAL_MEASURE } from "./historical";
+import { CITY_AS, cityNameSql, citySql, HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
 import { fmt } from "./deliver";
 import { aboutPeople } from "./presentation";
@@ -313,4 +313,91 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     delivered: { table: { columns, rows: covered.map((m, i) => [m, vals[i]]) },
       text: [`${where}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...head, ...cohortLine, ...outside, ...leftOutLine,
         ...(blanks.length ? [`No figure is known for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
+}
+
+/* ------------------------------------------- rankings and sets (2026) ------------------------------------------ */
+
+/**
+ * Rankings and "the N largest cities" past Crime Index's last year (Jeff 2026-11-10, ranking decisions 1 and 4): from
+ * Current Trends' sample agencies only, said; each agency's total over the months asked (January through the latest
+ * month), only agencies with a figure for every one of them ranked (P60), the others counted; population is Current
+ * Trends' for the latest month (decision 1); a rate is per 100,000 for the months, not scaled to a full year (P58).
+ * "City" is the agency's geography type in Crime Index (agency_crime.type), whatever the agency.
+ */
+export type CurrentRankQuestion = {
+  measure: string; state: string; from: Month; to: Month; statistic: "count" | "rate";
+  /** A ranking (top or bottom, cut at the limit), or the N largest by population. */
+  pick: { kind: "rank"; direction: "top" | "bottom"; limit: number } | { kind: "largest"; n: number };
+  minPopulation: number | null; entity: "city" | "agency";
+};
+type CurrentEntry = { ori: string; name: string; state: string; population: number | null; value: number | null; known: boolean };
+export function currentEntries(b: CurrentBuild, historicalRoot: string, rq: CurrentRankQuestion, execute: (sql: string) => unknown[][]): { entries: CurrentEntry[]; months: number } {
+  const col = CURRENT_MEASURE[rq.measure];
+  const ms = months(rq.from, rq.to);
+  const f = Number(rq.from.replace("-", "")), t = Number(rq.to.replace("-", ""));
+  const national = rq.state === "US";
+  const rows = execute(`WITH a AS (SELECT ori, any_value(state) AS state, sum(${col}_total) AS v, count(${col}_total) AS known, `
+    + `max(CASE WHEN year * 100 + month = ${t} THEN population END) AS pop FROM read_parquet(${q(`${b.root}/current_crime.parquet`)}) `
+    + `WHERE sample AND year * 100 + month BETWEEN ${f} AND ${t}${national ? "" : ` AND state = ${q(rq.state)}`} GROUP BY ori), `
+    + `n AS (SELECT ori, ${rq.entity === "city" ? cityNameSql() : "name"} AS name, type, row_number() OVER (PARTITION BY ori ORDER BY year DESC) AS k FROM read_parquet(${q(`${historicalRoot}/agency_crime.parquet`)})) `
+    + `SELECT a.ori, n.name, a.state, a.pop, a.v, a.known FROM a JOIN n ON n.ori = a.ori AND n.k = 1 WHERE ${rq.entity === "city" ? citySql("n") : `n.ori NOT IN (${CITY_AS.drop.map(q).join(", ")})`} ORDER BY a.ori`);
+  const entries = rows.map((r) => {
+    const pop = num(r[3]), total = num(r[4]), known = Number(r[5]) === ms.length;
+    const value = !known ? null : rq.statistic === "rate" ? currentRate(total, pop, ms.length) : total;
+    const name = national ? `${String(r[1])}, ${String(r[2])}` : String(r[1]);
+    return { ori: String(r[0]), name, state: String(r[2]), population: pop, value, known: value !== null };
+  }).filter((e) => !rq.minPopulation || (e.population !== null && e.population >= rq.minPopulation));
+  return { entries, months: ms.length };
+}
+export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, historicalRoot: string, execute: (sql: string) => unknown[][],
+  rank: <T extends { name: string; value: number | null; known: boolean }>(xs: T[], dir: "top" | "bottom", limit: number | null) => { ranked: T[]; leftOut: T[]; tie: { position: number; names: string[]; shown: number } | null }): CurrentAnswer | CurrentDecline {
+  const col = CURRENT_MEASURE[rq.measure];
+  if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
+  if (rq.from < b.firstMonth || rq.to > b.lastMonth) return { kind: "current-decline", explanation: `Current Trends covers ${spanWords(b.firstMonth, b.lastMonth)}.` };
+  const { entries } = currentEntries(b, historicalRoot, rq, execute);
+  const where = rq.state === "US" ? "the United States" : stateName(rq.state);
+  const kindWord = rq.entity === "city" ? "city agencies" : "agencies";
+  const floor = rq.minPopulation ? ` with a population of ${rq.minPopulation.toLocaleString("en-US")} or more` : "";
+  if (!entries.length) return { kind: "current-decline", explanation: `Current Trends' sample has no ${kindWord}${floor} in ${where} for ${spanWords(rq.from, rq.to)}.` };
+  const rate = rq.statistic === "rate";
+  const span = spanWords(rq.from, rq.to);
+  let shown: CurrentEntry[], leftOut: CurrentEntry[], lead: string;
+  const extra: string[] = [];
+  if (rq.pick.kind === "rank") {
+    const r = rank(entries, rq.pick.direction, rq.pick.limit);
+    shown = r.ranked; leftOut = r.leftOut;
+    const most = rq.pick.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
+    lead = `Current Trends' sample ${kindWord}${floor} in ${where}: the ${shown.length} with the ${most} ${rate ? `${SINGULAR[col]} rates per 100,000` : WORDS[col]}, ${span}.`;
+    if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
+  } else {
+    // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
+    const sorted = entries.filter((e) => e.population !== null).sort((x, y) => (y.population! - x.population!) || x.name.localeCompare(y.name));
+    const n = rq.pick.n;
+    const cutPop = sorted[Math.min(n, sorted.length) - 1]?.population ?? 0;
+    const byPop = sorted.filter((e, i) => i < n || e.population === cutPop);
+    shown = byPop.filter((e) => e.known); leftOut = byPop.filter((e) => !e.known);
+    shown = byPop;
+    lead = `The ${byPop.length} largest cities in Current Trends' sample in ${where} by population (${monthWords(rq.to)}): ${rate ? `${SINGULAR[col]} rate per 100,000` : WORDS[col]}, ${span}.`;
+  }
+  if (!shown.length) return { kind: "current-decline", explanation: `No ${kindWord} in Current Trends' sample have a figure for every month of ${span}.` };
+  const text = [lead,
+    `Only Current Trends' sample agencies are included (about 550 agencies, not every agency), and only those with a figure for every month of ${span} ${rq.pick.kind === "rank" ? "are ranked" : "have a figure"}.`];
+  text.push(...extra);
+  if (leftOut.length) text.push(`${rq.pick.kind === "rank" ? "Not ranked" : "Blank"} because a month is missing: ${leftOut.length <= 5 ? leftOut.map((e) => e.name).sort().join(", ") : `${leftOut.length} ${kindWord}`}.`);
+  if (rate) text.push(`Rates are per 100,000 of each agency's population for ${monthWords(rq.to)}, for the months shown; not scaled to a full year.`);
+  text.push("Source: Crime Index.");
+  const header = rate ? `${ucFirst(SINGULAR[col])} rate per 100,000` : ucFirst(WORDS[col]);
+  const period = { from: rq.from, to: rq.to };
+  return {
+    kind: "current", question: { measure: rq.measure, place: { kind: "group", states: rq.state === "US" ? null : [rq.state], label: where }, from: rq.from, to: rq.to, form: "total", statistic: rq.statistic,
+      agencies: shown.map((e) => ({ ori: e.ori, label: e.name, state: e.state })) } as CurrentQuestion,
+    period,
+    meaning: { source: "rtci", places: [rq.state === "US" ? { kind: "national", name: "United States" } : { kind: "state", name: where, state: rq.state }],
+      filters: [`Current Trends' sample ${kindWord}`, ...(floor ? [`population ${rq.minPopulation!.toLocaleString("en-US")} or more`] : [])],
+      measures: [{ name: SINGULAR[col], unit: "offense" }], period: { from: rq.from, to: rq.to }, groupings: ["agency"], statistic: rq.pick.kind === "rank" ? "rank" : rate ? "rate" : "count" } as unknown as Meaning,
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header }],
+      rows: shown.map((e) => [e.name, e.value]) } as unknown as ResultTable, text },
+    coverage: [],
+    read: { tables: ["current_crime", "agency_crime"], table: "current_crime", column: `${col}_total`, release: b.release },
+  };
 }

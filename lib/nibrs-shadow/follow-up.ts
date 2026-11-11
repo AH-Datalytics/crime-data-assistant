@@ -135,7 +135,10 @@ export function standsAlone(turn: string): boolean {
     && (/^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z]{2})?$/.test(p.text.trim())
       || /\b[a-z]+(?:\s+[a-z]+)?\s+(?:county|parish)\b/i.test(p.text)));
   // A ranking or set of places ("Top 10 auto theft rates in 2025", "the 20 most populous cities") is the turn's own scope.
-  const placeSet = of("rank").length > 0 || of("entity").length > 0;
+  // The reader takes "the 20 most populous cities" and "big cities" out of its words and flags them (rankings PR A): a set
+  // still (job S: 18 follow-ups read as changes to the last question).
+  const flagged = readQuestion(t, 2026);
+  const placeSet = of("rank").length > 0 || of("entity").length > 0 || !!flagged.largestSet || flagged.largeCities;
   // Unread county names count as places named (Codex follow-up review 01.2: "Bexar County versus Travis County").
   const unreadCounties = new Set(own.all.filter((p) => p.state === "not-interpreted").flatMap((p) => [...p.text.matchAll(/\b([a-z]+(?:\s+[a-z]+)?)\s+(?:county|parish)\b/gi)].map((m) => m[1].toLowerCase())));
   const places = new Set(own.places.map((p) => String(p.value))).size + unreadCounties.size;
