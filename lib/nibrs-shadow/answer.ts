@@ -988,6 +988,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // "Big cities" or "the N largest cities" with no place named are the whole country's, said (Jeff 2026-11-11: "yes",
     // with the answer saying so), when that answers; anything else is asked as before, never a decline in place of the
     // ask (job S: 36 questions that asked the place declined instead).
+    // The whole country's answer, or what it still asks (the period: job S2, the labels Jeff's decision moved); a
+    // decline keeps the place asked, as before.
     if (flags(ledger0).largeCities || flags(ledger0).largestSet) {
       const nation = fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
       if (["historical", "current", "srs", "answer"].includes(nation.kind)) {
@@ -995,6 +997,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         said.delivered?.text.splice(1, 0, "No place was named, so these are cities across the United States.");
         return nation;
       }
+      if (nation.kind === "clarify") return { ...nation, question: ledger0.question, note: "No place was named, so these are cities across the United States." };
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);

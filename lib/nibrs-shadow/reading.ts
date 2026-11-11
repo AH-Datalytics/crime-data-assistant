@@ -286,7 +286,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // review 01: "the homicide change ... in the top 100 cities" is still the 100 largest).
   if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*|slowest|fastest|steepest)\b/i.test(text)
     && !/\bby\s+(?!(?:population|size|year|month|years|months)\b)/i.test(text)) {
-    text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|with|ranked|in\s+terms|sorted|ordered|over|under|above|below|that|where|having|whose))/i,
+    text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|for|with|ranked|in\s+terms|sorted|ordered|over|under|above|below|that|where|having|whose))/i,
       (m, n: string, qual: string | undefined) => {
         const k = Number(n);
         if (k < 2 || k > 300) return m;

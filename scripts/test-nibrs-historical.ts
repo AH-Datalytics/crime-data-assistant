@@ -597,6 +597,8 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   // Picked by something else: not the N largest; a change asked of the N largest: still them (Codex job-S review 01).
   assert.equal(readQuestion("show me the top 10 cities over 250000 people with the slowest decline in violent crime since 2020", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("Show the homicide change from 2024 to 2025 in the top 100 cities", 2026, "2026-09").largestSet, 100);
+  // "Top 25 cities for murder rate": ranked by it, not the 25 largest (job S2).
+  assert.equal(readQuestion("Top 25 cities for murder rate in 2024", 2026, "2026-09").largestSet, null);
   // "By" a crime after a place or a year still ranks by it (Codex rankings review 03.1).
   assert.equal(readQuestion("top 10 cities in Texas by murder in 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities in 2024 by murder rate", 2026, "2026-09").largestSet, null);
