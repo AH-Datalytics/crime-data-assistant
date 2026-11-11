@@ -985,9 +985,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return options[0].continuation;
   }
   if (!clause0("place").length) {
-    // "Big cities" with no place named are the nation's cities of 250,000 or more (Jeff 2026-11-10: "Major/big/large
-    // cities should assume 250k+"), never asked.
-    if (flags(ledger0).largeCities || flags(ledger0).largestSet) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+    // "Big cities" or "the N largest cities" with no place named: the nation's, when that answers (Jeff 2026-11-10:
+    // "Major/big/large cities should assume 250k+"); anything else is asked as before, never a decline in place of the
+    // ask (job S: 36 questions that asked the place declined instead).
+    if (flags(ledger0).largeCities || flags(ledger0).largestSet) {
+      const nation = fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+      if (["historical", "current", "srs", "answer"].includes(nation.kind)) return nation;
+    }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [

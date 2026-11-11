@@ -515,7 +515,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(ask.kind === "clarify" && ask.about === "which period", JSON.stringify(ask).slice(0, 300));
   for (const q of ["Show me the homicide rate for the 100 largest US cities in 2026", "drug arrests in the 10 largest cities in 2024"]) {
     const o = shadowAnswer(q, base as never);
-    assert.equal(o.kind, "decline", `${q}: never a total in the set's place: ${JSON.stringify(o).slice(0, 200)}`);
+    assert.ok(!["historical", "current", "srs", "answer"].includes(o.kind), `${q}: never a total in the set's place: ${JSON.stringify(o).slice(0, 200)}`);
   }
 }
 // Rankings and sets past Crime Index's last year from Current Trends' sample agencies (Jeff 2026-11-10, decisions 1, 4):
@@ -594,6 +594,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.equal(readQuestion("Homicide rate for top 100 U.S. cities in 2024", 2026, "2026-09").topAsLargest, "top 100 U.S. cities");
   assert.equal(readQuestion("top 10 cities by murder in Texas 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities with the highest murder rate in 2024", 2026, "2026-09").largestSet, null);
+  // Picked by something else: not the N largest; a change asked of the N largest: still them (Codex job-S review 01).
+  assert.equal(readQuestion("show me the top 10 cities over 250000 people with the slowest decline in violent crime since 2020", 2026, "2026-09").largestSet, null);
+  assert.equal(readQuestion("Show the homicide change from 2024 to 2025 in the top 100 cities", 2026, "2026-09").largestSet, 100);
   // "By" a crime after a place or a year still ranks by it (Codex rankings review 03.1).
   assert.equal(readQuestion("top 10 cities in Texas by murder in 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities in 2024 by murder rate", 2026, "2026-09").largestSet, null);
