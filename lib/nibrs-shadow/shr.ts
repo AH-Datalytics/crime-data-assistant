@@ -181,10 +181,9 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   const conditions = plan.filters.flatMap((f, gi) => (f.kind === "attribute" ? [{ f, group: undefined as number | undefined }] : f.negate ? [null] : f.where.map((w) => ({ f: w, group: gi }))));
   // Two separate conditions on a record's one weapon, relationship or circumstance ("handguns versus rifles") would
   // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
-  const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [`${NIBRS_DIM[c.f.dimension]}|${c.group ?? "solo"}`] : []));
-  const perDim = new Map<string, Set<string>>();
-  for (const k of recordDims) { const [d, g] = k.split("|"); perDim.set(d, (perDim.get(d) ?? new Set()).add(g)); }
-  if ([...perDim.values()].some((gs) => gs.size > 1)) return { why: "two values of one record detail compared" };
+  // Counted per condition, whatever its group (Codex SHR-A review 02.2).
+  const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [NIBRS_DIM[c.f.dimension]] : []));
+  if (new Set(recordDims).size !== recordDims.length) return { why: "two values of one record detail compared" };
   for (const c of conditions) {
     if (!c) return { why: "a negated condition" };
     const { f, group } = c;
@@ -401,7 +400,8 @@ export function shrCategoryCodes(sq: ShrQuestion): Record<string, string[] | str
   const labels = DIM_LABELS[b.dim] ?? {};
   const out: Record<string, string[] | string> = {};
   for (const [c, l] of Object.entries(labels)) if (l !== "Unknown") out[l] = [c];
-  out.Unknown = `${Object.entries(labels).filter(([, l]) => l === "Unknown").map(([c]) => c).join(", ") || "none"}, a blank code, any code not listed here, or a person beyond the record's 11`;
+  // A record's weapon, relationship or circumstance counts for every victim, the 12th included (Codex SHR-A review 02.3).
+  out.Unknown = `${Object.entries(labels).filter(([, l]) => l === "Unknown").map(([c]) => c).join(", ") || "none"}, a blank code or any code not listed here${RECORD_DIMS.has(b.dim) ? "" : ", or a person beyond the record's 11"}`;
   return out;
 }
 /** "murder victims", "homicide offenders", "justifiable homicide victims". */

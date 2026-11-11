@@ -46,6 +46,7 @@ assert.equal(sb.source, "shr_canonical");
 assert.deepEqual(sb.filters, [{ dim: "victim.sex", codes: ["F"] }]);
 assert.deepEqual(sb.categories?.Handgun, ["12"]);
 assert.match(String(sb.categories?.Unknown), /blank code/);
+assert.doesNotMatch(String(sb.categories?.Unknown), /beyond the record/, "a record's weapon counts for every victim (02.3)");
 
 // A NIBRS answer: its plan, without any SQL at any depth; the engine's own query is never in a request.
 const nibrs = { kind: "answer", period: { from: "2023-01", to: "2023-12" }, sql: "SELECT secret", delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: "Robberies" }], rows: [[512]] } },

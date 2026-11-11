@@ -1937,7 +1937,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (s) return s;
     // A Homicide Reports question SHR-A can't answer yet (a rolling window, two weapons compared) is routed, as before
     // (job SA1); a NIBRS-only detail beside it (a location), no period named, or NIBRS's own views go on to NIBRS's path.
-    if (catG.every((g) => shrDetailDim(g.dimension)) && !plan.defaults.some((d) => d.path === "period") && !flags(ledger0).consistent && !flags(ledger0).quarter)
+    if (catG.every((g) => shrDetailDim(g.dimension)) && filterDims.every((ds) => ds.every(shrDetailDim)) && !plan.defaults.some((d) => d.path === "period") && !flags(ledger0).consistent && !flags(ledger0).quarter)
       return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR); this form of the question isn't available here yet." };
   } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };

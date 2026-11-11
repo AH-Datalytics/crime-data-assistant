@@ -71,6 +71,8 @@ assert.deepEqual(shrQuestionOf(plan({ geography: { places: [{ kind: "national" }
 // Job SA1: "handguns versus rifles" is two conditions on a record's one weapon, which no record meets together.
 const vs = (w: string[]) => ({ kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: w }] });
 assert.deepEqual(shrQuestionOf(plan({ filters: [vs(["12", "12A"]), vs(["13", "13A"])] }), { from: "2024-01", to: "2024-12" }, build), { why: "two values of one record detail compared" });
+const att = (w: string[]) => ({ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: w });
+assert.deepEqual(shrQuestionOf(plan({ filters: [att(["12", "12A"]), att(["13", "13A"])] }), { from: "2024-01", to: "2024-12" }, build), { why: "two values of one record detail compared" }, "ungrouped too (02.2)");
 // P29: a breakdown by an offender's detail counts offenders, never victims.
 assert.deepEqual(shrQuestionOf(plan({ groupings: [{ dimension: "offender.sex" }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a person's detail for the other unit" });
 
