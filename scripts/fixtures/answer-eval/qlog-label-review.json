@@ -7293,13 +7293,11 @@
 },
 "QL-hist-9c58989da2": {
 "status": "reviewed",
-"by": "jeff-2026-11-10",
-"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"by": "jeff-2026-11-11",
+"why": "\"Killings\" means murder (Jeff 2026-11-11: \"yes\"); big cities with no place are the whole country's (Jeff 2026-11-11)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"whether murder is meant"
-]
+"outcome": "answer",
+"source": "historical"
 }
 },
 "QL-hist-9c5a349365": {

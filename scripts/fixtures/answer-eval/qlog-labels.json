@@ -33957,19 +33957,20 @@
    "question": "which big cities had the most killings last year?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "whether murder is meant"
-    ],
-    "about": "whether murder is meant"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-10",
-    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
+    "drafted_by": "jeff-2026-11-11",
+    "reviewed_by": "jeff-2026-11-11",
+    "notes": "\"Killings\" means murder (Jeff 2026-11-11: \"yes\"); big cities with no place are the whole country's (Jeff 2026-11-11)"
    }
   },
   {
