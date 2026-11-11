@@ -1060,8 +1060,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
-  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked && !deps.shr)
+  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked) {
+    // With a release, "by victim-offender relationship" is the relationship breakdown: asked again without the words
+    // the reader reads as two counting units (Codex SHR-A confirmation 01.7); otherwise routed, as before.
+    if (deps.shr && !deps.rewritten) {
+      const again = shadowAnswer(ledger0.question.replace(/\bvictim[-\s]offender\s+(relationships?)\b/gi, "$1"), { ...deps, rewritten: true });
+      if (again.kind === "shr") return again;
+    }
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
+  }
   // Item 11 (bad-decline audit 2026-11-06): population on its own, for agencies, states or the nation.
   const list = agencyListQuestion(ledger, ledger0, deps);
   // A list is for one year: the year is asked with buttons that run (Codex population review 02.3: "Every year
@@ -1927,7 +1934,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (stateMode && deps.shr && murderDetail) {
     const s = shrOutcome(plan, deps, ledger0);
     if (s) return s;
-  } else if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
+  } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");

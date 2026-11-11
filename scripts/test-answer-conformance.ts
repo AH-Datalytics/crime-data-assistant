@@ -174,7 +174,9 @@ const FIXTURES: Record<string, string[]> = {
   rtci: ["Memphis murders by month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
   // Homicide Reports (Jeff S1, S2, 2026-11-11): a state's murder victims by weapon; a city's firearm murders reaching
   // back before NIBRS's years.
-  shr: ["Murder victims in Texas by weapon in 2024", "Firearm murders in Memphis by year since 2010", "Memphis murders by weapon in 2024"],
+  shr: ["Murder victims in Texas by weapon in 2024", "Firearm murders in Memphis by year since 2010", "Memphis murders by weapon in 2024",
+    // Codex SHR-A confirmation 01.7: the relationship breakdown, asked as "victim-offender relationship".
+    "Murders in Virginia in 2024 by victim-offender relationship"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
 const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",
