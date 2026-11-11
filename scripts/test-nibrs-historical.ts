@@ -599,6 +599,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.equal(readQuestion("Show the homicide change from 2024 to 2025 in the top 100 cities", 2026, "2026-09").largestSet, 100);
   // "Top 25 cities for murder rate": ranked by it, not the 25 largest (job S2).
   assert.equal(readQuestion("Top 25 cities for murder rate in 2024", 2026, "2026-09").largestSet, null);
+  // "Sort by year" orders rows; "sort them by homicide rate" ranks (Codex rankings review 09.1).
+  assert.ok(!/ranked by/.test(readQuestion("Homicides in the four largest cities in 2024, sort by year", 2026, "2026-09").text));
+  assert.ok(/ranked by/.test(readQuestion("make a list of the 20 most populous cities and sort them by 2026 homicide rate", 2026, "2026-09").text));
   // "By" a crime after a place or a year still ranks by it (Codex rankings review 03.1).
   assert.equal(readQuestion("top 10 cities in Texas by murder in 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities in 2024 by murder rate", 2026, "2026-09").largestSet, null);

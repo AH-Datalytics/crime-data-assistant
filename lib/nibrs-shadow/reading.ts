@@ -101,7 +101,8 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 const PHRASES: [RegExp, string][] = [
   // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
-  [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b/gi, "ranked by"],
+  // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
+  [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b(?!\s+(?:the\s+)?(?:years?|months?|dates?|names?|city|cities|states?|population|size|alphabet\w*))/gi, "ranked by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],

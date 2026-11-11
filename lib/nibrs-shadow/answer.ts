@@ -1002,7 +1002,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // violence calls over time in the four largest cities"): read without the set, a decline stands.
       const plain = fromLedger(Object.assign(filled(ledger, "place", "national", "the United States"), { largestSet: null, largeCities: false, topAsLargest: null }), deps, pins);
       // Not the reader's own "cities" left over from the set's words, which only the set explains.
-      if (plain.kind === "decline" && !(plain.reason === "reader" && /["“]\s*(?:the\s+)?(?:\w+\s+)?cit(?:y|ies)\b/i.test(plain.explanation))) return plain;
+      // Every word the reader left unread is "cities" or "city", and nothing else (Codex rankings review 09.2).
+      const unreadWords = plain.kind === "decline" ? [...plain.explanation.replace(/\b(?:Try|For example|for example)\b[\s\S]*$/, "").matchAll(/["“]([^"”]+)["”]/g)].map((m) => m[1].trim()) : [];
+      const onlyCities = plain.kind === "decline" && plain.reason === "reader" && unreadWords.length > 0 && unreadWords.every((w) => /^(?:the\s+)?cit(?:y|ies)$/i.test(w));
+      if (plain.kind === "decline" && !onlyCities) return plain;
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
