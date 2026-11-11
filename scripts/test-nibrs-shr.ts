@@ -106,6 +106,18 @@ if (a.kind === "shr") {
   assert.equal(a.delivered.text[a.delivered.text.length - 1], "Source: FBI Supplementary Homicide Reports.");
 }
 assert.ok(seen.some((s) => /agency_crime\.parquet'\) WHERE ori = 'TXHPD0000' AND murder_total = 0 AND year IN \(2017, 2019\)/.test(s)));
+// Jeff 2026-11-11: a filing year under 90% of the murders reported to the FBI is said, never adjusted, never as
+// "Crime Index"; years at 90% or more, or above, say nothing.
+const chi = { ...byYear, place: { kind: "agency" as const, ori: "ILCPD0000", label: "Chicago, Illinois", state: "IL" } };
+const chiStub = (s2: string) => (/shr_agency_year/.test(s2) ? [2017, 2018, 2019, 2020, 2021].map((y) => [y, 1, ["ori9:ILCPD0000"]])
+  : /murder_total IS NOT NULL/.test(s2) ? [[2017, 653], [2018, 567], [2019, 492], [2020, 700], [2021, 804]]
+  : /agency_crime/.test(s2) ? [] : [[2017, 519], [2018, 566], [2019, 495], [2020, 640], [2021, 370]]);
+const many = answerShr({ ...chi, from: "2017-01", to: "2021-12" }, build, chiStub, hist);
+assert.ok(many.kind === "shr" && many.delivered.text.includes("Chicago's Homicide Reports cover less than 90% of the murders reported to the FBI in 2017 (79%) and 2021 (46%)."), JSON.stringify(many));
+const one = answerShr({ ...chi, from: "2021-01", to: "2021-12", grain: "total" }, build, chiStub, hist);
+assert.ok(one.kind === "shr" && one.delivered.text.includes("Chicago's Homicide Reports for 2021 cover 370 of the 804 murders reported to the FBI."), JSON.stringify(one));
+const fine = answerShr({ ...chi, from: "2018-01", to: "2019-12" }, build, chiStub, hist);
+assert.ok(fine.kind === "shr" && !fine.delivered.text.some((t) => /Homicide Reports (?:for d{4} )?cover/.test(t)) && !fine.delivered.text.some((t) => /Crime Index/.test(t)));
 // A total over a gap is blank.
 const total = answerShr({ ...byYear, grain: "total" }, build, (s) => (/shr_agency_year/.test(s) ? [[2016, 1, []]] : /agency_crime/.test(s) ? [] : [[8]]), hist);
 assert.ok(total.kind === "shr" && total.delivered.table.rows[0][0] === null);

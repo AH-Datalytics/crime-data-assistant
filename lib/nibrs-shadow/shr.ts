@@ -345,6 +345,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   if (sq.place.kind === "agency") {
     const gaps = periods.filter((p) => blankPeriod(p)).map((p) => p.year);
     if (gaps.length) text.push(`A blank ${sq.grain === "month" ? "month" : "year"} is one in which ${sq.place.label} filed no Homicide Reports.`);
+    if (hist) { const note = partialNote(sq, build, execute, hist, filed); if (note) text.push(note); }
   } else {
     // S2: the filing agencies, how many, and the share of Crime Index's population they cover; nothing estimated.
     text.push(`A ${sq.place.kind === "state" ? "state" : "national"} total here is the sum of what the agencies that filed Homicide Reports reported; nothing is estimated for agencies that didn't.`);
@@ -366,6 +367,33 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     delivered: { table: { columns, rows }, text },
     read: { table: `${sq.unit === "victims" ? "shr_victim" : "shr_offender"} + shr_record`, release: build.release },
   };
+}
+
+/**
+ * Jeff 2026-11-11: a filing year whose Homicide Reports hold under 90% of the murders the agency reported to the FBI
+ * (Crime Index's murder count) is said, never adjusted, and never named as Crime Index: "Chicago's Homicide Reports for
+ * 2021 cover 370 of the 804 murders reported to the FBI"; over several years, one line with only the short years and
+ * their shares. The agency's murders (type A without justifiable homicide), whatever the question's filters.
+ */
+function partialNote(sq: ShrQuestion, build: ShrBuild, execute: (sql: string) => unknown[][], hist: HistoricalBuild, filed: Map<number, unknown>): string | null {
+  if (sq.place.kind !== "agency") return null;
+  const fromY = Number(sq.from.slice(0, 4)), toY = Number(sq.to.slice(0, 4));
+  const years = Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).filter((y) => filed.has(y) && y <= hist.lastYear);
+  if (!years.length) return null;
+  // Whole years only: a part of a year isn't compared with the year's count.
+  const whole = years.filter((y) => sq.from <= `${y}-01` && sq.to >= `${y}-12`);
+  if (!whole.length) return null;
+  const all: ShrQuestion = { ...sq, measure: "murder", unit: "victims", filters: [], breakdown: null, share: false, grain: "year", from: `${whole[0]}-01`, to: `${whole[whole.length - 1]}-12` };
+  const shr = new Map(execute(shrSql(all, build)).map((r) => [Number(r[0]), Number(r[1])]));
+  const ci = new Map(execute(`SELECT year, murder_total FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE ori = ${q(sq.place.ori)} AND year IN (${whole.join(", ")}) AND murder_total IS NOT NULL`)
+    .map((r) => [Number(r[0]), Number(r[1])]));
+  const short = whole.flatMap((y) => { const c = ci.get(y), s = shr.get(y) ?? 0; return c && c > 0 && s < 0.9 * c ? [{ y, s, c }] : []; });
+  if (!short.length) return null;
+  const city = sq.place.label.split(",")[0];
+  if (fromY === toY) return `${city}'s Homicide Reports for ${short[0].y} cover ${fmt(short[0].s)} of the ${fmt(short[0].c)} murders reported to the FBI.`;
+  const items = short.map(({ y, s, c }) => `${y} (${Math.round((s * 100) / c)}%)`);
+  const list = items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0];
+  return `${city}'s Homicide Reports cover less than 90% of the murders reported to the FBI in ${list}.`;
 }
 
 /** Each year's share of Crime Index's population that the filing agencies cover (S2), one decimal. */
