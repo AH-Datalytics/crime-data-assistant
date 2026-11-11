@@ -48,7 +48,16 @@ assert.equal((shrQuestionOf(plan({ measures: [{ id: "offenses.murder", as: "murd
 // Relationships: SHR names the side.
 const spouse = shrQuestionOf(plan({ filters: [{ kind: "exists", scope: "victim", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["SE", "XS"] }] }] }),
   { from: "2024-01", to: "2024-12" }, build) as ShrQuestion;
-assert.deepEqual(spouse.filters, [{ dim: "relationship", codes: ["HU", "WI", "XH", "XW"] }]);
+assert.deepEqual(spouse.filters, [{ dim: "relationship", codes: ["HU", "WI", "XH", "XW"], group: 0 }]);
+// Codex SHR-A review 01.2: only translations that keep the meaning. A grandparent alone, NIBRS "Other", or a handgun
+// without its automatic code is narrower than SHR's code: NIBRS keeps it.
+const rel = (values: string[]) => shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values }] }), { from: "2024-01", to: "2024-12" }, build);
+assert.deepEqual(rel(["GP"]), { why: "a code SHR records differently" });
+assert.deepEqual((rel(["OF", "GP", "GC", "SS"]) as ShrQuestion).filters[0].codes, ["OF"]);
+const weap = (values: string[]) => shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values }] }), { from: "2024-01", to: "2024-12" }, build);
+assert.deepEqual(weap(["12"]), { why: "a code SHR records differently" });
+assert.deepEqual(weap(["90"]), { why: "a code SHR records differently" });
+assert.deepEqual((weap(["12", "12A"]) as ShrQuestion).filters[0].codes, ["12"]);
 // S4: a felon killed by police is a justifiable homicide, counted as asked.
 const police = shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "victim_circumstance.circumstance", op: "in", values: ["21"] }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion;
 assert.equal(police.measure, "justifiable");
@@ -68,6 +77,10 @@ assert.match(sql, /WHERE r\.counted AND r\.homicide_type IN \('A'\) AND r\.circu
 assert.match(sql, /r\.weapon IN \('11', '12', '13', '14', '15'\)/);
 assert.match(sql, /EXISTS \(SELECT 1 FROM read_parquet\('[^']*shr_offender[^']*'.*o\.sex IN \('F'\)\)/);
 assert.match(sql, /GROUP BY k0/);
+// 01.3: one exists group's conditions are one offender's ("killed by female offenders under 18").
+const both = shrSql({ ...sq, filters: [{ dim: "offender.sex", codes: ["F"], group: 0 }, { dim: "offender.age", ages: [0, 17], group: 0 }] }, build);
+assert.equal((both.match(/EXISTS/g) ?? []).length, 1, both);
+assert.match(both, /o\.sex IN \('F'\) AND o\.age BETWEEN 0 AND 17\)/);
 assert.match(shrSql({ ...sq, measure: "homicide" }, build), /homicide_type IN \('A', 'B'\)/, "homicides add negligent manslaughter (S4)");
 assert.match(shrSql(police, build), /r\.homicide_type = 'A' AND r\.circumstance IN \('80', '81'\)/);
 
@@ -106,6 +119,16 @@ if (n.kind === "shr") {
   assert.ok(n.delivered.text.some((t) => /nothing is estimated/.test(t)));
   assert.ok(n.delivered.text.some((t) => /first offender's, counted for each of the incident's victims/.test(t)));
 }
+// 01.1: by month, January is January's cells only (2024|1 is not 2024|10, 11 or 12).
+const months = answerShr({ ...nat, breakdown: null, share: false, grain: "month" }, build, (sq2) => (/shr_agency_year/.test(sq2) ? [[2024, 10, []]]
+  : /nation_crime|sum\(population\)/.test(sq2) ? [] : [[2024, 1, 2], [2024, 10, 3], [2024, 11, 4], [2024, 12, 5]]));
+assert.ok(months.kind === "shr" && JSON.stringify(months.delivered.table.rows.slice(0, 2)) === '[["2024-01",2],["2024-02",0]]' && months.delivered.table.rows[9][1] === 3, JSON.stringify(months));
+// 01.11: U and blank or unlisted codes are one Unknown row.
+const sex = answerShr({ ...nat, breakdown: { dim: "victim.sex" } }, build, (sq2) => (/shr_agency_year/.test(sq2) ? [[2024, 10, []]] : /nation_crime|sum\(population\)/.test(sq2) ? [] : [["U", 2], [null, 3]]));
+assert.ok(sex.kind === "shr" && JSON.stringify(sex.delivered.table.rows) === '[["Unknown",5,100]]', JSON.stringify(sex));
+// 01.10: a filing year with no rows shows every category as 0, not an empty table.
+const empty = answerShr({ ...nat, breakdown: { dim: "victim.sex" } }, build, (sq2) => (/shr_agency_year/.test(sq2) ? [[2024, 10, []]] : []));
+assert.ok(empty.kind === "shr" && JSON.stringify(empty.delivered.table.rows) === '[["Male",0,null],["Female",0,null],["Unknown",0,null]]', JSON.stringify(empty));
 // J1, option A, in words.
 const e = answerShr({ ...nat, breakdown: null, share: false, from: "1985-01", to: "1990-12", askedFrom: "1976" }, build, (s) => (/shr_agency_year/.test(s) ? [1985, 1986, 1987, 1988, 1989, 1990].map((y) => [y, 10, []]) : [[100]]));
 assert.ok(e.kind === "shr" && e.delivered.text.includes("Homicide Reports here start in 1985, so 1976 through 1984 aren't included."));

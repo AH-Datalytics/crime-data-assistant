@@ -729,8 +729,9 @@ const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:female
  * asks for something SHR doesn't record the same way (the caller keeps its own path). Periods resolve against the SHR
  * release's latest month; a span starting before 1985 is answered from 1985 and says so (J1, option A).
  */
-function shrOutcome(plan: NibrsPlan, deps: ShadowDeps): ShadowOutcome | null {
-  if (!deps.shr) return null;
+function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
+  // Only agencies that reported every month, or quarters: NIBRS's own paths keep them (Codex SHR-A review 01.4, 01.5).
+  if (!deps.shr || flags(ledger0).consistent || flags(ledger0).quarter) return null;
   let period: { from: string; to: string };
   try {
     const r = resolvePeriod(plan.period, { ...deps.release, lastMonth: deps.shr.latestMonth });
@@ -1059,7 +1060,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
-  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked)
+  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked && !deps.shr)
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
   // Item 11 (bad-decline audit 2026-11-06): population on its own, for agencies, states or the nation.
   const list = agencyListQuestion(ledger, ledger0, deps);
@@ -1912,15 +1913,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Jeff S1 (2026-11-11, "NIBRS years included"): a murder detail for one agency is Homicide Reports' when a release is
   // loaded, whatever the years; NIBRS when it is named, or for a clearance, a location, property or arrests (which SHR
   // doesn't record: shrQuestionOf leaves those, and any code SHR records differently, on this path).
-  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected)
+  // Any person's detail selected, offenders' included (Codex SHR-A review 01.6).
+  const detailSelectedAny = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim));
+  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny)
     && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
   if (!stateMode && murderDetail) {
-    const s = shrOutcome(plan, deps);
+    const s = shrOutcome(plan, deps, ledger0);
     if (s) return s;
   }
-  if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
-    return shrOutcome(plan, deps) ?? { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
+  // With a release, a state or national detail SHR can't answer as asked (a location beside it, a rate) goes on to
+  // NIBRS's own path (Codex SHR-A review 01.8); without one, it is routed, as before.
+  if (stateMode && deps.shr && murderDetail) {
+    const s = shrOutcome(plan, deps, ledger0);
+    if (s) return s;
+  } else if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
+    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
   if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
@@ -2003,7 +2011,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
       && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
     if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
-      return shrOutcome(plan, deps) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
+      return shrOutcome(plan, deps, ledger0) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
     // Never "the data" for NIBRS's years alone: Crime Index has yearly figures for cities and counties back to its first
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);

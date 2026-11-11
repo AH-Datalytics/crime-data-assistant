@@ -13,7 +13,7 @@ import { CATEGORY, fmt, measureWords, monthName, periodWords } from "./deliver";
 import { HISTORICAL_MEASURE, type HistoricalAnswer } from "./historical";
 import { STAFF_MEASURE, type StaffKind } from "./staffing";
 import type { CurrentAnswer } from "./current";
-import type { ShrAnswer } from "./shr";
+import { shrWhat, type ShrAnswer } from "./shr";
 import { agencyName, reportedBy, STATE_NAMES, type PlaceIndex } from "./places";
 import { CONSISTENT_WORDS, NIBRS_WORDS } from "./reading";
 import { SRS_MEASURE, type SrsAnswer } from "./srs";
@@ -332,7 +332,7 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
 /** Homicide Reports (shr.ts): a place's murder victims or offenders, by year or month, with a detail. */
 function shrPresentation(o: ShrAnswer, places: PlaceIndex): Presentation {
   const q = o.question;
-  const what = o.delivered.table.columns.find((c) => c.binding.kind === "statistic")?.header.toLowerCase() ?? "murder victims";
+  const what = shrWhat(q);
   const placeTitle = [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.kind === "state" ? (STATE_NAMES[q.place.code] ?? q.place.code) : "United States"];
   const groupings = [...(q.grain !== "total" ? [q.grain] : []), ...(q.breakdown ? [q.breakdown.dim.replace(".", " ")] : [])];
   const titleParts: TitleParts = { places: placeTitle, measure: what, ratePer: null, groupings, period: titlePeriod(o.period, q.grain === "year"),
