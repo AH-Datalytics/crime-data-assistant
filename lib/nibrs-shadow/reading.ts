@@ -98,6 +98,8 @@ export type People = {
 };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
+/** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
+const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
   // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
@@ -268,7 +270,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/\b(?:the\s+)?(?:top\s+)?(\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred)\s+(?:largest|biggest|most\s+populous)\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?:\s+(?:in\s+the\s+(?:country|nation|dataset|usa?|united\s+states)|in\s+the\s+u\.s\.?|by\s+(?:size|population)))?/i,
     (m, n: string, qual: string | undefined) => {
       const k = /^\d+$/.test(n) ? Number(n) : NUM[n.toLowerCase()];
-      if (!k || k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !/^[A-Z]/.test(qual))) return m;
+      if (!k || k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !STATE_WORD.test(qual.trim()))) return m;
       largestSet = k;
       readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
       // A state's name before "cities" stays to be read as the place ("the 5 biggest Texas cities").
@@ -295,7 +297,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
         const k = Number(n);
         // Only a state's name (capitalized as written), "US" or "American" between "top N" and "cities": "top 5 murder
         // cities" picks by murder (job S4, QL-nibrs-f8b0bd256e).
-        if (k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !/^[A-Z]/.test(qual))) return m;
+        if (k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !STATE_WORD.test(qual.trim()))) return m;
         largestSet = k;
         topAsLargest = m.trim();
         readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
