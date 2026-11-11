@@ -39,6 +39,7 @@ import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
 import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
+import type { ShrBuild } from "../lib/nibrs-shadow/shr";
 import type { CurrentBuild } from "../lib/nibrs-shadow/current";
 import type { ResultTable } from "../lib/nibrs-plan/result";
 import { ORI_PREFIX_STATES } from "../lib/nibrs-plan/state-codes";
@@ -121,10 +122,25 @@ function currentStub(sql: string): unknown[][] {
   return ms.map((m) => [m, m === "2025-03" ? null : 30]);
 }
 const current: CurrentBuild = { root: "/ct", release: "crimeindex-20261101", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
+// Homicide Reports stub (Jeff S1, 2026-11-11): every year filed by 12 agencies covering 6 of 7 million people; 20
+// handgun and 5 knife victims a year, 25 in all; no proper zeros.
+const shrBuild: ShrBuild = { root: "/shr", release: "shr-20261111-1", latestMonth: "2026-09", crosswalk: "cw-20261102-2" };
+function shrStub(sql: string): unknown[][] {
+  const [, a, b] = /BETWEEN (\d{4})\d{2} AND (\d{4})\d{2}/.exec(sql) ?? /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql) ?? ["", "2024", "2024"];
+  const ys = Array.from({ length: Number(b) - Number(a) + 1 }, (_, i) => Number(a) + i);
+  if (/shr_agency_year/.test(sql)) return ys.map((y) => [y, 12, ["ori9:TNMPD0000"]]);
+  if (/state_crime|nation_crime/.test(sql)) return ys.map((y) => [y, 7_000_000]);
+  if (/sum\(population\)/.test(sql)) return [[6_000_000]];
+  if (/murder_total = 0/.test(sql)) return [];
+  if (/GROUP BY k0, k1/.test(sql)) return ys.flatMap((y) => [[y, "12", 20], [y, "20", 5]]);
+  if (/GROUP BY k0/.test(sql)) return /r\.data_year AS k0/.test(sql) ? ys.map((y) => [y, 25]) : [["12", 20], ["20", 5]];
+  return [[25 * ys.length]];
+}
+const isShrSql = (sql: string) => /\/shr\/canonical|state_crime|nation_crime|sum\(population\)|murder_total = 0/.test(sql);
 // 20: the months run through the month before the build's CDE release's month (Jeff 2026-11-03), from release.json.
 const nibrsRelease = loadNibrsRelease();
 const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: nibrsRelease.lastMonth, asOf: "2026-10-29" },
-  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (/current_crime|current_final/.test(sql) ? currentStub(sql) : /crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build, current } as ShadowDeps;
+  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (isShrSql(sql) ? shrStub(sql) : /current_crime|current_final/.test(sql) ? currentStub(sql) : /crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build, current, shr: shrBuild } as ShadowDeps;
 
 /** Fixtures for each live source: the questions its answers are checked on. */
 const FIXTURES: Record<string, string[]> = {
@@ -148,13 +164,19 @@ const FIXTURES: Record<string, string[]> = {
     // A state sum by category (coordinator 2026-11-04): each category over the reporting agencies, the button's view too.
     "Simple assault victims in Kansas by sex in 2024", "Simple assault victims in Kansas by sex by year from 2023 to 2024",
     // Element 31 (coordinator 2026-11-04): a breakdown by circumstance, and a filter on one.
-    "Murder victims in Memphis by circumstance in 2024", "Murders during an argument in Memphis in 2024",
+    // A murder detail is Homicide Reports' unless NIBRS is named (Jeff S1, 2026-11-11).
+    "Murder victims in Memphis by circumstance in 2024 according to NIBRS", "Murders during an argument in Memphis in 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.
     "Memphis murders since 1930", "Memphis homicides by year", "Memphis murders over the past 3 years"],
   // Current Trends (design note 2026-11-03): an agency by month (a blank month), the nation by month, a state's month.
   rtci: ["Memphis murders by month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
+  // Homicide Reports (Jeff S1, S2, 2026-11-11): a state's murder victims by weapon; a city's firearm murders reaching
+  // back before NIBRS's years.
+  shr: ["Murder victims in Texas by weapon in 2024", "Firearm murders in Memphis by year since 2010", "Memphis murders by weapon in 2024",
+    // Codex SHR-A confirmation 01.7: the relationship breakdown, asked as "victim-offender relationship".
+    "Murders in Virginia in 2024 by victim-offender relationship"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
 const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",
@@ -180,7 +202,7 @@ const ORI_PREFIX = new RegExp(`\\b(?:${Object.keys(ORI_PREFIX_STATES).join("|")}
 const check = (ok: boolean, what: string) => { if (!ok) fail.push(what); };
 const shown = (p: Presentation) => [titleOf(p.titleParts).title, titleOf(p.titleParts).subtitle ?? "", ...leadOf(p).sentences,
   ...p.offers.flatMap((o) => (o.text ? [o.text.before + o.text.link + o.text.after] : [])), ...notesOf(p)].join(" ");
-const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" || o.kind === "current" ? o.delivered : null);
+const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" || o.kind === "current" || o.kind === "shr" ? o.delivered : null);
 
 // 10: complete profiles, every field filled, for each live source.
 const FIELDS: (keyof SourceProfile)[] = ["units", "grain", "coverage", "rateBasis", "breakdowns", "caveats", "vocabulary", "name"];

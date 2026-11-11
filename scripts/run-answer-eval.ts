@@ -43,6 +43,7 @@ import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
+import { shrBuildAt } from "../lib/nibrs-shadow/shr";
 
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "scripts/fixtures/answer-eval/runs");
@@ -70,7 +71,7 @@ const shadowDeps = (): ShadowDeps => {
   return {
     places: loadPlaceIndex(), release,
     target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-    execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute),
+    execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined),
   };
 };
 /** Independent expected values: nibrs-model's correctness/slice/V*.json on its main branch, read with git show (read-only). */

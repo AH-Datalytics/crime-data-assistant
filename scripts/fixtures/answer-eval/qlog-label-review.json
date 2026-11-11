@@ -2041,7 +2041,16 @@
 },
 "QL-ct-6e7031ecc9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-ct-6e93ec865a": {
 "status": "reviewed",
@@ -2318,7 +2327,16 @@
 },
 "QL-ct-78159bceff": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-ct-784da15084": {
 "status": "reviewed",
@@ -3604,7 +3622,16 @@
 },
 "QL-ct-cdd1100910": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-ct-cde73145dd": {
 "status": "reviewed",
@@ -6562,7 +6589,16 @@
 },
 "QL-hist-6e7031ecc9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-hist-6ebd4f2228": {
 "status": "reviewed",
@@ -6683,12 +6719,16 @@
 "by": "codex-second-1"
 },
 "QL-hist-75e465b429": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency homicide demographic detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-hist-75fdc8ed4b": {
@@ -9195,7 +9235,16 @@
 },
 "QL-nibrs-1208b6701a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-1214f79a1b": {
 "status": "reviewed",
@@ -9421,7 +9470,16 @@
 },
 "QL-nibrs-1b1a8b2000": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-1b478cf52e": {
 "status": "draft",
@@ -9760,7 +9818,16 @@
 },
 "QL-nibrs-29fca6f41e": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-2a0706c0b5": {
 "status": "reviewed",
@@ -10066,7 +10133,16 @@
 },
 "QL-nibrs-3abf54e9a1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-3aebcdb31c": {
 "status": "draft",
@@ -10107,12 +10183,16 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-3cd3ae9555": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Robbery and assault offender ages are outside SHR.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-nibrs-3d9635b7a7": {
@@ -10146,7 +10226,16 @@
 },
 "QL-nibrs-401595e13b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-4040f1f0bf": {
 "status": "reviewed",
@@ -10561,7 +10650,16 @@
 },
 "QL-nibrs-4ee7417131": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-4f3895e27c": {
 "status": "reviewed",
@@ -10739,7 +10837,16 @@
 },
 "QL-nibrs-560d542b2d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-56da31b5bf": {
 "status": "reviewed",
@@ -10874,7 +10981,16 @@
 },
 "QL-nibrs-5b597ea8a7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-5b68ebdae1": {
 "status": "reviewed",
@@ -10886,7 +11002,16 @@
 },
 "QL-nibrs-5cc90027ca": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-5cf1916eed": {
 "status": "reviewed",
@@ -10965,7 +11090,16 @@
 },
 "QL-nibrs-5fd549e2e4": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-60105687e9": {
 "status": "reviewed",
@@ -11177,7 +11311,16 @@
 },
 "QL-nibrs-6a5e9632c5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-6ab8dbd2d5": {
 "status": "reviewed",
@@ -11246,7 +11389,16 @@
 },
 "QL-nibrs-6e7031ecc9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-6ef0da1a7d": {
 "status": "reviewed",
@@ -11314,7 +11466,16 @@
 },
 "QL-nibrs-722fe56cf2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-723b84e5e6": {
 "status": "reviewed",
@@ -11326,7 +11487,16 @@
 },
 "QL-nibrs-72d1e3dfee": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-72eb2ad905": {
 "status": "reviewed",
@@ -11416,7 +11586,16 @@
 },
 "QL-nibrs-78159bceff": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-7858386c48": {
 "status": "reviewed",
@@ -11476,7 +11655,16 @@
 },
 "QL-nibrs-7a7a167bd3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-7ac8000e8e": {
 "status": "reviewed",
@@ -11724,7 +11912,16 @@
 },
 "QL-nibrs-8615bf5d6f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-86540c7be7": {
 "status": "reviewed",
@@ -11876,7 +12073,16 @@
 },
 "QL-nibrs-8b14ff99a6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-8b1a9022d6": {
 "status": "reviewed",
@@ -12349,11 +12555,29 @@
 },
 "QL-nibrs-a4158b57de": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-a43546e717": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-a46a1b1b48": {
 "status": "draft",
@@ -12531,7 +12755,16 @@
 },
 "QL-nibrs-ab00976e92": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-ab3a5de130": {
 "status": "reviewed",
@@ -12900,7 +13133,16 @@
 },
 "QL-nibrs-c020987011": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-c02f2ce948": {
 "status": "reviewed",
@@ -12949,7 +13191,16 @@
 },
 "QL-nibrs-c1632c6741": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-c19630de61": {
 "status": "reviewed",
@@ -13870,7 +14121,16 @@
 },
 "QL-nibrs-eda390f9c8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-ee3bada8e6": {
 "status": "reviewed",
@@ -14013,7 +14273,16 @@
 },
 "QL-nibrs-f6c7b5791d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-f6ce2dfb17": {
 "status": "draft",
@@ -14378,7 +14647,16 @@
 },
 "QL-shr-15e40be935": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-1691eef0cf": {
 "status": "reviewed",
@@ -14406,7 +14684,16 @@
 },
 "QL-shr-18c482e421": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-1c20539449": {
 "status": "reviewed",
@@ -14430,7 +14717,16 @@
 },
 "QL-shr-1ca2953124": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-1e9bb9dc3f": {
 "status": "reviewed",
@@ -14488,7 +14784,16 @@
 },
 "QL-shr-2280157000": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-2281b516a6": {
 "status": "reviewed",
@@ -14530,12 +14835,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-264fb81d70": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Single-agency firearm homicide detail routes to NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-265f5236ae": {
@@ -14598,7 +14907,16 @@
 },
 "QL-shr-2bc7caf457": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-2bf81f1312": {
 "status": "reviewed",
@@ -14606,7 +14924,16 @@
 },
 "QL-shr-2d54d88f29": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-2d5bc44879": {
 "status": "reviewed",
@@ -14718,7 +15045,16 @@
 },
 "QL-shr-388cbdf0d1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-38c550f436": {
 "status": "reviewed",
@@ -14769,7 +15105,16 @@
 },
 "QL-shr-3e4df67d16": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-3eb627dccb": {
 "status": "reviewed",
@@ -14802,15 +15147,28 @@
 },
 "QL-shr-43292faa5d": {
 "status": "reviewed",
-"by": "codex-second-1"
-},
-"QL-shr-43505c9fbe": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Comparing offense records with victims requires incident detail.",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
+},
+"QL-shr-43505c9fbe": {
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-43f2a5a9be": {
@@ -15038,24 +15396,41 @@
 },
 "QL-shr-579998e093": {
 "status": "reviewed",
-"by": "codex-second-1"
-},
-"QL-shr-57f28470eb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Single-agency firearm homicide detail routes to NIBRS.",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
+},
+"QL-shr-57f28470eb": {
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-59b4ae2809": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Single-agency firearm homicide detail routes to NIBRS, with unavailable years named.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-59ebe7a861": {
@@ -15096,7 +15471,16 @@
 },
 "QL-shr-5d076a90e3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-5d1fa1295e": {
 "status": "reviewed",
@@ -15167,7 +15551,16 @@
 },
 "QL-shr-6372213a4c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-63e354c362": {
 "status": "reviewed",
@@ -15242,7 +15635,16 @@
 },
 "QL-shr-6bf1633bed": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-6d213dabfe": {
 "status": "reviewed",
@@ -15258,7 +15660,16 @@
 },
 "QL-shr-6e7031ecc9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-6e9f56e1a8": {
 "status": "draft",
@@ -15337,19 +15748,32 @@
 },
 "QL-shr-759c5ef475": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-75d27df473": {
 "status": "reviewed",
 "by": "codex-second-1"
 },
 "QL-shr-75e465b429": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency homicide demographic detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-75ed56f1ca": {
@@ -15362,7 +15786,16 @@
 },
 "QL-shr-764e015d62": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-77ccc469c9": {
 "status": "reviewed",
@@ -15436,7 +15869,16 @@
 },
 "QL-shr-8204fc5c0a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-820b9e683e": {
 "status": "draft",
@@ -15501,28 +15943,59 @@
 },
 "QL-shr-879dceecd6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-8836108c04": {
 "status": "reviewed",
 "by": "codex-second-1"
 },
 "QL-shr-88a6d5bdee": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-8982d5acc1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-89d81f9aab": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-8af203c52b": {
 "status": "draft",
@@ -15547,17 +16020,30 @@
 "by": "codex-second-1"
 },
 "QL-shr-8c1a55926e": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail routes to NIBRS with unavailable periods named.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-8c666d2969": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-8ce4cbfe32": {
 "status": "reviewed",
@@ -15579,12 +16065,16 @@
 }
 },
 "QL-shr-8d5f5ff509": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-8ee90a9fbc": {
@@ -15751,11 +16241,29 @@
 },
 "QL-shr-a2a6df51ef": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-a2bdcea062": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-a2f667934e": {
 "status": "reviewed",
@@ -15830,12 +16338,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-a9e8cf9e16": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-aa24700b69": {
@@ -16009,7 +16521,16 @@
 },
 "QL-shr-ba29854ea6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-ba4f7ad1eb": {
 "status": "reviewed",
@@ -16040,12 +16561,16 @@
 }
 },
 "QL-shr-bcdb4c61db": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "DC agency victim demographic detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-bcf79a3721": {
@@ -16093,7 +16618,16 @@
 },
 "QL-shr-c020987011": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-c07935e0e4": {
 "status": "draft",
@@ -16164,12 +16698,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-c4eebf2c50": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-c5a7750e9c": {
@@ -16182,7 +16720,16 @@
 },
 "QL-shr-c6973ab45d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-c6b8a6f2a1": {
 "status": "reviewed",
@@ -16214,7 +16761,16 @@
 },
 "QL-shr-ca0c753071": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-cb1071ad45": {
 "status": "reviewed",
@@ -16234,11 +16790,29 @@
 },
 "QL-shr-cda3d5839c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-ce38a70ee4": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-ce8899db4b": {
 "status": "draft",
@@ -16254,12 +16828,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-cf225c3788": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-cf22c622eb": {
@@ -16302,7 +16880,16 @@
 },
 "QL-shr-d0e0a67c52": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-d12ee27e60": {
 "status": "reviewed",
@@ -16342,12 +16929,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-d7a344362f": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-d7e416326b": {
@@ -16386,12 +16977,16 @@
 }
 },
 "QL-shr-da1a22df1f": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-daae7d7574": {
@@ -16424,7 +17019,16 @@
 },
 "QL-shr-dec6134eee": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-e065fca89f": {
 "status": "reviewed",
@@ -16432,7 +17036,16 @@
 },
 "QL-shr-e11ae9608b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-e257ab48d2": {
 "status": "reviewed",
@@ -16516,15 +17129,42 @@
 },
 "QL-shr-eccd95acc2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-eda390f9c8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-f075985aec": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-f1be611ab3": {
 "status": "reviewed",
@@ -16568,7 +17208,16 @@
 },
 "QL-shr-f5eac3ffc2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-f5eb45b43a": {
 "status": "reviewed",
@@ -17396,12 +18045,16 @@
 "by": "codex-second-1"
 },
 "QL-ct-9ac95d5ce5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "As long as available supplies the period.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-ct-9d330440c1": {
@@ -17668,12 +18321,16 @@
 }
 },
 "QL-ct-d5ce5d5ce5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "As long as available supplies the period.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-ct-d7e68a444a": {
@@ -17749,7 +18406,16 @@
 },
 "QL-ct-e52c778159": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-ct-e77310fa50": {
 "status": "reviewed",
@@ -19264,7 +19930,16 @@
 },
 "QL-nibrs-15ce54ee74": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-15ce55d139": {
 "status": "draft",
@@ -19497,12 +20172,16 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-4460b1fddb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Robbery and assault offender ages are outside SHR.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-nibrs-44aa895016": {
@@ -19599,7 +20278,16 @@
 },
 "QL-nibrs-4ee74ab009": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-4f73c8a0a8": {
 "status": "reviewed",
@@ -19611,7 +20299,16 @@
 },
 "QL-nibrs-4f73cff0ae": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-4ffe7fbb8c": {
 "status": "draft",
@@ -19742,7 +20439,16 @@
 },
 "QL-nibrs-6b86b5ebf2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-6b86b6b86b": {
 "status": "reviewed",
@@ -19898,7 +20604,16 @@
 },
 "QL-nibrs-8a0a84ee74": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-8ae1da5e9a": {
 "status": "reviewed",
@@ -19974,12 +20689,16 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-a780a37ab6": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Robbery and assault offender ages are outside SHR.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-nibrs-a881b3b2cd": {
@@ -20025,7 +20744,16 @@
 },
 "QL-nibrs-aeb3f5ebf2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-b00308fe08": {
 "status": "reviewed",
@@ -20129,7 +20857,16 @@
 },
 "QL-nibrs-c878629fca": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-ca9054dfd7": {
 "status": "reviewed",
@@ -20197,7 +20934,16 @@
 },
 "QL-nibrs-ddcbf4ee74": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-nibrs-e04249aed2": {
 "status": "reviewed",
@@ -20302,12 +21048,16 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-ffbd537ab6": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Robbery and assault offender ages are outside SHR.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-nibrs-ffbd5a780a": {
@@ -20358,11 +21108,29 @@
 },
 "QL-shr-0b297c5a75": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-0b297cda3d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-0b297d35d9": {
 "status": "reviewed",
@@ -20378,7 +21146,16 @@
 },
 "QL-shr-0d0ef22801": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-0fd210126b": {
 "status": "reviewed",
@@ -20409,12 +21186,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-264fb5eb53": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-265f5e065f": {
@@ -20427,7 +21208,16 @@
 },
 "QL-shr-26e06cda3d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-26e06d35d9": {
 "status": "reviewed",
@@ -20447,7 +21237,16 @@
 },
 "QL-shr-292b8cda3d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-2983508642": {
 "status": "reviewed",
@@ -20512,7 +21311,16 @@
 },
 "QL-shr-400d5cda3d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-405092d56d": {
 "status": "reviewed",
@@ -20557,7 +21365,16 @@
 },
 "QL-shr-440cdcb73a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-4596d74601": {
 "status": "reviewed",
@@ -20590,12 +21407,16 @@
 }
 },
 "QL-shr-59b4a8c1a5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail routes to NIBRS with unavailable years named.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-59db0f473d": {
@@ -20620,12 +21441,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-5eb53a9e8c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-61fce2d07b": {
@@ -20633,12 +21458,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-65db9a416e": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-691f0f3d37": {
@@ -20696,7 +21525,16 @@
 },
 "QL-shr-879dcced85": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-8b9d359db0": {
 "status": "reviewed",
@@ -20713,7 +21551,16 @@
 },
 "QL-shr-9a8fa879dc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-9a90a8a798": {
 "status": "disputed",
@@ -20740,12 +21587,16 @@
 "by": "codex-second-1"
 },
 "QL-shr-9c5d7cf225": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Agency firearm homicide detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-9dffa075a9": {
@@ -20833,7 +21684,16 @@
 },
 "QL-shr-c5a758c5dd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-c86f72f671": {
 "status": "reviewed",
@@ -20854,11 +21714,29 @@
 },
 "QL-shr-cda3d5ad28": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-cda3d6bf16": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-S1",
+"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-cda3d9c5d7": {
 "status": "reviewed",

@@ -9,6 +9,7 @@
  * at a tight tolerance, a result is trusted only for the request and value it names, and any ambiguity (two cells at one
  * place, a duplicate or extra checker value, an existing verification at another digest) leaves an answer unverified.
  */
+import { shrCategoryCodes, type ShrQuestion } from "../nibrs-shadow/shr";
 import { tableDigest } from "./table-digest";
 
 export type VerifyLabel = { id: string; tab: string; kind: string; times: number; question: string; previous: string | null };
@@ -42,7 +43,7 @@ const planStatistic = (plan?: Record<string, unknown>) => {
   return kind ? [kind, ...transforms].join("+") : null;
 };
 
-const SOURCE: Record<string, string> = { answer: "nibrs", srs: "crimeindex_state_national", current: "current_trends" };
+const SOURCE: Record<string, string> = { answer: "nibrs", srs: "crimeindex_state_national", current: "current_trends", shr: "shr_canonical" };
 
 /** A cell's identity: its column and where it sits, as structured JSON (never a joined string that two cells could share). */
 export const cellKey = (column: string, at: Record<string, unknown>) => JSON.stringify([column, Object.keys(at).sort().map((k) => [k, at[k]])]);
@@ -64,7 +65,7 @@ export function sameValue(engine: unknown, mine: unknown): boolean {
 /** The request for one answered label, or null for an outcome that shows no table (a clarify, a decline, a route). */
 export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null {
   const table = o.delivered?.table;
-  if (!table || !["answer", "historical", "srs", "current"].includes(o.kind)) return null;
+  if (!table || !["answer", "historical", "srs", "current", "shr"].includes(o.kind)) return null;
   const groups = table.columns.map((c, i) => [c, i] as const).filter(([c]) => c.binding.kind === "grouping");
   const numbers = table.rows.flatMap((row) => table.columns.flatMap((c, i): VerifyNumber[] => (c.binding.kind !== "statistic" ? []
     : [{ column: c.header, binding: c.binding, at: Object.fromEntries(groups.map(([g, gi]) => [g.header, row[gi]])), value: row[i] }])));
@@ -77,7 +78,18 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
   const odd = numbers.some((n) => n.value !== null && !(typeof n.value === "number" && Number.isFinite(n.value)));
   const q = (o.question ?? {}) as { measure?: string; statistic?: string; agencies?: { ori: string; state?: string; label: string }[]; beside?: { kind: string; code?: string }[];
     place?: { kind: string; ori?: string; label?: string; code?: string }; places?: { kind: string; code?: string }[];
-    countywide?: { members: { ori: string; label: string; state: string; years: number[] }[] } };
+    countywide?: { members: { ori: string; label: string; state: string; years: number[] }[] };
+    unit?: string; filters?: unknown[]; breakdown?: unknown; share?: boolean };
+  // A Homicide Reports answer (shr.ts) names its counting rules, so a checker counts the same rows (Jeff S1-S5, 2026-11-11).
+  const shr = o.kind === "shr";
+  const SHR_RULES = "SHR canonical release: count rows of shr_victim (or shr_offender for offenders) joined to shr_record on data_year and source_line_no, "
+    + "only records with counted = true; period by data_year and offense_month; murder = homicide_type 'A' with circumstance not 80 or 81, "
+    + "homicide = types 'A' and 'B' with circumstance not 80 or 81, justifiable = type 'A' with circumstance 80 or 81; weapon, relationship and circumstance are "
+    + "the record's (the first offender's), applied to each victim; a condition on the other person holds if any of the record's persons meets it; "
+    + "an agency is r.agency_key = 'ori9:' + its ORI, a state is r.state; a category of a person with in_record = false, a blank code or a code outside "
+    + "SHR's lists is Unknown; an agency-year with no row in shr_agency_year with records > 0 is blank, unless Crime Index's agency_crime has that "
+    + "agency's murder_total = 0 that year (then 0); a state or the nation is the sum of the agencies that filed, blank in a year none filed; a total over "
+    + "several years is blank if any of its years is blank; a share is the category's count over the period's total, one decimal";
   // A county-wide sum lists its member agencies and their years, summed (job SB1: with no places the checker read the nation).
   const county = o.kind === "historical" && q.countywide ? q.countywide.members.map((m) => ({ kind: "agency", ori: m.ori, state: m.state, label: m.label, years: m.years })) : null;
   const geo = (p: { kind: string; code?: string }) => (p.kind === "national" ? { kind: "national", label: "United States" } : { kind: "state", state: p.code });
@@ -85,6 +97,7 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     : o.kind === "srs" ? (q.places ?? (q.place ? [q.place] : [])).map(geo)
     // A Current Trends ranking or set lists its agencies with their ORIs, so a checker can find each one (job S4).
     : o.kind === "current" ? [...(q.place ? [q.place] : []), ...(q.agencies ?? []).map((a) => ({ kind: "agency", ori: a.ori, state: a.state ?? null, label: a.label }))]
+    : shr ? (q.place ? [q.place] : [])
     : ((o.plan?.geography as { places?: unknown[] } | undefined)?.places ?? []));
   const source = o.kind === "historical" ? (q.beside?.length ? (q.agencies?.length ? "crimeindex_agency+state_national" : "crimeindex_state_national") : "crimeindex_agency") : SOURCE[o.kind];
   const grain = groups.some(([g]) => g.binding.dimension === "time.year") ? "time.year" : groups.some(([g]) => g.binding.dimension === "time.month") ? "time.month" : groups.length ? null : "total";
@@ -92,9 +105,10 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     id: label.id, tab: label.tab, times_asked: label.times, question: label.question, follow_up_of: label.kind === "follow-up" ? label.previous : null, source,
     measure: q.measure ?? planMeasure(o.plan) ?? o.meaning?.measures?.[0]?.name ?? null, statistic: q.statistic ?? planStatistic(o.plan) ?? o.meaning?.statistic ?? null, grain, places: withoutSql(places) as unknown[],
     // A rate's denominator is only the reporting agencies' residents (Codex rankings-B review 03.1).
-    combine: county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
+    combine: shr ? SHR_RULES : county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
       (q.statistic === "rate") ? "; a rate is the summed count per 100,000 of the summed population of the agencies with a figure that year, blank if any of them has no population" : ""}` : (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
-    filters: o.plan ? withoutSql(o.plan.filters) ?? null : null, groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
+    filters: shr ? (q.filters ?? []) : o.plan ? withoutSql(o.plan.filters) ?? null : null,
+    ...(shr ? { categories: shrCategoryCodes(o.question as ShrQuestion) } : {}), groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
     verifiable: numbers.length > 0 && !ambiguous && !odd,
     note: ambiguous ? "two cells share one column and place: not verifiable" : odd ? "a value that is not a finite number or a blank: not verifiable" : numbers.length ? "" : "no numbers shown",
@@ -110,7 +124,11 @@ export type VerifyResult = { request: string; column: string; at: Record<string,
  */
 export function blindOf(q: VerifyRequest): Record<string, unknown> {
   return { id: q.id, tab: q.tab, question: q.question, follow_up_of: q.follow_up_of, source: q.source, measure: q.measure, statistic: q.statistic, grain: q.grain,
-    places: q.places, combine: q.combine, period: q.period, cells: q.numbers.map((n) => ({ column: n.column, at: n.at })) };
+    places: q.places, combine: q.combine, period: q.period,
+    // A Homicide Reports request's filters (SHR codes; one group is one person) and each category's codes: without them
+    // a checker counts every murder (job SA1).
+    ...(q.source === "shr_canonical" ? { filters: q.filters, categories: (q as { categories?: unknown }).categories ?? null } : {}),
+    cells: q.numbers.map((n) => ({ column: n.column, at: n.at })) };
 }
 
 /** One value the checker wrote for a cell (the 2026-11-06 checker output). */

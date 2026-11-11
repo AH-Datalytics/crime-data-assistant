@@ -2547,6 +2547,15 @@
       "note": "Current Trends in the new engine (P90, P91, decisions A-C): agency months, consistent group sums, cumulative totals never complete over unknown months; a stub executor stands in for DuckDB over the build, which is checked when present"
     },
     {
+      "id": "test-nibrs-shr",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shr.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Homicide Reports in the new engine (Jeff S1-S5, J1, 2026-11-11): the release's manifest key, NIBRS plan to SHR question, counted records, murder without justifiable homicide, blanks only where no agency filed, coverage; a stub executor stands in for DuckDB over the release"
+    },
+    {
       "id": "test-nibrs-preview",
       "tier": "F",
       "script": "scripts/test-nibrs-preview.ts",

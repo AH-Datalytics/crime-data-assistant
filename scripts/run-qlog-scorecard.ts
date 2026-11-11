@@ -52,6 +52,7 @@ import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shad
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor, SERVER as DUCKDB_SERVER } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
+import { shrBuildAt } from "../lib/nibrs-shadow/shr";
 import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
@@ -189,7 +190,7 @@ const execute = (sql: string): unknown[][] => {
 const deps: ShadowDeps = {
   places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" },
   target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-  execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute),
+  execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined),
 } as ShadowDeps;
 
 
@@ -202,6 +203,7 @@ function got(o: { kind: string } & Record<string, unknown>, ms: number): Got {
     case "answer": return { kind: "answer", source: "nibrs", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "srs": case "historical": return { kind: "answer", source: "historical", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "current": return { kind: "answer", source: "rtci", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
+    case "shr": return { kind: "answer", source: "shr", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "route": return { kind: "route", source: String(o.source), ms };
     case "clarify": return { kind: "clarify", source: null, about: String(o.about ?? ""), ms };
     case "proposal": return { kind: "proposal", source: null, ms };

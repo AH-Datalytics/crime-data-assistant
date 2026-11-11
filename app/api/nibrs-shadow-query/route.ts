@@ -11,6 +11,7 @@ import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
 import { loadNibrsRelease } from "@/lib/nibrs-shadow/release";
 import { currentBuildAt } from "@/lib/nibrs-shadow/current";
+import { shrBuildAt } from "@/lib/nibrs-shadow/shr";
 import { follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,8 @@ function shadowDeps(): ShadowDeps {
     // Historical (P75-P79) and Current Trends: the Crime Index build, when NIBRS_HISTORICAL_ROOT names one.
     historical: historicalBuildAt(process.env.NIBRS_HISTORICAL_ROOT),
     current: currentBuildAt(process.env.NIBRS_HISTORICAL_ROOT, execute),
+    // Homicide Reports (Jeff S1, 2026-11-11): the SHR release, when NIBRS_SHR_ROOT names one.
+    shr: shrBuildAt(process.env.NIBRS_SHR_ROOT),
   };
   return deps;
 }

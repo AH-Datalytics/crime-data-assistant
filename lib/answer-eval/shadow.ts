@@ -1026,7 +1026,7 @@ function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, 
     const own = ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
     return (o.buttons ?? []).reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}button "${x.label}" `, `${key}|button`, x.continuation, r, ev, ctx)) : acc), own);
   }
-  if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "route") return none();
+  if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "shr" || o.kind === "route") return none();
   if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
   return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
@@ -1053,7 +1053,8 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   // Not available yet (a capability the shadow doesn't have): the plain prefix, or the plain sentence for an internal reason (P74).
   if (c.kind === "decline" && (/^This isn't available yet/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
   // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
-  if (c.kind === "srs" || c.kind === "historical" || c.kind === "current" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
+  if (c.kind === "srs" || c.kind === "historical" || c.kind === "current" || c.kind === "shr" || c.kind === "route")
+    return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : c.kind === "shr" ? "a Homicide Reports answer" : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
     return deliveredCheck(prefix, key, c, want, r, ev, ctx);
@@ -1110,6 +1111,16 @@ export function withRewrite(res: CaseResult, c: Case, o: { rewrite: string | nul
 export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capability: string; era: string }, expectedValues?: ExpectedValues): ShadowScore {
   const e = c.expected!;
   if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
+  // A Homicide Reports answer (shr.ts): no labelled case holds its values yet, so it is unverified when the label wants
+  // a Homicide Reports answer and a material miss when it wants another source or action (the query-log scorecard and
+  // the runner's blind check verify it).
+  if (o.kind === "shr") {
+    const fits = e.action === "answer" && e.meaning.source === "shr";
+    const diffs: Diff[] = [fits ? { field: "values", expected: "Homicide Reports values", actual: "not checked by this harness", kind: "unverified" }
+      : { field: e.action === "answer" ? "source" : "action", expected: e.action === "answer" ? e.meaning.source : e.action, actual: "a Homicide Reports answer", kind: "material" }];
+    const outcome = outcomeOf(e.action, "answer", { material: fits ? 0 : 1, unverified: fits ? 1 : 0, structured: true, alternativeMissing: false });
+    return { result: { id: c.id, split: c.split, expected: e.action, actual: "answer", outcome, diffs, notes: [`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`], capability: ctx.capability, era: ctx.era } };
+  }
   const actual: ActualAction = o.kind;
   const notes: string[] = [];
   let diffs: Diff[] = [];
