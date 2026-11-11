@@ -33,6 +33,19 @@ const cwr = requestOf({ ...label, id: "QL-hist-cwr" }, { ...historical, question
   countywide: { members: [{ ori: "CA0150000", label: "Kern County", state: "CA", years: [2024] }] } } })!;
 assert.match(String(cwr.combine), /summed population of the agencies with a figure that year/, "a rate's denominator is the reporting agencies' (review 03.1)");
 assert.equal(cwq.source, "crimeindex_agency");
+// Job SA1: a Homicide Reports request's blind view carries its filters and each category's codes, so a checker counts
+// the same rows (without them it had counted every murder).
+const shrQ = { measure: "murder", unit: "victims", place: { kind: "agency", ori: "PAPEP0000", label: "Philadelphia, Pennsylvania", state: "PA" }, from: "2024-01", to: "2024-12",
+  grain: "total", filters: [{ dim: "victim.sex", codes: ["F"] }], breakdown: { dim: "weapon" }, share: false };
+const shrO = { kind: "shr", period: { from: "2024-01", to: "2024-12" }, question: shrQ, read: { table: "shr_victim + shr_record", release: "shr-20261111-1" },
+  delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "shr.weapon" }, header: "Weapon" }, { binding: { kind: "statistic", as: "count" }, header: "Murder victims" }],
+    rows: [["Handgun", 9], ["Unknown", 1]] }, text: [] } };
+const sr = requestOf({ ...label, id: "QL-shr-x", tab: "shr" }, shrO)!;
+const sb = blindOf(sr) as { filters?: unknown; categories?: Record<string, unknown>; source: string };
+assert.equal(sb.source, "shr_canonical");
+assert.deepEqual(sb.filters, [{ dim: "victim.sex", codes: ["F"] }]);
+assert.deepEqual(sb.categories?.Handgun, ["12"]);
+assert.match(String(sb.categories?.Unknown), /blank code/);
 
 // A NIBRS answer: its plan, without any SQL at any depth; the engine's own query is never in a request.
 const nibrs = { kind: "answer", period: { from: "2023-01", to: "2023-12" }, sql: "SELECT secret", delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: "Robberies" }], rows: [[512]] } },

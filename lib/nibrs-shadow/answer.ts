@@ -737,6 +737,9 @@ const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:female
 function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
   // Only agencies that reported every month, or quarters: NIBRS's own paths keep them (Codex SHR-A review 01.4, 01.5).
   if (!deps.shr || flags(ledger0).consistent || flags(ledger0).quarter) return null;
+  // No period named: the period is asked, as on NIBRS's path, never a default year answered (job SA1: "firearm murders
+  // in Philadelphia" is labelled to ask which period).
+  if (plan.defaults.some((d) => d.path === "period")) return null;
   let period: { from: string; to: string };
   try {
     const r = resolvePeriod(plan.period, { ...deps.release, lastMonth: deps.shr.latestMonth });
@@ -1932,6 +1935,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (stateMode && deps.shr && murderDetail) {
     const s = shrOutcome(plan, deps, ledger0);
     if (s) return s;
+    // A Homicide Reports question SHR-A can't answer yet (a rolling window, two weapons compared) is routed, as before
+    // (job SA1); a NIBRS-only detail beside it (a location), no period named, or NIBRS's own views go on to NIBRS's path.
+    if (catG.every((g) => shrDetailDim(g.dimension)) && !plan.defaults.some((d) => d.path === "period") && !flags(ledger0).consistent && !flags(ledger0).quarter)
+      return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR); this form of the question isn't available here yet." };
   } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length

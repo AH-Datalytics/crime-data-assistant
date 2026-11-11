@@ -68,6 +68,9 @@ assert.deepEqual(shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: 
 assert.deepEqual(shrQuestionOf(plan({ statistics: [{ kind: "rate", as: "r", measure: "murder" }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a rate or another statistic" });
 assert.deepEqual(shrQuestionOf(plan({ measures: [{ id: "victims.robbery", as: "robbery" }] }), { from: "2024-01", to: "2024-12" }, build), { why: "not a homicide count" });
 assert.deepEqual(shrQuestionOf(plan({ geography: { places: [{ kind: "national" }, { kind: "state", code: "TX" }], combine: "separate" } }), { from: "2024-01", to: "2024-12" }, build), { why: "several places" });
+// Job SA1: "handguns versus rifles" is two conditions on a record's one weapon, which no record meets together.
+const vs = (w: string[]) => ({ kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: w }] });
+assert.deepEqual(shrQuestionOf(plan({ filters: [vs(["12", "12A"]), vs(["13", "13A"])] }), { from: "2024-01", to: "2024-12" }, build), { why: "two values of one record detail compared" });
 // P29: a breakdown by an offender's detail counts offenders, never victims.
 assert.deepEqual(shrQuestionOf(plan({ groupings: [{ dimension: "offender.sex" }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a person's detail for the other unit" });
 

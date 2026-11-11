@@ -9,6 +9,7 @@
  * at a tight tolerance, a result is trusted only for the request and value it names, and any ambiguity (two cells at one
  * place, a duplicate or extra checker value, an existing verification at another digest) leaves an answer unverified.
  */
+import { shrCategoryCodes, type ShrQuestion } from "../nibrs-shadow/shr";
 import { tableDigest } from "./table-digest";
 
 export type VerifyLabel = { id: string; tab: string; kind: string; times: number; question: string; previous: string | null };
@@ -106,7 +107,8 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     // A rate's denominator is only the reporting agencies' residents (Codex rankings-B review 03.1).
     combine: shr ? SHR_RULES : county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
       (q.statistic === "rate") ? "; a rate is the summed count per 100,000 of the summed population of the agencies with a figure that year, blank if any of them has no population" : ""}` : (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
-    filters: shr ? (q.filters ?? []) : o.plan ? withoutSql(o.plan.filters) ?? null : null, groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
+    filters: shr ? (q.filters ?? []) : o.plan ? withoutSql(o.plan.filters) ?? null : null,
+    ...(shr ? { categories: shrCategoryCodes(o.question as ShrQuestion) } : {}), groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
     verifiable: numbers.length > 0 && !ambiguous && !odd,
     note: ambiguous ? "two cells share one column and place: not verifiable" : odd ? "a value that is not a finite number or a blank: not verifiable" : numbers.length ? "" : "no numbers shown",
@@ -122,7 +124,11 @@ export type VerifyResult = { request: string; column: string; at: Record<string,
  */
 export function blindOf(q: VerifyRequest): Record<string, unknown> {
   return { id: q.id, tab: q.tab, question: q.question, follow_up_of: q.follow_up_of, source: q.source, measure: q.measure, statistic: q.statistic, grain: q.grain,
-    places: q.places, combine: q.combine, period: q.period, cells: q.numbers.map((n) => ({ column: n.column, at: n.at })) };
+    places: q.places, combine: q.combine, period: q.period,
+    // A Homicide Reports request's filters (SHR codes; one group is one person) and each category's codes: without them
+    // a checker counts every murder (job SA1).
+    ...(q.source === "shr_canonical" ? { filters: q.filters, categories: (q as { categories?: unknown }).categories ?? null } : {}),
+    cells: q.numbers.map((n) => ({ column: n.column, at: n.at })) };
 }
 
 /** One value the checker wrote for a cell (the 2026-11-06 checker output). */

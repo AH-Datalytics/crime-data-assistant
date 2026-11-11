@@ -179,6 +179,12 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   const filters: ShrFilter[] = [];
   let measure: ShrQuestion["measure"] = m[2] === "justifiable_homicide" ? "justifiable" : (m[2] as "murder" | "homicide");
   const conditions = plan.filters.flatMap((f, gi) => (f.kind === "attribute" ? [{ f, group: undefined as number | undefined }] : f.negate ? [null] : f.where.map((w) => ({ f: w, group: gi }))));
+  // Two separate conditions on a record's one weapon, relationship or circumstance ("handguns versus rifles") would
+  // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
+  const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [`${NIBRS_DIM[c.f.dimension]}|${c.group ?? "solo"}`] : []));
+  const perDim = new Map<string, Set<string>>();
+  for (const k of recordDims) { const [d, g] = k.split("|"); perDim.set(d, (perDim.get(d) ?? new Set()).add(g)); }
+  if ([...perDim.values()].some((gs) => gs.size > 1)) return { why: "two values of one record detail compared" };
   for (const c of conditions) {
     if (!c) return { why: "a negated condition" };
     const { f, group } = c;
@@ -384,6 +390,20 @@ function coverageShares(sq: ShrQuestion, filed: Map<number, { keys: string[] }>,
 }
 
 const ucFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/**
+ * Each category label a breakdown shows, with the SHR codes it counts, for a blind checker (job SA1): "Unknown" is the
+ * list's own Unknown code, a blank, a victim beyond the record's 11 and any code outside the list.
+ */
+export function shrCategoryCodes(sq: ShrQuestion): Record<string, string[] | string> | null {
+  const b = sq.breakdown;
+  if (!b) return null;
+  if (b.bins) return Object.fromEntries([...b.bins.map(([lo, hi]) => [hi >= 120 ? `${lo} and older` : `${lo} to ${hi}`, `age ${lo}-${hi}`]), ["Unknown", "no age, a code that isn't an age, or a victim beyond the record's 11"]]);
+  const labels = DIM_LABELS[b.dim] ?? {};
+  const out: Record<string, string[] | string> = {};
+  for (const [c, l] of Object.entries(labels)) if (l !== "Unknown") out[l] = [c];
+  out.Unknown = `${Object.entries(labels).filter(([, l]) => l === "Unknown").map(([c]) => c).join(", ") || "none"}, a blank code, any code not listed here, or a person beyond the record's 11`;
+  return out;
+}
 /** "murder victims", "homicide offenders", "justifiable homicide victims". */
 export function shrUnitWords(sq: ShrQuestion): string {
   const crime = sq.measure === "homicide" ? "homicide" : sq.measure === "justifiable" ? "justifiable homicide" : "murder";
