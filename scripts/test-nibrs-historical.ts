@@ -3,7 +3,7 @@
  * Offline: a stub executor stands in for DuckDB over the build (scripts/build-crimeindex.py), and its SQL is checked.
  */
 import assert from "node:assert/strict";
-import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
+import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { answerCurrentRanking, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { rankAgencies } from "../lib/nibrs-plan/transforms";
@@ -606,5 +606,96 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.equal(readQuestion("top 10 cities in Texas by murder in 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities in 2024 by murder rate", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities by population murder rate 2024", 2026, "2026-09").largestSet, 10);
+}
+// Census regions from Crime Index (bad-declines plan item 8): the region's cities ranked; its yearly total the sum of
+// its states, a year counted only when every state has a figure; DC said for the South.
+{
+  const gsql: string[] = [];
+  const MW = ["IL", "IN", "MI", "OH", "WI", "IA", "KS", "MN", "MO", "NE", "ND", "SD"];
+  const gexec = (sql: string) => { gsql.push(sql); return /state_crime/.test(sql) ? [[2023, 1000, 10_000_000, 12, 12, 12], [2024, 900, 10_000_000, 11, 12, 12]] : []; };
+  answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "rate", direction: "top", limit: 20, minPopulation: 100000, region: { name: "the Midwest", states: MW } }, build, gexec);
+  assert.match(gsql[0], /WHERE state IN \('IL', 'IN', 'MI', 'OH', 'WI', 'IA', 'KS', 'MN', 'MO', 'NE', 'ND', 'SD'\) AND \(type = 'city'/);
+  const g = answerHistoricalRegion({ measure: "robbery", region: { name: "the Midwest", states: MW }, from: 2023, to: 2024, statistic: "count", byYear: true }, build, gexec);
+  assert.ok(g.kind === "historical" && JSON.stringify(g.delivered.table.rows) === '[["2023",1000],["2024",null]]', JSON.stringify(g));
+  if (g.kind === "historical") assert.ok(g.delivered.text.some((t) => /A blank year is one in which a state of the region has no figure/.test(t)));
+  const south = answerHistoricalRegion({ measure: "robbery", region: { name: "the South", states: ["DC", "TX"] }, from: 2023, to: 2023, statistic: "rate", byYear: false },
+    build, () => [[2023, 100, 1_000_000, 1, 1, 1]]);
+  assert.ok(south.kind === "historical" && JSON.stringify(south.delivered.table.rows) === "[[10]]" && south.delivered.text.some((t) => /District of Columbia isn't in the state totals/.test(t)), JSON.stringify(south));
+  // Through the shadow: a region's city ranking and total, never the nation's.
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: gexec, historical: build };
+  gsql.length = 0;
+  shadowAnswer("Which Midwest cities had the highest murder rate in 2024?", base as never);
+  assert.ok(gsql.some((x) => /state IN \('IL'.*population >= 100000/.test(x)), gsql.join("\n"));
+  gsql.length = 0;
+  const tot = shadowAnswer("robberies in the Midwest by year from 2023 to 2024", base as never);
+  assert.ok(tot.kind === "historical" && gsql.some((x) => /state_crime.*state IN \('IL'/.test(x)), JSON.stringify(tot).slice(0, 200));
+}
+// Rankings PR B (Jeff 2026-11-10): counties ranked by their own agency; county-wide sums (P70, 2017 on); "where does X rank".
+{
+  const sql: string[] = [];
+  const ex = (rows: (s: string) => unknown[][]) => (s: string) => { sql.push(s); return rows(s); };
+  // Counties: Crime Index's county agencies, the consolidated sheriff counted as its city left out; cities said not included.
+  const c = answerHistoricalRanking({ measure: "murder", state: "TX", year: 2023, statistic: "count", direction: "top", limit: 2, minPopulation: null, entity: "county" }, build,
+    ex(() => [["TX1010000", "Harris County", 2_000_000, 121, 6, "TX"], ["TX0150000", "Bexar County", 500_000, 13, 2.6, "TX"]]));
+  assert.ok(c.kind === "historical" && c.delivered.text.some((t) => /cities in the county are not included/.test(t)), JSON.stringify(c));
+  assert.match(sql[sql.length - 1], /type = 'county' AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200', 'FL0160000'\)/);
+  // County-wide: the reporting members summed, listed, the share said, non-reporters not estimated; 2017 on only.
+  const cw = answerCountywide({ measure: "murder", countyOri: "CA0150000", countyName: "Kern County", state: "CA", from: 2024, to: 2024, statistic: "count", byYear: false, canonicalRoot: "/nb" }, build,
+    ex(() => [[2024, "CA0150000", "Kern County", 300_000, 40], [2024, "CA0150100", "Bakersfield", 400_000, 28], [2024, "CA0150200", "Arvin", 20_000, null]]));
+  assert.ok(cw.kind === "historical" && JSON.stringify(cw.delivered.table.rows) === "[[68]]", JSON.stringify(cw));
+  if (cw.kind === "historical") {
+    assert.ok(cw.delivered.text.some((t) => /^2 of 3 agencies in the county reported, covering 97\.2% of the residents.*: Kern County, Bakersfield\.$/.test(t)), JSON.stringify(cw.delivered.text));
+    assert.ok(cw.delivered.text.some((t) => /2017 on/.test(t)) && cw.delivered.text.some((t) => /not estimated/.test(t)));
+    // A member with no figure is named (coordinator 2026-11-11).
+    assert.ok(cw.delivered.text.includes("No figure: Arvin."), JSON.stringify(cw.delivered.text));
+    // Every member, reporting or not, with its years, for the checker (job SB1).
+    assert.deepEqual(cw.question.countywide?.members.map((m) => [m.ori, m.years]), [["CA0150000", [2024]], ["CA0150100", [2024]], ["CA0150200", [2024]]]);
+  }
+  assert.match(sql[sql.length - 1], /agency_fips_county.*WHERE ordinal = 1/);
+  const early = answerCountywide({ measure: "murder", countyOri: "CA0150000", countyName: "Kern County", state: "CA", from: 2010, to: 2010, statistic: "count", byYear: false, canonicalRoot: "/nb" }, build, ex(() => []));
+  assert.ok(early.kind === "historical-decline" && /2017 through/.test(early.explanation));
+  // Where does X rank: the place out of how many, the two above and below; the size group or the state.
+  const field: unknown[][] = [["A", "Alpha", 300_000, 50, 20, "NC"], ["B", "Beta", 290_000, 40, 15, "NC"], ["D", "Durham", 290_000, 30, 10.3, "NC"],
+    ["E", "Epsilon", 260_000, 20, 8, "NC"], ["F", "Phi", 255_000, 10, 4, "NC"], ["G", "Gamma", 270_000, 5, 2, "NC"]];
+  const pos = answerHistoricalPosition({ measure: "murder", ori: "D", label: "Durham, North Carolina", state: "NC", year: 2024, statistic: "rate", scope: "size" }, build,
+    ex((s2) => (/^SELECT population/.test(s2) ? [[290_000]] : field)));
+  assert.ok(pos.kind === "historical", JSON.stringify(pos));
+  if (pos.kind === "historical") {
+    assert.equal(pos.delivered.text[0], "Durham, North Carolina ranks 3rd of 6 U.S. cities of 250,000 or more (the FBI's population group Durham, North Carolina is in) by murder rate in 2024 (1st is the highest).");
+    assert.deepEqual(pos.delivered.table.rows.map((r) => r[1]), ["Alpha, NC", "Beta, NC", "Durham, NC", "Epsilon, NC", "Phi, NC"]);
+    assert.ok(sql.some((x) => /population >= 250000 ORDER BY ori/.test(x)));
+  }
+  answerHistoricalPosition({ measure: "murder", ori: "D", label: "Durham, North Carolina", state: "NC", year: 2024, statistic: "rate", scope: "state" }, build, ex((s2) => (/^SELECT population/.test(s2) ? [[290_000]] : field)));
+  assert.ok(sql.some((x) => /state = 'NC' AND \(population >= 100000 OR ori = 'D'\)/.test(x)));
+}
+// Codex rankings-B review 01: county-wide wording, qualifiers, rates with a missing population, Nebraska, yearly members.
+{
+  assert.equal(readQuestion("All agencies in Kern County, California murders in 2024", 2026, "2026-09").countywide, true);
+  assert.equal(readQuestion("murders across all agencies in Texas in 2024", 2026, "2026-09").countywide, false);
+  const sql: string[] = [];
+  const ex = (rows: unknown[][]) => (s2: string) => { sql.push(s2); return rows; };
+  // A rate needs every reporting member's population.
+  const r1 = answerCountywide({ measure: "murder", countyOri: "CA0150000", countyName: "Kern County", state: "CA", from: 2024, to: 2024, statistic: "rate", byYear: false, canonicalRoot: "/nb" }, build,
+    ex([[2024, "A", "Kern County", 100_000, 10], [2024, "B", "Bakersfield", null, 90]]));
+  assert.ok(r1.kind === "historical" && JSON.stringify(r1.delivered.table.rows) === "[[null]]", JSON.stringify(r1));
+  // Nebraska's batch headers are filed under NB too.
+  answerCountywide({ measure: "murder", countyOri: "NB0280000", countyName: "Douglas County", state: "NE", from: 2024, to: 2024, statistic: "count", byYear: false, canonicalRoot: "/nb" }, build, ex([]));
+  assert.match(sql[sql.length - 1], /state_abbr IN \('NE', 'NB'\)/);
+  // Several years: each year's reporting agencies and share.
+  const r2 = answerCountywide({ measure: "murder", countyOri: "CA0150000", countyName: "Kern County", state: "CA", from: 2023, to: 2024, statistic: "count", byYear: true, canonicalRoot: "/nb" }, build,
+    ex([[2023, "A", "Kern County", 100_000, 10], [2024, "A", "Kern County", 100_000, 12], [2024, "B", "Bakersfield", 300_000, null]]));
+  assert.ok(r2.kind === "historical" && r2.delivered.text.some((t) => /^2023: 1 of 1 agencies reported/.test(t)) && r2.delivered.text.some((t) => /^2024: 1 of 2 agencies reported, covering 25%/.test(t)), JSON.stringify(r2));
+  // A region's rate needs every state's population.
+  const r3 = answerHistoricalRegion({ measure: "robbery", region: { name: "the West", states: ["CA", "OR"] }, from: 2023, to: 2023, statistic: "rate", byYear: false }, build, () => [[2023, 100, 1_000_000, 2, 2, 1]]);
+  assert.ok(r3.kind === "historical" && JSON.stringify(r3.delivered.table.rows) === "[[null]]", JSON.stringify(r3));
+  // Through the shadow: county-wide population and the position's year to date or another scale are never answered.
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: () => [[500_000]], historical: build };
+  assert.notEqual(shadowAnswer("Countywide population in Kern County, California in 2024", base as never).kind, "historical");
+  for (const q of ["Where does Durham rank in murder rate so far in 2025 nationally?", "Where does Durham rank in murder rate per 1,000 in 2024 nationally?"]) {
+    const o = shadowAnswer(q, base as never) as { kind: string; delivered?: { text: string[] } };
+    assert.ok(!(o.kind === "historical" && /ranks/.test(o.delivered?.text[0] ?? "")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

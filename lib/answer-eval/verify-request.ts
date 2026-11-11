@@ -76,19 +76,24 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
   // would then match it (Codex tool review 02.4): such an answer is not verifiable.
   const odd = numbers.some((n) => n.value !== null && !(typeof n.value === "number" && Number.isFinite(n.value)));
   const q = (o.question ?? {}) as { measure?: string; statistic?: string; agencies?: { ori: string; state?: string; label: string }[]; beside?: { kind: string; code?: string }[];
-    place?: { kind: string; ori?: string; label?: string; code?: string }; places?: { kind: string; code?: string }[] };
+    place?: { kind: string; ori?: string; label?: string; code?: string }; places?: { kind: string; code?: string }[];
+    countywide?: { members: { ori: string; label: string; state: string; years: number[] }[] } };
+  // A county-wide sum lists its member agencies and their years, summed (job SB1: with no places the checker read the nation).
+  const county = o.kind === "historical" && q.countywide ? q.countywide.members.map((m) => ({ kind: "agency", ori: m.ori, state: m.state, label: m.label, years: m.years })) : null;
   const geo = (p: { kind: string; code?: string }) => (p.kind === "national" ? { kind: "national", label: "United States" } : { kind: "state", state: p.code });
-  const places = o.kind === "historical" ? [...(q.agencies ?? []).map((a) => ({ kind: "agency", ori: a.ori, state: a.state ?? null, label: a.label })), ...(q.beside ?? []).map(geo)]
+  const places = county ?? (o.kind === "historical" ? [...(q.agencies ?? []).map((a) => ({ kind: "agency", ori: a.ori, state: a.state ?? null, label: a.label })), ...(q.beside ?? []).map(geo)]
     : o.kind === "srs" ? (q.places ?? (q.place ? [q.place] : [])).map(geo)
     // A Current Trends ranking or set lists its agencies with their ORIs, so a checker can find each one (job S4).
     : o.kind === "current" ? [...(q.place ? [q.place] : []), ...(q.agencies ?? []).map((a) => ({ kind: "agency", ori: a.ori, state: a.state ?? null, label: a.label }))]
-    : ((o.plan?.geography as { places?: unknown[] } | undefined)?.places ?? []);
+    : ((o.plan?.geography as { places?: unknown[] } | undefined)?.places ?? []));
   const source = o.kind === "historical" ? (q.beside?.length ? (q.agencies?.length ? "crimeindex_agency+state_national" : "crimeindex_state_national") : "crimeindex_agency") : SOURCE[o.kind];
   const grain = groups.some(([g]) => g.binding.dimension === "time.year") ? "time.year" : groups.some(([g]) => g.binding.dimension === "time.month") ? "time.month" : groups.length ? null : "total";
   return {
     id: label.id, tab: label.tab, times_asked: label.times, question: label.question, follow_up_of: label.kind === "follow-up" ? label.previous : null, source,
     measure: q.measure ?? planMeasure(o.plan) ?? o.meaning?.measures?.[0]?.name ?? null, statistic: q.statistic ?? planStatistic(o.plan) ?? o.meaning?.statistic ?? null, grain, places: withoutSql(places) as unknown[],
-    combine: (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
+    // A rate's denominator is only the reporting agencies' residents (Codex rankings-B review 03.1).
+    combine: county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
+      (q.statistic === "rate") ? "; a rate is the summed count per 100,000 of the summed population of the agencies with a figure that year, blank if any of them has no population" : ""}` : (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
     filters: o.plan ? withoutSql(o.plan.filters) ?? null : null, groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
     verifiable: numbers.length > 0 && !ambiguous && !odd,

@@ -5872,12 +5872,16 @@
 "by": "codex-second-1"
 },
 "QL-hist-443272f110": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P70 countywide sums require reporting-agency aggregation.",
+"status": "reviewed",
+"by": "coordinator-2026-11-11",
+"why": "A Part I count by year is Crime Index's under Jeff's D3 and ranking decision 3, and a county-wide figure is the sum of those agency figures (P70, membership from the FBI's agency records, 2017 on); NIBRS also answers it (coordinator correction 2026-11-11, not an owner verdict)",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
 }
 },
 "QL-hist-44d40ebbd6": {

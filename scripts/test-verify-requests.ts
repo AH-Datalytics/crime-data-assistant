@@ -23,6 +23,16 @@ assert.equal(q.numbers.length, 4, "every statistic cell, blanks included");
 assert.deepEqual(q.numbers[1], { column: "Dallas, Texas: murders cleared (%)", binding: { kind: "statistic", as: "clearance_rate.1" }, at: { Year: "2024" }, value: null });
 assert.equal(q.digest, tableDigest(rows), "the scorecard's digest of the same rows");
 assert.equal(q.follow_up_of, null);
+// A county-wide sum: its member agencies with their years, summed, never an empty place list (job SB1).
+const cwq = requestOf({ ...label, id: "QL-hist-cw" }, { ...historical, question: { measure: "murder", statistic: "count", agencies: [],
+  countywide: { members: [{ ori: "CA0150000", label: "Kern County", state: "CA", years: [2024] }, { ori: "CA0150100", label: "Bakersfield", state: "CA", years: [2024] }] } } })!;
+assert.deepEqual(cwq.places, [{ kind: "agency", ori: "CA0150000", state: "CA", label: "Kern County", years: [2024] }, { kind: "agency", ori: "CA0150100", state: "CA", label: "Bakersfield", years: [2024] }]);
+assert.match(String(cwq.combine), /^sum of the listed agencies/);
+assert.doesNotMatch(String(cwq.combine), /per 100,000/, "a count says nothing of a denominator");
+const cwr = requestOf({ ...label, id: "QL-hist-cwr" }, { ...historical, question: { measure: "murder", statistic: "rate", agencies: [],
+  countywide: { members: [{ ori: "CA0150000", label: "Kern County", state: "CA", years: [2024] }] } } })!;
+assert.match(String(cwr.combine), /summed population of the agencies with a figure that year/, "a rate's denominator is the reporting agencies' (review 03.1)");
+assert.equal(cwq.source, "crimeindex_agency");
 
 // A NIBRS answer: its plan, without any SQL at any depth; the engine's own query is never in a request.
 const nibrs = { kind: "answer", period: { from: "2023-01", to: "2023-12" }, sql: "SELECT secret", delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: "Robberies" }], rows: [[512]] } },
