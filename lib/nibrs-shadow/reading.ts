@@ -281,7 +281,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   let topAsLargest: string | null = null;
   // "By" a crime anywhere ("top 10 cities in Texas by murder in 2024") ranks by it (Codex rankings review 03.1); "by
   // population", "by size", "by year" or "by month" don't.
-  if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*)\b/i.test(text)
+  // Nor when the cities are picked by anything else ("with the slowest decline", "sorted by"): job S, QL-ct-20af00a1f6.
+  if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*|slowest|fastest|steepest|biggest|largest|decline|declines|increase|increases|change|changes|growth|drop|rise|sort\w*|order\w*|with)\b/i.test(text)
     && !/\bby\s+(?!(?:population|size|year|month|years|months)\b)/i.test(text)) {
     text = text.replace(/\b(?:the\s+)?top\s+(\d{1,3})\s+((?:u\.?s\.?|american|[A-Z][a-zA-Z]+)\s+)?cities\b(?!\s+(?:by|with|ranked|in\s+terms))/i,
       (m, n: string, qual: string | undefined) => {

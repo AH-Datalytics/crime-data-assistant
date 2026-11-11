@@ -1749,7 +1749,12 @@
 },
 "QL-ct-6242a16819": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
 },
 "QL-ct-62c329283d": {
 "status": "reviewed",
@@ -3253,7 +3258,12 @@
 },
 "QL-ct-b99e212b28": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
 },
 "QL-ct-ba94861aa2": {
 "status": "reviewed",
@@ -3557,7 +3567,14 @@
 },
 "QL-ct-cd17bcb18f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-ct-cd20c8a351": {
 "status": "reviewed",
@@ -4134,14 +4151,11 @@
 },
 "QL-ct-ea8fcf985b": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"place",
-"crime"
-]
+"outcome": "answer",
+"source": "historical"
 }
 },
 "QL-ct-eae792fea4": {
@@ -6214,7 +6228,12 @@
 },
 "QL-hist-5b8ade42d5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
 },
 "QL-hist-5bdc02c4a1": {
 "status": "reviewed",
@@ -10282,7 +10301,14 @@
 },
 "QL-nibrs-4687a654cb": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-nibrs-468b36254f": {
 "status": "draft",
@@ -13055,14 +13081,13 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-c5d3d25c63": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Misdemeanor does not specify an approved NIBRS grouping.",
+"status": "reviewed",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"which misdemeanor offenses",
-"place"
+"which misdemeanor offenses"
 ]
 }
 },
@@ -13198,7 +13223,14 @@
 },
 "QL-nibrs-cd17bcb18f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-nibrs-cd5140feb6": {
 "status": "reviewed",
@@ -13762,14 +13794,11 @@
 },
 "QL-nibrs-ea8fcf985b": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"place",
-"crime"
-]
+"outcome": "answer",
+"source": "historical"
 }
 },
 "QL-nibrs-eb58ac7f53": {
@@ -16833,7 +16862,14 @@
 },
 "QL-ct-2071d2071d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-ct-2127df59d2": {
 "status": "reviewed",
@@ -17179,7 +17215,14 @@
 },
 "QL-ct-6b86b2071d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-ct-6e331ab5fa": {
 "status": "draft",
@@ -17620,7 +17663,14 @@
 },
 "QL-ct-d5b34c57bc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-ct-d5ce5d5ce5": {
 "status": "draft",
@@ -17637,7 +17687,12 @@
 },
 "QL-ct-d99b4f6ccc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
 },
 "QL-ct-db5dff539d": {
 "status": "reviewed",
@@ -17684,7 +17739,14 @@
 },
 "QL-ct-e0aff2071d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-ct-e52c720633": {
 "status": "reviewed",
@@ -17704,7 +17766,12 @@
 },
 "QL-ct-ea8fcd7e68": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
 },
 "QL-ct-eae798a9bd": {
 "status": "reviewed",
@@ -20126,7 +20193,12 @@
 },
 "QL-nibrs-d99b4f6ccc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
 },
 "QL-nibrs-ddcbf4ee74": {
 "status": "reviewed",
@@ -20154,7 +20226,12 @@
 },
 "QL-nibrs-ea8fcea8fc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
 },
 "QL-nibrs-ec32dca905": {
 "status": "reviewed",
@@ -20186,7 +20263,12 @@
 },
 "QL-nibrs-f6cccf6ccc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
+"expected": {
+"outcome": "answer",
+"source": "rtci"
+}
 },
 "QL-nibrs-f6e7d8d3ae": {
 "status": "reviewed",

@@ -7811,19 +7811,20 @@
    "question": "make a list of the 20 most populous cities and sort them by 2026 homicide rate",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -14816,19 +14817,20 @@
    "question": "show me the four largest cities homicide trends 2010-2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -16322,18 +16324,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -18693,20 +18694,20 @@
    "question": "Aggravated assault per capita for the hundred largest cities in 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "place",
-     "crime"
-    ],
-    "about": "place"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -28781,19 +28782,20 @@
    "question": "Show me the top 20 largest cities by murder rate in 2023",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -49056,18 +49058,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -62655,17 +62656,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which misdemeanor offenses",
-     "place"
+     "which misdemeanor offenses"
     ],
     "about": "which misdemeanor offenses"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Misdemeanor does not specify an approved NIBRS grouping."
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -63350,18 +63350,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -65950,20 +65949,20 @@
    "question": "Aggravated assault per capita for the hundred largest cities in 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "place",
-     "crime"
-    ],
-    "about": "place"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -80715,18 +80714,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -82964,18 +82962,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -85552,18 +85549,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -85669,19 +85665,20 @@
    "question": "Murder rate for the top 100 cities in 2026",
    "previous": "Murder rate in 2026 for all American cities",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -85940,18 +85937,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -86155,19 +86151,20 @@
    "question": "Give me the 100 largest cities by aggravated assault per capita in 2026",
    "previous": "Aggravated assault per capita for the hundred largest cities in 2025",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -103375,19 +103372,20 @@
    "question": "Murder rate for the top 100 cities in 2026",
    "previous": "Murder rate in 2026 for all American cities",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -103607,19 +103605,20 @@
    "question": "Aggravated assault per capita for the hundred largest cities in 2025",
    "previous": "Aggravated assault per capita for the hundred largest cities in 2025",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -104052,19 +104051,20 @@
    "question": "Murder rate for the top 100 cities in 2026",
    "previous": "Murder rate for the top 100 cities in 2026",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
