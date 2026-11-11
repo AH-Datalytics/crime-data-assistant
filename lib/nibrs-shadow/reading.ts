@@ -109,7 +109,6 @@ const PHRASES: [RegExp, string][] = [
   [/\b(murders?|homicides?|robberies|robbery|burglar(?:y|ies)|rapes?|assaults?|thefts?|crimes?)\s+totals\b/gi, "$1 count"],
   // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
   [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b(?!\s+(?:the\s+)?(?:years?|months?|dates?|names?|city|cities|states?|population|size|alphabet\w*))/gi, "ranked by"],
-  [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b/gi, "ranked by"],
   // "Rank Virginia counties in terms of murder rate": "by", only after a rank word (rankings PR B).
   [/(\brank\w*\b[^.?!]*?)\bin\s+terms\s+of\b/gi, "$1by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
