@@ -105,7 +105,6 @@ const PHRASES: [RegExp, string][] = [
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
   // "Homicide totals in top 15 cities", "tell me about murder rates in the largest cities" (job S5).
   [/\b(murders?|homicides?|robberies|robbery|burglar(?:y|ies)|rapes?|assaults?|thefts?|crimes?)\s+totals\b/gi, "$1 count"],
-  [/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i, ""],
   // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
   [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b(?!\s+(?:the\s+)?(?:years?|months?|dates?|names?|city|cities|states?|population|size|alphabet\w*))/gi, "ranked by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
@@ -342,6 +341,10 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     text = text.replace(L12, (m) => { const to = `from ${first} to ${lastName}`; readings.push({ kind: "period", from: m, to }); return to; });
     last12 = true;
   }
+  // "Tell me about murder rates in the largest cities" (job S5): filler before a crime named; applied here, not in PHRASES,
+  // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
+  text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });

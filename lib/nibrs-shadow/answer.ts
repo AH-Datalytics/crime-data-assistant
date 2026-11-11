@@ -1020,7 +1020,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         || /\b(?:teen\w*|juvenile|age|race|sex|gender|relationship|circumstance)\b/i.test(ledger0.question)
         // The reader sets people ("teenage victims") and circumstances aside from its words.
         || !!flags(ledger0).people || !!flags(ledger0).shrDetail || !!flags(ledger0).circumstance;
-      if (nation.kind === "decline" && murderish && detail)
+      // Never a clearance ("the share of murders cleared": Codex review 13.1), which isn't a Homicide Reports detail.
+      const cleared = !!flags(ledger0).clearance || ledger0.parts.some((p) => p.clause === 0 && (p.concept === "clearance" || p.concept === "clearance-reason"));
+      if (nation.kind === "decline" && murderish && detail && !cleared)
         return { kind: "route", source: "shr", explanation: "Cities ranked by a homicide detail (a weapon, a share, the victims' age, race or sex) come from Homicide Reports (FBI SHR). Homicide Reports aren't available here yet; the Homicide Reports tab has them." };
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
