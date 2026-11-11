@@ -5530,6 +5530,13 @@
    "batch": "pr-rankings-a-2026-11-11c",
    "date": "2026-11-11",
    "numbers": 20
+  },
+  "QL-hist-d7fbcca23f": {
+   "digest": "05572a980a98704d",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-b-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 10
   }
  }
 }

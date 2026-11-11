@@ -93,6 +93,8 @@ export type HistoricalQuestion = {
   list?: { state: string; count: number; top: { label: string; population: number }[] };
   /** A ranking of a state's city agencies (answerHistoricalRanking): the state, the direction and how many. */
   ranking?: { state: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+  /** A county-wide sum (answerCountywide): each member agency and the years it is in the county, so a checker sums the same agencies (job SB1). */
+  countywide?: { members: { ori: string; label: string; state: string; years: number[] }[] };
 };
 export type HistoricalAnswer = {
   kind: "historical"; meaning: Meaning; period: { from: string; to: string };
@@ -640,16 +642,21 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
   const years = Array.from({ length: cq.to - cq.from + 1 }, (_, i) => cq.from + i);
   const rate = cq.statistic === "rate";
   // A rate needs every reporting member's population (Codex rankings-B review 01.4): one missing, no rate that year.
-  type Y = { total: number | null; pop: number; popAll: number; reporting: string[]; members: number; popMissing: boolean };
+  const members = new Map<string, { ori: string; label: string; state: string; years: number[] }>();
+  type Y = { total: number | null; pop: number; popAll: number; reporting: string[]; missing: string[]; members: number; popMissing: boolean };
   const per = new Map<number, Y>();
-  for (const y of years) per.set(y, { total: null, pop: 0, popAll: 0, reporting: [], members: 0, popMissing: false });
+  for (const y of years) per.set(y, { total: null, pop: 0, popAll: 0, reporting: [], missing: [], members: 0, popMissing: false });
   for (const r of got) {
     const y = per.get(Number(r[0]));
     if (!y) continue;
     y.members++;
+    const ori = String(r[1]);
+    const mem = members.get(ori) ?? { ori, label: String(r[2] ?? ori), state: cq.state, years: [] };
+    mem.years.push(Number(r[0])); members.set(ori, mem);
     const pop = num(r[3]), total = num(r[4]);
     if (pop !== null) y.popAll += pop;
     if (total !== null) { y.total = (y.total ?? 0) + total; if (pop !== null) y.pop += pop; else y.popMissing = true; y.reporting.push(String(r[2] ?? r[1])); }
+    else y.missing.push(String(r[2] ?? r[1]));
   }
   if (![...per.values()].some((y) => y.members)) return { kind: "historical-decline", explanation: `The FBI's agency records have no agencies in ${cq.countyName} for ${cq.from === cq.to ? cq.from : `${cq.from} through ${cq.to}`}.` };
   const value = (y: Y) => (y.total === null ? null : rate ? (y.pop > 0 && !y.popMissing ? Math.round((y.total * 1e6) / y.pop) / 10 : null) : y.total);
@@ -664,12 +671,13 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
     const y = per.get(cq.from)!;
     const share = y.popAll > 0 ? Math.round((y.pop * 1000) / y.popAll) / 10 : null;
     text.push(`${y.reporting.length} of ${y.members} agencies in the county reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}: ${y.reporting.join(", ")}.`);
+    if (y.missing.length) text.push(`No figure: ${y.missing.join(", ")}.`);
   } else {
     // Each year's reporting agencies and share (Codex rankings-B review 01.7).
     for (const yr of years) {
       const y = per.get(yr)!;
       const share = y.popAll > 0 ? Math.round((y.pop * 1000) / y.popAll) / 10 : null;
-      text.push(`${yr}: ${y.reporting.length} of ${y.members} agencies reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}${y.reporting.length ? `: ${y.reporting.join(", ")}` : ""}.`);
+      text.push(`${yr}: ${y.reporting.length} of ${y.members} agencies reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}${y.reporting.length ? `: ${y.reporting.join(", ")}` : ""}${y.missing.length ? `; no figure: ${y.missing.join(", ")}` : ""}.`);
     }
   }
   if (rate && [...per.values()].some((y) => y.total !== null && y.popMissing)) text.push("A year with a reporting agency whose population isn't published has no rate.");
@@ -680,7 +688,7 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
   const columns = [...(multi ? [{ binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }] : []), { binding: { kind: "statistic" as const, as: "x" }, header }];
   return {
     kind: "historical", period,
-    question: { measure: cq.measure, agencies: [], from: cq.from, to: cq.to, byYear: multi, statistic: cq.statistic, comparison: null },
+    question: { measure: cq.measure, agencies: [], from: cq.from, to: cq.to, byYear: multi, statistic: cq.statistic, comparison: null, countywide: { members: [...members.values()] } },
     meaning: { source: "historical", places: [{ kind: "county", name: where, state: cq.state }], filters: ["every reporting agency in the county (P70)"], measures: [{ name: m.name, unit: m.unit }], period,
       groupings: multi ? ["year"] : [], statistic: rate ? "rate" : "count", ...(rate ? { denominator: "the reporting agencies' summed residents, per 100,000" } : {}) } as unknown as HistoricalAnswer["meaning"],
     delivered: { table: { columns, rows }, text },

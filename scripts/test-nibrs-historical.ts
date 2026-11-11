@@ -647,6 +647,10 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   if (cw.kind === "historical") {
     assert.ok(cw.delivered.text.some((t) => /^2 of 3 agencies in the county reported, covering 97\.2% of the residents.*: Kern County, Bakersfield\.$/.test(t)), JSON.stringify(cw.delivered.text));
     assert.ok(cw.delivered.text.some((t) => /2017 on/.test(t)) && cw.delivered.text.some((t) => /not estimated/.test(t)));
+    // A member with no figure is named (coordinator 2026-11-11).
+    assert.ok(cw.delivered.text.includes("No figure: Arvin."), JSON.stringify(cw.delivered.text));
+    // Every member, reporting or not, with its years, for the checker (job SB1).
+    assert.deepEqual(cw.question.countywide?.members.map((m) => [m.ori, m.years]), [["CA0150000", [2024]], ["CA0150100", [2024]], ["CA0150200", [2024]]]);
   }
   assert.match(sql[sql.length - 1], /agency_fips_county.*WHERE ordinal = 1/);
   const early = answerCountywide({ measure: "murder", countyOri: "CA0150000", countyName: "Kern County", state: "CA", from: 2010, to: 2010, statistic: "count", byYear: false, canonicalRoot: "/nb" }, build, ex(() => []));
