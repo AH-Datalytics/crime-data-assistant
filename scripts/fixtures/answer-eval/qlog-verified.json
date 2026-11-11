@@ -5516,6 +5516,20 @@
    "batch": "pr-rankings-a-2026-11-11b",
    "date": "2026-11-11",
    "numbers": 100
+  },
+  "QL-ct-9f18f436a0": {
+   "digest": "48bf6a9135c3d8d0",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11c",
+   "date": "2026-11-11",
+   "numbers": 20
+  },
+  "QL-shr-9f18f436a0": {
+   "digest": "48bf6a9135c3d8d0",
+   "by": "runner-codex-blind",
+   "batch": "pr-rankings-a-2026-11-11c",
+   "date": "2026-11-11",
+   "numbers": 20
   }
  }
 }

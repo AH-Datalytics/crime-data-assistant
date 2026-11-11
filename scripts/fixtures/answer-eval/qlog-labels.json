@@ -13026,19 +13026,20 @@
    "question": "Can I see murders in major cities by month from 2022 to 2026",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "crime"
-    ],
-    "about": "crime"
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-10",
-    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "The question names the crime (murders), so asking about the crime was a label error; under Jeff's decision 2 (major = 250,000+) and his nation default (2026-11-11), with Current Trends for months, it is answered (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {
@@ -74959,19 +74960,20 @@
    "question": "Can I see murders in major cities by month from 2022 to 2026",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "crime"
-    ],
-    "about": "crime"
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-10",
-    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "The question names the crime (murders), so asking about the crime was a label error; under Jeff's decision 2 (major = 250,000+) and his nation default (2026-11-11), with Current Trends for months, it is answered (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {

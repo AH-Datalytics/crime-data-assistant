@@ -2861,13 +2861,11 @@
 },
 "QL-ct-9f18f436a0": {
 "status": "reviewed",
-"by": "jeff-2026-11-10",
-"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"by": "coordinator-2026-11-11",
+"why": "The question names the crime (murders), so asking about the crime was a label error; under Jeff's decision 2 (major = 250,000+) and his nation default (2026-11-11), with Current Trends for months, it is answered (coordinator correction 2026-11-11, not an owner verdict)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"crime"
-]
+"outcome": "answer",
+"source": "rtci"
 }
 },
 "QL-ct-9f2cc66b3e": {
@@ -15719,13 +15717,11 @@
 },
 "QL-shr-9f18f436a0": {
 "status": "reviewed",
-"by": "jeff-2026-11-10",
-"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"by": "coordinator-2026-11-11",
+"why": "The question names the crime (murders), so asking about the crime was a label error; under Jeff's decision 2 (major = 250,000+) and his nation default (2026-11-11), with Current Trends for months, it is answered (coordinator correction 2026-11-11, not an owner verdict)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"crime"
-]
+"outcome": "answer",
+"source": "rtci"
 }
 },
 "QL-shr-a14554c775": {
