@@ -91,7 +91,9 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
   return {
     id: label.id, tab: label.tab, times_asked: label.times, question: label.question, follow_up_of: label.kind === "follow-up" ? label.previous : null, source,
     measure: q.measure ?? planMeasure(o.plan) ?? o.meaning?.measures?.[0]?.name ?? null, statistic: q.statistic ?? planStatistic(o.plan) ?? o.meaning?.statistic ?? null, grain, places: withoutSql(places) as unknown[],
-    combine: county ? "sum of the listed agencies, each only in its listed years" : (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
+    // A rate's denominator is only the reporting agencies' residents (Codex rankings-B review 03.1).
+    combine: county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
+      (q.statistic === "rate") ? "; a rate is the summed count per 100,000 of the summed population of the agencies with a figure that year, blank if any of them has no population" : ""}` : (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
     filters: o.plan ? withoutSql(o.plan.filters) ?? null : null, groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
     verifiable: numbers.length > 0 && !ambiguous && !odd,

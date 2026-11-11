@@ -28,6 +28,10 @@ const cwq = requestOf({ ...label, id: "QL-hist-cw" }, { ...historical, question:
   countywide: { members: [{ ori: "CA0150000", label: "Kern County", state: "CA", years: [2024] }, { ori: "CA0150100", label: "Bakersfield", state: "CA", years: [2024] }] } } })!;
 assert.deepEqual(cwq.places, [{ kind: "agency", ori: "CA0150000", state: "CA", label: "Kern County", years: [2024] }, { kind: "agency", ori: "CA0150100", state: "CA", label: "Bakersfield", years: [2024] }]);
 assert.match(String(cwq.combine), /^sum of the listed agencies/);
+assert.doesNotMatch(String(cwq.combine), /per 100,000/, "a count says nothing of a denominator");
+const cwr = requestOf({ ...label, id: "QL-hist-cwr" }, { ...historical, question: { measure: "murder", statistic: "rate", agencies: [],
+  countywide: { members: [{ ori: "CA0150000", label: "Kern County", state: "CA", years: [2024] }] } } })!;
+assert.match(String(cwr.combine), /summed population of the agencies with a figure that year/, "a rate's denominator is the reporting agencies' (review 03.1)");
 assert.equal(cwq.source, "crimeindex_agency");
 
 // A NIBRS answer: its plan, without any SQL at any depth; the engine's own query is never in a request.
