@@ -401,6 +401,13 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const both = shadowAnswer("What is the total number of officers and rate per capita in Memphis in 2023?", base);
   assert.ok(both.kind === "decline" && /same figure throughout/.test(both.explanation), JSON.stringify(both).slice(0, 200));
   assert.deepEqual(hist("Police officers per 1,000 per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 3.12], ["2023", 3.084]]);
+  const both2 = shadowAnswer("Show the total number of police officers and per capita in Memphis in 2023", base);
+  assert.ok(both2.kind === "decline" && /same figure throughout/.test(both2.explanation), JSON.stringify(both2).slice(0, 200));
+  assert.deepEqual(hist("Police officers per 1,000 each year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 3.12], ["2023", 3.084]]);
+  for (const q of ["Police staffing and aggravated assaults in Memphis in 2023", "Murders per sworn officer in Memphis in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(o.kind === "decline" && !/staffing:/.test(JSON.stringify(o)), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
   // The staffing alone and the crime alone still answer.
   assert.deepEqual(hist("Police staffing in Memphis in 2023").delivered.table.rows, [[2510]]);
   assert.deepEqual(hist("murders in Memphis in 2023").delivered.table.rows, [[351]]);
