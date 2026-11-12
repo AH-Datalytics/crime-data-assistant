@@ -397,6 +397,10 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = shadowAnswer(q, base);
     assert.ok(o.kind === "decline" && /one dataset at a time|one period at a time|full years/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
+  // Codex staffing review 07: a count and a rate asked together are asked about; "per 1,000 per year" is a rate by year.
+  const both = shadowAnswer("What is the total number of officers and rate per capita in Memphis in 2023?", base);
+  assert.ok(both.kind === "decline" && /same figure throughout/.test(both.explanation), JSON.stringify(both).slice(0, 200));
+  assert.deepEqual(hist("Police officers per 1,000 per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 3.12], ["2023", 3.084]]);
   // The staffing alone and the crime alone still answer.
   assert.deepEqual(hist("Police staffing in Memphis in 2023").delivered.table.rows, [[2510]]);
   assert.deepEqual(hist("murders in Memphis in 2023").delivered.table.rows, [[351]]);

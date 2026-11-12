@@ -2334,7 +2334,7 @@ function staffTerms(q: string, own: Part[]): { decline: ShadowOutcome } | StaffT
   const everyone = /(?<!\bcivilian\s)\b(?:employees?|personnel|headcount)\b/i.test(q);
   // "Per" only as a rate per people or "per year": a ratio between staff ("employees per officer") is never answered
   // as a count (Codex staffing review 01.2).
-  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per[\s-]+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|eyar|yera|yaer|yr|yrs)\b|^per[\s-]+(?:\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)(?![\d,])(?=\s*(?:people|population|residents?|persons?|inhabitants|citizens|capita)\b|[\s,.?!]*(?:$|in\b|for\b|since\b|from\b|by\b|during\b|between\b|over\b|across\b|at\b|and\b|vs\.?\b|versus\b|to\b|compared\b|\d))/i.test(q.slice(m.index)));
+  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per[\s-]+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|eyar|yera|yaer|yr|yrs)\b|^per[\s-]+(?:\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)(?![\d,])(?=\s*(?:people|population|residents?|persons?|inhabitants|citizens|capita)\b|[\s,.?!]*(?:$|in\b|for\b|since\b|from\b|by\b|per\b|during\b|between\b|over\b|across\b|at\b|and\b|vs\.?\b|versus\b|to\b|compared\b|\d))/i.test(q.slice(m.index)));
   if (!perOk) return no("unsupported_capability", "Staffing is answered as counts or per 100,000 people; a ratio between kinds of staff isn't available.");
   // More than one kind named ("officers and civilian employees", "officers and police employees"): which one is asked,
   // never one of them answered for both (01.1).
@@ -2348,7 +2348,7 @@ function staffTerms(q: string, own: Part[]): { decline: ShadowOutcome } | StaffT
   // A count asked beside a rate ("What is the count of ... and the rate per capita": 01.3): the same figure is asked
   // for. "The number of officers per capita" and "how many officers per capita" are the rate: the opener's count words
   // name what is counted, not a second figure.
-  if (rate && (/\bcounts?\b/i.test(q) || (/\b(?:numbers?|totals?)\b/i.test(q) && /\brates?\b/i.test(q) && !/\bper\s+(?:capita|population|resident|person|people|\d)/i.test(q))))
+  if (rate && (/\bcounts?\b/i.test(q) || (/\b(?:numbers?|totals?)\b/i.test(q) && /\brates?\b/i.test(q))))
     return no("unsupported_capability", "Ask for the same figure throughout: a count, or a rate per 100,000 people.");
   if (stats.some((p) => !rateLike(p.value) && p.value !== "count")) return null;
   // P97 (Jeff 2026-11-07: "Convert to per 1,000"): a rate asked at another base is given at that base.
