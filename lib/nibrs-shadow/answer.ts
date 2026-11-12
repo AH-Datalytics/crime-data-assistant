@@ -419,7 +419,7 @@ const sameText = (question: string, read: string, ledger?: RequestLedger) =>
   // The comparison wording's own rewrites ("compare X to Y" as "X and Y") keep everything in the text: only a reading
   // kept beside the text (a region, a composite, a comparison of periods...) stops the ask (job CW1: four asks lost).
   || (!!ledger && textOnly(ledger));
-const TEXT_ONLY_FLAGS = ["comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance",
+const TEXT_ONLY_FLAGS = ["combined", "comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance",
   "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"];
 function textOnly(ledger: RequestLedger): boolean {
   const f = ledger as unknown as Record<string, unknown>;
