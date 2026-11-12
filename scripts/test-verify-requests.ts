@@ -52,6 +52,10 @@ assert.doesNotMatch(String(sb.categories?.Unknown), /beyond the record/, "a reco
 const nibrs = { kind: "answer", period: { from: "2023-01", to: "2023-12" }, sql: "SELECT secret", delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: "Robberies" }], rows: [[512]] } },
   plan: { measures: [{ id: "offenses.robbery", as: "robbery" }], statistics: [{ kind: "count", as: "robbery_count", measure: "robbery" }], filters: [], groupings: [], geography: { places: [{ kind: "agency", ori: "MA0130100", label: "Boston, Massachusetts" }], combine: "separate" }, compiled: { sql: "SELECT x" } } };
 const n = requestOf({ ...label, id: "QL-nibrs-y", tab: "nibrs", kind: "follow-up", previous: "robberies in Boston" }, nibrs)!;
+// Job AR1: a NIBRS request's blind view carries its plan (coverage, groupings, filters), never SQL.
+const nb = blindOf(n) as { plan?: Record<string, unknown> };
+assert.ok(nb.plan && "geography" in nb.plan && !("compiled" in nb.plan), JSON.stringify(nb));
+assert.doesNotMatch(JSON.stringify(nb), /SELECT/);
 assert.equal(n.source, "nibrs");
 assert.equal(n.grain, "total");
 assert.equal(n.follow_up_of, "robberies in Boston");

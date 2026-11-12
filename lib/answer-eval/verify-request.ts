@@ -122,12 +122,22 @@ export type VerifyResult = { request: string; column: string; at: Record<string,
  * What the blind checker sees (the 2026-11-06 prompt): the question, the figure family, measure, statistic, grain,
  * places, period and, for each cell, its column and where it sits, never the engine's value, digest, plan or reading.
  */
+/** A plan's parts a blind checker needs (no compiled SQL, no bindings to the reader's spans). */
+function planView(plan: unknown): Record<string, unknown> {
+  const p = plan as Record<string, unknown>;
+  return Object.fromEntries(["measures", "filters", "groupings", "statistics", "transforms", "coverage", "timeBasis", "geography", "period", "defaults"]
+    .filter((k) => k in p).map((k) => [k, p[k]]));
+}
 export function blindOf(q: VerifyRequest): Record<string, unknown> {
   return { id: q.id, tab: q.tab, question: q.question, follow_up_of: q.follow_up_of, source: q.source, measure: q.measure, statistic: q.statistic, grain: q.grain,
     places: q.places, combine: q.combine, period: q.period,
     // A Homicide Reports request's filters (SHR codes; one group is one person) and each category's codes: without them
     // a checker counts every murder (job SA1).
     ...(q.source === "shr_canonical" ? { filters: q.filters, categories: (q as { categories?: unknown }).categories ?? null } : {}),
+    // A NIBRS request's plan, what was asked and how it is counted (measures, filters, groupings with their bins,
+    // statistics, coverage such as "only agencies that reported every month", time basis), never a value or SQL: a
+    // recount must count the same agencies and the same rows (job AR1).
+    ...(q.source === "nibrs" && q.nibrs_plan ? { plan: planView(q.nibrs_plan) } : {}),
     cells: q.numbers.map((n) => ({ column: n.column, at: n.at })) };
 }
 
