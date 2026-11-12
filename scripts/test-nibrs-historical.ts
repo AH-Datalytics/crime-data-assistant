@@ -414,6 +414,22 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = shadowAnswer(q, base);
     assert.ok(o.kind === "decline" && /Staffing is reported by individual agencies; there is no state or national staffing total/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }
+  // Codex staffing review 02 (engine 2): each of these once got a staffing answer that said more or less than was asked.
+  for (const [q, re] of [
+    ["Robberies of officers and police staffing in the 2 largest cities in 2023", null],
+    ["Police officers per 1,000 murders in Memphis in 2023", /ratio between kinds of staff/],
+    ["Compare murder rates per 1,000 to police officers per 100,000 in Memphis in 2023", /Crime rates are given per 100,000/],
+    ["Compare the number of police officers to murder rates per 100,000 in Memphis in 2023", /counts or rates for both/],
+    ["Police staffing vs murders in the 2 largest cities so far in 2023", /full years/],
+    ["Compare police officers in Memphis in 2022 to murders in 2023", /Name the years once for both/],
+    ["murders vs police officers per 1,000 in Memphis in 2023", /counts or rates for both/]] as const) {
+    const o = shadowAnswer(q, base);
+    assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+    if (re) assert.ok(o.kind === "decline" && re.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  // And the plain forms still answer: a base after the staffing words, the years once after both.
+  assert.deepEqual(hist("murder rates vs police officers per 1,000 in Memphis in 2023").delivered.table.rows, [["2023", 3.084, 57]]);
+  assert.deepEqual(hist("Compare police officers per 1,000 to murder rates per 100,000 in Memphis in 2023").delivered.table.rows, [["2023", 3.084, 57]]);
   for (const q of ["murders in Memphis per officer in 2023", "police officers killed and murders in Memphis in 2023", "murders and assaults on officers in Memphis in 2023", "murders in Memphis in 2023"]) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
