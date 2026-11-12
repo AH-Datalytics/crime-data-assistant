@@ -2474,6 +2474,8 @@ function besideConflict(ledger0: RequestLedger, own: Part[], terms: StaffTerms):
   const bases = [...q.matchAll(new RegExp(String.raw`\b(?:per|in)\s+(${base})\b`, "gi"))].filter((m) => { const b = baseOf(m[1]); return b !== null && b !== 100_000; });
   if (bases.length && (bases.length > 1 || !new RegExp(String.raw`\b${STAFF_WORD}(?:\s+\w+){0,2}\s+(?:per|in)\s+${bases[0][1].replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}\b`, "i").test(q)))
     return decline("unsupported_capability", "Crime rates are given per 100,000; another base can be asked for the staffing only, right after its words (\"officers per 1,000\").");
+  // "Today" or "current" with a year named: two times asked for, never one taken for both.
+  if (/\b(?:current(?:ly)?|today|now|latest|this year)\b/i.test(q) && own.some((p) => p.concept === "period")) return decline("unsupported_capability", "Name one time for both the staffing and the crime: a year, or the latest year.");
   // The years named once for both: a year placed between the staffing and the crime would belong to one of them.
   const periods = own.filter((p) => p.concept === "period");
   if (periods.length) {
