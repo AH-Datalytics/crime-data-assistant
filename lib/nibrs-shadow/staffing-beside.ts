@@ -7,7 +7,8 @@
  */
 import type { ResultTable } from "../nibrs-plan/result";
 import { fmt, SRS_SOURCE } from "./deliver";
-import { HISTORICAL_MEASURE, historicalRate, type HistoricalAgency, type HistoricalAnswer, type HistoricalBuild, type HistoricalDecline } from "./historical";
+import { cityNameSql, citySql, HISTORICAL_MEASURE, historicalRate, type HistoricalAgency, type HistoricalAnswer, type HistoricalBuild, type HistoricalDecline } from "./historical";
+import { stateName } from "./places";
 import { STAFF_MEASURE, type StaffKind } from "./staffing";
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -82,7 +83,7 @@ export function answerStaffingBeside(kind: StaffKind, statistic: "count" | "rate
   const title = `${agency.label}: ${sw.words}${rate ? (per === 100_000 ? " as rates per 100,000" : ` as rates (staffing ${staffPerWords}, crime per 100,000)`) : ""}, ${when}.`;
   const headers = [`${ucFirst(sm.words)}${rate ? ` ${staffPerWords}` : ""}`, ...crimeData.map((c) => `${ucFirst(c.m.words)}${rate ? " per 100,000" : ""}`)];
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
-    ...headers.map((header, i) => ({ binding: { kind: "statistic" as const, as: `x.${i}` }, header }))];
+    ...headers.map((header, i) => ({ binding: { kind: "statistic" as const, as: i === 0 ? "staffing" : `crime.${crimeData[i - 1].key}` }, header }))];
   const rows = shown.map((y) => [String(y), ...figures(y)]) as (string | number | null)[][];
   const period = { from: `${shown[0]}-01`, to: `${shown[shown.length - 1]}-12` };
   const notes = [...(extra.agencyLine ? [extra.agencyLine] : []), ...baseNote, ...startNote, ...outsideNote, ...computedNotes, ...blanks];
@@ -94,6 +95,69 @@ export function answerStaffingBeside(kind: StaffKind, statistic: "count" | "rate
       measures: [{ name: sm.name, unit: "person" }, ...crimeData.map((c) => ({ name: c.m.name, unit: c.m.unit }))], period, groupings: ["year"],
       statistic: rate ? "rate" : "count", ...(rate ? { denominator: `the agency's population as published by Crime Index (staffing ${staffPerWords}, crime per 100,000)` } : {}) },
     delivered: { table: { columns, rows }, text: [title, ...notes, SRS_SOURCE] },
+    read: { table: "agency_staffing, agency_crime", column: `${sm.col}_${rate ? "capita" : "total"}, ${crimeData.map((c) => `${c.m.col}_${rate ? "capita" : "total"}`).join(", ")}`, release: build.release },
+  };
+}
+
+/**
+ * The N largest cities beside staffing and crime (engine 2: "Compare crime rates vs police staffing levels across the 20
+ * largest cities in the US", once the crime and the year are chosen): the city agencies with the most residents in the
+ * nation or a state for the year (every city tied with the Nth included), each one's staffing next to the crime. Complete
+ * data only (Jeff's ranking rule): a city lacking a staffing or crime figure that year is left out and named.
+ */
+export function answerStaffingSet(kind: StaffKind, statistic: "count" | "rate", state: string, year: number, n: number, crimes: string[], build: HistoricalBuild,
+  execute: (sql: string) => unknown[][], extra: { per?: number } = {}): HistoricalAnswer | HistoricalDecline {
+  const sm = STAFF_MEASURE[kind];
+  const rate = statistic === "rate";
+  const per = extra.per ?? 100_000;
+  const decimals = Math.max(1, 1 + Math.round(Math.log10(100_000 / per)));
+  const atBase = (v: number | null) => (v === null || per === 100_000 ? v : Number((v * per / 100_000).toFixed(decimals)));
+  if (year < build.firstYear || year > build.lastYear)
+    return { kind: "historical-decline", explanation: `Figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${year} is outside them.` };
+  const national = state === "US";
+  const crimeFile = q(`${build.root}/agency_crime.parquet`);
+  const inState = national ? "" : `state = ${q(state)} AND `;
+  const base = `SELECT ori, ${cityNameSql()} AS name, state, population FROM read_parquet(${crimeFile}) WHERE ${inState}${citySql()} AND year = ${year} AND population IS NOT NULL`;
+  const set = execute(`WITH c AS (${base}), cut AS (SELECT population FROM c ORDER BY population DESC LIMIT 1 OFFSET ${Math.floor(n) - 1}) `
+    + `SELECT * FROM c WHERE population >= coalesce((SELECT population FROM cut), 0) ORDER BY population DESC, name`);
+  const where = national ? "the United States" : stateName(state);
+  if (!set.length) return { kind: "historical-decline", explanation: `Crime Index has no city populations in ${where} for ${year}.` };
+  const oris = set.map((r) => q(String(r[0]))).join(", ");
+  const staffRows = execute(`SELECT ori, year, ${sm.col}_total, ${sm.col}_capita, population FROM read_parquet(${q(`${build.root}/agency_staffing.parquet`)}) `
+    + `WHERE ori IN (${oris}) AND year BETWEEN ${year} AND ${year} ORDER BY ori, year`);
+  const staff = new Map(staffRows.map((r) => [String(r[0]), { total: num(r[2]), capita: num(r[3]), population: num(r[4]) }]));
+  const staffValue = (ori: string) => { const c = staff.get(ori); return !c ? null : rate ? atBase(historicalRate(c.capita, c.total, c.population).rate) : c.total; };
+  const crimeData = crimes.map((key) => {
+    const m = HISTORICAL_MEASURE[key];
+    const got = execute(`SELECT ori, year, ${m.col}_total, ${m.col}_capita, population FROM read_parquet(${crimeFile}) WHERE ori IN (${oris}) AND year BETWEEN ${year} AND ${year} ORDER BY ori, year`);
+    const cell = new Map(got.map((r) => [String(r[0]), { total: num(r[2]), capita: num(r[3]), population: num(r[4]) }]));
+    return { key, m, value: (ori: string) => { const c = cell.get(ori); return !c ? null : rate ? historicalRate(c.capita, c.total, c.population).rate : c.total; } };
+  });
+  const label = (r: unknown[]) => (national ? `${String(r[1])}, ${String(r[2])}` : String(r[1]));
+  const complete = set.filter((r) => staffValue(String(r[0])) !== null && crimeData.every((c) => c.value(String(r[0])) !== null));
+  const left = set.filter((r) => !complete.includes(r));
+  if (!complete.length) return { kind: "historical-decline", explanation: `No city among the ${set.length} largest in ${where} has both staffing and crime figures for ${year}.` };
+  const staffPerWords = `per ${fmt(per)}`;
+  const sw = staffingMeasureOf(besideMeasure(kind, crimes));
+  const text = [`The ${n} largest cities in ${where} by population (${year}): ${sw.words}${rate ? (per === 100_000 ? " as rates per 100,000" : ` as rates (staffing ${staffPerWords}, crime per 100,000)`) : ""}.`,
+    ...(set.length > n ? [`${set.filter((r) => num(r[3]) === num(set[n - 1][3])).length} cities tie at the ${n}th largest population, so ${set.length} are in the set.`] : []),
+    `The cities are Crime Index's city agencies with the most residents as published for ${year}, largest first; "city" is the geography, whatever the agency.`,
+    ...(rate && per !== 100_000 ? [`${ucFirst(sm.words)} ${staffPerWords} are rates per 100,000, ${per < 100_000 ? `divided by ${fmt(100_000 / per)}` : `multiplied by ${fmt(per / 100_000)}`}.`] : []),
+    ...(left.length ? [`Left out because Crime Index lacks a staffing or crime figure for ${year}: ${listWords(left.map(label))}.`] : []),
+    SRS_SOURCE];
+  const headers = [`${ucFirst(sm.words)}${rate ? ` ${staffPerWords}` : ""}`, ...crimeData.map((c) => `${ucFirst(c.m.words)}${rate ? " per 100,000" : ""}`)];
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "City" },
+    { binding: { kind: "statistic", as: "staffing" }, header: headers[0] }, ...crimeData.map((c, i) => ({ binding: { kind: "statistic" as const, as: `crime.${c.key}` }, header: headers[i + 1] }))];
+  const rows = complete.map((r) => [label(r), staffValue(String(r[0])), ...crimeData.map((c) => c.value(String(r[0])))]) as (string | number | null)[][];
+  const period = { from: `${year}-01`, to: `${year}-12` };
+  const agencies = complete.map((r) => ({ ori: String(r[0]), label: label(r), name: String(r[1]), state: String(r[2]) }));
+  return {
+    kind: "historical", period,
+    question: { measure: besideMeasure(kind, crimes), agencies, from: year, to: year, byYear: false, statistic, comparison: null },
+    meaning: { source: "historical", places: [national ? { kind: "national", name: "United States" } : { kind: "state", name: where, state }],
+      filters: [`the ${n} largest city agencies by population (${year})`], measures: [{ name: sm.name, unit: "person" }, ...crimeData.map((c) => ({ name: c.m.name, unit: c.m.unit }))], period,
+      groupings: ["agency"], statistic: rate ? "rate" : "count", ...(rate ? { denominator: `each agency's population as published by Crime Index (staffing ${staffPerWords}, crime per 100,000)` } : {}) },
+    delivered: { table: { columns, rows }, text },
     read: { table: "agency_staffing, agency_crime", column: `${sm.col}_${rate ? "capita" : "total"}, ${crimeData.map((c) => `${c.m.col}_${rate ? "capita" : "total"}`).join(", ")}`, release: build.release },
   };
 }

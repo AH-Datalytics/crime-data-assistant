@@ -14504,20 +14504,16 @@
    "question": "Show me nationwide police staffing data since 2015",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
    }
   },
   {
@@ -23639,20 +23635,16 @@
    "question": "Total law enforcement officers in Texas since 1990",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
    }
   },
   {
@@ -35847,20 +35839,16 @@
    "question": "Show me nationwide police staffing data since 2015",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
    }
   },
   {
