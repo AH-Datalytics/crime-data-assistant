@@ -163,4 +163,19 @@ assert.match(readQuestion("fatal shootings in Houston since 2015", 2026).text, /
 // Jeff's example: only the pure filler "me the" is left, so the rest is answered as asked.
 assert.deepEqual(unreadOf("plot me the number of assaults in Glassboro NJ from 2010 to 2024"), ["me the"]);
 
+// Arrests (2026-11-11): every arrest with no crime named, an age range on the counted person, "cases", Group B names.
+const rq = (q: string) => readQuestion(q, 2026, "2026-09");
+assert.equal(rq("How many arrests were made in 2024 in the United States?").text, "All crime arrests in 2024 in the United States?");
+assert.equal(rq("arrests for robbery in Texas in 2024").text, "arrests for robbery in Texas in 2024", "a crime named is never every arrest");
+assert.equal(rq("how many arrests in 2024 for robbery in Texas").text.startsWith("All crime"), false);
+const ages = rq("show me all arrestees ages 18 to 21 in vermont by year");
+assert.equal(ages.text, "All crime arrests in vermont by year");
+assert.deepEqual(ages.people?.where, [{ who: "arrestee", attr: "age", range: [18, 21], paired: false }]);
+assert.deepEqual(rq("murder victims aged 18 to 24 in Memphis in 2024").people?.where, [{ who: "victim", attr: "age", range: [18, 24], paired: false }]);
+assert.equal(rq("arrests of people under 18 in Minneapolis in 2024").text, "arrests under 18 in Minneapolis in 2024");
+assert.deepEqual(rq("juvenile arrests nationally in 2024").people?.where, [{ who: "arrestee", attr: "age", range: [1, 17], paired: false }]);
+assert.equal(rq("What's the trend in negligent manslaughter cases over the past decade?").text.includes("cases"), false, "Jeff 2026-11-11: 'cases' is the normal count");
+for (const q of ["disorderly conduct arrests in Ohio in 2024", "liquor law violation arrests in Ohio in 2024", "curfew arrests in Ohio in 2024", "trespassing arrests in Ohio in 2024"])
+  assert.deepEqual(rq(q).ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], q);
+
 console.log("nibrs shadow reading: general wording forms read; boundaries keep their meaning");

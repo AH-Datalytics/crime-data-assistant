@@ -591,8 +591,24 @@ function readPeople(text0: string): { text: string; people: People | null } {
     const noun = /^\s*\S+\s+(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b/i.exec(text.slice(m.index))?.[1].toLowerCase();
     p.where.push({ who: noun === "arrests" ? "arrestee" : noun === "offenders" ? "offender" : "victim", attr: "age", range: UNDER18, paired: false });
   });
+  // Arrests (2026-11-11): "arrests of people ..." are arrests; an age range ("aged 18 to 21", "ages 18-24", "between the
+  // ages of 18 and 24") is the counted person's own, the arrestee's for arrests, the victim's or offender's otherwise.
+  text = text.replace(/\b(arrests?|arrestees|victims|offenders)\s+of\s+(?:people|persons|individuals)\b/gi, "$1");
+  const counted = /\b(arrest(?:s|ees?)?)\b/i.test(text) ? "arrestee" : /\boffenders?\b/i.test(text) ? "offender" : /\bvictims?\b/i.test(text) ? "victim" : null;
+  if (counted) cut(/,?\s*\b(?:who\s+(?:were|are)\s+)?(?:aged?|ages|between\s+(?:the\s+)?ages?\s+(?:of\s+)?)\s*(\d{1,2})\s*(?:to|-|–|through|and)\s*(\d{1,2})\b(?:\s+years?\s+old)?/i, (m) => {
+    const lo = Number(m[1]), hi = Number(m[2]);
+    if (lo <= hi) p.where.push({ who: counted, attr: "age", range: [lo, hi], paired: false });
+  });
   // Every arrest, with no crime named.
   if (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text)) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
+  // Arrests (2026-11-11): "how many arrests ...", "show me all arrestees ...", "the total number of arrests ..." with no
+  // crime named are every arrest too.
+  else {
+    const all = /^\s*(?:how\s+many\s+|(?:can\s+you\s+)?show\s+(?:me\s+)?|give\s+me\s+|what\s+(?:is|was|were)\s+)?(?:the\s+)?(?:total\s+)?(?:number\s+of\s+)?(?:all\s+)?(?:arrests|arrestees)\s+(?=(?:in|for|by|nationally|nationwide|statewide|across)\b|(?:19|20)\d{2}\b)/i.exec(text);
+    // Never when a crime is named anywhere ("how many arrests in 2024 for robbery").
+    const CRIME = /\b(?:murder|homicide|robber|burglar|assault|theft|larcen|rape|dui|dwi|drug|narcotic|marijuana|disorderly|drunk|liquor|curfew|loiter|trespass|violent|property|shoplift|fraud|vandal|weapon|arson|carjack|kidnap|prostitut|gambl|offense|crime)\w*/i;
+    if (all && !CRIME.test(text)) text = `All crime arrests ${text.slice(all[0].length)}`;
+  }
   const any = p.by || p.where.length || p.ask || p.unsupported;
   return { text, people: any ? p : null };
 }

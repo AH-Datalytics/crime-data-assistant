@@ -2082,6 +2082,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return shrOutcome(plan, deps, ledger0) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
     // Never "the data" for NIBRS's years alone: Crime Index has yearly figures for cities and counties back to its first
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").
+    // Arrests (Jeff 2026-11-11): answered from NIBRS's first year, saying the earlier years aren't in this data, until a
+    // summary-arrest source exists. Crime Index has no arrests, so there is no other answer to offer.
+    if (covered?.kind === "answer" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) {
+      const lastBefore = String(Number(firstY) - 1);
+      const note = `Arrests here come from NIBRS, which starts in ${firstY}, so ${periodWords(period.from, `${lastBefore}-12`)} aren't included.`;
+      return { ...covered, delivered: { ...covered.delivered, text: [covered.delivered.text[0], note, ...covered.delivered.text.slice(1)] } };
+    }
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);
     return decline("outside_release_coverage", `NIBRS figures here cover ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so they don't include ${periodWords(period.from, period.to)}.${byYear ? ` Crime Index has yearly figures: cities and counties from ${deps.historical?.firstYear ?? 1930}, states and the nation from 1960.` : ""}`,
       { notBuilt: true, alternative: covered && runsNow(covered) ? { label: `From ${firstY}, the first year in the data`, continuation: covered, role: "nearest_question" } : byYear });
