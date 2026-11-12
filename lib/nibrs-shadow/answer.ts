@@ -2384,6 +2384,8 @@ function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: S
   if (own.some((p) => p.concept === "combine" && p.value !== "combine")) return null;
   if (own.some((p) => p.concept === "entity" && p.value !== "agency")) return null;
   const trend = own.some((p) => p.concept === "change");
+  // Staffing is a year's figure: a year to date ("so far in 2023") is never answered with the whole year.
+  if (saysToDate(ledger0)) return decline("unsupported_capability", "Staffing and crime figures are for full years; a year to date isn't available here. Ask for a full year.");
   if (!own.filter((p) => p.concept === "unrecognized").every((p) => STAFF_ONLY.test(p.text.replace(YEAR_TYPO, "year")))) return null;
   const terms = staffTerms(q, own);
   if (!terms) return null;
@@ -2460,10 +2462,13 @@ function besideConflict(ledger0: RequestLedger, own: Part[], terms: StaffTerms):
   const rateWord = /\brates?\b|\bper\s+capita\b/i.test(q);
   // A rate asked for the crime while the reader took the figure as a count (or the reverse) is never answered as either.
   if (!terms.rate && (rateWord || /\bper\s+(?:1,?000|10,?000|100,?000)\b/i.test(q))) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
-  if (terms.rate && (staffCount || !rateWord)) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
-  const base = String.raw`(?:1,?000|10,?000|1,?000,?000|thousand|ten\s+thousand|million)`;
-  const bases = [...q.matchAll(new RegExp(String.raw`\b(?:per|in)\s+${base}\b`, "gi"))];
-  if (bases.length && (bases.length > 1 || !new RegExp(String.raw`\b${STAFF_WORD}(?:\s+\w+){0,2}\s+(?:per|in)\s+${base}\b`, "i").test(q)))
+  // A crime asked as a count ("the number of murders") beside staffing asked as a rate.
+  const crimeCount = own.some((p) => p.concept === "measure" && new RegExp(String.raw`(?:number|numbers|count|counts|total|how many)(?:\s+of)?(?:\s+the)?\s*$`, "i").test(q.slice(Math.max(0, p.span[0] - 30), p.span[0])));
+  if (terms.rate && (staffCount || crimeCount || !rateWord)) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
+  // Any base but 100,000 ("per 1,000", "per 10k"): one, and attached to the staffing words.
+  const base = String.raw`(?:\d[0-9,]*(?:\s*k)?|thousand|ten\s+thousand|(?:one\s+)?million)`;
+  const bases = [...q.matchAll(new RegExp(String.raw`\b(?:per|in)\s+(${base})\b`, "gi"))].filter((m) => { const b = baseOf(m[1]); return b !== null && b !== 100_000; });
+  if (bases.length && (bases.length > 1 || !new RegExp(String.raw`\b${STAFF_WORD}(?:\s+\w+){0,2}\s+(?:per|in)\s+${bases[0][1].replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)}\b`, "i").test(q)))
     return decline("unsupported_capability", "Crime rates are given per 100,000; another base can be asked for the staffing only, right after its words (\"officers per 1,000\").");
   // The years named once for both: a year placed between the staffing and the crime would belong to one of them.
   const periods = own.filter((p) => p.concept === "period");

@@ -422,12 +422,17 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     ["Compare the number of police officers to murder rates per 100,000 in Memphis in 2023", /counts or rates for both/],
     ["Police staffing vs murders in the 2 largest cities so far in 2023", /full years/],
     ["Compare police officers in Memphis in 2022 to murders in 2023", /Name the years once for both/],
-    ["murders vs police officers per 1,000 in Memphis in 2023", /counts or rates for both/]] as const) {
+    ["murders vs police officers per 1,000 in Memphis in 2023", /counts or rates for both/],
+    ["Robberies of sworn officers and police staffing in the 2 largest cities in 2023", null],
+    ["Compare murder rates per 10k to police officers per 100,000 in Memphis in 2023", /Crime rates are given per 100,000/],
+    ["Compare police staffing rates per 100,000 to the number of murders in Memphis in 2023", /counts or rates for both/],
+    ["Police staffing in Memphis so far in 2023", /full years/]] as const) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
     if (re) assert.ok(o.kind === "decline" && re.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
   // And the plain forms still answer: a base after the staffing words, the years once after both.
+  assert.deepEqual(hist("Police staffing in Memphis in 2023").delivered.table.rows, [[2510]], "a full year still answers");
   assert.deepEqual(hist("murder rates vs police officers per 1,000 in Memphis in 2023").delivered.table.rows, [["2023", 3.084, 57]]);
   assert.deepEqual(hist("Compare police officers per 1,000 to murder rates per 100,000 in Memphis in 2023").delivered.table.rows, [["2023", 3.084, 57]]);
   for (const q of ["murders in Memphis per officer in 2023", "police officers killed and murders in Memphis in 2023", "murders and assaults on officers in Memphis in 2023", "murders in Memphis in 2023"]) {
