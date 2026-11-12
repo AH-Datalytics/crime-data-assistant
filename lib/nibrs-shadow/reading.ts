@@ -110,7 +110,7 @@ const PHRASES: [RegExp, string][] = [
   // "Compare Houston's murder rate to the Texas state average": the two places side by side (never a year: "compare
   // 2024 to 2023" is a period comparison).
   // Never a time ("year to date", "to the most recent data", "to present": job CW2).
-  [/^\s*compare\s+((?:(?!\b(?:from|between|through)\b).)+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!(?:19|20)\d{2}\b|(?:the\s+)?(?:date|most|present|today|now|current|latest|recent|end|last|this|next|previous|january|february|march|april|may|june|july|august|september|october|november|december)\b)/gi, "$1 and "],
+  [/^\s*compare\s+((?:(?!\b(?:from|between|through)\b).)+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!\d|(?:the\s+)?(?:date|most|present|today|now|current|latest|recent|end|last|this|next|previous|early|mid|late|spring|summer|fall|autumn|winter|first|second|third|fourth|beginning|start|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december)\b)/gi, "$1 and "],
   [/\bin\s+the\s+state\s+of\s+/gi, "in "],
   [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|as\s+a\s+whole)\b/gi, "$1"],
   // Time words read, never dropped: "by months", "year-to-date", "over 5 years", "going back to 1980".
