@@ -169,6 +169,7 @@ assert.equal(rq("How many arrests were made in 2024 in the United States?").text
 assert.equal(rq("arrests for robbery in Texas in 2024").text, "arrests for robbery in Texas in 2024", "a crime named is never every arrest");
 assert.equal(rq("how many arrests in 2024 for robbery in Texas").text.startsWith("All crime"), false);
 assert.equal(rq("How many arrests for peeping tom in Ohio in 2024").text.startsWith("All crime"), false, "a Group B crime named (Codex arrests 01.1)");
+for (const q of ["arrests in Ohio in 2024 for robbery", "arrests for Robbery in Ohio in 2024"]) assert.equal(rq(q).text.startsWith("All crime"), false, q);
 for (const q of ["how many arrests nationally in 2024 by sex", "how many arrests in Guntersville, Alabama in 2024"])
   assert.equal(rq(q).text.startsWith("All crime arrests"), true, q);
 const ages = rq("show me all arrestees ages 18 to 21 in vermont by year");

@@ -600,14 +600,16 @@ function readPeople(text0: string): { text: string; people: People | null } {
     if (lo <= hi) p.where.push({ who: counted, attr: "age", range: [lo, hi], paired: false });
   });
   // Every arrest, with no crime named.
-  if (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text)) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
+  // A crime the reader finds anywhere is never every arrest ("arrests in Ohio in 2024 for robbery": Codex arrests review).
+  const crimeNamed = accountNibrsRequest(text).parts.some((x) => x.concept === "measure" && x.state === "recognized");
+  if (!crimeNamed && (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text))) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
   // Arrests (2026-11-11): "how many arrests ...", "show me all arrestees ...", "the total number of arrests ..." with no
   // crime named are every arrest too.
   else {
     const all = /^\s*(?:how\s+many\s+|(?:can\s+you\s+)?show\s+(?:me\s+)?|give\s+me\s+|what\s+(?:is|was|were)\s+)?(?:the\s+)?(?:total\s+)?(?:number\s+of\s+)?(?:all\s+)?(?:arrests|arrestees)\s+(?=(?:in|for|by|nationally|nationwide|statewide|across)\b|(?:19|20)\d{2}\b)/i.exec(text);
     // Never when the reader finds a crime named anywhere ("how many arrests in 2024 for robbery", "peeping tom"): the
     // reader's own measures decide, never a word list (Codex arrests review 01: "Guntersville", "by sex").
-    if (all && !accountNibrsRequest(text).parts.some((x) => x.concept === "measure" && x.state === "recognized")) text = `All crime arrests ${text.slice(all[0].length)}`;
+    if (all && !crimeNamed) text = `All crime arrests ${text.slice(all[0].length)}`;
   }
   const any = p.by || p.where.length || p.ask || p.unsupported;
   return { text, people: any ? p : null };
