@@ -1,0 +1,58 @@
+{
+ "year": 1990,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": -130,
+   "detail": "sum=14194970 printed_total=14195100"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 22070,
+   "detail": "sum_with_suspicion=14217170 printed_total=14195100 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": false,
+   "diff": -30,
+   "detail": "parts=705470 printed=705500"
+  },
+  {
+   "check": "property_subtotal (with arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=2217800 printed=2217800; without arson=2198700, with arson=2217800"
+  }
+ ],
+ "ocr_vs_image_mismatches": [],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Aggravated assault",
+  "Burglary",
+  "Larceny--theft",
+  "Arson",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Fraud",
+  "Embezzlement",
+  "Stolen property; buying, receiving, possessing",
+  "Vandalism",
+  "Weapons; carrying, possessing, etc.",
+  "Prostitution and commercialized vice",
+  "Drug abuse violations",
+  "Gambling",
+  "Liquor laws",
+  "Drunkenness",
+  "Disorderly conduct",
+  "Vagrancy",
+  "Curfew and loitering law violations",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

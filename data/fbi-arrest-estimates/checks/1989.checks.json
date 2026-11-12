@@ -1,0 +1,61 @@
+{
+ "year": 1989,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": 270,
+   "detail": "sum=14341170 printed_total=14340900"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 16270,
+   "detail": "sum_with_suspicion=14357170 printed_total=14340900 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": false,
+   "diff": -30,
+   "detail": "parts=685470 printed=685500"
+  },
+  {
+   "check": "property_subtotal (with arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=2320400 printed=2320400; without arson=2301800, with arson=2320400"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Crime Index total",
+   "ocr": 3003800,
+   "image": 3005800
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Burglary",
+  "Larceny--theft",
+  "Arson",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Weapons; carrying, possessing, etc.",
+  "Prostitution and commercialized vice",
+  "Sex offenses (except forcible rape and prostitution)",
+  "Drug abuse violations",
+  "Gambling",
+  "Liquor laws",
+  "Drunkenness",
+  "Vagrancy",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

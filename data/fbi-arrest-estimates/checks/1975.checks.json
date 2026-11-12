@@ -1,0 +1,203 @@
+{
+ "year": 1975,
+ "rows": 41,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, subtotals and narcotic/gambling sub-lines)",
+   "ok": false,
+   "diff": 40,
+   "detail": "sum=9273640 printed_total=9273600; printed footnote: items may not add because of rounding"
+  },
+  {
+   "check": "violent_subtotal (murder+manslaughter excluded? no: murder+rape+robbery+agg assault)",
+   "ok": false,
+   "diff": 10,
+   "detail": "parts=451320 printed=451310"
+  },
+  {
+   "check": "property_subtotal (burglary+larceny+MVT; arson not in 1975 property crime)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1843800 printed=1843800"
+  },
+  {
+   "check": "narcotic_subitems",
+   "ok": true,
+   "diff": 0,
+   "detail": "sub-lines vs Narcotic drug laws"
+  },
+  {
+   "check": "gambling_subitems",
+   "ok": false,
+   "diff": 100,
+   "detail": "sub-lines vs Gambling"
+  }
+ ],
+ "notes": "Scanned page; tesseract 300dpi columns compared with the page image. OCR digit errors vs image: Total 9,278,600 (image 9,273,600), Larceny 1,199,100 (1,139,100), Forgery 87,100 (67,100), Liquor laws 840,100 (340,100); Arson line dropped by the crop; first full-page pass also misread Narcotic 61,400, Vandalism 280,100, Gambling 63,600. Stored values are the image reading, not adjusted to make sums work.",
+ "raw_rows": [
+  [
+   "Total",
+   9273600
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   20180
+  ],
+  [
+   "Manslaughter by negligence",
+   3720
+  ],
+  [
+   "Forcible rape",
+   26670
+  ],
+  [
+   "Robbery",
+   158870
+  ],
+  [
+   "Aggravated assault",
+   245600
+  ],
+  [
+   "Burglary--breaking or entering",
+   553900
+  ],
+  [
+   "Larceny--theft",
+   1139100
+  ],
+  [
+   "Motor vehicle theft",
+   150800
+  ],
+  [
+   "Violent crime",
+   451310
+  ],
+  [
+   "Property crime",
+   1843800
+  ],
+  [
+   "Subtotal for above offenses",
+   2298900
+  ],
+  [
+   "Other assaults",
+   422700
+  ],
+  [
+   "Arson",
+   18600
+  ],
+  [
+   "Forgery and counterfeiting",
+   67100
+  ],
+  [
+   "Fraud",
+   171300
+  ],
+  [
+   "Embezzlement",
+   12200
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   122000
+  ],
+  [
+   "Vandalism",
+   230700
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   166400
+  ],
+  [
+   "Prostitution and commercialized vice",
+   68200
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   64400
+  ],
+  [
+   "Narcotic drug laws",
+   601400
+  ],
+  [
+   "Opium or cocaine and their derivatives",
+   78800
+  ],
+  [
+   "Marijuana",
+   416100
+  ],
+  [
+   "Synthetic or manufactured narcotics",
+   28300
+  ],
+  [
+   "Other--dangerous narcotic drugs",
+   78200
+  ],
+  [
+   "Gambling",
+   62600
+  ],
+  [
+   "Bookmaking",
+   5500
+  ],
+  [
+   "Numbers and lottery",
+   10400
+  ],
+  [
+   "All other gambling",
+   46800
+  ],
+  [
+   "Offenses against family and children",
+   68900
+  ],
+  [
+   "Driving under the influence",
+   947100
+  ],
+  [
+   "Liquor laws",
+   340100
+  ],
+  [
+   "Drunkenness",
+   1217000
+  ],
+  [
+   "Disorderly conduct",
+   748400
+  ],
+  [
+   "Vagrancy",
+   40000
+  ],
+  [
+   "All other offenses (except traffic)",
+   1209200
+  ],
+  [
+   "Suspicion (not included in total)",
+   36200
+  ],
+  [
+   "Curfew and loitering law violations",
+   146400
+  ],
+  [
+   "Runaways",
+   250100
+  ]
+ ]
+}

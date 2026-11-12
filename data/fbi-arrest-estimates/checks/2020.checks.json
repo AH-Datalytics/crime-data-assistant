@@ -1,0 +1,151 @@
+{
+ "year": 2020,
+ "rows": 31,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=7632473 printed_total=7632473"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=482408 printed=482408"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=871370 printed=871370"
+  }
+ ],
+ "notes": "table title: Table 29 Estimated Number of Arrests United States, 2020 Total1 7632473.0",
+ "raw_rows": [
+  [
+   "Total",
+   7632473
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   12444
+  ],
+  [
+   "Rape2",
+   20872
+  ],
+  [
+   "Robbery",
+   67903
+  ],
+  [
+   "Aggravated assault",
+   381189
+  ],
+  [
+   "Burglary",
+   149352
+  ],
+  [
+   "Larceny-theft",
+   629024
+  ],
+  [
+   "Motor vehicle theft",
+   83219
+  ],
+  [
+   "Arson",
+   9775
+  ],
+  [
+   "Violent crime",
+   482408
+  ],
+  [
+   "Property crime",
+   871370
+  ],
+  [
+   "Other assaults",
+   906980
+  ],
+  [
+   "Forgery and counterfeiting",
+   32499
+  ],
+  [
+   "Fraud",
+   79518
+  ],
+  [
+   "Embezzlement",
+   9393
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   88316
+  ],
+  [
+   "Vandalism",
+   173774
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   166197
+  ],
+  [
+   "Prostitution and commercialized vice",
+   16770
+  ],
+  [
+   "Sex offenses (except rape and prostitution)",
+   31793
+  ],
+  [
+   "Drug abuse violations",
+   1155610
+  ],
+  [
+   "Gambling",
+   1625
+  ],
+  [
+   "Offenses against the family and children",
+   59396
+  ],
+  [
+   "Driving under the influence",
+   778906
+  ],
+  [
+   "Liquor laws",
+   104201
+  ],
+  [
+   "Drunkenness",
+   194249
+  ],
+  [
+   "Disorderly conduct",
+   225804
+  ],
+  [
+   "Vagrancy",
+   13653
+  ],
+  [
+   "All other offenses",
+   2228332
+  ],
+  [
+   "Suspicion",
+   363
+  ],
+  [
+   "Curfew and loitering law violations",
+   11679
+  ]
+ ]
+}

@@ -1,0 +1,81 @@
+{
+ "year": 1976,
+ "rows": 41,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": -37560,
+   "detail": "sum=9570940 printed_total=9608500"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 40,
+   "detail": "sum_with_suspicion=9608540 printed_total=9608500 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=411630 printed=411630"
+  },
+  {
+   "check": "property_subtotal (without arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1746900 printed=1746900; without arson=1746900, with arson=1764600"
+  },
+  {
+   "check": "sub_lines_of: Narcotic drug laws",
+   "ok": true,
+   "diff": 0,
+   "detail": "sub-lines=609700 printed=609700"
+  },
+  {
+   "check": "sub_lines_of: Gambling",
+   "ok": true,
+   "diff": 0,
+   "detail": "sub-lines=79000 printed=79000"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Aggravated assault",
+   "ocr": 285050,
+   "image": 235050
+  },
+  {
+   "offense": "Motor vehicle theft",
+   "ocr": 184400,
+   "image": 134400
+  },
+  {
+   "offense": "Numbers and lottery",
+   "ocr": 42700,
+   "image": 12700
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Larceny--theft",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Arson",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Sex offenses (except forcible rape and prostitution)",
+  "Marijuana",
+  "Gambling",
+  "Bookmaking",
+  "Liquor laws",
+  "Drunkenness",
+  "Vagrancy",
+  "Runaways"
+ ],
+ "notes": "image reading (two passes) is the stored value; OCR shown for comparison"
+}

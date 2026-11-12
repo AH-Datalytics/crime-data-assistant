@@ -1,0 +1,159 @@
+{
+ "year": 1995,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": false,
+   "diff": -270,
+   "detail": "sum=15119530 printed_total=15119800"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": false,
+   "diff": -20,
+   "detail": "parts=796230 printed=796250"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=2128600 printed=2128600"
+  }
+ ],
+ "notes": "page text saved from built-in browser visit",
+ "raw_rows": [
+  [
+   "Total",
+   15119800
+  ],
+  [
+   "Embezzlement",
+   15200
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   166500
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   21230
+  ],
+  [
+   "Vandalism",
+   311100
+  ],
+  [
+   "Forcible rape",
+   34650
+  ],
+  [
+   "Weapons; carrying, possessing, etc",
+   243900
+  ],
+  [
+   "Robbery",
+   171870
+  ],
+  [
+   "Prostitution and commercialized vice",
+   97700
+  ],
+  [
+   "Aggravated assault",
+   568480
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   94500
+  ],
+  [
+   "Burglary",
+   386500
+  ],
+  [
+   "Drug abuse violations",
+   1476100
+  ],
+  [
+   "Larceny\u2013theft",
+   1530200
+  ],
+  [
+   "Gambling",
+   19500
+  ],
+  [
+   "Motor vehicle theft",
+   191900
+  ],
+  [
+   "Offenses against family and children",
+   142900
+  ],
+  [
+   "Arson",
+   20000
+  ],
+  [
+   "Driving under the influence",
+   1436000
+  ],
+  [
+   "Liquor laws",
+   594900
+  ],
+  [
+   "Violent crime",
+   796250
+  ],
+  [
+   "Drunkenness",
+   708100
+  ],
+  [
+   "Property crime",
+   2128600
+  ],
+  [
+   "Disorderly conduct",
+   748600
+  ],
+  [
+   "Vagrancy",
+   25900
+  ],
+  [
+   "Crime Index total",
+   2924800
+  ],
+  [
+   "All other offenses",
+   3865400
+  ],
+  [
+   "Suspicion (not included in totals)",
+   12100
+  ],
+  [
+   "Other assaults",
+   1290400
+  ],
+  [
+   "Curfew and loitering law violations",
+   149800
+  ],
+  [
+   "Forgery and counterfeiting",
+   122300
+  ],
+  [
+   "Runaways",
+   249500
+  ],
+  [
+   "Fraud",
+   436400
+  ]
+ ]
+}

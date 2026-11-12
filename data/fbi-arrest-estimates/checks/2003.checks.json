@@ -1,0 +1,155 @@
+{
+ "year": 2003,
+ "rows": 32,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=13639479 printed_total=13639479"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=597026 printed=597026"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1605127 printed=1605127"
+  }
+ ],
+ "notes": "archive snapshot (Wayback), text layer of FBI PDF",
+ "raw_rows": [
+  [
+   "Total",
+   13639479
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   126775
+  ],
+  [
+   "Vandalism",
+   273431
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   13190
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   167972
+  ],
+  [
+   "Forcible rape",
+   26350
+  ],
+  [
+   "Prostitution and commercialized vice",
+   75190
+  ],
+  [
+   "Robbery",
+   107553
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   91546
+  ],
+  [
+   "Aggravated assault",
+   449933
+  ],
+  [
+   "Drug abuse violations",
+   1678192
+  ],
+  [
+   "Burglary",
+   290956
+  ],
+  [
+   "Gambling",
+   10954
+  ],
+  [
+   "Larceny-theft",
+   1145074
+  ],
+  [
+   "Offenses against the family and children",
+   136034
+  ],
+  [
+   "Motor vehicle theft",
+   152934
+  ],
+  [
+   "Driving under the influence",
+   1448148
+  ],
+  [
+   "Arson",
+   16163
+  ],
+  [
+   "Liquor laws",
+   612079
+  ],
+  [
+   "Drunkenness",
+   548616
+  ],
+  [
+   "Violent crime",
+   597026
+  ],
+  [
+   "Disorderly conduct",
+   639371
+  ],
+  [
+   "Property crime",
+   1605127
+  ],
+  [
+   "Vagrancy",
+   28948
+  ],
+  [
+   "All other offenses",
+   3665543
+  ],
+  [
+   "Other assaults",
+   1246698
+  ],
+  [
+   "Suspicion",
+   7163
+  ],
+  [
+   "Forgery and counterfeiting",
+   111823
+  ],
+  [
+   "Curfew and loitering law violations",
+   136461
+  ],
+  [
+   "Fraud",
+   299138
+  ],
+  [
+   "Runaways",
+   123581
+  ],
+  [
+   "Embezzlement",
+   16826
+  ]
+ ]
+}

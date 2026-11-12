@@ -1,0 +1,60 @@
+{
+ "year": 1971,
+ "rows": 34,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": -64850,
+   "detail": "sum=8574850 printed_total=8639700"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 50,
+   "detail": "sum_with_suspicion=8639750 printed_total=8639700 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=323060 printed=323060"
+  },
+  {
+   "check": "property_subtotal (without arson)",
+   "ok": false,
+   "diff": -100,
+   "detail": "parts=1380800 printed=1380900; without arson=1380800, with arson=1394600"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Prostitution and commercialized vice",
+   "ocr": 65100,
+   "image": 55100
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Larceny--theft",
+  "Auto theft",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Arson",
+  "Forgery and counterfeiting",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Narcotic drug laws",
+  "Gambling",
+  "Liquor laws",
+  "Drunkenness",
+  "Vagrancy",
+  "Suspicion",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

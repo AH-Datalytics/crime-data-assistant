@@ -1,0 +1,62 @@
+{
+ "year": 1991,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": -10,
+   "detail": "sum=14211890 printed_total=14211900"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 18390,
+   "detail": "sum_with_suspicion=14230290 printed_total=14211900 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=718890 printed=718890"
+  },
+  {
+   "check": "property_subtotal (with arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=2252500 printed=2252500; without arson=2232500, with arson=2252500"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Crime Index total",
+   "ocr": 38500,
+   "image": 2971400
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Aggravated assault",
+  "Burglary",
+  "Larceny--theft",
+  "Arson",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Weapons; carrying, possessing, etc.",
+  "Prostitution and commercialized vice",
+  "Sex offenses (except forcible rape and prostitution)",
+  "Gambling",
+  "Offenses against family and children",
+  "Liquor laws",
+  "Drunkenness",
+  "Disorderly conduct",
+  "Vagrancy"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

@@ -1,0 +1,64 @@
+{
+ "year": 1970,
+ "rows": 34,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": -83460,
+   "detail": "sum=8034240 printed_total=8117700"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 40,
+   "detail": "sum_with_suspicion=8117740 printed_total=8117700 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=287550 printed=287550"
+  },
+  {
+   "check": "property_subtotal (without arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1259600 printed=1259600; without arson=1259600, with arson=1271500"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Forgery and counterfeiting",
+   "ocr": 55600,
+   "image": 55500
+  },
+  {
+   "offense": "Narcotic drug laws",
+   "ocr": 415800,
+   "image": 415600
+  },
+  {
+   "offense": "Curfew and loitering law violations",
+   "ocr": 120600,
+   "image": 129600
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Auto theft",
+  "Other assaults",
+  "Arson",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Gambling",
+  "Liquor laws",
+  "Vagrancy",
+  "Suspicion",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

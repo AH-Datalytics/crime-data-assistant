@@ -1,0 +1,155 @@
+{
+ "year": 2007,
+ "rows": 32,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=14209365 printed_total=14209365"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=597447 printed=597447"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1610088 printed=1610088"
+  }
+ ],
+ "notes": "page text saved from built-in browser visit",
+ "raw_rows": [
+  [
+   "Total",
+   14209365
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   13480
+  ],
+  [
+   "Forcible rape",
+   23307
+  ],
+  [
+   "Robbery",
+   126715
+  ],
+  [
+   "Aggravated assault",
+   433945
+  ],
+  [
+   "Burglary",
+   303853
+  ],
+  [
+   "Larceny-theft",
+   1172762
+  ],
+  [
+   "Motor vehicle theft",
+   118231
+  ],
+  [
+   "Arson",
+   15242
+  ],
+  [
+   "Violent crime",
+   597447
+  ],
+  [
+   "Property crime",
+   1610088
+  ],
+  [
+   "Other assaults",
+   1305693
+  ],
+  [
+   "Forgery and counterfeiting",
+   103448
+  ],
+  [
+   "Fraud",
+   252873
+  ],
+  [
+   "Embezzlement",
+   22381
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   122061
+  ],
+  [
+   "Vandalism",
+   291575
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   188891
+  ],
+  [
+   "Prostitution and commercialized vice",
+   77607
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   83979
+  ],
+  [
+   "Drug abuse violations",
+   1841182
+  ],
+  [
+   "Gambling",
+   12161
+  ],
+  [
+   "Offenses against the family and children",
+   122812
+  ],
+  [
+   "Driving under the influence",
+   1427494
+  ],
+  [
+   "Liquor laws",
+   633654
+  ],
+  [
+   "Drunkenness",
+   589402
+  ],
+  [
+   "Disorderly conduct",
+   709105
+  ],
+  [
+   "Vagrancy",
+   33666
+  ],
+  [
+   "All other offenses",
+   3931965
+  ],
+  [
+   "Suspicion",
+   2176
+  ],
+  [
+   "Curfew and loitering law violations",
+   143002
+  ],
+  [
+   "Runaways",
+   108879
+  ]
+ ]
+}

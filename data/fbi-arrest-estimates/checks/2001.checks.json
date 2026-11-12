@@ -1,0 +1,159 @@
+{
+ "year": 2001,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=13699254 printed_total=13699254"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=627132 printed=627132"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1618465 printed=1618465"
+  }
+ ],
+ "notes": "archive snapshot (Wayback), text layer of FBI PDF",
+ "raw_rows": [
+  [
+   "Total",
+   13699254
+  ],
+  [
+   "Embezzlement",
+   20157
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   121972
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   13653
+  ],
+  [
+   "Vandalism",
+   270645
+  ],
+  [
+   "Forcible rape",
+   27270
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   165896
+  ],
+  [
+   "Robbery",
+   108400
+  ],
+  [
+   "Prostitution and commercialized vice",
+   80854
+  ],
+  [
+   "Aggravated assault",
+   477809
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   91828
+  ],
+  [
+   "Burglary",
+   291444
+  ],
+  [
+   "Drug abuse violations",
+   1586902
+  ],
+  [
+   "Larceny-theft",
+   1160821
+  ],
+  [
+   "Gambling",
+   11112
+  ],
+  [
+   "Motor vehicle theft",
+   147451
+  ],
+  [
+   "Offenses against the family and children",
+   143683
+  ],
+  [
+   "Arson",
+   18749
+  ],
+  [
+   "Driving under the influence",
+   1434852
+  ],
+  [
+   "Liquor laws",
+   610591
+  ],
+  [
+   "Violent crime",
+   627132
+  ],
+  [
+   "Drunkenness",
+   618668
+  ],
+  [
+   "Property crime",
+   1618465
+  ],
+  [
+   "Disorderly conduct",
+   621394
+  ],
+  [
+   "Crime Index total",
+   2245597
+  ],
+  [
+   "Vagrancy",
+   27935
+  ],
+  [
+   "All other offenses",
+   3618164
+  ],
+  [
+   "Other assaults",
+   1315807
+  ],
+  [
+   "Suspicion",
+   3955
+  ],
+  [
+   "Forgery and counterfeiting",
+   113741
+  ],
+  [
+   "Curfew and loitering law violations",
+   142889
+  ],
+  [
+   "Fraud",
+   323308
+  ],
+  [
+   "Runaways",
+   133259
+  ]
+ ]
+}

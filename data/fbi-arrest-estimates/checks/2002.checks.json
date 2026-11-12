@@ -1,0 +1,159 @@
+{
+ "year": 2002,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=13741438 printed_total=13741438"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=620510 printed=620510"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1613954 printed=1613954"
+  }
+ ],
+ "notes": "archive snapshot (Wayback) of FBI page",
+ "raw_rows": [
+  [
+   "Total",
+   13741438
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   14158
+  ],
+  [
+   "Forcible rape",
+   28288
+  ],
+  [
+   "Robbery",
+   105774
+  ],
+  [
+   "Aggravated assault",
+   472290
+  ],
+  [
+   "Burglary",
+   288291
+  ],
+  [
+   "Larceny-theft",
+   1160085
+  ],
+  [
+   "Motor vehicle theft",
+   148943
+  ],
+  [
+   "Arson",
+   16635
+  ],
+  [
+   "Violent crime",
+   620510
+  ],
+  [
+   "Property crime",
+   1613954
+  ],
+  [
+   "Crime Index",
+   2234464
+  ],
+  [
+   "Other assaults",
+   1288682
+  ],
+  [
+   "Forgery and counterfeiting",
+   115735
+  ],
+  [
+   "Fraud",
+   337404
+  ],
+  [
+   "Embezzlement",
+   18552
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   126422
+  ],
+  [
+   "Vandalism",
+   276697
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   164446
+  ],
+  [
+   "Prostitution and commercialized vice",
+   79733
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   95066
+  ],
+  [
+   "Drug abuse violations",
+   1538813
+  ],
+  [
+   "Gambling",
+   10506
+  ],
+  [
+   "Offenses against the family and children",
+   140286
+  ],
+  [
+   "Driving under the influence",
+   1461746
+  ],
+  [
+   "Liquor laws",
+   653819
+  ],
+  [
+   "Drunkenness",
+   572735
+  ],
+  [
+   "Disorderly conduct",
+   669938
+  ],
+  [
+   "Vagrancy",
+   27295
+  ],
+  [
+   "All other offenses",
+   3662159
+  ],
+  [
+   "Suspicion",
+   8899
+  ],
+  [
+   "Curfew and loitering law violations",
+   141252
+  ],
+  [
+   "Runaways",
+   125688
+  ]
+ ]
+}

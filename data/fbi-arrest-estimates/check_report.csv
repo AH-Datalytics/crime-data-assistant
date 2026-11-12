@@ -1,0 +1,56 @@
+year,rows,total_row_printed,method,source,rows_sum_minus_total,rows_sum_ok,rows_incl_suspicion_minus_total,violent_diff,property_diff,ocr_mismatches,year_flags,read_verification,notes
+1970,34,8117700,image+ocr+image,Drive PDF (scan),-83460,False,40,0,0,3,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1971,34,8639700,image+ocr+image,Drive PDF (scan),-64850,False,50,0,-100,1,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1972,41,8712400,image+ocr+image,Drive PDF (scan),-56100,False,-100,10,0,1,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1973,41,9027700,image+ocr+image,Drive PDF (scan),-67110,False,-10,0,0,1,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1974,41,9055800,image+ocr+image,Drive PDF (scan),-70,False,45830,10,0,3,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1975,41,9273600,image+ocr+image,Drive PDF (scan),40,False,,10,0,0,,full_double_read_image,"Scanned page; tesseract 300dpi columns compared with the page image. OCR digit errors vs image: Total 9,278,600 (image 9,273,600), Larceny 1,199,100 (1,139,100)"
+1976,41,9608500,image+ocr+image,Drive PDF (scan),-37560,False,40,0,0,3,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading (two passes) is the stored value; OCR shown for comparison
+1977,41,10189900,image+ocr+image,Drive PDF (scan),-26010,False,90,10,100,0,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading (two passes) is the stored value; OCR shown for comparison
+1978,40,10271000,image+ocr+image,Drive PDF (scan),200,False,23100,0,100,2,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading (two passes) is the stored value; OCR shown for comparison
+1979,40,10205800,image+ocr+image,Drive PDF (scan),100,False,19700,0,200,2,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading (two passes) is the stored value; OCR shown for comparison
+1980,40,10441000,image+ocr+image,Drive PDF (scan),60,False,17260,0,0,1,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading (two passes) is the stored value; OCR shown for comparison
+1981,40,10840000,image+ocr+image,Drive PDF (scan),60,False,16260,0,0,2,handwritten_corrections_on_drug_abuse_lines_printed_numbers_stored,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. PAGE ANNOTATION: the five Drug abuse / sub-line printed values are struck through by hand and repla
+1982,40,12136400,image+ocr+image,Drive PDF (scan),-110,False,11090,-10,0,1,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1983,40,11700500,image+ocr+image,Drive PDF (scan),190,False,13990,0,0,1,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1984,40,11564000,image+ocr+image,Drive PDF (scan),260,False,21560,0,-100,0,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1985,33,11945200,image+ocr+image,Drive PDF (scan),160,False,13060,0,0,1,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1986,33,12487500,image+ocr+image,Drive PDF (scan),-8900,False,100,0,-100,1,suspicion_included_in_printed_total,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1987,33,12711600,image+ocr+image,Drive PDF (scan),50,False,13550,-50,0,2,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1988,33,13812300,image+ocr+image,Drive PDF (scan),-200,False,13800,0,0,0,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1989,33,14340900,image+ocr+image,Drive PDF (scan),270,False,16270,-30,0,1,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1990,33,14195100,image+ocr+image,Drive PDF (scan),-130,False,22070,-30,0,0,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1991,33,14211900,image+ocr+image,Drive PDF (scan),-10,False,18390,0,0,1,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1992,33,14075100,image+ocr+image,Drive PDF (scan),30,False,18430,0,0,0,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1993,33,14036300,image+ocr+image,Drive PDF (scan),10,False,14110,0,0,0,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1994,33,14648700,image+ocr+image,Drive PDF (scan),260,False,14260,30,0,0,,single_image_read_plus_ocr_comparison_and_arithmetic_checks,image reading is the stored value; OCR shown for comparison. 
+1995,33,15119800,pdf-text,PDF supplied by Jeff,-270,False,,-20,0,0,,text_layer_plus_arithmetic_checks,page text saved from built-in browser visit
+1996,33,15168100,pdf-text,PDF supplied by Jeff,-90,False,,10,-100,0,,text_layer_plus_arithmetic_checks,page text saved from built-in browser visit
+1997,33,15284300,pdf-text,PDF supplied by Jeff,120,False,,-30,0,0,,text_layer_plus_arithmetic_checks,page text saved from built-in browser visit
+1998,33,14528300,pdf-text,PDF supplied by Jeff,120,False,,120,100,0,,text_layer_plus_arithmetic_checks,page text saved from built-in browser visit
+1999,33,14031070,pdf-text,PDF supplied by Jeff,14430,False,,10,0,0,rounding_difference_row_sum_above_printed_total_by_14430,text_layer_plus_page_image_check,page text saved from built-in browser visit
+2000,33,13980297,pdf-text,PDF supplied by Jeff,0,True,,111,33,0,violent_and_property_subtotals_differ_from_parts_as_printed,text_layer_plus_page_image_check,page text saved from built-in browser visit
+2001,33,13699254,pdf-text,Wayback snapshot,0,True,,0,0,0,,text_layer_plus_arithmetic_checks,"archive snapshot (Wayback), text layer of FBI PDF"
+2002,33,13741438,html,Wayback snapshot,0,True,,0,0,0,,text_layer_plus_arithmetic_checks,archive snapshot (Wayback) of FBI page
+2003,32,13639479,pdf-text,Wayback snapshot,0,True,,0,0,0,,text_layer_plus_arithmetic_checks,"archive snapshot (Wayback), text layer of FBI PDF"
+2004,32,13938071,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2005,32,14094186,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2006,32,14380370,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2007,32,14209365,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2008,32,14005615,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2009,32,13687241,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2010,31,13120947,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,
+2011,31,12408899,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2012,31,12196959,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2013,31,11302102,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2014,31,11205833,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2015,31,10797088,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2016,31,10662252,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2017,31,10554985,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2018,31,10310960,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2019,31,10085207,html,live FBI page,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,page text saved from built-in browser visit
+2020,31,7632473,xls,CDE download,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,"table title: Table 29 Estimated Number of Arrests United States, 2020 Total1 7632473.0"
+2022,31,7364553,xlsx,CDE download,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,"table title: Table 29 Estimated Number of Arrests United States, 2022 Total1 7364553"
+2023,31,7555863,xlsx,CDE download,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,"table title: Table 29 Estimated Number of Arrests United States, 2023 Total1 7555863"
+2024,31,7522824,xlsx,CDE download,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,"table title: Table 29 Estimated Number of Arrests United States, 2024 Total1 7522824"
+2025,31,7570249,xlsx,CDE download,0,True,,0,0,0,,machine_readable_source_plus_arithmetic_checks,"table title: Table 29 Estimated Number of Arrests United States, 2025 Total1 7570249"

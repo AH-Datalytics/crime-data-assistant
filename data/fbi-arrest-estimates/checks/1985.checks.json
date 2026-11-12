@@ -1,0 +1,58 @@
+{
+ "year": 1985,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": 160,
+   "detail": "sum=11945360 printed_total=11945200"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 13060,
+   "detail": "sum_with_suspicion=11958260 printed_total=11945200 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=497560 printed=497560"
+  },
+  {
+   "check": "property_subtotal (with arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1945100 printed=1945100; without arson=1925600, with arson=1945100"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Crime Index total",
+   "ocr": 242700,
+   "image": 2442700
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Burglary",
+  "Arson",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Weapons; carrying, possessing, etc.",
+  "Sex offenses (except forcible rape and prostitution)",
+  "Offenses against family and children",
+  "Liquor laws",
+  "Drunkenness",
+  "Vagrancy",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

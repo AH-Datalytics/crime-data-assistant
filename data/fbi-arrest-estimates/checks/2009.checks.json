@@ -1,0 +1,155 @@
+{
+ "year": 2009,
+ "rows": 32,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=13687241 printed_total=13687241"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=581765 printed=581765"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1728285 printed=1728285"
+  }
+ ],
+ "notes": "page text saved from built-in browser visit",
+ "raw_rows": [
+  [
+   "Total",
+   13687241
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   12418
+  ],
+  [
+   "Forcible rape",
+   21407
+  ],
+  [
+   "Robbery",
+   126725
+  ],
+  [
+   "Aggravated assault",
+   421215
+  ],
+  [
+   "Burglary",
+   299351
+  ],
+  [
+   "Larceny-theft",
+   1334933
+  ],
+  [
+   "Motor vehicle theft",
+   81797
+  ],
+  [
+   "Arson",
+   12204
+  ],
+  [
+   "Violent crime",
+   581765
+  ],
+  [
+   "Property crime",
+   1728285
+  ],
+  [
+   "Other assaults",
+   1319458
+  ],
+  [
+   "Forgery and counterfeiting",
+   85844
+  ],
+  [
+   "Fraud",
+   210255
+  ],
+  [
+   "Embezzlement",
+   17920
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   105303
+  ],
+  [
+   "Vandalism",
+   270439
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   166334
+  ],
+  [
+   "Prostitution and commercialized vice",
+   71355
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   77326
+  ],
+  [
+   "Drug abuse violations",
+   1663582
+  ],
+  [
+   "Gambling",
+   10360
+  ],
+  [
+   "Offenses against the family and children",
+   114564
+  ],
+  [
+   "Driving under the influence",
+   1440409
+  ],
+  [
+   "Liquor laws",
+   570333
+  ],
+  [
+   "Drunkenness",
+   594300
+  ],
+  [
+   "Disorderly conduct",
+   655322
+  ],
+  [
+   "Vagrancy",
+   33388
+  ],
+  [
+   "All other offenses",
+   3764672
+  ],
+  [
+   "Suspicion",
+   1975
+  ],
+  [
+   "Curfew and loitering law violations",
+   112593
+  ],
+  [
+   "Runaways",
+   93434
+  ]
+ ]
+}

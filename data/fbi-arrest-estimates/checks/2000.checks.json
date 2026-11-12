@@ -1,0 +1,159 @@
+{
+ "year": 2000,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=13980297 printed_total=13980297"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": false,
+   "diff": 111,
+   "detail": "parts=625243 printed=625132"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": false,
+   "diff": 33,
+   "detail": "parts=1620961 printed=1620928"
+  }
+ ],
+ "notes": "page text saved from built-in browser visit",
+ "raw_rows": [
+  [
+   "Total",
+   13980297
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   13227
+  ],
+  [
+   "Forcible rape",
+   27469
+  ],
+  [
+   "Robbery",
+   106130
+  ],
+  [
+   "Aggravated assault",
+   478417
+  ],
+  [
+   "Burglary",
+   289844
+  ],
+  [
+   "Larceny-theft",
+   1166362
+  ],
+  [
+   "Motor vehicle theft",
+   148225
+  ],
+  [
+   "Arson",
+   16530
+  ],
+  [
+   "Violent crime",
+   625132
+  ],
+  [
+   "Property crime",
+   1620928
+  ],
+  [
+   "Crime Index total",
+   2246054
+  ],
+  [
+   "Other assaults",
+   1312169
+  ],
+  [
+   "Forgery and counterfeiting",
+   108654
+  ],
+  [
+   "Fraud",
+   345732
+  ],
+  [
+   "Embezzlement",
+   18952
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   118641
+  ],
+  [
+   "Vandalism",
+   281305
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   159181
+  ],
+  [
+   "Prostitution and commercialized vice",
+   87620
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   93399
+  ],
+  [
+   "Drug abuse violations",
+   1579566
+  ],
+  [
+   "Gambling",
+   10842
+  ],
+  [
+   "Offenses against the family and children",
+   147663
+  ],
+  [
+   "Driving under the influence",
+   1471289
+  ],
+  [
+   "Liquor laws",
+   683124
+  ],
+  [
+   "Drunkenness",
+   637554
+  ],
+  [
+   "Disorderly conduct",
+   638740
+  ],
+  [
+   "Vagrancy",
+   32542
+  ],
+  [
+   "All other offenses",
+   3710434
+  ],
+  [
+   "Suspicion",
+   5682
+  ],
+  [
+   "Curfew and loitering law violations",
+   154711
+  ],
+  [
+   "Runaways",
+   141975
+  ]
+ ]
+}

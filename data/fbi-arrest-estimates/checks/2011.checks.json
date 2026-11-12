@@ -1,0 +1,151 @@
+{
+ "year": 2011,
+ "rows": 31,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=12408899 printed_total=12408899"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=534704 printed=534704"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1639883 printed=1639883"
+  }
+ ],
+ "notes": "page text saved from built-in browser visit",
+ "raw_rows": [
+  [
+   "Total",
+   12408899
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   10832
+  ],
+  [
+   "Forcible rape",
+   19491
+  ],
+  [
+   "Robbery",
+   106674
+  ],
+  [
+   "Aggravated assault",
+   397707
+  ],
+  [
+   "Burglary",
+   296707
+  ],
+  [
+   "Larceny-theft",
+   1264986
+  ],
+  [
+   "Motor vehicle theft",
+   66414
+  ],
+  [
+   "Arson",
+   11776
+  ],
+  [
+   "Violent crime",
+   534704
+  ],
+  [
+   "Property crime",
+   1639883
+  ],
+  [
+   "Other assaults",
+   1241722
+  ],
+  [
+   "Forgery and counterfeiting",
+   70211
+  ],
+  [
+   "Fraud",
+   168217
+  ],
+  [
+   "Embezzlement",
+   16190
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   93234
+  ],
+  [
+   "Vandalism",
+   237638
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   153519
+  ],
+  [
+   "Prostitution and commercialized vice",
+   57345
+  ],
+  [
+   "Sex offenses (except forcible rape and prostitution)",
+   69225
+  ],
+  [
+   "Drug abuse violations",
+   1531251
+  ],
+  [
+   "Gambling",
+   8596
+  ],
+  [
+   "Offenses against the family and children",
+   116723
+  ],
+  [
+   "Driving under the influence",
+   1215077
+  ],
+  [
+   "Liquor laws",
+   500648
+  ],
+  [
+   "Drunkenness",
+   534218
+  ],
+  [
+   "Disorderly conduct",
+   582158
+  ],
+  [
+   "Vagrancy",
+   29203
+  ],
+  [
+   "All other offenses",
+   3532195
+  ],
+  [
+   "Suspicion",
+   1424
+  ],
+  [
+   "Curfew and loitering law violations",
+   76942
+  ]
+ ]
+}

@@ -1,0 +1,65 @@
+{
+ "year": 1987,
+ "rows": 33,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": 50,
+   "detail": "sum=12711650 printed_total=12711600"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 13550,
+   "detail": "sum_with_suspicion=12725150 printed_total=12711600 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": false,
+   "diff": -50,
+   "detail": "parts=546250 printed=546300"
+  },
+  {
+   "check": "property_subtotal (with arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=2099900 printed=2099900; without arson=2081900, with arson=2099900"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Aggravated assault",
+   "ocr": 191700,
+   "image": 352450
+  },
+  {
+   "offense": "Crime Index total",
+   "ocr": 2836700,
+   "image": 2646200
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Burglary",
+  "Larceny--theft",
+  "Arson",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Weapons; carrying, possessing, etc.",
+  "Sex offenses (except forcible rape and prostitution)",
+  "Offenses against family and children",
+  "Liquor laws",
+  "Drunkenness",
+  "Vagrancy",
+  "All other offenses (except traffic)",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

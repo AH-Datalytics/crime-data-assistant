@@ -72,3 +72,6 @@ docs/superpowers/2026-09-06-correctness-gold-set-v7.json -text
 
 # The Crime Index snapshot files are byte-hashed against nibrs-model's manifest (scripts/build-crimeindex-fixture.py).
 scripts/fixtures/nibrs-shadow/crimeindex/** -text
+
+# FBI national arrest estimates (job FE1): kept byte for byte, so their sha256s match the runner's.
+data/fbi-arrest-estimates/** -text

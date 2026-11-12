@@ -1,0 +1,73 @@
+{
+ "year": 1982,
+ "rows": 40,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion, aggregate lines and sub-lines)",
+   "ok": false,
+   "diff": -110,
+   "detail": "sum=12136290 printed_total=12136400"
+  },
+  {
+   "check": "info: rows INCLUDING Suspicion vs printed total",
+   "ok": false,
+   "diff": 11090,
+   "detail": "sum_with_suspicion=12147490 printed_total=12136400 (informational; the table label says Suspicion is not in the total)"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": false,
+   "diff": -10,
+   "detail": "parts=526190 printed=526200"
+  },
+  {
+   "check": "property_subtotal (with arson)",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=2044800 printed=2044800; without arson=2024300, with arson=2044800"
+  },
+  {
+   "check": "sub_lines_of: Drug abuse violations",
+   "ok": false,
+   "diff": 200,
+   "detail": "sub-lines=676200 printed=676000"
+  },
+  {
+   "check": "sub_lines_of: Gambling",
+   "ok": false,
+   "diff": -100,
+   "detail": "sub-lines=41100 printed=41200"
+  }
+ ],
+ "ocr_vs_image_mismatches": [
+  {
+   "offense": "Sex offenses (except forcible rape and prostitution)",
+   "ocr": 91100,
+   "image": 78800
+  }
+ ],
+ "ocr_unmatched": [
+  "Total",
+  "Forcible rape",
+  "Robbery",
+  "Burglary",
+  "Larceny--theft",
+  "Arson",
+  "Violent crime",
+  "Property crime",
+  "Other assaults",
+  "Fraud",
+  "Embezzlement",
+  "Vandalism",
+  "Marijuana",
+  "Gambling",
+  "Bookmaking",
+  "Liquor laws",
+  "Drunkenness",
+  "Disorderly conduct",
+  "Vagrancy",
+  "Curfew and loitering law violations",
+  "Runaways"
+ ],
+ "notes": "image reading is the stored value; OCR shown for comparison. "
+}

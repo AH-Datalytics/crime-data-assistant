@@ -1,0 +1,151 @@
+{
+ "year": 2019,
+ "rows": 31,
+ "checks": [
+  {
+   "check": "offense_rows_sum_to_total (excl. Suspicion)",
+   "ok": true,
+   "diff": 0,
+   "detail": "sum=10085207 printed_total=10085207"
+  },
+  {
+   "check": "violent_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=495871 printed=495871"
+  },
+  {
+   "check": "property_subtotal",
+   "ok": true,
+   "diff": 0,
+   "detail": "parts=1074367 printed=1074367"
+  }
+ ],
+ "notes": "page text saved from built-in browser visit",
+ "raw_rows": [
+  [
+   "Total",
+   10085207
+  ],
+  [
+   "Murder and nonnegligent manslaughter",
+   11060
+  ],
+  [
+   "Rape2",
+   24986
+  ],
+  [
+   "Robbery",
+   74547
+  ],
+  [
+   "Aggravated assault",
+   385278
+  ],
+  [
+   "Burglary",
+   171590
+  ],
+  [
+   "Larceny-theft",
+   813073
+  ],
+  [
+   "Motor vehicle theft",
+   80636
+  ],
+  [
+   "Arson",
+   9068
+  ],
+  [
+   "Violent crime",
+   495871
+  ],
+  [
+   "Property crime",
+   1074367
+  ],
+  [
+   "Other assaults",
+   1025711
+  ],
+  [
+   "Forgery and counterfeiting",
+   45183
+  ],
+  [
+   "Fraud",
+   112707
+  ],
+  [
+   "Embezzlement",
+   13497
+  ],
+  [
+   "Stolen property; buying, receiving, possessing",
+   88272
+  ],
+  [
+   "Vandalism",
+   180501
+  ],
+  [
+   "Weapons; carrying, possessing, etc.",
+   153161
+  ],
+  [
+   "Prostitution and commercialized vice",
+   26713
+  ],
+  [
+   "Sex offenses (except rape and prostitution)",
+   40796
+  ],
+  [
+   "Drug abuse violations",
+   1558862
+  ],
+  [
+   "Gambling",
+   2458
+  ],
+  [
+   "Offenses against the family and children",
+   85687
+  ],
+  [
+   "Driving under the influence",
+   1024508
+  ],
+  [
+   "Liquor laws",
+   175548
+  ],
+  [
+   "Drunkenness",
+   316032
+  ],
+  [
+   "Disorderly conduct",
+   310331
+  ],
+  [
+   "Vagrancy",
+   21896
+  ],
+  [
+   "All other offenses",
+   3318453
+  ],
+  [
+   "Suspicion",
+   579
+  ],
+  [
+   "Curfew and loitering law violations",
+   14653
+  ]
+ ]
+}
