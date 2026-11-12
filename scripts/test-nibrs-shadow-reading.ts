@@ -151,6 +151,7 @@ assert.equal(readQuestion("Compare Houston's murder rate to the Texas state aver
 assert.match(readQuestion("Baltimore violent crime rate compared to the national rate since 2015", 2026).text, /and the United States since 2015/);
 // The national rate as the only rate word is left as written (Codex comparison review 01.1).
 assert.match(readQuestion("How does murder in Texas compare to the national rate in 2023?", 2026).text, /national rate/);
+assert.match(readQuestion("Compare murder rate in Texas to the national total in 2023", 2026).text, /national total/, "a total against a rate is left as written");
 const lastYear = readQuestion("How has violent crime changed in the last year in Washington D.C.?", 2026);
 assert.deepEqual(lastYear.comparison, { earlier: { from: "2024-01", to: "2024-12" }, later: { from: "2025-01", to: "2025-12" }, matched: false });
 const early = readQuestion("Homicide rates in Kansas City MO in 2022 vs 2025", 2026);

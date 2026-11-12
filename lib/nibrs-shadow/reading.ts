@@ -390,7 +390,10 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // 01.1). Applied here, not in PHRASES, whose replacement sees only the matched words.
   text = text.replace(/\band\s+(?:to\s+)?(?:the\s+)?(?:national(?:\s+(?:rate|average|total|level|figures?|trend))?|nation(?:\s+as\s+a\s+whole)?|U\.?S\.?\s+(?:rate|average|total)|nationally)\b/gi,
     (m: string, offset: number, whole: string) => {
-      if (/\b(?:rate|average)\b/i.test(m) && !/\b(?:rates?|per\s+capita|per\s+100,?000)\b/i.test(whole.slice(0, offset))) return m;
+      const rateBefore = /\b(?:rates?|per\s+capita|per\s+100,?000)\b/i.test(whole.slice(0, offset));
+      if (/\b(?:rate|average)\b/i.test(m) && !rateBefore) return m;
+      // A national total against a rate asked mixes units: left as written (Codex comparison confirmation 01).
+      if (/\b(?:total|figures?)\b/i.test(m) && rateBefore) return m;
       readings.push({ kind: "phrase", from: m, to: "and the United States" });
       return "and the United States";
     });

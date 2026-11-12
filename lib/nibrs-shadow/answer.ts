@@ -519,6 +519,11 @@ function otherStates(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const states = l.parts.filter((p) => p.clause === 0 && p.concept === "place" && /^state:/.test(String(p.value)));
   const measure = l.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value !== "unspecified");
   if (states.length !== 1 || !measure || l.parts.some((p) => p.state === "not-interpreted")) return null;
+  // Only a question the reader's text says in full: a comparison of periods, a circumstance, a region, a composite or
+  // another reading kept beside the text would be lost when the text is asked again (Codex comparison confirmation 01).
+  const f = l as unknown as Record<string, unknown>;
+  if (["comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance", "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"]
+    .some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); })) return null;
   const st = states[0];
   // The reader's spans are in its own text (Codex comparison review 01.2), so the place is added there.
   const lq = l.question;
