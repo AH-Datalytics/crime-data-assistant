@@ -6027,6 +6027,48 @@
    "batch": "pr-comparison-2026-11-11",
    "date": "2026-11-11",
    "numbers": 7
+  },
+  "QL-hist-423179ca6d": {
+   "digest": "9b53875b7fc32cfc",
+   "by": "model-canonical",
+   "batch": "pr-arrests-2026-11-12",
+   "numbers": 144,
+   "date": "2026-11-12"
+  },
+  "QL-nibrs-25246a6b9b": {
+   "digest": "64e1e09c2624f734",
+   "by": "model-canonical",
+   "batch": "pr-arrests-2026-11-12",
+   "numbers": 1,
+   "date": "2026-11-12"
+  },
+  "QL-nibrs-2dae025246": {
+   "digest": "64e1e09c2624f734",
+   "by": "model-canonical",
+   "batch": "pr-arrests-2026-11-12",
+   "numbers": 1,
+   "date": "2026-11-12"
+  },
+  "QL-nibrs-423179ca6d": {
+   "digest": "9b53875b7fc32cfc",
+   "by": "model-canonical",
+   "batch": "pr-arrests-2026-11-12",
+   "numbers": 144,
+   "date": "2026-11-12"
+  },
+  "QL-nibrs-6869b3f836": {
+   "digest": "772b9a347b6bfd10",
+   "by": "model-canonical",
+   "batch": "pr-arrests-2026-11-12",
+   "numbers": 80,
+   "date": "2026-11-12"
+  },
+  "QL-nibrs-da9dfa7f3e": {
+   "digest": "d235e269d9e82189",
+   "by": "model-canonical",
+   "batch": "pr-arrests-2026-11-12",
+   "numbers": 9,
+   "date": "2026-11-12"
   }
  }
 }
