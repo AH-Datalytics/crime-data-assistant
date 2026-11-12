@@ -9476,19 +9476,16 @@
    "question": "Compare violent crime to number of police officers in Kansas City in 2022 vs 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "which Kansas City",
-    "about_any": [
-     "which Kansas City"
-    ]
+    "reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "Jeff 2026-11-11: staffing and a crime in one question is declined, one dataset at a time (P99, P100)"
    }
   },
   {
@@ -14428,20 +14425,16 @@
    "question": "Compare crime rates vs police staffing levels across the 20 largest cities in the US",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ],
-    "about": "violent, property or both"
+    "reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
    },
    "label": {
     "status": "draft",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Staffing does not resolve the generic crime category."
+    "notes": "Jeff 2026-11-11: staffing and a crime in one question is declined, one dataset at a time (P99, P100)"
    }
   },
   {
@@ -14504,20 +14497,16 @@
    "question": "Show me nationwide police staffing data since 2015",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
    }
   },
   {
@@ -23639,20 +23628,16 @@
    "question": "Total law enforcement officers in Texas since 1990",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
    }
   },
   {
@@ -35741,20 +35726,16 @@
    "question": "Compare crime rates vs police staffing levels across the 20 largest cities in the US",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ],
-    "about": "violent, property or both"
+    "reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
    },
    "label": {
     "status": "draft",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Staffing does not resolve the generic crime measure."
+    "notes": "Jeff 2026-11-11: staffing and a crime in one question is declined, one dataset at a time (P99, P100)"
    }
   },
   {
@@ -35847,20 +35828,16 @@
    "question": "Show me nationwide police staffing data since 2015",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
    }
   },
   {

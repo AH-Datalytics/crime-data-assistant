@@ -106,3 +106,14 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
     read: { table: "agency_staffing", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
 }
+
+/**
+ * Staffing named in a question that also names a crime ("violent crime vs number of police officers in Kansas City"):
+ * words that name the staff counted, and none that make officers a crime's victims or a ratio ("officers killed",
+ * "assaults on officers", "murders per officer"). Such a question is declined (one dataset at a time).
+ */
+const STAFF_WORDS = /\b(?:staffing|staff levels?|(?:number|numbers|count|counts|total|how many)\s+(?:of\s+)?(?:sworn\s+|police\s+)?(?:officers?|cops?|employees?)|sworn|cops?|police employees|civilian employees|headcount|police force size|(?:police\s+)?officers?\s+per\s+(?:capita|1,?000|100,?000|population))\b/i;
+const NOT_STAFF = /\b(?:kill\w*|assaulted|attacked|shot|shoot\w*|murdered|injur\w*|victims?|line of duty|on duty|died|deaths?|arrest\w*|use of force|per\s+(?:(?:police|sworn)\s+)*(?:officer|cop|employee)s?|(?:against|by|on|targeting|toward|towards)\s+(?:the\s+)?(?:(?:police|sworn|civilian|uniformed|law\s+enforcement)\s+)*(?:officer|cop|employee|personnel|staff)s?|(?<!\b(?:number|numbers|count|counts|total|rate|rates|level|levels|size)\s)of\s+(?:the\s+)?(?:(?:police|sworn|civilian|uniformed|law\s+enforcement)\s+)*(?:officer|cop|employee|personnel|staff)s?)\b/i;
+export const staffingBesideWords = (question: string) => STAFF_WORDS.test(question) && !NOT_STAFF.test(question);
+/** Jeff 2026-11-11: "it should do one dataset at a time, not mix". */
+export const STAFF_MIXED_TEXT = "I answer one dataset at a time, so staffing and a crime can't be in the same question. Ask for the police staffing on its own (for example \"police officers in Memphis in 2023\"), and the crime on its own as a separate question.";

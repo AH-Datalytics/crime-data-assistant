@@ -36,7 +36,7 @@ import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, type Fl
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
-import { answerStaffing, type StaffKind } from "./staffing";
+import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
 const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
@@ -860,7 +860,7 @@ function monthSpan(sp: { period: NPeriod; grain: string }, b: CurrentBuild): [st
 const openSpan = (sp: { period: NPeriod }) => sp.period.form === "since" || (sp.period.form === "last" && sp.period.n > 1) || sp.period.form === "none";
 
 /** Police staffing in words: officers, sworn or civilian employees, staffing, headcount (Crime Index's staffing tables). */
-const STAFFING = /\b(?:staffing|staff levels?|(?:police )?officers?(?: per (?:capita|1,?000|100,?000))?|sworn|civilian employees|police employees|headcount|police force size)\b/i;
+const STAFFING = /\b(?:staffing|staff levels?|cops?|(?:police )?officers?(?: per (?:capita|1,?000|100,?000))?|sworn|civilian employees|police employees|headcount|police force size)\b/i;
 
 /**
  * A county asked by name and answered from its sheriff's office (coordinator 2026-11-05: "Tarrant County, Texas murders
@@ -1143,6 +1143,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // answered as if the set weren't there.
   // Before every other route: a national or state total must never stand in for the set.
   const setN = flags(ledger0).largestSet;
+  // Staffing with a crime is one dataset at a time (Jeff 2026-11-11), also for a set of cities.
+  if (setN && staffingBesideWords(ledger0.question) && ledger0.parts.some((p) => p.clause === 0 && p.concept === "measure")) return decline("unsupported_capability", STAFF_MIXED_TEXT);
   // The set ranked ("ranked by their murder rate"): the rank word has no places of its own to rank (the set's words were
   // taken out), so the question is matched without it and the set is ordered by the figure.
   const setRank = setN ? ledger.parts.find((p) => p.clause === 0 && p.concept === "rank") : undefined;
@@ -1279,7 +1281,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Police staffing (Crime Index's staffing tables: officers and civilian employees) isn't built here yet: said plainly,
   // never "couldn't tell what this asks" (query-log step one, 2026-11-02: 1 in 8 of the Historical tab's first questions).
   // "Assaults on officers" is not staffing; "the number of police officers" is.
-  if (STAFFING.test(ledger0.question) && !/(?<!\b(?:number|numbers|count|counts|total)\s)\b(?:on|against|of)\s+(?:police\s+)?officers\b/i.test(ledger0.question) && !ledger0.parts.some((p) => p.concept === "measure" && p.state === "recognized")) {
+  if (STAFFING.test(ledger0.question) && !/(?<!\b(?:number|numbers|count|counts|total|rate|rates|ratio|level|levels|size|percentage)\s)\b(?:on|against|of)\s+(?:police\s+)?officers\b/i.test(ledger0.question) && (!ledger0.parts.some((p) => p.concept === "measure" && p.state === "recognized") || staffingBesideWords(ledger0.question))) {
     // Item 1: an agency's staffing, from the Crime Index build; anything it can't answer keeps a plain decline.
     const staff = staffingQuestion(ledger, ledger0, deps, resolved);
     if (staff === "ask period") return askCrimeIndexPeriod();
@@ -2377,51 +2379,95 @@ function qualified(ledger0: RequestLedger): boolean {
  * period, by year, a count or a rate, or staffing words; every place a resolved agency. Crime Index publishes staffing
  * per 100,000 people: another scale is answered per 100,000 and said, never converted. States and the nation have none.
  */
-const STAFF_ONLY = /^(?:\s|[,.?!:'’()-]|\b(?:police|officers?|sworn|law\s+enforcement|cops?|civilians?|employees?|staff|staffing|staffed|personnel|headcount|force|size|levels?|full[-\s]?time|total|number|numbers|count|counts|of|the|in|at|for|did|does|do|have|has|had|how|many|what|was|is|were|are|show|me|give|tell|list|by|per|year|years|each|every|annual|yearly|over|time|department|departments|dept|agency|agencies|compared?|vs\.?|versus|with|and|to|a|its|their|current(?:ly)?|latest|now|today)\b)*$/i;
-function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: ShadowDeps, resolved: Map<string, Place>): ShadowOutcome | "ask period" | null {
-  if (!deps.historical || qualifiedStaffing(ledger0)) return null;
-  const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
-  if (!own.every((p) => ["place", "period", "grain", "statistic", "unrecognized"].includes(p.concept))) return null;
-  if (!own.filter((p) => p.concept === "unrecognized").every((p) => STAFF_ONLY.test(p.text))) return null;
-  const q = ledger0.question;
+/** The staff counted, a count or a rate, and the rate's base, from a question's words (an agency's staffing and a set of cities' share it). */
+type StaffTerms = { kind: StaffKind; rate: boolean; per: number };
+function staffTerms(q: string, own: Part[]): { decline: ShadowOutcome } | StaffTerms | null {
+  const no = (reason: LimitationReason, why: string) => ({ decline: decline(reason, why) });
   const officers = /\b(?:officers?|sworn|cops?)\b/i.test(q), civilians = /\bcivilians?\b/i.test(q);
   // All employees named apart from civilian employees ("police employees", "personnel"); "staffing" alone names none.
   const everyone = /(?<!\bcivilian\s)\b(?:employees?|personnel|headcount)\b/i.test(q);
   // "Per" only as a rate per people or "per year": a ratio between staff ("employees per officer") is never answered
   // as a count (Codex staffing review 01.2).
-  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per[\s-]+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)\b/i.test(q.slice(m.index)));
-  if (!perOk) return decline("unsupported_capability", "Staffing is answered as counts or per 100,000 people; a ratio between kinds of staff isn't available.");
+  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per[\s-]+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|eyar|yera|yaer|yr|yrs)\b|^per[\s-]+(?:\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)(?![\d,])(?=\s*(?:people|population|residents?|persons?|inhabitants|citizens|capita)\b|[\s,.?!]*(?:$|in\b|for\b|since\b|from\b|by\b|per\b|each\b|every\b|yearly\b|annual\w*|during\b|between\b|over\b|across\b|at\b|and\b|vs\.?\b|versus\b|to\b|compared\b|\d))/i.test(q.slice(m.index)));
+  if (!perOk) return no("unsupported_capability", "Staffing is answered as counts or per 100,000 people; a ratio between kinds of staff isn't available.");
   // More than one kind named ("officers and civilian employees", "officers and police employees"): which one is asked,
   // never one of them answered for both (01.1).
-  if ([officers, civilians, everyone].filter(Boolean).length > 1) return decline("unsupported_capability", "Ask for one: sworn officers, civilian employees or all employees (officers and civilians together).");
+  if ([officers, civilians, everyone].filter(Boolean).length > 1) return no("unsupported_capability", "Ask for one: sworn officers, civilian employees or all employees (officers and civilians together).");
   const kind: StaffKind = civilians ? "civilians" : officers ? "officers" : "employees";
   const stats = own.filter((p) => p.concept === "statistic");
   const rateLike = (v: string | null) => v === "rate" || v === "per100k" || v === "percapita" || /^scale:/.test(String(v));
-  const rate = stats.some((p) => rateLike(p.value)) || /\bper\s+(?:capita|population|resident|person|people)\b/i.test(q);
-  // A count asked beside a rate, also where the reader took the count's words as an opener ("What is the count of
-  // ... and the rate per capita": 01.3): the same figure is asked for. ("How many officers per capita" is the rate.)
-  if (rate && (stats.some((p) => p.value === "count") || /\b(?:counts?|numbers?|totals?)\b/i.test(q))) return decline("unsupported_capability", "Ask for the same figure throughout: a count, or a rate per 100,000 people.");
+  // "In 1,000" for "per 1,000" ("sworn officers in 1,000 in Salem").
+  const inBase = /\b(?:officers?|sworn|cops?|staff\w*|employees?)\b[^,.?]*?\bin\s+(1,?000|10,?000|100,?000)\b(?!\s*(?:\d|police|officers?))/i.exec(q);
+  const rate = stats.some((p) => rateLike(p.value)) || /\bper\s+(?:capita|population|resident|person|people)\b/i.test(q) || !!inBase;
+  // A count asked beside a rate ("What is the count of ... and the rate per capita": 01.3): the same figure is asked
+  // for. "The number of officers per capita" and "how many officers per capita" are the rate: the opener's count words
+  // name what is counted, not a second figure.
+  if (rate && (/\bcounts?\b/i.test(q) || (/\b(?:numbers?|totals?)\b/i.test(q) && (/\brates?\b/i.test(q) || /\b(?:and|plus|&|with|versus|vs\.?)\s+(?:the\s+)?per\b/i.test(q)))))
+    return no("unsupported_capability", "Ask for the same figure throughout: a count, or a rate per 100,000 people.");
   if (stats.some((p) => !rateLike(p.value) && p.value !== "count")) return null;
-  const grains = own.filter((p) => p.concept === "grain"), periods = own.filter((p) => p.concept === "period");
-  if (grains.some((p) => p.value !== "year") || periods.length > 1) return null;
+  // P97 (Jeff 2026-11-07: "Convert to per 1,000"): a rate asked at another base is given at that base.
+  const scale = stats.find((p) => /^scale:/.test(String(p.value)));
+  // Two different bases ("per 1,000 residents and per 100,000 residents"): one is asked for, never the first answered.
+  const askedBases = new Set([...stats.filter((p) => /^scale:/.test(String(p.value))).map((p) => baseOf(String(p.value).slice(6))),
+    ...[...q.matchAll(/\bper\s+(\d[\d,]*(?:\s*k)?|thousand|ten\s+thousand|(?:one\s+)?million)\b/gi)].map((m) => baseOf(m[1]))].filter((b) => b !== null));
+  if (askedBases.size > 1) return no("unsupported_capability", "Ask for one rate base: per 1,000, per 100,000 or another, not several.");
+  const per = inBase ? baseOf(inBase[1]) : !scale ? 100_000 : baseOf(String(scale.value).slice(6));
+  if (per === null) return no("unsupported_capability", "Staffing rates are given per a whole number of people, such as per 1,000 or 100,000.");
+  return { kind, rate, per };
+}
+const STAFF_ONLY = /^(?:\s|[,.?!:'’()-]|\b(?:police|officers?|sworn|law\s+enforcement|cops?|civilians?|employees?|employed|staff|staffing|staffed|personnel|headcount|force|size|levels?|full[-\s]?time|total|number|numbers|count|counts|of|the|in|at|for|did|does|do|have|has|had|how|many|what|was|is|were|are|show|me|give|tell|list|by|per|year|years|each|every|annual|yearly|over|time|department|departments|dept|agency|agencies|compared?|vs\.?|versus|with|and|to|a|its|their|current(?:ly)?|latest|now|today|until|across|information|info|data|population|capita|residents?|people|persons?|inhabitants|1,?000|10,?000|100,?000)\b)*$/i;
+/** A misspelled "year" ("per eyar"): the grain asked, never an unread word. */
+const YEAR_TYPO = /\b(?:eyar|yera|yaer|yr|yrs)\b/gi;
+function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: ShadowDeps, resolved: Map<string, Place>): ShadowOutcome | "ask period" | null {
+  if (!deps.historical) return null;
+  const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
+  const q = ledger0.question;
+  // Staffing with a crime in one question (Jeff 2026-11-11: "it should do one dataset at a time, not mix"): said plainly,
+  // never answered as either one. Only when the words name staff, never a crime's victims ("officers killed").
+  if (own.some((p) => p.concept === "measure")) return staffingBesideWords(q) ? decline("unsupported_capability", STAFF_MIXED_TEXT) : null;
+  if (qualifiedStaffing(ledger0)) return null;
+  if (!own.every((p) => ["place", "period", "grain", "statistic", "unrecognized", "change", "combine", "entity"].includes(p.concept))) return null;
+  // "How has staffing changed" (a neutral change) is the series by year; a percent or other change is not built.
+  if (own.some((p) => p.concept === "change" && p.value !== "change:neutral")) return null;
+  if (own.some((p) => p.concept === "combine" && p.value !== "combine")) return null;
+  if (own.some((p) => p.concept === "entity" && p.value !== "agency")) return null;
+  const trend = own.some((p) => p.concept === "change");
+  // Staffing is a year's figure: a year to date ("so far in 2023") is never answered with the whole year.
+  if (saysToDate(ledger0)) return decline("unsupported_capability", "Staffing figures are for full years; a year to date isn't available here. Ask for a full year.");
+  if (!own.filter((p) => p.concept === "unrecognized").every((p) => STAFF_ONLY.test(p.text.replace(YEAR_TYPO, "year")))) return null;
+  const terms = staffTerms(q, own);
+  if (!terms) return null;
+  if ("decline" in terms) return terms.decline;
+  const { kind, rate, per } = terms;
+  const grains = own.filter((p) => p.concept === "grain");
+  const typoYear = YEAR_TYPO.test(own.filter((p) => p.concept === "unrecognized").map((p) => p.text).join(" ")) ? 1 : 0;
+  YEAR_TYPO.lastIndex = 0;
+  const periods = own.filter((p) => p.concept === "period");
+  if (grains.some((p) => p.value !== "year")) return null;
   const places = own.filter((p) => p.concept === "place");
   if (!places.length) return null;
   const agencies: { ori: string; label: string; name: string; state: string }[] = [];
   for (const part of places) {
     const np = placeOf(part);
-    if (np?.kind === "state" || np?.kind === "national") return decline("unsupported_capability", "Crime Index publishes police staffing for agencies only, not for states or the nation. Ask for an agency.");
+    if (np?.kind === "state" || np?.kind === "national") return decline("unsupported_capability", "Staffing is reported by individual agencies; there is no state or national staffing total. Ask for an agency.");
     if (np?.kind !== "agency") return null;
     const r = resolved.get(String(part.value));
     if (r?.kind !== "agency") return null;
     agencies.push({ ori: r.ori, label: r.label, name: np.name, state: np.state });
   }
   const build = deps.historical, thisYear = Number(deps.release.lastMonth.slice(0, 4));
-  const period = periods.length ? periodOf(periods[0]) : null;
-  if (periods.length && !period) return null;
+  // "Since 1980 until 2025": a span, the two years the reader took for a "since" and a year.
+  const sinceUntil = periods.length === 2 ? (() => {
+    const [a, b] = periods.map(periodOf);
+    return a?.form === "since" && b?.form === "year" && b.year >= a.from && /\b(?:until|through|thru|to)\b/i.test(q) ? { form: "range" as const, from: a.from, to: b.year } : null;
+  })() : null;
+  if (periods.length > 1 && !sinceUntil) return null;
+  const period = sinceUntil ?? (periods.length === 1 ? periodOf(periods[0]) : null);
+  if ((periods.length === 1 || sinceUntil) && !period) return null;
   let from: number, to: number;
   if (!period) {
     if (/\b(?:current(?:ly)?|latest|now|today)\b/i.test(q)) [from, to] = [build.lastYear, build.lastYear];
-    else if (grains.length) [from, to] = [build.firstYear, build.lastYear];
+    else if (grains.length || trend || typoYear) [from, to] = [build.firstYear, build.lastYear];
     else return "ask period";
   } else if (period.form === "year") [from, to] = [period.year, period.year];
   else if (period.form === "range") [from, to] = [period.from, period.to];
@@ -2430,12 +2476,8 @@ function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: S
   else if (period.form === "lastyear") [from, to] = [thisYear - 1, thisYear - 1];
   else if (period.form === "latest") [from, to] = [build.lastYear, build.lastYear];
   else return decline("unsupported_capability", "Staffing figures are by year; ask for a year or a span of years.");
-  // P97 (Jeff 2026-11-07: "Convert to per 1,000"): a rate asked at another base is given at that base.
-  const scale = stats.find((p) => /^scale:/.test(String(p.value)));
-  const per = !scale ? 100_000 : baseOf(String(scale.value).slice(6));
-  if (per === null) return decline("unsupported_capability", "Staffing rates are given per a whole number of people, such as per 1,000 or per 100,000.");
-  const r = answerStaffing(kind, rate ? "rate" : "count", agencies, from, to, grains.length > 0 || to > from, build, deps.execute,
-    { agencyLine: reportedBy(agencies.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), per });
+  const agencyLine = reportedBy(agencies.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for ");
+  const r = answerStaffing(kind, rate ? "rate" : "count", agencies, from, to, grains.length > 0 || trend || typoYear > 0 || to > from, build, deps.execute, { agencyLine, per });
   if (r.kind === "historical") return r;
   return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
 }

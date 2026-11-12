@@ -362,9 +362,8 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const series = hist("police staffing in Memphis by year from 2022 to 2023");
   assert.deepEqual(series.delivered.table.rows, [["2022", 2550], ["2023", 2510]]);
   assert.equal(series.question.measure, "staffing:employees");
-  for (const [q, re] of [["police officers in Tennessee in 2023", /agencies only, not for states or the nation/], ["officers and civilian employees in Memphis in 2023", /Ask for one: sworn officers, civilian employees or all employees/],
-    ["number of officers per capita in Memphis in 2023", /same figure throughout/],
-    // Codex staffing review 01: never one kind answered for two, a staff ratio as a count, or a rate for a count too.
+  for (const [q, re] of [["police officers in Tennessee in 2023", /there is no state or national staffing total/], ["officers and civilian employees in Memphis in 2023", /Ask for one: sworn officers, civilian employees or all employees/],
+        // Codex staffing review 01: never one kind answered for two, a staff ratio as a count, or a rate for a count too.
     ["Police officers and police employees in Memphis in 2023", /Ask for one: sworn officers/], ["civilian employees and police employees in Memphis in 2023", /Ask for one/],
     ["Police employees per officer in Memphis in 2023", /a ratio between kinds of staff/],
     ["What is the count of police officers and the rate per capita in Memphis in 2023?", /same figure throughout/]] as const) {
@@ -376,6 +375,53 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.deepEqual(hist("police staffing per-capita in Memphis in 2023").delivered.table.rows, [[407.4]], "per-capita, hyphenated, is the rate (Codex staffing review 02)");
   assert.deepEqual(hist("police staffing per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 2550], ["2023", 2510]], "per year is the grain");
   for (const q of ["officers killed in Memphis in 2023", "assaults on police officers in Memphis in 2023", "murders in Memphis per officer in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  // Engine 2: a neutral change is the series by year; "number of officers per capita" and "in 1,000" are rates; a
+  // misspelled "year" is the grain; "since A until B" is a span; no period is asked; the words must name staff.
+  assert.deepEqual(hist("How has police staffing changed in Memphis since 2022?").delivered.table.rows.slice(0, 2), [["2022", 2550], ["2023", 2510]]);
+  assert.deepEqual(hist("Number of Memphis officers per eyar").delivered.table.rows.slice(0, 2), [["2022", 1950], ["2023", 1900]]);
+  assert.deepEqual(hist("Show me the number of officers per capita in Memphis in 2023").delivered.table.rows, [[308.4]], "number of ... per capita is the rate");
+  assert.deepEqual(hist("sworn police officers in 1,000 in Memphis since 2022").delivered.table.rows.slice(0, 2), [["2022", 3.12], ["2023", 3.084]]);
+  assert.deepEqual(hist("Staffing level of Memphis since 2022 until 2023").delivered.table.rows, [["2022", 2550], ["2023", 2510]]);
+  assert.deepEqual(hist("How many officers are with the Memphis police department by year total?").delivered.table.rows.slice(0, 2), [["2022", 1950], ["2023", 1900]]);
+  for (const q of ["how many cops does Memphis have?", "How many police officers are employed in Memphis?"]) assert.equal(shadowAnswer(q, base).kind, "clarify", q);
+  // Staffing and a crime in one question (Jeff 2026-11-11: "it should do one dataset at a time, not mix"): declined in plain
+  // words, never answered as either one, also for a set of cities, an open crime, two years or rates.
+  for (const q of ["Compare murders to the number of police officers in Memphis in 2022 vs 2023", "murder rates vs police officers per 1,000 in Memphis from 2022 to 2023",
+    "violent crime and police staffing in Memphis in 2023", "police staffing and murders in Memphis", "police staffing vs murders in the 2 largest cities in 2023",
+    "Compare crime rates vs police staffing levels across the 2 largest cities in 2023", "Compare police officers in Memphis in 2022 to murders in 2023",
+    "Compare the number of police officers to murder rates per 100,000 in Memphis in 2023", "Police staffing vs murders in the 2 largest cities so far in 2023",
+    "Compare police staffing today with murders in Memphis in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(o.kind === "decline" && /one dataset at a time|one period at a time|full years/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  // Codex staffing review 07: a count and a rate asked together are asked about; "per 1,000 per year" is a rate by year.
+  const both = shadowAnswer("What is the total number of officers and rate per capita in Memphis in 2023?", base);
+  assert.ok(both.kind === "decline" && /same figure throughout/.test(both.explanation), JSON.stringify(both).slice(0, 200));
+  assert.deepEqual(hist("Police officers per 1,000 per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 3.12], ["2023", 3.084]]);
+  const both2 = shadowAnswer("Show the total number of police officers and per capita in Memphis in 2023", base);
+  assert.ok(both2.kind === "decline" && /same figure throughout/.test(both2.explanation), JSON.stringify(both2).slice(0, 200));
+  assert.deepEqual(hist("Police officers per 1,000 each year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 3.12], ["2023", 3.084]]);
+  for (const q of ["Police staffing and aggravated assaults in Memphis in 2023", "Murders per sworn officer in Memphis in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(o.kind === "decline" && !/staffing:/.test(JSON.stringify(o)), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  // The staffing alone and the crime alone still answer.
+  assert.deepEqual(hist("Police staffing in Memphis in 2023").delivered.table.rows, [[2510]]);
+  assert.deepEqual(hist("murders in Memphis in 2023").delivered.table.rows, [[351]]);
+  // Two rate bases, a base on something other than people, and a year to date are never answered as asked.
+  for (const [q, re] of [["Police officers per 1,000 murders in Memphis in 2023", /one dataset at a time/], ["Police officers per 1,000 residents and per 100,000 residents in Memphis in 2023", /one rate base/],
+    ["Police staffing in Memphis so far in 2023", /full years/]] as const) {
+    const o = shadowAnswer(q, base);
+    assert.ok(o.kind === "decline" && re.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  for (const q of ["Show police staffing and robberies of civilian employees in Memphis in 2023", "Show police staffing and robberies against civilian employees in Memphis in 2023", "Robberies of sworn officers and police staffing in the 2 largest cities in 2023", "Robberies of police employees and police staffing in Memphis in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  for (const q of ["murders in Memphis per officer in 2023", "police officers killed and murders in Memphis in 2023", "murders and assaults on officers in Memphis in 2023", "murders in Memphis in 2023"]) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }
