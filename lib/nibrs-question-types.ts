@@ -33,6 +33,8 @@ export const MEASURE_CODES: Record<string, string[]> = {
   // Group B offenses (arrests only), 2026-11-11: each its own measure, as DUI is.
   disorderly_conduct: ["90C"], drunkenness: ["90E"], liquor_law: ["90G"], curfew_loitering: ["90B"], trespass: ["90J"],
   family_offense_nonviolent: ["90F"], peeping_tom: ["90H"], bad_checks: ["90A"], runaway: ["90I"], all_other_offenses: ["90Z"],
+  // Job AR6: weapon law violations (carrying, possessing a weapon unlawfully), a Group A crime against society.
+  weapon_law: ["520"],
 };
 /** Crimes against persons count victims (the FBI NIBRS convention; CLAUDE.md "Person crimes must use victim summary tables"). */
 export const PERSON_CODES = new Set(["09A", "09B", "09C", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"]);
@@ -47,7 +49,7 @@ export const MEASURE_LABEL: Record<string, string> = {
   motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", assault_offenses: "assault offense",
   disorderly_conduct: "disorderly conduct", drunkenness: "drunkenness", liquor_law: "liquor law violation", curfew_loitering: "curfew or loitering",
   trespass: "trespass of real property", family_offense_nonviolent: "nonviolent family offense", peeping_tom: "peeping tom", bad_checks: "bad checks",
-  runaway: "runaway", all_other_offenses: "all other offenses",
+  runaway: "runaway", all_other_offenses: "all other offenses", weapon_law: "weapon law violation",
 };
 
 /** Filter value labels, for the delivered `filter` column ("sex: female; age: under 18"). */

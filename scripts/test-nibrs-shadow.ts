@@ -645,6 +645,17 @@ assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "declin
 const arr = as(ask("How many people were arrested for burglary in Detroit in 2023?"), "answer");
 assert.deepEqual([arr.plan.measures[0].id, arr.plan.timeBasis, arr.delivered.answerStatements], ["arrests.burglary", "arrest_date", ["arrests_counted_once"]]);
 assert.ok(sqls.at(-1)!.includes("substr(a.arrest_date, 1, 6) AS ym"));
+// Job AR6: arrests for a Group B offense with a period answer from the standalone Group B arrests, by arrest date.
+const dui = as(ask("DUI arrests in Detroit in 2023"), "answer");
+assert.deepEqual([dui.plan.measures[0].id, dui.plan.timeBasis], ["group_b_arrests.dui", "arrest_date"]);
+assert.ok(sqls.some((x) => x.includes("group_b_arrest") && x.includes("a.arrest_offense IN ('90D')")), "read from Group B arrests");
+// Job AR6: gun possession is a weapon law violation (520), never drug possession; a gun as a weapon stays a condition;
+// a leading "Please" keeps the every-arrest reading.
+for (const q of ["gun possession arrests in Detroit in 2023", "possession of a firearm arrests in Detroit in 2023"])
+  assert.equal(as(ask(q), "answer").plan.measures[0].id, "arrests.weapon_law", q);
+assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_possession");
+assert.equal(as(ask("robberies with a gun in Detroit in 2023"), "answer").plan.filters[0].kind, "exists");
+assert.equal(as(ask("Please show me the number of arrests of people under age 18 by year in Detroit from 2020 through 2023."), "answer").plan.measures[0].id, "arrests.all_crime");
 const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
 // Several measures by month: a column each, and the months a crime is blank named.

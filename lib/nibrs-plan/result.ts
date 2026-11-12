@@ -261,7 +261,7 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
   if (plan.source === "nibrs" && !national && env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts belongs to a national plan only");
   const multi = plan.groupings.some((g) => g.multiValue);
   if (plan.source === "nibrs" && multi !== env.answerStatements.includes("categories_overlap")) out.push("categories_overlap is required exactly when a grouping is multi-valued");
-  const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee");
+  const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee" || m.unit === "group_b_arrest");
   if (plan.source === "nibrs" && (national && arrests) !== env.answerStatements.includes("arrests_not_estimated")) out.push("arrests_not_estimated is required exactly for a national arrest count");
   if (plan.source === "nibrs" && arrests !== env.answerStatements.includes("arrests_counted_once")) out.push("arrests_counted_once is required exactly when the plan counts arrests");
   const people = peopleFacts(plan);

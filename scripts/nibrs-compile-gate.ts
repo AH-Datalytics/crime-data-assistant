@@ -200,6 +200,13 @@ check("synthetic arrests of another kind in an unreported month", { ...syn("offe
   measures: [{ id: "arrests.robbery", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
     ["2025-01", [C(0, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
   ["arrests_counted_once"]);
+// Job AR6: DUI arrests (a Group B offense) at WW, from the standalone Group B arrests: January has one (a month with an
+// arrest is reported for arrests whatever its status), February-May have neither an arrest nor a status (blank).
+check("synthetic DUI arrests (Group B)", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
+  geography: { places: [{ kind: "agency", ori: "WW0000000", label: "Synthetic, WW" }], combine: "separate" },
+  measures: [{ id: "group_b_arrests.dui", unit: "group_b_arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
+    ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(null, "UNKNOWN")]], ["2025-03", [C(null, "UNKNOWN")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "UNKNOWN")]]]),
+  ["arrests_counted_once"]);
 // --synthetic-only: part 1 alone (no canonical build or values repository needed).
 if (process.argv.includes("--synthetic-only")) process.exit(failed ? 1 : 0);
 

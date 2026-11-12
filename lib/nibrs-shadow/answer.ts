@@ -1912,7 +1912,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.statistics = [{ kind: "count", as: plan.statistics[0].as, measure: m0.as }, { kind: "share", as: "share_of_period", measure: m0.as, within: plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension) }];
   }
   // P50: arrests are placed by arrest date; arrests beside other measures would mix time bases (refused).
-  const arrests = plan.measures.filter((m) => m.id.startsWith("arrests."));
+  const arrests = plan.measures.filter((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
   if (arrests.length && arrests.length !== plan.measures.length) return decline("unsupported_capability", "This isn't available yet: arrests beside other crimes (arrests are dated by the arrest, crimes by the incident).");
   if (arrests.length) {
     plan.timeBasis = "arrest_date";

@@ -109,7 +109,8 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "weapon:13", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?rifles?\b`) },
   { concept: "filter", value: () => "weapon:14", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?shotguns?\b`) },
   { concept: "filter", value: () => "weapon:20", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?(?:knives|knife)\b`) },
-  { concept: "filter", value: () => "weapon:firearm", pattern: R(String.raw`\b(?:(?:that|which)\s+)?(?:involv(?:e|es|ing)\s+(?:the\s+)?use\s+of\s+a\s+)?(?:guns?|firearms?)\b`) },
+  // Not a weapon law violation ("gun possession", "possession of a firearm": job AR6), which is its own crime.
+  { concept: "filter", value: () => "weapon:firearm", pattern: R(String.raw`(?<!\b(?:possession|carrying)\s+of\s+(?:a\s+)?|\b(?:illegal|unlawful)\s+|\bcarrying\s+(?:a\s+)?(?:concealed\s+)?)\b(?:(?:that|which)\s+)?(?:involv(?:e|es|ing)\s+(?:the\s+)?use\s+of\s+a\s+)?(?:guns?|firearms?)\b(?!\s+(?:possession|laws?\s+violations?|laws?|violations?|offen[cs]es|charges?)\b)`) },
   // drugs
   { concept: "filter", value: () => "drug:E", pattern: R(String.raw`\bmarijuana\b|\bcannabis\b`) },
   { concept: "filter", value: () => "drug:L", pattern: R(String.raw`\bmeth(?:amphetamines?)?\b|\bamphetamines?\b`) },
@@ -196,7 +197,10 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "curfew_loitering", pattern: R(String.raw`\bcurfew\b|\bloitering\b|\bvagrancy\b`) },
   { concept: "measure", value: () => "trespass", pattern: R(String.raw`\btrespass(?:ing)?\b`) },
   { concept: "measure", value: () => "peeping_tom", pattern: R(String.raw`\bpeeping\s+toms?\b`) },
-  { concept: "measure", value: () => "drug_possession", pattern: R(String.raw`\bdrug\s+possession\b|\bpossession\b|\bdrug(?:\/narcotic)?\s+(?:offenses?|violations?)\b|\bdrugs?\b|\bnarcotics?\b`) },
+  // Job AR6: "gun possession", "firearm possession", "weapons law violations" are weapon law violations (520), never
+  // drug possession; "gun arrests" alone stays a firearm condition.
+  { concept: "measure", value: () => "weapon_law", pattern: R(String.raw`\b(?:illegal\s+|unlawful\s+)?(?:guns?|firearms?|handguns?|weapons?)\s+(?:possession|law\s+violations?|laws?\s+violations?|violations?|offen[cs]es|charges?)\b|\bweapons?\s+laws?\b|\b(?:(?:illegal|unlawful)\s+)?(?:possession|carrying)\s+of\s+(?:a\s+)?(?:guns?|firearms?|weapons?)\b|\bcarrying\s+(?:a\s+)?(?:concealed\s+)?(?:guns?|firearms?|weapons?)\b`) },
+  { concept: "measure", value: () => "drug_possession", pattern: R(String.raw`\bdrug\s+possession\b|(?<!\b(?:guns?|firearms?|handguns?|weapons?)\s)\bpossession\b(?!\s+of\s+(?:a\s+)?(?:guns?|firearms?|weapons?))|\bdrug(?:\/narcotic)?\s+(?:offenses?|violations?)\b|\bdrugs?\b|\bnarcotics?\b`) },
   // P32: "sexual assaults" is asked about like "sex offenses" (which sex offenses), never read as aggravated assault.
   // Not "sexual assault kits" or "sex offender registrations" (Codex P32 review 01.2): those aren't offenses.
   { concept: "measure", value: () => "sex_offense", pattern: R(String.raw`\b(?:all\s+)?(?:forcible\s+)?sex(?:ual)?\s+(?:offenses?|crimes?|assaults?)\b(?!\s+(?:kits?|evidence|exams?|nurses?|forensic|registr\w*|backlogs?))`) },
