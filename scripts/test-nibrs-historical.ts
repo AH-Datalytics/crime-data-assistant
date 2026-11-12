@@ -363,8 +363,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.deepEqual(series.delivered.table.rows, [["2022", 2550], ["2023", 2510]]);
   assert.equal(series.question.measure, "staffing:employees");
   for (const [q, re] of [["police officers in Tennessee in 2023", /agencies only, not for states or the nation/], ["officers and civilian employees in Memphis in 2023", /Ask for one: sworn officers, civilian employees or all employees/],
-    ["number of officers per capita in Memphis in 2023", /same figure throughout/],
-    // Codex staffing review 01: never one kind answered for two, a staff ratio as a count, or a rate for a count too.
+        // Codex staffing review 01: never one kind answered for two, a staff ratio as a count, or a rate for a count too.
     ["Police officers and police employees in Memphis in 2023", /Ask for one: sworn officers/], ["civilian employees and police employees in Memphis in 2023", /Ask for one/],
     ["Police employees per officer in Memphis in 2023", /a ratio between kinds of staff/],
     ["What is the count of police officers and the rate per capita in Memphis in 2023?", /same figure throughout/]] as const) {
@@ -376,6 +375,31 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.deepEqual(hist("police staffing per-capita in Memphis in 2023").delivered.table.rows, [[407.4]], "per-capita, hyphenated, is the rate (Codex staffing review 02)");
   assert.deepEqual(hist("police staffing per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 2550], ["2023", 2510]], "per year is the grain");
   for (const q of ["officers killed in Memphis in 2023", "assaults on police officers in Memphis in 2023", "murders in Memphis per officer in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  // Engine 2: a neutral change is the series by year; "number of officers per capita" and "in 1,000" are rates; a
+  // misspelled "year" is the grain; "since A until B" is a span; no period is asked; the words must name staff.
+  assert.deepEqual(hist("How has police staffing changed in Memphis since 2022?").delivered.table.rows.slice(0, 2), [["2022", 2550], ["2023", 2510]]);
+  assert.deepEqual(hist("Number of Memphis officers per eyar").delivered.table.rows.slice(0, 2), [["2022", 1950], ["2023", 1900]]);
+  assert.deepEqual(hist("Show me the number of officers per capita in Memphis in 2023").delivered.table.rows, [[308.4]], "number of ... per capita is the rate");
+  assert.deepEqual(hist("sworn police officers in 1,000 in Memphis since 2022").delivered.table.rows.slice(0, 2), [["2022", 3.12], ["2023", 3.084]]);
+  assert.deepEqual(hist("Staffing level of Memphis since 2022 until 2023").delivered.table.rows, [["2022", 2550], ["2023", 2510]]);
+  assert.deepEqual(hist("How many officers are with the Memphis police department by year total?").delivered.table.rows.slice(0, 2), [["2022", 1950], ["2023", 1900]]);
+  for (const q of ["how many cops does Memphis have?", "How many police officers are employed in Memphis?"]) assert.equal(shadowAnswer(q, base).kind, "clarify", q);
+  // Staffing beside a crime: the same years side by side, counts beside counts and rates beside rates, never across years.
+  const beside = hist("Compare murders to the number of police officers in Memphis in 2022 vs 2023");
+  assert.deepEqual(beside.delivered.table.rows, [["2022", 1950, 252], ["2023", 1900, 351]]);
+  assert.deepEqual(beside.delivered.table.columns.map((c) => c.header), ["Year", "Sworn officers", "Murders"]);
+  assert.equal(beside.question.measure, "staffing:officers|murder");
+  assert.equal(beside.delivered.text[0], "Memphis, Tennessee: sworn officers and murders, 2022 and 2023.");
+  assert.equal(beside.delivered.text[beside.delivered.text.length - 1], SRS_SOURCE);
+  const besideRates = hist("murder rates vs police officers per 1,000 in Memphis from 2022 to 2023");
+  assert.deepEqual(besideRates.delivered.table.rows, [["2022", 3.12, 40.3], ["2023", 3.084, 57]]);
+  assert.deepEqual(besideRates.delivered.table.columns.map((c) => c.header), ["Year", "Sworn officers per 1,000", "Murders per 100,000"]);
+  assert.deepEqual(hist("violent crime and police staffing in Memphis in 2023").delivered.table.rows, [["2023", 2510, 351]]);
+  assert.equal(shadowAnswer("police staffing and murders in Memphis", base).kind, "clarify", "no period: asked");
+  for (const q of ["murders in Memphis per officer in 2023", "police officers killed and murders in Memphis in 2023", "murders and assaults on officers in Memphis in 2023", "murders in Memphis in 2023"]) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }

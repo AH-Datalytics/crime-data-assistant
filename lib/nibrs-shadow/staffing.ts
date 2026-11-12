@@ -106,3 +106,11 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
     read: { table: "agency_staffing", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
 }
+
+/**
+ * Staffing named beside a crime ("violent crime vs number of police officers in Kansas City"): staff words, and none
+ * that make the officers a crime's victims or a ratio ("officers killed", "assaults on officers", "murders per officer").
+ */
+const STAFF_WORDS = /\b(?:staffing|staff levels?|(?:police |sworn )?officers?|sworn|cops?|civilian employees|police employees|headcount|police force size)\b/i;
+const NOT_STAFF = /\b(?:kill\w*|assault\w*|attack\w*|shot|shoot\w*|murdered|injur\w*|victims?|line of duty|on duty|died|deaths?|arrest\w*|use of force|per\s+(?:police\s+)?(?:officer|cop|employee)s?|(?:against|by|on)\s+(?:the\s+)?(?:police\s+)?(?:officer|cop)s?)\b/i;
+export const staffingBesideWords = (question: string) => STAFF_WORDS.test(question) && !NOT_STAFF.test(question);
