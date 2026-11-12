@@ -189,6 +189,13 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "domestic_violence", pattern: R(String.raw`\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b|\bdomestic\b`) },
   { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
+  // Group B offenses (arrests only), 2026-11-11.
+  { concept: "measure", value: () => "disorderly_conduct", pattern: R(String.raw`\bdisorderly\s+conduct\b|\bdisorderly\b`) },
+  { concept: "measure", value: () => "drunkenness", pattern: R(String.raw`\bdrunkenness\b|\bpublic\s+intoxication\b|\bdrunk\s+in\s+public\b`) },
+  { concept: "measure", value: () => "liquor_law", pattern: R(String.raw`\bliquor\s+laws?(?:\s+violations?)?\b|\bunderage\s+drinking\b`) },
+  { concept: "measure", value: () => "curfew_loitering", pattern: R(String.raw`\bcurfew\b|\bloitering\b|\bvagrancy\b`) },
+  { concept: "measure", value: () => "trespass", pattern: R(String.raw`\btrespass(?:ing)?\b`) },
+  { concept: "measure", value: () => "peeping_tom", pattern: R(String.raw`\bpeeping\s+toms?\b`) },
   { concept: "measure", value: () => "drug_possession", pattern: R(String.raw`\bdrug\s+possession\b|\bpossession\b|\bdrug(?:\/narcotic)?\s+(?:offenses?|violations?)\b|\bdrugs?\b|\bnarcotics?\b`) },
   // P32: "sexual assaults" is asked about like "sex offenses" (which sex offenses), never read as aggravated assault.
   // Not "sexual assault kits" or "sex offender registrations" (Codex P32 review 01.2): those aren't offenses.

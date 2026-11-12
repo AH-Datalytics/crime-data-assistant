@@ -112,6 +112,11 @@ const PHRASES: [RegExp, string][] = [
   // Never a time ("year to date", "to the most recent data", "to present": job CW2).
   [/^\s*compare\s+((?:(?!\b(?:from|between|through)\b).)+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!\d|(?:the\s+)?(?:date|most|present|today|now|current|latest|recent|end|last|this|next|previous|early|mid|late|spring|summer|fall|autumn|winter|first|second|third|fourth|beginning|start|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b)/gi, "$1 and "],
   [/\bin\s+the\s+state\s+of\s+/gi, "in "],
+  // Jeff 2026-11-11: "cases" is the source's normal count for the crime (victims for crimes against people, offenses
+  // otherwise), so the word itself adds nothing.
+  [/\b(?:number\s+of\s+)?cases\s+of\s+/gi, ""],
+  [/\s+cases\b/gi, ""],
+  [/\barrests\s+(?:were\s+|have\s+been\s+)?made\b/gi, "arrests"],
   [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|as\s+a\s+whole)\b/gi, "$1"],
   // Time words read, never dropped: "by months", "year-to-date", "over 5 years", "going back to 1980".
   [/\b(by|per)\s+months\b/gi, "$1 month"],
