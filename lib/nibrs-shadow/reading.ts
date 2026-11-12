@@ -113,7 +113,7 @@ const PHRASES: [RegExp, string][] = [
   // 2024 to 2023" is a period comparison).
   [/^\s*compare\s+(.+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!(?:19|20)\d{2}\b)/gi, "$1 and "],
   [/\bin\s+the\s+state\s+of\s+/gi, "in "],
-  [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|state\s+total|as\s+a\s+whole)\b/gi, "$1"],
+  [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|as\s+a\s+whole)\b/gi, "$1"],
   // Time words read, never dropped: "by months", "year-to-date", "over 5 years", "going back to 1980".
   [/\b(by|per)\s+months\b/gi, "$1 month"],
   [/\byear[-\s]to[-\s]date\b/gi, "year to date"],
