@@ -86,7 +86,10 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const root = deps.target.root;
 
   // The universe and populations, per data year.
-  const header = deps.execute(agencyHeaderSql(root, universeStates(place), years));
+  const headerSql = agencyHeaderSql(root, universeStates(place), years);
+  const header = deps.execute(headerSql);
+  // Category sums (byCategory) join this universe too: an agency counts in a year only with that year's header in the
+  // place, as the yearly totals (inYear) count it (Codex arrests review 04.2: a late arrest dated in a year without one).
   // A missing FBI population stays missing (null), never 0: it withholds the rate and makes coverage a lower bound
   // (Codex increment-5 review 2.5). A population of 0 is the FBI's own figure (a state police, a university).
   const pop = new Map<string, number | null>();
@@ -245,7 +248,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
     const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT unnest([${list(everySet.length ? everySet : [""])}]))), 0) AS n_every
-      FROM (${gridSql}) WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
+      FROM (${gridSql}) gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
+      WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
     const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2]]);
     const deliverView = (every: boolean, p: NibrsPlan) => {
       const sums = sumsFor(every).filter((r) => keptYears.includes(Number(r[0])));

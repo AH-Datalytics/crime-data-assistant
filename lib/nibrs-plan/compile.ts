@@ -505,8 +505,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         // arrest dated in a month reported as zero crimes or not reported (an arrest on an older incident, say) is real
         // and counted, not a conflict. Crimes keep the conflict rule.
         isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}
-           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'${isArrest ? `
+${isArrest ? `
            WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
+           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
       FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${isArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,

@@ -194,11 +194,11 @@ check("synthetic arrests in zero and unreported months", { ...syn("offenses.moto
   measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
     ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
   ["arrests_counted_once"]);
-// Job AR3: robbery arrests at XX: none anywhere, but April (UNKNOWN) has a theft arrest, so April is a known 0, not blank;
-// the reported-zero months stay reported zeros.
+// Job AR3: robbery arrests at XX: none anywhere, but January (REPORTED_ZERO) and April (UNKNOWN) have a theft arrest, so
+// both are a known 0 (VALUE, Codex 04.1), not a reported zero or a blank; May (REPORTED_ZERO, no arrest) stays a reported zero.
 check("synthetic arrests of another kind in an unreported month", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
   measures: [{ id: "arrests.robbery", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
-    ["2025-01", [C(0, "REPORTED_ZERO")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
+    ["2025-01", [C(0, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
   ["arrests_counted_once"]);
 // --synthetic-only: part 1 alone (no canonical build or values repository needed).
 if (process.argv.includes("--synthetic-only")) process.exit(failed ? 1 : 0);
