@@ -606,7 +606,7 @@ function readPeople(text0: string): { text: string; people: People | null } {
   else {
     const all = /^\s*(?:how\s+many\s+|(?:can\s+you\s+)?show\s+(?:me\s+)?|give\s+me\s+|what\s+(?:is|was|were)\s+)?(?:the\s+)?(?:total\s+)?(?:number\s+of\s+)?(?:all\s+)?(?:arrests|arrestees)\s+(?=(?:in|for|by|nationally|nationwide|statewide|across)\b|(?:19|20)\d{2}\b)/i.exec(text);
     // Never when a crime is named anywhere ("how many arrests in 2024 for robbery").
-    const CRIME = /\b(?:murder|homicide|robber|burglar|assault|theft|larcen|rape|dui|dwi|drug|narcotic|marijuana|disorderly|drunk|liquor|curfew|loiter|trespass|violent|property|shoplift|fraud|vandal|weapon|arson|carjack|kidnap|prostitut|gambl|offense|crime)\w*/i;
+    const CRIME = /\b(?:murder|homicide|robber|burglar|assault|theft|larcen|rape|dui|dwi|drug|narcotic|marijuana|disorderly|drunk|liquor|curfew|loiter|trespass|violent|property|shoplift|fraud|vandal|weapon|arson|carjack|kidnap|prostitut|gambl|offense|crime|peeping|intoxicat|intimidat|bad\s+checks?|runaway|family|sex|stalk|extort|bribe|forger|counterfeit|embezzl|stolen|smuggl|pornograph|traffick|animal\s+cruelty|homicid|killing|shoot|gun|firearm|domestic|hate)\w*/i;
     if (all && !CRIME.test(text)) text = `All crime arrests ${text.slice(all[0].length)}`;
   }
   const any = p.by || p.where.length || p.ask || p.unsupported;
