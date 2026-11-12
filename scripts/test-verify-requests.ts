@@ -56,6 +56,9 @@ const n = requestOf({ ...label, id: "QL-nibrs-y", tab: "nibrs", kind: "follow-up
 const nb = blindOf(n) as { plan?: Record<string, unknown> };
 assert.ok(nb.plan && "geography" in nb.plan && !("compiled" in nb.plan), JSON.stringify(nb));
 assert.doesNotMatch(JSON.stringify(nb), /SELECT/);
+// A national or state request says which agencies and months are summed (AR1 recount: federal agencies and Guam).
+const places = ((n.nibrs_plan as { geography?: { places?: { kind: string }[] } } | undefined)?.geography?.places ?? []);
+assert.equal("universe" in nb.plan!, places.some((x) => x.kind === "national" || x.kind === "state"), JSON.stringify(places));
 assert.equal(n.source, "nibrs");
 assert.equal(n.grain, "total");
 assert.equal(n.follow_up_of, "robberies in Boston");

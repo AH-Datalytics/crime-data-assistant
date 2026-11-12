@@ -125,9 +125,18 @@ export type VerifyResult = { request: string; column: string; at: Record<string,
 /** A plan's parts a blind checker needs (no compiled SQL, no bindings to the reader's spans). */
 function planView(plan: unknown): Record<string, unknown> {
   const p = plan as Record<string, unknown>;
-  return Object.fromEntries(["measures", "filters", "groupings", "statistics", "transforms", "coverage", "timeBasis", "geography", "period", "defaults"]
+  const view: Record<string, unknown> = Object.fromEntries(["measures", "filters", "groupings", "statistics", "transforms", "coverage", "timeBasis", "geography", "period", "defaults"]
     .filter((k) => k in p).map((k) => [k, p[k]]));
+  // Which agencies a state or national sum covers (P53), and how a month counts (D6; arrests: Jeff 2026-11-12), so a
+  // recount counts the same agencies and months (job AR1: the first recount took in federal agencies and Guam).
+  const places = ((p.geography as { places?: { kind: string }[] } | undefined)?.places ?? []);
+  if (places.some((x) => x.kind === "national" || x.kind === "state")) view.universe = UNIVERSE;
+  return view;
 }
+const UNIVERSE = "Agencies with a batch header in the data year's file whose header state is the state asked; the nation is the 50 "
+  + "states and DC (Nebraska's header code is NB), federal agencies and territories left out. A month is summed when its "
+  + "agency_month_status is REPORTED_CRIMES or REPORTED_ZERO; for arrests, a month with arrests is summed whatever its status. "
+  + "The consistent reporters are the agencies with a header in every year and every month summed, over the whole period.";
 export function blindOf(q: VerifyRequest): Record<string, unknown> {
   return { id: q.id, tab: q.tab, question: q.question, follow_up_of: q.follow_up_of, source: q.source, measure: q.measure, statistic: q.statistic, grain: q.grain,
     places: q.places, combine: q.combine, period: q.period,

@@ -498,7 +498,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // The month's own total of the measure: the evidence for the month and every share's denominator.
     `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
     `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den, coalesce(t.ni, 0) AS deni,
-      CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN 'EVIDENCE_CONFLICT'
+      CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN ${
+        // Arrests (Jeff 2026-11-12, "Yes, count them"): a month's status describes its crime reports, not its arrests; an
+        // arrest dated in a month reported as zero crimes or not reported (an arrest on an older incident, say) is real
+        // and counted, not a conflict. Crimes keep the conflict rule.
+        isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell

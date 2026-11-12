@@ -9,7 +9,7 @@
  * statistic in every row, value/status consistency, the fixed answer statements, and that no status the compiler
  * marks for refusal appears.
  *
- *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--values-repo <nibrs-model checkout>]
+ *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--values-repo <nibrs-model checkout>] [--synthetic-only]
  *
  * The expected cases are read from nibrs-model's main branch with `git show` (correctness/cases/<case>/expected.json), never
  * from a work tree.
@@ -149,6 +149,12 @@ write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [(
 write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
     + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
 write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
+# Arrests (Jeff 2026-11-12, "Yes, count them"): an arrest in a month reported as zero crimes (January) or not reported
+# (April, an arrest in the 2026 file) is counted, not a conflict; an M segment is left out (P68).
+A = ["ori", "incident_num", "arrestee_seq", "key_occurrence", "arrest_date", "arrest_offense", "multiple_arrestee_indicator", "age"]
+write("arrestee", 2025, A, [("XX0000000", "OLD-1", "01", 1, "20250120", "240", "N", "30"),
+    ("XX0000000", "MAR-1", "01", 1, "20250310", "240", "N", "30"), ("XX0000000", "MAR-1", "02", 1, "20250310", "240", "M", "30")])
+write("arrestee", 2026, A, [("XX0000000", "JAN-LATE", "01", 1, "20250415", "240", "N", "30")])
 # ZZ, January 2024 (Codex review 02): key_occurrence numbers lines within one segment family, so it never links families.
 # One robbery (occurrence 1) with two offender lines sharing sequence "##" (occurrences 1 and 2, M and F); one aggravated
 # assault (occurrence 1, handgun) whose victim line is occurrence 2 of its sequence.
@@ -175,11 +181,18 @@ check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offen
 const zz = (measures: NibrsPlan["measures"], groupings: NibrsPlan["groupings"] = [], filters: NibrsPlan["filters"] = []): NibrsPlan =>
   ({ ...syn("offenses.robbery", "offense"), geography: { places: [{ kind: "agency", ori: "ZZ0000000", label: "Synthetic, ZZ" }], combine: "separate" }, measures, groupings, filters });
 const JAN24: ResolvedPeriod = { kind: "absolute", from: "2024-01", to: "2024-01" };
-check("synthetic offenders sharing a sequence", zz([{ id: "offenders.robbery", unit: "offender", as: "n" }]), JAN24, SYN, [2024], new Map([["total", [known(2)]]]));
+check("synthetic offenders sharing a sequence", zz([{ id: "offenders.robbery", unit: "offender", as: "n" }]), JAN24, SYN, [2024], new Map([["total", [known(2)]]]), ["offender_records"]);
 check("synthetic robbery by its offenders' sexes", zz([{ id: "offenses.robbery", unit: "offense", as: "n" }], [{ ...by("offender.sex"), multiValue: "each_value" }]), JAN24, SYN, [2024],
   new Map([["M", [known(1)]], ["F", [known(1)]]]), ["categories_overlap"]);
 check("synthetic victim with a handgun on its connecting offense", zz([{ id: "victims.aggravated_assault", unit: "victim", as: "n" }], [],
   [{ kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["12"] }] }]), JAN24, SYN, [2024], new Map([["total", [known(1)]]]));
+
+check("synthetic arrests in zero and unreported months", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
+  measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
+    ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
+  ["arrests_counted_once"]);
+// --synthetic-only: part 1 alone (no canonical build or values repository needed).
+if (process.argv.includes("--synthetic-only")) process.exit(failed ? 1 : 0);
 
 // ---- 2. correctness cases against the canonical build ----
 const load = (c: string) => JSON.parse(execFileSync("git", ["-C", VALUES_REPO, "show", `main:correctness/cases/${c}/expected.json`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }));
