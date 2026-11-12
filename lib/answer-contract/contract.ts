@@ -20,7 +20,7 @@ export type SourceId = "nibrs" | "historical" | "rtci" | "shr" | "hate_crime";
 
 /** A note or caveat the app can show, by key (its words in NOTE_TEXT); a profile lists the keys its source may show. */
 export type NoteKey = "property_not_attributed" | "property_counted_by_offense" | "categories_overlap" | "clearance_as_of_file"
-  | "car_break_ins" | "blank_not_available" | "circumstance_unknown";
+  | "car_break_ins" | "blank_not_available" | "circumstance_unknown" | "arrests_not_estimated";
 
 export type SourceProfile = {
   /** What the source can count. */
@@ -100,7 +100,7 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
       { dimension: "victim_offender.relationship", exclusive: false, ordinal: false },
       { dimension: "offender.sex", exclusive: false, ordinal: false }, { dimension: "offender.age", exclusive: false, ordinal: true },
     ],
-    caveats: ["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "car_break_ins", "circumstance_unknown"],
+    caveats: ["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "car_break_ins", "circumstance_unknown", "arrests_not_estimated"],
     latestMonth: "month_before_release",
     vocabulary: {
       terms: { shoplifting: ["shoplifting"], carjacking: ["carjackings", "car jackings"], simple_assault: ["simple assaults"],
@@ -158,9 +158,11 @@ export const NOTE_TEXT: Record<Exclude<NoteKey, "blank_not_available">, string> 
   clearance_as_of_file: "A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly tables instead count the clearances reported during the year, for crimes from any year.",
   car_break_ins: "Car break-ins are counted as theft from motor vehicles.",
   circumstance_unknown: "Many agencies record a victim's circumstance as unknown, so a count for one circumstance can be lower than the number of such crimes.",
+  // Jeff 2026-11-12: every national arrest count says it is the reported total, not the FBI's estimate.
+  arrests_not_estimated: "These are arrests reported to the FBI, not the FBI's estimate of all arrests nationwide.",
 };
 /** The one caveat the lead carries, first of these present; the rest stay notes. */
-export const CAVEAT_ORDER: readonly NoteKey[] = ["categories_overlap", "property_counted_by_offense", "car_break_ins", "clearance_as_of_file", "circumstance_unknown"];
+export const CAVEAT_ORDER: readonly NoteKey[] = ["arrests_not_estimated", "categories_overlap", "property_counted_by_offense", "car_break_ins", "clearance_as_of_file", "circumstance_unknown"];
 
 /** What the title says (Savant format: place first, Title Case, "&", no colon, no period). */
 export type TitleParts = {

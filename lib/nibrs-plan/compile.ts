@@ -469,6 +469,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
   if (units.entity === "arrestee") statements.push("arrests_counted_once");
+  // Jeff 2026-11-12: a national arrest count is the arrests reported, not the FBI's national estimate.
+  if (isArrest && plan.geography.places.some((p) => p.kind === "national")) statements.push("arrests_not_estimated");
   const people = peopleFacts(plan);
   if (people.throughIncident) statements.push("arrests_through_incident");
   if (people.allArrests) statements.push("arrests_include_group_b");
