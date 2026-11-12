@@ -327,7 +327,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.deepEqual(fillerRewrite("Minneapolis scorecard"), { rest: "Minneapolis", left: [] });
     assert.deepEqual(fillerRewrite("Toledo crime scorecard"), { rest: "Toledo crime", left: [] });
     assert.deepEqual(fillerRewrite("is crime up in milwaukee"), { rest: "is crime milwaukee", left: ["up in"] });
-    assert.deepEqual(fillerRewrite("Murder rate in New York City vs national average"), { rest: "Murder rate in New York City and national", left: ["average"] });
+    // Comparison wording (Jeff 2026-11-11): "vs national average" is now read in full, the city beside the United States.
+    assert.equal(fillerRewrite("Murder rate in New York City vs national average"), null);
+    assert.equal(readQuestion("Murder rate in New York City vs national average", 2026, "2026-09").text, "Murder rate in New York City and the United States");
     // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
     assert.equal(fillerRewrite("Tell me more about crime in Arlington, VA"), null);
     assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");

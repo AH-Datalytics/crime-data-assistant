@@ -382,6 +382,18 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
   "recently recent current currently last past few several couple years year " +
   "average averages statewide nationwide level levels terms side-by-side side compared compare comparison versus vs vs. " +
   "relative rest same specifically or and any way so").split(/\s+/));
+/**
+ * Pure filler (Jeff 2026-11-11, "rules first then gemini"): words that ask for nothing ("plot me the", "report", "do you
+ * have", "please"). When the reader leaves only these unread, the question without them is answered as asked, not just
+ * asked about: the rest of the question was read in full. Never a place, crime, time or comparison word.
+ */
+const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will tell give show see get let us plot chart graph draw " +
+  "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
+  "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
+const pureFillerOnly = (text: string) => {
+  const words = wordsOf(text);
+  return words.length > 0 && words.every((w) => PURE_FILLER.has(w));
+};
 /** A question about what data there is ("Do you have any data for NYC?", "does Olathe report NIBRS data?"): never an ask. */
 const COVERAGE_QUESTION = /^\s*(?:do|does)\s+(?:you|we|they|i|this\s+(?:site|tool|app))\s+have\b|\b(?:any|what)\s+data\b|\breports?\s+(?:to\s+)?(?:nibrs|the\s+fbi|data)\b|\bdata\s+(?:do|does)\s+you\b/i;
 const wordsOf = (text: string) => text.toLowerCase().replace(/[“”"’'?!.,;:()]/g, " ").split(/\s+/).filter(Boolean);
@@ -402,8 +414,17 @@ const meaningful = (text: string) => wordsOf(text).some((w) => MEANING_WORDS.has
  * rewrites some words, "Midwest" to "United States" with the region kept apart, "gun crimes" to three crimes, and its
  * text read again would lose them). Its one rewrite allowed: a comparison's "vs" or "compared to" as "and".
  */
-const sameText = (question: string, read: string) =>
-  read === question || question.replace(/\s+(?:vs\.?|versus|compared\s+to)\s+/gi, " and ") === read;
+const sameText = (question: string, read: string, ledger?: RequestLedger) =>
+  read === question || question.replace(/\s+(?:vs\.?|versus|compared\s+to)\s+/gi, " and ") === read
+  // The comparison wording's own rewrites ("compare X to Y" as "X and Y") keep everything in the text: only a reading
+  // kept beside the text (a region, a composite, a comparison of periods...) stops the ask (job CW1: four asks lost).
+  || (!!ledger && textOnly(ledger));
+const TEXT_ONLY_FLAGS = ["combined", "comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance",
+  "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"];
+function textOnly(ledger: RequestLedger): boolean {
+  const f = ledger as unknown as Record<string, unknown>;
+  return !TEXT_ONLY_FLAGS.some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); });
+}
 /** A year the reader couldn't read: digits run too short or too long, or broken by a stray character. */
 const garbledYear = (text: string) => {
   const words = text.toLowerCase().split(/\s+/).filter(Boolean);
@@ -427,7 +448,7 @@ const cut = (text: string, parts: Part[]) => {
 function peerRewrite(question: string, ledger: RequestLedger): { rest: string; peer: string } | null {
   const c0 = ledger.parts.filter((p) => p.clause === 0);
   const peer = c0.find((p) => p.concept === "peer");
-  if (!peer || !sameText(question, ledger.question) || !c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) return null;
+  if (!peer || !sameText(question, ledger.question, ledger) || !c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) return null;
   const lq = ledger.question;
   const drop = c0.filter((p) => p === peer || (p.concept === "entity" && p.span[0] >= peer.span[1] && /^\s*$/.test(lq.slice(peer.span[1], p.span[0])))
     // Filler with a meaning of its own ("is crime up ... compared to similar cities") keeps the decline (Codex 02.1).
@@ -444,7 +465,7 @@ function peerRewrite(question: string, ledger: RequestLedger): { rest: string; p
  */
 function fillerRewrite(question: string, ledger: RequestLedger): { rest: string; left: string[] } | null {
   const unread = ledger.parts.filter((p) => p.state === "not-interpreted");
-  if (!unread.length || !unread.every((p) => fillerOnly(p.text)) || !sameText(question, ledger.question)) return null;
+  if (!unread.length || !unread.every((p) => fillerOnly(p.text)) || !sameText(question, ledger.question, ledger)) return null;
   // Something of the question was read: a place or a crime (a bare "crime" counts).
   if (!ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure"))) return null;
   return { rest: cut(ledger.question, unread), left: unread.filter((p) => meaningful(p.text)).map((p) => p.text.trim()) };
@@ -486,13 +507,46 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
     return { kind: "clarify", about: "which years", question, options: [{ label: "Name the years", entry: "which years" }] };
   const fr = fillerRewrite(question, ledger);
   const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true }) : null;
+  // Only pure filler left unread: the rest was read in full, so its answer is the question's (Jeff 2026-11-11).
+  if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr"].includes(again.kind)) return again;
   if (!fr || again?.kind !== "clarify") return null;
   // Words with a meaning of their own left out ("up in", "average"): said, so a button's answer is never taken for
   // the change or the average asked (Codex review 01.2).
   return { ...again, question, ...(fr.left.length ? { note: `The choices below answer without ${fr.left.map((t) => `"${t}"`).join(" and ")}.` } : {}) };
 }
 
+/**
+ * "Violent crime per capita in NC over time and how it compares to other states" (Jeff 2026-11-11): the state beside
+ * the United States, by the question's own period, saying that "other states" was read as the country as a whole and
+ * naming the question that ranks every state for a year (decision 5). Null when no single state and crime are read.
+ */
+const OTHER_STATES = /,?\s*\b(?:and\s+)?(?:how\s+(?:it|they|this|that)\s+)?compares?\s+(?:to|with)\s+(?:the\s+)?other\s+states\b\.?/i;
+function otherStates(question: string, deps: ShadowDeps): ShadowOutcome | null {
+  if (!OTHER_STATES.test(question)) return null;
+  const base = question.replace(OTHER_STATES, " ").replace(/\s+/g, " ").trim();
+  const l = readQuestion(base, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+  const states = l.parts.filter((p) => p.clause === 0 && p.concept === "place" && /^state:/.test(String(p.value)));
+  const measure = l.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value !== "unspecified");
+  if (states.length !== 1 || !measure || l.parts.some((p) => p.state === "not-interpreted")) return null;
+  // Only a question the reader's text says in full: a comparison of periods, a circumstance, a region, a composite or
+  // another reading kept beside the text would be lost when the text is asked again (Codex comparison confirmation 01).
+  const f = l as unknown as Record<string, unknown>;
+  if (["comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance", "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"]
+    .some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); })) return null;
+  const st = states[0];
+  // The reader's spans are in its own text (Codex comparison review 01.2), so the place is added there.
+  const lq = l.question;
+  const beside = answerAsked(`${lq.slice(0, st.span[1])} and the United States${lq.slice(st.span[1])}`, { ...deps, rewritten: true });
+  if (beside.kind !== "historical" && beside.kind !== "srs") return null;
+  const year = Number(deps.release.lastMonth.slice(0, 4)) - 1;
+  const rate = /\b(?:per\s+capita|rates?)\b/i.test(question);
+  const note = `"Other states" is read as the United States as a whole. Every state ranked is answered one year at a time, for example "states ranked by ${measure.text.trim().toLowerCase()}${rate ? " rate" : ""} in ${year}".`;
+  return { ...beside, delivered: { ...beside.delivered, text: [...beside.delivered.text.slice(0, -1), note, ...beside.delivered.text.slice(-1)] } } as ShadowOutcome;
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+  const os = deps.rewritten ? null : otherStates(question, deps);
+  if (os) return os;
   const o = answerAsked(question, deps);
   return deps.rewritten ? o : clarifyInstead(question, o, deps) ?? o;
 }
