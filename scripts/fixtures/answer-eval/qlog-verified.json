@@ -5796,6 +5796,237 @@
    "batch": "pr-shr-a-2026-11-11b",
    "date": "2026-11-11",
    "numbers": 17
+  },
+  "QL-ct-3265957a2d": {
+   "digest": "49f00e584c998e0f",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 13
+  },
+  "QL-ct-347fa062e2": {
+   "digest": "e57933877e2989fa",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 0
+  },
+  "QL-ct-4394f77730": {
+   "digest": "869d002002227ab2",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 5
+  },
+  "QL-ct-4c7bd3e3b3": {
+   "digest": "300291988c61ecaf",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 44
+  },
+  "QL-ct-6db04c92f2": {
+   "digest": "3313422291209385",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 4
+  },
+  "QL-ct-7eef965543": {
+   "digest": "5ee0b9102c90130f",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 0
+  },
+  "QL-ct-8754bd0be3": {
+   "digest": "e5389b5ca6f36c72",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 132
+  },
+  "QL-ct-8a2e9086ca": {
+   "digest": "a216a4fd72cfd116",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 12
+  },
+  "QL-ct-997c76808d": {
+   "digest": "b506ebaef9482eab",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 1
+  },
+  "QL-ct-db8f214ba5": {
+   "digest": "9dd3e2b163d3d6c2",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 66
+  },
+  "QL-hist-077851d3b7": {
+   "digest": "a2a827d6ab29ad5f",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 92
+  },
+  "QL-hist-1d3b7100e0": {
+   "digest": "6eb561a3fb874724",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 92
+  },
+  "QL-hist-3265957a2d": {
+   "digest": "49f00e584c998e0f",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 13
+  },
+  "QL-hist-4c7bd3e3b3": {
+   "digest": "300291988c61ecaf",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 44
+  },
+  "QL-hist-743536be08": {
+   "digest": "06a5da4be78439d6",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 5
+  },
+  "QL-hist-786334dbef": {
+   "digest": "14fdc55c53ee83da",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 61
+  },
+  "QL-hist-a232a74b58": {
+   "digest": "e5389b5ca6f36c72",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 132
+  },
+  "QL-hist-beeb263484": {
+   "digest": "80c0f1e870a56e44",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 4
+  },
+  "QL-nibrs-38181178b2": {
+   "digest": "bb9a59f3e498dbcd",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 10
+  },
+  "QL-nibrs-4c7bd3e3b3": {
+   "digest": "300291988c61ecaf",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 44
+  },
+  "QL-nibrs-736ea347ac": {
+   "digest": "3242a38a040ec1bd",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 5
+  },
+  "QL-shr-16a86c9566": {
+   "digest": "112b1f86bf389ad7",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 5
+  },
+  "QL-shr-57f28470eb": {
+   "digest": "952f87f20ef8cee4",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 7
+  },
+  "QL-shr-59b4ae2809": {
+   "digest": "5625c85895a795d5",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 42
+  },
+  "QL-shr-5eb53a9e8c": {
+   "digest": "a49a8147041071d3",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 321
+  },
+  "QL-shr-88a6d5bdee": {
+   "digest": "5f82fe6865126012",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 7
+  },
+  "QL-shr-8d5f5ff509": {
+   "digest": "aa9b7063532b8448",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 3
+  },
+  "QL-shr-9c5d7cf225": {
+   "digest": "a33aa90c894ae9e7",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 12
+  },
+  "QL-shr-a9e8cf9e16": {
+   "digest": "a49a8147041071d3",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 321
+  },
+  "QL-shr-c4eebf2c50": {
+   "digest": "f87fb946cd86da79",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 3
+  },
+  "QL-shr-cf225c3788": {
+   "digest": "a33aa90c894ae9e7",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 12
+  },
+  "QL-shr-d7a344362f": {
+   "digest": "2111431f6ba099b9",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 7
+  },
+  "QL-shr-da1a22df1f": {
+   "digest": "526beac84b97c8fd",
+   "by": "runner-codex-blind",
+   "batch": "pr-comparison-2026-11-11",
+   "date": "2026-11-11",
+   "numbers": 7
   }
  }
 }

@@ -414,8 +414,17 @@ const meaningful = (text: string) => wordsOf(text).some((w) => MEANING_WORDS.has
  * rewrites some words, "Midwest" to "United States" with the region kept apart, "gun crimes" to three crimes, and its
  * text read again would lose them). Its one rewrite allowed: a comparison's "vs" or "compared to" as "and".
  */
-const sameText = (question: string, read: string) =>
-  read === question || question.replace(/\s+(?:vs\.?|versus|compared\s+to)\s+/gi, " and ") === read;
+const sameText = (question: string, read: string, ledger?: RequestLedger) =>
+  read === question || question.replace(/\s+(?:vs\.?|versus|compared\s+to)\s+/gi, " and ") === read
+  // The comparison wording's own rewrites ("compare X to Y" as "X and Y") keep everything in the text: only a reading
+  // kept beside the text (a region, a composite, a comparison of periods...) stops the ask (job CW1: four asks lost).
+  || (!!ledger && textOnly(ledger));
+const TEXT_ONLY_FLAGS = ["comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance",
+  "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"];
+function textOnly(ledger: RequestLedger): boolean {
+  const f = ledger as unknown as Record<string, unknown>;
+  return !TEXT_ONLY_FLAGS.some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); });
+}
 /** A year the reader couldn't read: digits run too short or too long, or broken by a stray character. */
 const garbledYear = (text: string) => {
   const words = text.toLowerCase().split(/\s+/).filter(Boolean);
@@ -439,7 +448,7 @@ const cut = (text: string, parts: Part[]) => {
 function peerRewrite(question: string, ledger: RequestLedger): { rest: string; peer: string } | null {
   const c0 = ledger.parts.filter((p) => p.clause === 0);
   const peer = c0.find((p) => p.concept === "peer");
-  if (!peer || !sameText(question, ledger.question) || !c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) return null;
+  if (!peer || !sameText(question, ledger.question, ledger) || !c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) return null;
   const lq = ledger.question;
   const drop = c0.filter((p) => p === peer || (p.concept === "entity" && p.span[0] >= peer.span[1] && /^\s*$/.test(lq.slice(peer.span[1], p.span[0])))
     // Filler with a meaning of its own ("is crime up ... compared to similar cities") keeps the decline (Codex 02.1).
@@ -456,7 +465,7 @@ function peerRewrite(question: string, ledger: RequestLedger): { rest: string; p
  */
 function fillerRewrite(question: string, ledger: RequestLedger): { rest: string; left: string[] } | null {
   const unread = ledger.parts.filter((p) => p.state === "not-interpreted");
-  if (!unread.length || !unread.every((p) => fillerOnly(p.text)) || !sameText(question, ledger.question)) return null;
+  if (!unread.length || !unread.every((p) => fillerOnly(p.text)) || !sameText(question, ledger.question, ledger)) return null;
   // Something of the question was read: a place or a crime (a bare "crime" counts).
   if (!ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure"))) return null;
   return { rest: cut(ledger.question, unread), left: unread.filter((p) => meaningful(p.text)).map((p) => p.text.trim()) };

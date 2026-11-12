@@ -106,8 +106,6 @@ const PHRASES: [RegExp, string][] = [
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.
-  [/^\s*(?:(?:can\s+you\s+)?show\s+me\s+)?how\s+(?:has|have)\s+(.+?)\s+(?:changed|trended|fared|moved|evolved)(?:\s+over\s+time)?\b/gi, "$1 by year"],
-  [/^\s*(?:(?:can\s+you\s+)?show\s+me\s+)?how\s+(.+?)\s+(?:has|have)\s+(?:changed|trended|fared|moved|evolved)(?:\s+over\s+time)?\b/gi, "$1 by year"],
   [/^\s*(?:by\s+year,\s*)?how\s+(?:does|do|did)\s+(.+?)\s+(?:compare|stack\s+up)\s+(?:to|with|against)\s+/gi, "$1 and "],
   // "Compare Houston's murder rate to the Texas state average": the two places side by side (never a year: "compare
   // 2024 to 2023" is a period comparison).
@@ -120,7 +118,7 @@ const PHRASES: [RegExp, string][] = [
   [/\bover\s+(?:the\s+)?(\d+|two|three|four|five|six|seven|eight|nine|ten)\s+years\b/gi, "over the past $1 years"],
   [/\bgoing\s+back\s+to\s+((?:19|20)\d{2})\b/gi, "since $1"],
   // Fatal shootings are firearm murders (Homicide Reports' firearm homicides, Jeff S1; NIBRS's murders with a firearm).
-  [/\b(?:fatal\s+shootings?|shooting\s+deaths?|people\s+(?:shot\s+and\s+)?killed\s+(?:by|with)\s+(?:guns?|firearms?))\b/gi, "firearm murders"],
+  [/(?<!\b(?:police|officer[-\s]involved|officer|law\s+enforcement)\s+)\b(?:fatal\s+shootings?|shooting\s+deaths?|people\s+(?:shot\s+and\s+)?killed\s+(?:by|with)\s+(?:guns?|firearms?))\b(?!\s+(?:by|of|involving)\s+(?:the\s+)?(?:police|officers?|law\s+enforcement))/gi, "firearm murders"],
   // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
   // "Homicide totals in top 15 cities", "tell me about murder rates in the largest cities" (job S5).
@@ -385,6 +383,22 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     readings.push({ kind: "phrase", from: m, to: t });
     return t;
   });
+  // "How has X changed / trended / fared ..." (Jeff 2026-11-11, "the word 'how'"): X by year over the period named; with
+  // no period, X over time, whose period is asked; a change between two years ("changed from 2024 to 2025") is left to
+  // the change reading (job CW1). Applied here, not in PHRASES, so the rest of the question is seen.
+  const CHANGED = String.raw`(?:changed|trended|fared|moved|evolved)`;
+  for (const re of [new RegExp(String.raw`^(\s*(?:(?:can\s+you\s+)?show\s+me\s+)?)how\s+(?:has|have)\s+(.+?)\s+${CHANGED}(?:\s+over\s+time)?\b(.*)$`, "i"),
+    new RegExp(String.raw`^(\s*(?:(?:can\s+you\s+)?show\s+me\s+)?)how\s+(.+?)\s+(?:has|have)\s+${CHANGED}(?:\s+over\s+time)?\b(.*)$`, "i")]) {
+    const m = re.exec(text);
+    if (!m) continue;
+    const [, , x, rest] = m;
+    if (/^\s*(?:from|between)\s+(?:19|20)\d{2}\s+(?:to|and|through)\s+(?:19|20)\d{2}\b/i.test(rest)) break;
+    const period = /\b(?:since|from|between|through|during|in\s+(?:19|20)\d{2}|over\s+the\s+(?:past|last)|(?:past|last)\s+(?:\d+|few|two|three|four|five|ten)|(?:19|20)\d{2})\b/i.test(rest);
+    const t = `${x} ${period ? "by year" : "over time"}${rest}`;
+    readings.push({ kind: "phrase", from: m[0], to: t });
+    text = t;
+    break;
+  }
   // "... and the national rate / average / total": the United States, only where a rate, if asked, is named before it
   // ("the national rate" may be the question's only rate word, and then it is left as written: Codex comparison review
   // 01.1). Applied here, not in PHRASES, whose replacement sees only the matched words.
