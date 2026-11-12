@@ -109,7 +109,8 @@ const PHRASES: [RegExp, string][] = [
   [/^\s*(?:by\s+year,\s*)?how\s+(?:does|do|did)\s+(.+?)\s+(?:compare|stack\s+up)\s+(?:to|with|against)\s+/gi, "$1 and "],
   // "Compare Houston's murder rate to the Texas state average": the two places side by side (never a year: "compare
   // 2024 to 2023" is a period comparison).
-  [/^\s*compare\s+(.+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!(?:19|20)\d{2}\b)/gi, "$1 and "],
+  // Never a time ("year to date", "to the most recent data", "to present": job CW2).
+  [/^\s*compare\s+(.+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!(?:19|20)\d{2}\b|(?:the\s+)?(?:date|most|present|today|now|current|latest|recent|end)\b)/gi, "$1 and "],
   [/\bin\s+the\s+state\s+of\s+/gi, "in "],
   [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|as\s+a\s+whole)\b/gi, "$1"],
   // Time words read, never dropped: "by months", "year-to-date", "over 5 years", "going back to 1980".
@@ -394,7 +395,10 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     const [, , x, rest] = m;
     if (/^\s*(?:from|between)\s+(?:19|20)\d{2}\s+(?:to|and|through)\s+(?:19|20)\d{2}\b/i.test(rest)) break;
     const period = /\b(?:since|from|between|through|during|in\s+(?:19|20)\d{2}|over\s+the\s+(?:past|last)|(?:past|last)\s+(?:\d+|few|two|three|four|five|ten)|(?:19|20)\d{2})\b/i.test(rest);
-    const t = `${x} ${period ? "by year" : "over time"}${rest}`;
+    // No period named: left as asked until Jeff's all-years rule (a Crime Index place "over time" would be answered
+    // for every year, where the label asks the period: job CW2).
+    if (!period) break;
+    const t = `${x} by year${rest}`;
     readings.push({ kind: "phrase", from: m[0], to: t });
     text = t;
     break;
