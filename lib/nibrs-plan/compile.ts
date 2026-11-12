@@ -503,11 +503,19 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         // arrest dated in a month reported as zero crimes or not reported (an arrest on an older incident, say) is real
         // and counted, not a conflict. Crimes keep the conflict rule.
         isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}
-           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
+           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'${isArrest ? `
+           WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
-      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym))`,
+      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${isArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,
   ];
+  // Arrests (job AR3, following Jeff's "Yes, count them"): a month with any arrest (Group A not M, or a standalone Group
+  // B arrest) is a reported month for every arrest question, whatever its status, so an agency that sent arrests in a
+  // month with no crime report has a known 0 for arrests of another kind, not a blank.
+  if (isArrest) parts.splice(parts.length - 1, 0, `any_arrest AS (SELECT DISTINCT ${O}ym FROM (
+      SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("arrestee")} WHERE coalesce(multiple_arrestee_indicator, '') <> 'M'
+      UNION ALL SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("group_b_arrest")} WHERE identical_to_line_no IS NULL)
+      WHERE ${oriIs("ori")} AND ym BETWEEN ${q(from)} AND ${q(to)})`);
   if (g.length) {
     // Every category that occurs in the place and period, in every month.
     // In grid mode, a placeholder category when none occurs (Codex state-categories review 01.1): the cross join below

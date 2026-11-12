@@ -132,7 +132,7 @@ def write(table, year, cols, rows):
     import os
     d = f"{root}/{table}/data_year={year}"
     os.makedirs(d, exist_ok=True)
-    values = ", ".join("(" + ", ".join(repr(v) for v in r) + ")" for r in rows)
+    values = ", ".join("(" + ", ".join("NULL" if v is None else repr(v) for v in r) + ")" for r in rows)
     sel = f"SELECT * FROM (VALUES {values}) t({', '.join(cols)})"
     con.execute(f"COPY ({sel}) TO '{d}/data.parquet' (FORMAT parquet)")
 O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence", "location_type"]
@@ -155,6 +155,9 @@ A = ["ori", "incident_num", "arrestee_seq", "key_occurrence", "arrest_date", "ar
 write("arrestee", 2025, A, [("XX0000000", "OLD-1", "01", 1, "20250120", "240", "N", "30"),
     ("XX0000000", "MAR-1", "01", 1, "20250310", "240", "N", "30"), ("XX0000000", "MAR-1", "02", 1, "20250310", "240", "M", "30")])
 write("arrestee", 2026, A, [("XX0000000", "JAN-LATE", "01", 1, "20250415", "240", "N", "30")])
+B = ["ori", "arrest_transaction_num", "arrestee_seq", "occurrence", "arrest_date", "arrest_offense", "identical_to_line_no", "age"]
+for y in (2025, 2026):
+    write("group_b_arrest", y, B, [("WW0000000", f"T-{y}", "01", 1, f"{y}0110", "90D", None, "40")])
 # ZZ, January 2024 (Codex review 02): key_occurrence numbers lines within one segment family, so it never links families.
 # One robbery (occurrence 1) with two offender lines sharing sequence "##" (occurrences 1 and 2, M and F); one aggravated
 # assault (occurrence 1, handgun) whose victim line is occurrence 2 of its sequence.
@@ -190,6 +193,12 @@ check("synthetic victim with a handgun on its connecting offense", zz([{ id: "vi
 check("synthetic arrests in zero and unreported months", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
   measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
     ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
+  ["arrests_counted_once"]);
+// Job AR3: robbery arrests at XX: none anywhere, but April (UNKNOWN) has a theft arrest, so April is a known 0, not blank;
+// the reported-zero months stay reported zeros.
+check("synthetic arrests of another kind in an unreported month", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
+  measures: [{ id: "arrests.robbery", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
+    ["2025-01", [C(0, "REPORTED_ZERO")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
   ["arrests_counted_once"]);
 // --synthetic-only: part 1 alone (no canonical build or values repository needed).
 if (process.argv.includes("--synthetic-only")) process.exit(failed ? 1 : 0);
