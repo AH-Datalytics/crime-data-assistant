@@ -2362,6 +2362,10 @@ function staffTerms(q: string, own: Part[]): { decline: ShadowOutcome } | StaffT
   if (stats.some((p) => !rateLike(p.value) && p.value !== "count")) return null;
   // P97 (Jeff 2026-11-07: "Convert to per 1,000"): a rate asked at another base is given at that base.
   const scale = stats.find((p) => /^scale:/.test(String(p.value)));
+  // Two different bases ("per 1,000 residents and per 100,000 residents"): one is asked for, never the first answered.
+  const askedBases = new Set([...stats.filter((p) => /^scale:/.test(String(p.value))).map((p) => baseOf(String(p.value).slice(6))),
+    ...[...q.matchAll(/\bper\s+(\d[\d,]*(?:\s*k)?|thousand|ten\s+thousand|(?:one\s+)?million)\b/gi)].map((m) => baseOf(m[1]))].filter((b) => b !== null && !(b === 100_000 && own.some((p) => p.concept === "measure"))));
+  if (askedBases.size > 1) return no("unsupported_capability", "Ask for one rate base: per 1,000, per 100,000 or another, not several.");
   const per = inBase ? baseOf(inBase[1]) : !scale ? 100_000 : baseOf(String(scale.value).slice(6));
   if (per === null) return no("unsupported_capability", "Staffing rates are given per a whole number of people, such as per 1,000 or 100,000.");
   return { kind, rate, per };
@@ -2463,7 +2467,7 @@ function besideConflict(ledger0: RequestLedger, own: Part[], terms: StaffTerms):
   // A rate asked for the crime while the reader took the figure as a count (or the reverse) is never answered as either.
   if (!terms.rate && (rateWord || /\bper\s+(?:1,?000|10,?000|100,?000)\b/i.test(q))) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
   // A crime asked as a count ("the number of murders") beside staffing asked as a rate.
-  const crimeCount = own.some((p) => p.concept === "measure" && new RegExp(String.raw`(?:number|numbers|count|counts|total|how many)(?:\s+of)?(?:\s+the)?\s*$`, "i").test(q.slice(Math.max(0, p.span[0] - 30), p.span[0])));
+  const crimeCount = own.some((p) => p.concept === "measure" && new RegExp(String.raw`(?:number|numbers|count|counts|total|how many)(?:\s+of)?(?:\s+the)?(?:\s+\w+){0,2}\s*$`, "i").test(q.slice(Math.max(0, p.span[0] - 30), p.span[0])));
   if (terms.rate && (staffCount || crimeCount || !rateWord)) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
   // Any base but 100,000 ("per 1,000", "per 10k"): one, and attached to the staffing words.
   const base = String.raw`(?:\d[0-9,]*(?:\s*k)?|thousand|ten\s+thousand|(?:one\s+)?million)`;

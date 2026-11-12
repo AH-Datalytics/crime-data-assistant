@@ -418,7 +418,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   for (const [q, re] of [
     ["Robberies of officers and police staffing in the 2 largest cities in 2023", null],
     ["Police officers per 1,000 murders in Memphis in 2023", /ratio between kinds of staff/],
-    ["Compare murder rates per 1,000 to police officers per 100,000 in Memphis in 2023", /Crime rates are given per 100,000/],
+    ["Compare murder rates per 1,000 to police officers per 100,000 in Memphis in 2023", /Crime rates are given per 100,000|one rate base/],
     ["Compare the number of police officers to murder rates per 100,000 in Memphis in 2023", /counts or rates for both/],
     ["Police staffing vs murders in the 2 largest cities so far in 2023", /full years/],
     ["Compare police officers in Memphis in 2022 to murders in 2023", /Name the years once for both/],
@@ -426,7 +426,10 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     ["Robberies of sworn officers and police staffing in the 2 largest cities in 2023", null],
     ["Compare murder rates per 10k to police officers per 100,000 in Memphis in 2023", /Crime rates are given per 100,000/],
     ["Compare police staffing rates per 100,000 to the number of murders in Memphis in 2023", /counts or rates for both/],
-    ["Police staffing in Memphis so far in 2023", /full years/]] as const) {
+    ["Police staffing in Memphis so far in 2023", /full years/],
+    ["Robberies of police employees and police staffing in Memphis in 2023", null],
+    ["Compare the number of reported murders with police staffing rates per capita in Memphis in 2023", /counts or rates for both/],
+    ["Police officers per 1,000 residents and per 100,000 residents in Memphis in 2023", /one rate base/]] as const) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
     if (re) assert.ok(o.kind === "decline" && re.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
