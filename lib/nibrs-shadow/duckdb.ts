@@ -102,6 +102,9 @@ export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): Duckdb
   return Object.assign((sql: string) => {
     const hit = cache.get(sql);
     if (hit) { cache.delete(sql); cache.set(sql, hit); return hit; }
+    // Diagnosis only (job AR1, recount mismatch): NIBRS_SQL_LOG names a file each query is appended to, so a checker
+    // can diff the engine's own SQL against a recount key by key. Unset, nothing is written.
+    if (process.env.NIBRS_SQL_LOG) fs.appendFileSync(process.env.NIBRS_SQL_LOG, `${sql}\n;\n`);
     const rows = run(sql);
     cache.set(sql, rows);
     if (cache.size > size) cache.delete(cache.keys().next().value!);
