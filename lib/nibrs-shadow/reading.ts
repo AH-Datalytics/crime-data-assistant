@@ -606,10 +606,11 @@ function readPeople(text0: string): { text: string; people: People | null } {
   // Arrests (2026-11-11): "how many arrests ...", "show me all arrestees ...", "the total number of arrests ..." with no
   // crime named are every arrest too.
   else {
-    const all = /^\s*(?:how\s+many\s+|(?:can\s+you\s+)?show\s+(?:me\s+)?|give\s+me\s+|what\s+(?:is|was|were)\s+)?(?:the\s+)?(?:total\s+)?(?:number\s+of\s+)?(?:all\s+)?(?:arrests|arrestees)\s+(?=(?:in|for|by|nationally|nationwide|statewide|across)\b|(?:19|20)\d{2}\b)/i.exec(text);
+    const all = /^\s*(?:how\s+many\s+|(?:can\s+you\s+)?show\s+(?:me\s+)?|give\s+me\s+|what\s+(?:is|was|were)\s+)?(?:the\s+)?(?:total\s+)?(?:number\s+of\s+)?(?:all\s+)?(?:(?:total|overall)\s+)?(?:(nationwide|national|statewide)\s+)?(?:arrests|arrestees)\s+(?=(?:in|for|by|nationally|nationwide|statewide|across|under|over|aged?|ages|from|since|between|per|each)\b|(?:19|20)\d{2}\b)/i.exec(text);
     // Never when the reader finds a crime named anywhere ("how many arrests in 2024 for robbery", "peeping tom"): the
     // reader's own measures decide, never a word list (Codex arrests review 01: "Guntersville", "by sex").
-    if (all && !crimeNamed) text = `All crime arrests ${text.slice(all[0].length)}`;
+    // A place word before "arrests" ("nationwide arrests") is kept (job AR1).
+    if (all && !crimeNamed) text = `All crime arrests ${all[1] ? (/^state/i.test(all[1]) ? "statewide " : "nationally ") : ""}${text.slice(all[0].length)}`;
   }
   const any = p.by || p.where.length || p.ask || p.unsupported;
   return { text, people: any ? p : null };
