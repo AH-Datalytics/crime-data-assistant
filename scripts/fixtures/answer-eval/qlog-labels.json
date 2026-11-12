@@ -16593,16 +16593,20 @@
    "question": "how many larceny reports at hotels in 2025",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Reports are not a supported counting unit."
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines reports."
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "NIBRS records hotels and motels as a location, so larceny at hotels can be counted (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {
@@ -40217,16 +40221,24 @@
    "question": "Number of cases of female ho. Ici",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R08>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines cases."
+    "drafted_by": "jeff-2026-11-11-cases",
+    "reviewed_by": "jeff-2026-11-11-cases",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count for the crime; female homicide victims in Homicide Reports"
    }
   },
   {
@@ -43243,16 +43255,19 @@
    "question": "What the average number of cases cleared vs reported for each state",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "about_any": [
+     "crime"
+    ],
+    "about": "crime"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines cases."
+    "drafted_by": "jeff-2026-11-11-cases",
+    "reviewed_by": "jeff-2026-11-11-cases",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; offenses cleared and reported by state; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -44734,16 +44749,24 @@
    "question": "What's the trend in negligent manslaughter cases over the past decade?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs",
+     "shr"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R08>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines cases."
+    "drafted_by": "jeff-2026-11-11-cases",
+    "reviewed_by": "jeff-2026-11-11-cases",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; negligent manslaughter"
    }
   },
   {
@@ -48002,16 +48025,20 @@
    "question": "add the number of larceny of auto cases cleared by arrest",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines cases."
+    "drafted_by": "jeff-2026-11-11-cases",
+    "reviewed_by": "jeff-2026-11-11-cases",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; motor vehicle theft offenses cleared by arrest"
    }
   },
   {
@@ -51294,16 +51321,24 @@
    "question": "can you give the number of overall rape cases and % this represented?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs",
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines cases."
+    "drafted_by": "jeff-2026-11-11-cases",
+    "reviewed_by": "jeff-2026-11-11-cases",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; rape counted by victim (crimes against people)"
    }
   },
   {
@@ -66975,16 +67010,20 @@
    "question": "how have intimate partner violence cases trended in the past 5 years",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 explicitly declines cases."
+    "drafted_by": "jeff-2026-11-11-cases",
+    "reviewed_by": "jeff-2026-11-11-cases",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; intimate partner violence counted by victim"
    }
   },
   {
@@ -98427,11 +98466,7 @@
    "previous": "now add murders and aggravated assaults",
    "expected": {
     "outcome": "answer",
-    "source": "shr",
-    "source_any": [
-     "shr",
-     "nibrs"
-    ],
+    "source": "nibrs",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -98441,9 +98476,9 @@
    "label": {
     "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "Offender age for robbery, murder and aggravated assault together is NIBRS's; the Homicide Reports relabel didn't fit several crimes (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {
@@ -105820,11 +105855,7 @@
    "previous": "murders per month in 2021 in Oakland",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
+    "source": "shr",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -105833,10 +105864,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "Murders by month before 2017 come from Homicide Reports, by month; Current Trends starts in 2017 (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {
@@ -107351,11 +107382,7 @@
    "previous": "now 1995",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
+    "source": "shr",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -107364,10 +107391,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "Murders by month before 2017 come from Homicide Reports, by month; Current Trends starts in 2017 (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {
@@ -109154,12 +109181,8 @@
    "previous": "murder pr month in Oakland in 1997",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the earlier question, changed as asked",
+    "source": "shr",
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -109167,10 +109190,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "rule": "F3>2nd",
+    "drafted_by": "coordinator-2026-11-11",
+    "reviewed_by": "coordinator-2026-11-11",
+    "notes": "Murders by month before 2017 come from Homicide Reports, by month; Current Trends starts in 2017 (coordinator correction 2026-11-11, not an owner verdict)"
    }
   },
   {
