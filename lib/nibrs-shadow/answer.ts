@@ -2467,7 +2467,7 @@ function besideConflict(ledger0: RequestLedger, own: Part[], terms: StaffTerms):
   // A rate asked for the crime while the reader took the figure as a count (or the reverse) is never answered as either.
   if (!terms.rate && (rateWord || /\bper\s+(?:1,?000|10,?000|100,?000)\b/i.test(q))) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
   // A crime asked as a count ("the number of murders") beside staffing asked as a rate.
-  const crimeCount = own.some((p) => p.concept === "measure" && new RegExp(String.raw`(?:number|numbers|count|counts|total|how many)(?:\s+of)?(?:\s+the)?(?:\s+\w+){0,2}\s*$`, "i").test(q.slice(Math.max(0, p.span[0] - 30), p.span[0])));
+  const crimeCount = own.some((p) => p.concept === "measure" && (/^\s*(?:in total|in all|total|counts?)\b/i.test(q.slice(p.span[1], p.span[1] + 16)) || new RegExp(String.raw`(?:number|numbers|count|counts|total|how many)(?:\s+of)?(?:\s+the)?(?:\s+\w+){0,2}\s*$`, "i").test(q.slice(Math.max(0, p.span[0] - 30), p.span[0]))));
   if (terms.rate && (staffCount || crimeCount || !rateWord)) return decline("unsupported_capability", "Ask for counts or rates for both the staffing and the crime: one answer shows them the same way.");
   // Any base but 100,000 ("per 1,000", "per 10k"): one, and attached to the staffing words.
   const base = String.raw`(?:\d[0-9,]*(?:\s*k)?|thousand|ten\s+thousand|(?:one\s+)?million)`;

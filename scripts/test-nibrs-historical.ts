@@ -429,7 +429,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     ["Police staffing in Memphis so far in 2023", /full years/],
     ["Robberies of police employees and police staffing in Memphis in 2023", null],
     ["Compare the number of reported murders with police staffing rates per capita in Memphis in 2023", /counts or rates for both/],
-    ["Police officers per 1,000 residents and per 100,000 residents in Memphis in 2023", /one rate base/]] as const) {
+    ["Police officers per 1,000 residents and per 100,000 residents in Memphis in 2023", /one rate base/],
+    ["Show police staffing and robberies of civilian employees in Memphis in 2023", null],
+    ["Compare murders in total to police staffing rates per capita in Memphis in 2023", /counts or rates for both/]] as const) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
     if (re) assert.ok(o.kind === "decline" && re.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
