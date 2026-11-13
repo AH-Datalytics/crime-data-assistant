@@ -664,6 +664,15 @@ assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").
 const juvDui = as(ask("juvenile DUI arrests in Detroit in 2023"), "answer");
 assert.deepEqual([juvDui.plan.measures[0].id, juvDui.plan.filters[0]], ["group_b_arrests.dui", { kind: "attribute", dimension: "group_b_arrest.age", op: "between", values: [1, 17] }]);
 assert.equal(as(ask("DUI arrests by age in Detroit in 2023"), "answer").plan.groupings.at(-1)!.dimension, "group_b_arrest.age");
+// Jeff 2026-11-12 ("Yes, B then A"): every national arrest by a person's attribute over several years is declined as too
+// large for now, one year offered in words (never run); one year, a crime, a state, or no breakdown still answer.
+for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for consistent reporters", "show me nationwide arrests by age by year for 2015 to 2025 for consistent reporters"]) {
+  const d = as(ask(q), "decline");
+  assert.match(d.explanation, /takes too long to count here\. Ask for one year/, q);
+  assert.ok(!d.alternative, q);
+}
+for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrests for violent crimes by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025", "arrests by sex by year in Texas from 2021 to 2025"])
+  as(ask(q), "answer");
 const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
 // Several measures by month: a column each, and the months a crime is blank named.
