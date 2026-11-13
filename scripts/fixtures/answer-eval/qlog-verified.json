@@ -6615,6 +6615,14 @@
    "batch": "vb1-2026-11-13",
    "date": "2026-11-13",
    "numbers": 1
+  },
+  "QL-hist-f63c774a7e": {
+   "digest": "1a8abbb0348a5261",
+   "by": "codex-blind-sql",
+   "batch": "vb1-2026-11-13",
+   "date": "2026-11-13",
+   "numbers": 192,
+   "note": "Chicago 1984 officers per 100,000 = 397.0, derived from the published count and population (11,960 / 3,012,524 x 100,000) as the build publishes no rate that year (Jeff 2026-11-13); checked by this arithmetic; every other cell agreed with Codex"
   }
  }
 }
