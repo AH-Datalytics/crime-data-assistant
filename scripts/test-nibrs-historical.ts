@@ -744,4 +744,36 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.ok(!(o.kind === "historical" && /ranks/.test(o.delivered?.text[0] ?? "")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }
 }
+// Engine 2, rules 1 and 3 (Jeff 2026-11-12): a rate for a group of people (D03) and what the data doesn't record are declined
+// in plain words before any place, period or crime is asked; counts and shares by group, and place names, still answer.
+{
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: () => [], historical: build };
+  const GROUP = /^A rate for a group of people needs population figures by race, sex or age, which the FBI data doesn't include\./;
+  for (const q of ["show me the crime rate for 18 to 25 year olds", "How do juvenile crime rates compare to criminal rates", "homicide rates for gender and race", "violent crime rates by race 2006 to 2026",
+    "How do juvenile arrest rates compare to adult rates", "compare the rate of violent victimization for males and females from 1995 to 2013", "Can you show me the national female arrest rate for simple assault over time please",
+    "what is the homicide victimization rate for women by year?", "show the shoplifting rate by race of offender for 2019 and 2023", "show the shoplifting rate since 2010 by race of offender",
+    "Black female murder victim rate per 100K Black women", "murder rates by race and sex per 100000", "murders per 10,000 Black residents", "homicide rates by gender and race",
+    "Population by race and sex and rate per 100000", "i want ir in per capita seperated by race and sex"]) {
+    const o = shadowAnswer(q, base as never) as { kind: string; explanation?: string };
+    assert.ok(o.kind === "decline" && GROUP.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 240)}`);
+  }
+  const NOT_REC: [string, RegExp][] = [["What census data can we use? Compare violent crime rates in cities with the highest proportions of people living under the poverty line", /poverty, income or other census population/],
+    ["Are vehicle deaths increasing", /traffic fatalities or vehicle crashes/], ["Add health data", /health data/], ["are there statistics that combine murders and suicides", /suicides/], ["recidivism", /corrections or repeat offending/],
+    ["Crime data on cities with the highest African American population", /population by race or ethnicity/], ["can i see flowcharts or strategy diagrams of the VCRR factsheet", /program documents/],
+    ["how many cases used DNA evidence", /investigative evidence/], ["What percentage of homicides were solved with video evidience?", /investigative evidence/], ["what percentage of clearances have video evidence", /investigative evidence/],
+    ["top 5 cities for robberies involving the discharge use of a firearm", /whether a firearm was fired/], ["firearms trafficking?", /firearms trafficking/], ["How many people receive criminal legal fines or fees each year?", /court fines or fees/],
+    ["What multifamily apartment complexes had the most burglaries in the last 5 years?", /multifamily housing/], ["How do burglaries committed on multifamily properties compare to single family homes in the last five years?", /multifamily housing/],
+    ["which major metro areas have seen the biggest dip in homicides in the last 10 years", /metropolitan areas/], ["How many people were killed by law enforcement officers in 2025", /deaths caused by law enforcement/]];
+  for (const [q, re] of NOT_REC) {
+    const o = shadowAnswer(q, base as never) as { kind: string; explanation?: string };
+    assert.ok(o.kind === "decline" && /^NIBRS doesn't include /.test(o.explanation ?? "") && re.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 240)}`);
+  }
+  // Not declined for these reasons: a place named Black or White, counts and shares by group, a human trafficking crime, motor vehicle theft, drug trafficking.
+  for (const q of ["violent crime rate in Black Hawk County, Iowa in 2023", "robberies in White Plains, New York in 2023", "murders by race in Memphis in 2023", "murders of female victims in Memphis in 2023",
+    "murders in Memphis in 2023 by sex of victim", "motor vehicle theft in Memphis in 2023", "murder rate in Memphis in 2023", "aggravated assaults with a firearm in Memphis in 2023"]) {
+    const o = shadowAnswer(q, base as never) as { kind: string; explanation?: string };
+    assert.ok(!(o.kind === "decline" && (GROUP.test(o.explanation ?? "") || /^NIBRS doesn't include /.test(o.explanation ?? ""))), `${q}: ${JSON.stringify(o).slice(0, 240)}`);
+  }
+}
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

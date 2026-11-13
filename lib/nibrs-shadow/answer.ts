@@ -31,6 +31,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
+import { DEMOGRAPHIC_RATE } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
@@ -900,6 +901,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // other group (one sex, juveniles) is declined, never answered as victims.
   const bySexes = !!flags(ledger0).offenders && BY_SEXES.test(ledger0.question);
   if (flags(ledger0).offenders && !bySexes) return decline("unsupported_capability", "\"By\" a group of people means the offenders. Only \"by men and women\" (the offenders' sexes) is available yet.");
+  // Engine 2, rule 1 (D03, Jeff 2026-11-12): a rate for a group of people the reader took out as people ("by race of offender",
+  // an age range) is declined like the other group rates, before any place or crime is asked.
+  const pplRate = flags(ledger0).people;
+  if (pplRate && (pplRate.by || pplRate.where.some((w) => w.attr === "age"))
+    && ledger0.parts.some((p) => p.clause === 0 && p.concept === "statistic" && /^(?:rate|per100k|percapita|scale:)/.test(p.value ?? ""))) {
+    const why = DEMOGRAPHIC_RATE("a rate for a group of people");
+    return decline(readerReason(why), plainReaderExplanation(why), { detail: why });
+  }
   if (unrecorded.length) {
     const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
     // P74: in plain words, with the question without those words when it can be answered.
