@@ -6623,6 +6623,35 @@
    "date": "2026-11-13",
    "numbers": 192,
    "note": "Chicago 1984 officers per 100,000 = 397.0, derived from the published count and population (11,960 / 3,012,524 x 100,000) as the build publishes no rate that year (Jeff 2026-11-13); checked by this arithmetic; every other cell agreed with Codex"
+  },
+  "QL-nibrs-28e65b33e3": {
+   "digest": "f7c84a3fe4f7f58c",
+   "by": "model-canonical",
+   "batch": "vb2-2026-11-13",
+   "date": "2026-11-13",
+   "numbers": 93,
+   "note": "Houston carjackings per month: 91 of 93 cells matched; 2026-08 and 2026-09 are blank (Houston's month status UNKNOWN; a gap never reads as zero, D04) where the recount wrote 0"
+  },
+  "QL-hist-373c45ee26": {
+   "digest": "70c22a9f4e5d48d7",
+   "by": "model-canonical",
+   "batch": "vb2-2026-11-13",
+   "date": "2026-11-13",
+   "numbers": 6
+  },
+  "QL-nibrs-a622b373c4": {
+   "digest": "70c22a9f4e5d48d7",
+   "by": "model-canonical",
+   "batch": "vb2-2026-11-13",
+   "date": "2026-11-13",
+   "numbers": 6
+  },
+  "QL-shr-38c550f436": {
+   "digest": "8a423c7da55788ce",
+   "by": "model-canonical",
+   "batch": "vb2-2026-11-13",
+   "date": "2026-11-13",
+   "numbers": 9
   }
  }
 }
