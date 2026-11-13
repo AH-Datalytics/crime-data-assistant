@@ -123,38 +123,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const monthly = catDims.length
     ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${c.query.sql}) GROUP BY ori, period`
     : c.query.sql;
-  const covSql = (from: string) => `SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
+  const covRows = deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
       count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
       coalesce(sum(n) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')), 0) AS repsum,
       count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts
-    FROM (${from}) GROUP BY ALL`;
-  // Speed (job AR6: national arrests by age took minutes): an arrest breakdown reads its grid ONCE. One query gives the
-  // coverage rows ('c'), the category sums for every reporting agency and for the Consistent Reporting Agencies ('s'),
-  // and how many agencies that set has ('e'); the set is computed in SQL by the rule below (a header in every year,
-  // every month reported) and checked against it, falling back to the two-pass reading if they differ. Crimes keep
-  // the two passes, their SQL unchanged.
-  let onePass: { sums: unknown[][]; every: number } | null = null;
-  let covRows: unknown[][];
-  if (catDims.length && arrests) {
-    const rows = deps.execute(`WITH gr AS MATERIALIZED (${c.query.sql}),
-      mo AS (SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM gr GROUP BY ori, period),
-      cov AS (${covSql("SELECT * FROM mo")}),
-      hdr AS (${headerSql}),
-      ev AS (SELECT ori FROM cov WHERE ori IN (SELECT ori FROM hdr GROUP BY ori HAVING count(DISTINCT data_year) = ${years.length})
-        GROUP BY ori HAVING bool_and(rep = months)),
-      su AS (SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
-          coalesce(sum(n) FILTER (WHERE ori IN (SELECT ori FROM ev)), 0) AS n_every
-        FROM gr SEMI JOIN hdr h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
-        WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL)
-    SELECT 'c' AS t, ori, y, months, rep, repsum, conflicts, NULL AS g0, NULL AS n_all, NULL AS n_every FROM cov
-    UNION ALL SELECT 's', NULL, y, NULL, NULL, NULL, NULL, g0, n_all, n_every FROM su
-    UNION ALL SELECT 'e', NULL, NULL, count(*), NULL, NULL, NULL, NULL, NULL, NULL FROM ev`);
-    if (rows.length && rows.every((r) => r[0] === "c" || r[0] === "s" || r[0] === "e")) {
-      covRows = rows.filter((r) => r[0] === "c").map((r) => r.slice(1, 7));
-      onePass = { sums: rows.filter((r) => r[0] === "s").map((r) => [r[2], r[7], r[8], r[9]]).sort((a, b) => Number(a[0]) - Number(b[0]) || String(a[1]).localeCompare(String(b[1]))),
-        every: Number(rows.find((r) => r[0] === "e")?.[3] ?? -1) };
-    } else covRows = deps.execute(covSql(monthly));
-  } else covRows = deps.execute(covSql(monthly));
+    FROM (${monthly}) GROUP BY ALL`);
   for (const r of covRows) {
     const y = Number(r[1]);
     if (yearSet && !yearSet.includes(y)) continue;
@@ -277,7 +250,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   function byCategory(): ShadowOutcome {
     const g = catDims[0].dimension, count = plan.statistics.find((x) => x.kind === "count")!, share = plan.statistics.find((x) => x.kind === "share");
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
-    const sums2 = onePass && onePass.every === everySet.length ? onePass.sums : deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
+    const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT unnest([${list(everySet.length ? everySet : [""])}]))), 0) AS n_every
       FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)` : ""}
       WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
