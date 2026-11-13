@@ -656,6 +656,14 @@ for (const q of ["gun possession arrests in Detroit in 2023", "possession of a f
 assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_possession");
 assert.equal(as(ask("robberies with a gun in Detroit in 2023"), "answer").plan.filters[0].kind, "exists");
 assert.equal(as(ask("Please show me the number of arrests of people under age 18 by year in Detroit from 2020 through 2023."), "answer").plan.measures[0].id, "arrests.all_crime");
+// Codex arrests review 06: a charge is never an offense count; Group B arrests are counted alone; handgun possession is
+// a weapon law violation; a person's condition or breakdown on Group B arrests uses their own columns.
+assert.notEqual(ask("How many gun charges in Detroit in 2023?").kind, "answer");
+assert.notEqual(ask("DUI arrests involving robbery in Detroit in 2023").kind, "answer");
+assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.weapon_law");
+const juvDui = as(ask("juvenile DUI arrests in Detroit in 2023"), "answer");
+assert.deepEqual([juvDui.plan.measures[0].id, juvDui.plan.filters[0]], ["group_b_arrests.dui", { kind: "attribute", dimension: "group_b_arrest.age", op: "between", values: [1, 17] }]);
+assert.equal(as(ask("DUI arrests by age in Detroit in 2023"), "answer").plan.groupings.at(-1)!.dimension, "group_b_arrest.age");
 const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
 // Several measures by month: a column each, and the months a crime is blank named.

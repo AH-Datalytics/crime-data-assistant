@@ -1773,8 +1773,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         if (unit !== "victim") return decline("unsupported_capability", "This isn't available yet: a victim's age for crimes counted by offense.");
         plan.filters.push(between("victim.age", w.range));
       } else if (w.who === "arrestee") {
-        if (unit !== "arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's age for anything but arrests.");
-        plan.filters.push(between("arrestee.age", w.range));
+        if (unit !== "arrest" && unit !== "group_b_arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's age for anything but arrests.");
+        plan.filters.push(between(unit === "group_b_arrest" ? "group_b_arrest.age" : "arrestee.age", w.range));
       } else if (w.paired) {
         if (unit !== "victim") return decline("unsupported_capability", "This isn't available yet: a linked offender's age for anything but victims.");
         plan.filters.push({ kind: "exists", scope: "victim", entity: "victim_offender", where: [between("victim_offender.offender_age", w.range)] });
@@ -1784,11 +1784,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     if (ppl.by) {
       const b = ppl.by;
-      if (b.who === "arrestee" && unit !== "arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's attributes for anything but arrests.");
+      if (b.who === "arrestee" && unit !== "arrest" && unit !== "group_b_arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's attributes for anything but arrests.");
       if (b.paired && unit !== "victim") return decline("unsupported_capability", "This isn't available yet: the linked offenders' attributes for anything but victims.");
-      if (b.who === "offender" && unit === "arrest") return decline("unsupported_capability", "This isn't available yet: offenders' attributes for arrests.");
+      if (b.who === "offender" && (unit === "arrest" || unit === "group_b_arrest")) return decline("unsupported_capability", "This isn't available yet: offenders' attributes for arrests.");
       if (plan.groupings.some((g) => !g.dimension.startsWith("time."))) return decline("unsupported_capability", "This isn't available yet: a person's attribute beside another breakdown.");
-      const dimension = b.paired ? `victim_offender.offender_${b.attr}` : `${b.who}.${b.attr}`;
+      const dimension = b.paired ? `victim_offender.offender_${b.attr}` : b.who === "arrestee" && unit === "group_b_arrest" ? `group_b_arrest.${b.attr}` : `${b.who}.${b.attr}`;
       const multi = b.paired || (b.who === "offender" && unit !== "offender");
       plan.groupings.push({ dimension, unknown: "visible", absent: "show", ...(multi ? { multiValue: "each_value" as const } : {}), ...(b.attr === "age" ? { bins: AGE_BINS } : {}) });
       const m0 = plan.measures[0];
@@ -1913,6 +1913,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // P50: arrests are placed by arrest date; arrests beside other measures would mix time bases (refused).
   const arrests = plan.measures.filter((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
+  if (arrests.some((m) => m.id.startsWith("group_b_arrests.")) && plan.measures.length > 1)
+    return decline("unsupported_capability", "This isn't available yet: arrests for DUI, disorderly conduct or another minor offense beside another crime or condition.");
   if (arrests.length && arrests.length !== plan.measures.length) return decline("unsupported_capability", "This isn't available yet: arrests beside other crimes (arrests are dated by the arrest, crimes by the incident).");
   if (arrests.length) {
     plan.timeBasis = "arrest_date";
