@@ -31,7 +31,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
-import { DEMOGRAPHIC_RATE } from "../nibrs-request-accounting";
+import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
@@ -905,7 +905,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // an age range) is declined like the other group rates, before any place or crime is asked.
   const pplRate = flags(ledger0).people;
   if (pplRate && (pplRate.by || pplRate.where.some((w) => w.attr === "age"))
-    && ledger0.parts.some((p) => p.clause === 0 && p.concept === "statistic" && /^(?:rate|per100k|percapita|scale:)/.test(p.value ?? ""))) {
+    && ledger0.parts.some((p) => p.clause === 0 && p.concept === "statistic" && /^(?:rate|per100k|percapita|scale:)/.test(p.value ?? "") && !negatedBefore(ledger0.question, p.span[0]))) {
     const why = DEMOGRAPHIC_RATE("a rate for a group of people");
     return decline(readerReason(why), plainReaderExplanation(why), { detail: why });
   }

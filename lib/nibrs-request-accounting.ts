@@ -520,9 +520,11 @@ function recordNibrsFiller(ledger: RequestLedger): void {
  * asked; counts and shares by group still answer. A rate word with a group the reader found (a race, sex or age filter or
  * breakdown) or, failing that, group words it left unread ("year olds", "gender", "race"). Never from a place's own name.
  */
-const GROUP_WORDS = R(String.raw`\b(?:race|racial|ethnicity|ethnic|gender|sex|ages?|aged|year[-\s]?olds?|adults?|youths?|teens?|teenagers?|seniors?|elderly|demographics?)\b`, "i");
+const GROUP_WORDS = R(String.raw`\b(?:race|racial|ethnicity|ethnic|gender|year[-\s]?olds?|adults?|youths?|teens?|teenagers?|seniors?|elderly|demographics?)\b|\b(?:by|for|of|and|per|across|among|each)\s+(?:sex|ages?|aged)\b`, "i");
+/** "Not rates", "instead of rates": a rate word the question turns away is not a rate asked for. */
+export const negatedBefore = (q: string, at: number) => /\b(?:not|no|without|instead\s+of|rather\s+than|except)\s+(?:the\s+|any\s+)?$/i.test(q.slice(Math.max(0, at - 20), at));
 function recordDemographicRate(ledger: RequestLedger): void {
-  const rated = ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && p.concept === "statistic" && /^(?:rate|per100k|percapita|scale:)/.test(p.value ?? ""));
+  const rated = ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && p.concept === "statistic" && /^(?:rate|per100k|percapita|scale:)/.test(p.value ?? "") && !negatedBefore(ledger.question, p.span[0]));
   if (!rated) return;
   const group = ledger.parts.find((p) => p.clause === 0 && p.state === "recognized"
     && ((p.concept === "breakdown" && /^(?:race|sex|age|ethnicity|gender)$/.test(p.value ?? "")) || (p.concept === "filter" && /^(?:race|sex|age|ethnicity):/.test(p.value ?? ""))));

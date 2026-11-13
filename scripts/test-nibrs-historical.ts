@@ -771,7 +771,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   }
   // Not declined for these reasons: a place named Black or White, counts and shares by group, a human trafficking crime, motor vehicle theft, drug trafficking.
   for (const q of ["violent crime rate in Black Hawk County, Iowa in 2023", "robberies in White Plains, New York in 2023", "murders by race in Memphis in 2023", "murders of female victims in Memphis in 2023",
-    "murders in Memphis in 2023 by sex of victim", "motor vehicle theft in Memphis in 2023", "murder rate in Memphis in 2023", "aggravated assaults with a firearm in Memphis in 2023"]) {
+    "murders in Memphis in 2023 by sex of victim", "sex assualt rate in Memphis in 2023", "How many murders in Memphis in 2023 by race of offender, not rates?", "motor vehicle theft in Memphis in 2023", "murder rate in Memphis in 2023", "aggravated assaults with a firearm in Memphis in 2023"]) {
     const o = shadowAnswer(q, base as never) as { kind: string; explanation?: string };
     assert.ok(!(o.kind === "decline" && (GROUP.test(o.explanation ?? "") || /^NIBRS doesn't include /.test(o.explanation ?? ""))), `${q}: ${JSON.stringify(o).slice(0, 240)}`);
   }
