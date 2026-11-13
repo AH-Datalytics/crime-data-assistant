@@ -502,6 +502,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const key = `(u.data_year, u.ori, u.incident_num, u.sub)`;
   const ikey = `(u.data_year, u.ori, u.incident_num)`;
   const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
+  // Speed (job AR6): every arrest with no condition already counts every arrest, so a month with any arrest is a month
+  // with a count and the any-arrest scan (a second read of every arrest table) adds nothing.
+  const anyArrest = isArrest && !(m.id === "arrests.all_crime" && !plan.filters.length && !m.filters?.length);
   // In grid mode every month and status is per agency (O: the ori column and join key).
   const O = grid ? "ori, " : "";
   const parts = [
@@ -518,17 +521,17 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         // Arrests (Jeff 2026-11-12, "Yes, count them"): a month's status describes its crime reports, not its arrests; an
         // arrest dated in a month reported as zero crimes or not reported (an arrest on an older incident, say) is real
         // and counted, not a conflict. Crimes keep the conflict rule.
-        isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}${isArrest ? `
+        isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}${anyArrest ? `
            WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
-      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${isArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,
+      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${anyArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,
   ];
   // Arrests (job AR3, following Jeff's "Yes, count them"): a month with any arrest (Group A not M, or a standalone Group
   // B arrest) is a reported month for every arrest question, whatever its status, so an agency that sent arrests in a
   // month with no crime report has a known 0 for arrests of another kind, not a blank.
-  if (isArrest) parts.splice(parts.length - 1, 0, `any_arrest AS (SELECT DISTINCT ${O}ym FROM (
+  if (anyArrest) parts.splice(parts.length - 1, 0, `any_arrest AS (SELECT DISTINCT ${O}ym FROM (
       SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("arrestee")} WHERE coalesce(multiple_arrestee_indicator, '') <> 'M'
       UNION ALL SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("group_b_arrest")} WHERE identical_to_line_no IS NULL)
       WHERE ${oriIs("ori")} AND ym BETWEEN ${q(from)} AND ${q(to)})`);
