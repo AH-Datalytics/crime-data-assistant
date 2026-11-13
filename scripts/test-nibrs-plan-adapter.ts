@@ -130,12 +130,11 @@ assert.deepEqual([exc.measures[0].id, exc.groupings[0].dimension, JSON.stringify
 }
 
 // ---- refusals ----
-// Today's typed breakdown drops "rate"; the plan refuses rather than answering counts (the live route declines these
-// earlier, so no wrong answer has been delivered).
-const dropped = problems(adapt("show the shoplifting rate since 2010 by race of offender"));
-assert.ok(dropped.some((p) => p.startsWith("A1") && p.includes("rate")), dropped.join("; "));
-// A mixed-unit composite has no single person to break down.
-assert.equal(adapt("please show the violent crime rate by race").kind, "unmapped");
+// A rate for a group of people (D03, Jeff 2026-11-12) is now declined by the reader before any plan is built, so the adapter's
+// own refusal of a dropped "rate" (A1) is no longer reached by these questions; counts by group still reach it.
+for (const q of ["show the shoplifting rate since 2010 by race of offender", "please show the violent crime rate by race"]) {
+  assert.notEqual(matchNibrsType(accountNibrsRequest(q)).kind, "spec", `${q}: the reader declines a rate by group`);
+}
 // An unresolved place is never guessed.
 assert.equal(adapt("What is the auto theft clearance rate in Omaha by year?").kind, "unmapped");
 

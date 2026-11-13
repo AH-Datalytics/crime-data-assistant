@@ -64,7 +64,7 @@ const DAILY = notRecorded("daily figures in its summary tables; monthly and year
 const SHOOTING = (text: string) =>
   `NIBRS does not track shootings as a category, so I can't apply "${text.trim()}". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a firearm, which also includes brandishing, pistol-whipping and threats, not only people who were shot; ask for "firearm aggravated assault victims" if that is what you want. I haven't answered with a number that leaves it out.`;
 // Option 3 batch 1: the established demographic-rate limitation (P078) and unrecorded statements (P341).
-const DEMOGRAPHIC_RATE = (text: string) =>
+export const DEMOGRAPHIC_RATE = (text: string) =>
   `I can't apply "${text.trim()}": a per-capita rate for a demographic group needs population denominators by race, sex or age that the FBI data does not include. I can show raw counts, or the group's share of reported victims, offenders or arrestees. I haven't answered with a number that leaves it out.`;
 const DRUG_ACTIVITY = notRecorded("drug distribution or sales as its own measure (drug possession and drug offenses are counted)");
 const STATEMENTS = notRecorded("what people said in interviews, or how they got a weapon");
@@ -245,6 +245,22 @@ const RULES: Rule[] = [
   // Option 3 batch 1 (P078): a per-group crime rate needs population denominators the source does not hold (the established
   // demographic-rate limitation, lib/capability-overrides.ts).
   { concept: "demographic-rate", pattern: R(String.raw`\b(?:people\s+)?commit\s+more\s+crimes?\b|\bproportion(?:al(?:ly)?)?[-\s]?wise\b|\bproportionally\b|\bdisproportionate(?:ly)?\b`), state: "not-recorded", explanation: DEMOGRAPHIC_RATE },
+  // Engine 2, rule 3 (Jeff 2026-11-12): what the data doesn't record is declined in plain words, before any place, period
+  // or crime is asked. One sentence each, in the style of the court and sub-city refusals above.
+  { concept: "no-census-data", pattern: R(String.raw`\b(?:poverty(?:\s+(?:line|rates?|levels?))?|census\s+data|household\s+income|median\s+income|unemployment(?:\s+rates?)?)\b`), state: "not-recorded", explanation: notRecorded("poverty, income or other census population characteristics") },
+  { concept: "no-traffic-deaths", pattern: R(String.raw`\b(?:vehicle|traffic|car|auto(?:mobile)?|motor\s+vehicle)\s+(?:deaths?|fatalities|crashes|accidents?|collisions?)\b`), state: "not-recorded", explanation: notRecorded("traffic fatalities or vehicle crashes") },
+  { concept: "no-health-data", pattern: R(String.raw`\b(?:(?:public\s+|mental\s+)?health|medical|hospital)\s+(?:data|records?|statistics)\b`), state: "not-recorded", explanation: notRecorded("health data") },
+  { concept: "no-suicides", pattern: R(String.raw`\bsuicides?\b`), state: "not-recorded", explanation: notRecorded("suicides") },
+  { concept: "no-corrections", pattern: R(String.raw`\b(?:recidivism|recidivists?|re-?offend(?:ing|ers?)|parole|probation|prison\s+(?:population|sentences?|terms?)|jail\s+population)\b`), state: "not-recorded", explanation: notRecorded("corrections or repeat offending (recidivism, prison, probation or parole); it records crimes reported to police, arrests and clearances") },
+  { concept: "no-population-by-race", pattern: R(String.raw`\b(?:african[-\s]american|black|white|hispanic|latino|latina|asian|native\s+american)\s+population\b`), state: "not-recorded", explanation: notRecorded("population by race or ethnicity, so places can't be ranked or grouped by it") },
+  { concept: "no-documents", pattern: R(String.raw`\b(?:flow\s*charts?|strategy\s+diagrams?|road\s*maps?|fact\s*sheets?|vcrr)\b`), state: "not-recorded", explanation: notRecorded("program documents, strategy diagrams or fact sheets") },
+  { concept: "no-evidence-records", pattern: R(String.raw`\b(?:dna|video|surveillance|body[-\s]?cam(?:era)?s?|cctv|fingerprints?|forensic)\s+(?:evid\w+|footage|recordings?)\b`), state: "not-recorded", explanation: notRecorded("investigative evidence such as DNA or video") },
+  { concept: "no-gun-discharge", pattern: R(String.raw`\b(?:the\s+)?discharg(?:e|ed|es|ing)(?:\s+use)?(?:\s+of)?(?:\s+(?:a|the))?\b`), state: "not-recorded", explanation: notRecorded("whether a firearm was fired; it records that a firearm was involved") },
+  { concept: "no-firearms-trafficking", pattern: R(String.raw`(?<!\b(?:human|sex|labor|drug|narcotics?)\s+)\btraffick(?:ing|ers?)\b`), state: "not-recorded", explanation: notRecorded("firearms trafficking as its own measure") },
+  { concept: "no-fines-fees", pattern: R(String.raw`\bfines?\s+(?:or|and)\s+fees\b|\b(?:court|criminal|legal)\s+(?:fines?|fees)\b|\bfines\b`), state: "not-recorded", explanation: notRecorded("court fines or fees; it records crimes reported to police, arrests and clearances") },
+  { concept: "no-housing-type", pattern: R(String.raw`\b(?:multi[-\s]?family|single[-\s]?family)(?:\s+(?:apartment|complexes|buildings?|properties|homes?|houses?|residences?|dwellings?|units?))*\b`), state: "not-recorded", explanation: notRecorded("single-family versus multifamily housing or individual apartment complexes; the data stops at the agency level") },
+  { concept: "no-metro-areas", pattern: R(String.raw`\bmetro(?:politan)?\s+areas?\b|\bmsas?\b|\bcbsas?\b`), state: "not-recorded", explanation: notRecorded("metropolitan areas; places here are agencies, counties, states or the nation") },
+  { concept: "no-police-killings", pattern: R(String.raw`\b(?:killed|deaths?|fatalities)\s+(?:by|from|at\s+the\s+hands\s+of)\s+(?:the\s+)?(?:police|law\s+enforcement(?:\s+officers?)?|cops|officers|sheriffs?|deput(?:y|ies))\b`), state: "not-recorded", explanation: notRecorded("deaths caused by law enforcement; it does not count them comprehensively") },
   // Option 3 batch 1 (P367): "or distribution of", "sales of drugs": not a separate NIBRS measure.
   { concept: "drug-activity", pattern: R(String.raw`\b(?:or|and)\s+(?:distribution|distributing|dealing|sales?|selling|trafficking)(?:\s+of)?\b|\b(?:distribution|dealing|sales?|selling|trafficking)\s+of\s+(?:drugs?|narcotics?)\b`), state: "not-recorded", explanation: DRUG_ACTIVITY },
   // Option 3 batch 1 (P341): what people said, or how they got a weapon, is not recorded.
@@ -498,6 +514,36 @@ function recordNibrsFiller(ledger: RequestLedger): void {
   }
 }
 
+/**
+ * Engine 2, rule 1 (policy D03, Jeff 2026-11-12): a rate for a group of people (a race, a sex, an age range) needs population
+ * figures the FBI data does not hold, so it is declined in plain words before any place, crime or "victim or offender" is
+ * asked; counts and shares by group still answer. A rate word with a group the reader found (a race, sex or age filter or
+ * breakdown) or, failing that, group words it left unread ("year olds", "gender", "race"). Never from a place's own name.
+ */
+const GROUP_WORDS = R(String.raw`\b(?:race|racial|ethnicity|ethnic|gender|year[-\s]?olds?|adults?|youths?|teens?|teenagers?|seniors?|elderly|demographics?)\b|\b(?:by|for|of|and|per|across|among|each)\s+(?:sex|ages?|aged)\b`, "i");
+/** "Not rates", "instead of rates": a rate word the question turns away is not a rate asked for. */
+export const negatedBefore = (q: string, at: number) => /\b(?:not|no|without|instead\s+of|rather\s+than|except)\s+(?:the\s+|any\s+)?$/i.test(q.slice(Math.max(0, at - 20), at));
+function recordDemographicRate(ledger: RequestLedger): void {
+  const rated = ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && p.concept === "statistic" && /^(?:rate|per100k|percapita|scale:)/.test(p.value ?? "") && !negatedBefore(ledger.question, p.span[0]));
+  if (!rated) return;
+  const group = ledger.parts.find((p) => p.clause === 0 && p.state === "recognized"
+    && ((p.concept === "breakdown" && /^(?:race|sex|age|ethnicity|gender)$/.test(p.value ?? "")) || (p.concept === "filter" && /^(?:race|sex|age|ethnicity):/.test(p.value ?? ""))));
+  if (group) {
+    group.concept = "demographic-rate"; group.state = "not-recorded"; group.value = null; group.explanation = DEMOGRAPHIC_RATE(group.text);
+    return;
+  }
+  // Unread words next to each other are one phrase ("year olds"), as the ledger names them at the end.
+  const pieces = ledger.residue().filter((x) => !/^[\p{P}\p{S}]+$/u.test(x.text));
+  for (let i = 0; i < pieces.length;) {
+    let j = i;
+    while (j + 1 < pieces.length && /^\s+$/.test(ledger.question.slice(pieces[j].span[1], pieces[j + 1].span[0]))) j += 1;
+    const span: [number, number] = [pieces[i].span[0], pieces[j].span[1]];
+    const text = ledger.question.slice(span[0], span[1]);
+    if (GROUP_WORDS.test(text)) { ledger.record({ concept: "demographic-rate", span, rule: "demographic-rate-words", state: "not-recorded", explanation: DEMOGRAPHIC_RATE(text) }); return; }
+    i = j + 1;
+  }
+}
+
 /* ------------------------------------------------------------------------------ entry point --------------------- */
 
 /**
@@ -519,6 +565,7 @@ export function accountNibrsRequest(question: string): RequestLedger {
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm) => ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });
   for (const rule of RULES.filter((r) => !early.includes(r))) recordAll(ledger, rule);
+  recordDemographicRate(ledger);
   recordWhich(ledger);
   recordNibrsFiller(ledger);
   recordNibrsFiller(ledger);
@@ -567,7 +614,9 @@ export function hasExplicitNumericAsk(parts: Part[]): boolean {
 
 const NUMERIC_CONCEPTS = new Set(["measure", "statistic", "rank", "threshold", "share", "clearance", "change", "combine", "list", "grain", "period", "versus", "unit", "filter", "breakdown", "rolling"]);
 // Option 3 batch 1: the not-recorded topics added on 10-21 (shooting, overdose deaths, immigration status) make a request numeric, like the others.
-const REFUSED_CONCEPTS = new Set(["ori", "court", "sub-city", "daily", "two-way-rank", "phase-unsupported", "fentanyl", "shooting", "overdose-deaths", "immigration-status", "demographic-rate", "statements", "drug-activity"]);
+const REFUSED_CONCEPTS = new Set(["ori", "court", "sub-city", "daily", "two-way-rank", "phase-unsupported", "fentanyl", "shooting", "overdose-deaths", "immigration-status", "demographic-rate", "statements", "drug-activity",
+  "no-census-data", "no-traffic-deaths", "no-health-data", "no-suicides", "no-corrections", "no-population-by-race", "no-documents", "no-evidence-records",
+  "no-gun-discharge", "no-firearms-trafficking", "no-fines-fees", "no-housing-type", "no-metro-areas", "no-police-killings"]);
 const OPERATIONS = ["peer", "coverage-lookup", "completeness", "cohort", "meta-codes"];
 
 /**
