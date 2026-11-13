@@ -1773,8 +1773,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         if (unit !== "victim") return decline("unsupported_capability", "This isn't available yet: a victim's age for crimes counted by offense.");
         plan.filters.push(between("victim.age", w.range));
       } else if (w.who === "arrestee") {
-        if (unit !== "arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's age for anything but arrests.");
-        plan.filters.push(between("arrestee.age", w.range));
+        if (unit !== "arrest" && unit !== "group_b_arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's age for anything but arrests.");
+        plan.filters.push(between(unit === "group_b_arrest" ? "group_b_arrest.age" : "arrestee.age", w.range));
       } else if (w.paired) {
         if (unit !== "victim") return decline("unsupported_capability", "This isn't available yet: a linked offender's age for anything but victims.");
         plan.filters.push({ kind: "exists", scope: "victim", entity: "victim_offender", where: [between("victim_offender.offender_age", w.range)] });
@@ -1784,11 +1784,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     if (ppl.by) {
       const b = ppl.by;
-      if (b.who === "arrestee" && unit !== "arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's attributes for anything but arrests.");
+      if (b.who === "arrestee" && unit !== "arrest" && unit !== "group_b_arrest") return decline("unsupported_capability", "This isn't available yet: an arrestee's attributes for anything but arrests.");
       if (b.paired && unit !== "victim") return decline("unsupported_capability", "This isn't available yet: the linked offenders' attributes for anything but victims.");
-      if (b.who === "offender" && unit === "arrest") return decline("unsupported_capability", "This isn't available yet: offenders' attributes for arrests.");
+      if (b.who === "offender" && (unit === "arrest" || unit === "group_b_arrest")) return decline("unsupported_capability", "This isn't available yet: offenders' attributes for arrests.");
       if (plan.groupings.some((g) => !g.dimension.startsWith("time."))) return decline("unsupported_capability", "This isn't available yet: a person's attribute beside another breakdown.");
-      const dimension = b.paired ? `victim_offender.offender_${b.attr}` : `${b.who}.${b.attr}`;
+      const dimension = b.paired ? `victim_offender.offender_${b.attr}` : b.who === "arrestee" && unit === "group_b_arrest" ? `group_b_arrest.${b.attr}` : `${b.who}.${b.attr}`;
       const multi = b.paired || (b.who === "offender" && unit !== "offender");
       plan.groupings.push({ dimension, unknown: "visible", absent: "show", ...(multi ? { multiValue: "each_value" as const } : {}), ...(b.attr === "age" ? { bins: AGE_BINS } : {}) });
       const m0 = plan.measures[0];
@@ -1912,7 +1912,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.statistics = [{ kind: "count", as: plan.statistics[0].as, measure: m0.as }, { kind: "share", as: "share_of_period", measure: m0.as, within: plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension) }];
   }
   // P50: arrests are placed by arrest date; arrests beside other measures would mix time bases (refused).
-  const arrests = plan.measures.filter((m) => m.id.startsWith("arrests."));
+  const arrests = plan.measures.filter((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
+  if (arrests.some((m) => m.id.startsWith("group_b_arrests.")) && plan.measures.length > 1)
+    return decline("unsupported_capability", "This isn't available yet: arrests for DUI, disorderly conduct or another minor offense beside another crime or condition.");
   if (arrests.length && arrests.length !== plan.measures.length) return decline("unsupported_capability", "This isn't available yet: arrests beside other crimes (arrests are dated by the arrest, crimes by the incident).");
   if (arrests.length) {
     plan.timeBasis = "arrest_date";
@@ -2082,6 +2084,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return shrOutcome(plan, deps, ledger0) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
     // Never "the data" for NIBRS's years alone: Crime Index has yearly figures for cities and counties back to its first
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").
+    // Arrests (Jeff 2026-11-11): answered from NIBRS's first year, saying the earlier years aren't in this data, until a
+    // summary-arrest source exists. Crime Index has no arrests, so there is no other answer to offer.
+    if (covered?.kind === "answer" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) {
+      const lastBefore = String(Number(firstY) - 1);
+      const note = `Arrests here come from NIBRS, which starts in ${firstY}, so ${periodWords(period.from, `${lastBefore}-12`)} aren't included.`;
+      return { ...covered, delivered: { ...covered.delivered, text: [covered.delivered.text[0], note, ...covered.delivered.text.slice(1)] } };
+    }
+    // The covered years themselves can't be answered (every national arrest by age over several years: job AR6): that
+    // reason is the true one, not the years outside the data.
+    if (covered?.kind === "decline" && covered.reason === "unsupported_capability" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) return covered;
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);
     return decline("outside_release_coverage", `NIBRS figures here cover ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so they don't include ${periodWords(period.from, period.to)}.${byYear ? ` Crime Index has yearly figures: cities and counties from ${deps.historical?.firstYear ?? 1930}, states and the nation from 1960.` : ""}`,
       { notBuilt: true, alternative: covered && runsNow(covered) ? { label: `From ${firstY}, the first year in the data`, continuation: covered, role: "nearest_question" } : byYear });
@@ -2145,6 +2157,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
     // P84 (Jeff 2026-11-01): how the phrase was read.
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
+  // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here
+  // in time (job AR6: 2021-2025 by age took 8 minutes, 2017-2025 more than 15). Declined, with one year offered in
+  // words (never run in advance, which would cost as much) until the national arrest query is made faster (Jeff
+  // 2026-11-12, "Yes, B then A"). One year, a state, a crime, or no breakdown still answer.
+  const nationalEveryArrestBreakdown = stateMode && checked.geography.places.some((p) => p.kind === "national")
+    && checked.measures.some((m) => m.id === "arrests.all_crime") && checked.groupings.some((g) => !g.dimension.startsWith("time."));
+  if (nationalEveryArrestBreakdown && period.from.slice(0, 4) !== period.to.slice(0, 4))
+    return decline("unsupported_capability", `This isn't available yet: every arrest in the United States broken down by ${checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension.split(".")[1]).join(" and ")} over several years takes too long to count here. Ask for one year, for example "nationwide arrests by age in ${release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1}", or for one crime or one state.`);
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
   const placesNote = sheriffNote(deps, checked.geography.places.flatMap((p) => (p.kind === "agency" ? [p.ori] : [])), ledger0.question);

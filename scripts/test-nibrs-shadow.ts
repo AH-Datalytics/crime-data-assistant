@@ -645,6 +645,34 @@ assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "declin
 const arr = as(ask("How many people were arrested for burglary in Detroit in 2023?"), "answer");
 assert.deepEqual([arr.plan.measures[0].id, arr.plan.timeBasis, arr.delivered.answerStatements], ["arrests.burglary", "arrest_date", ["arrests_counted_once"]]);
 assert.ok(sqls.at(-1)!.includes("substr(a.arrest_date, 1, 6) AS ym"));
+// Job AR6: arrests for a Group B offense with a period answer from the standalone Group B arrests, by arrest date.
+const dui = as(ask("DUI arrests in Detroit in 2023"), "answer");
+assert.deepEqual([dui.plan.measures[0].id, dui.plan.timeBasis], ["group_b_arrests.dui", "arrest_date"]);
+assert.ok(sqls.some((x) => x.includes("group_b_arrest") && x.includes("a.arrest_offense IN ('90D')")), "read from Group B arrests");
+// Job AR6: gun possession is a weapon law violation (520), never drug possession; a gun as a weapon stays a condition;
+// a leading "Please" keeps the every-arrest reading.
+for (const q of ["gun possession arrests in Detroit in 2023", "possession of a firearm arrests in Detroit in 2023"])
+  assert.equal(as(ask(q), "answer").plan.measures[0].id, "arrests.weapon_law", q);
+assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_possession");
+assert.equal(as(ask("robberies with a gun in Detroit in 2023"), "answer").plan.filters[0].kind, "exists");
+assert.equal(as(ask("Please show me the number of arrests of people under age 18 by year in Detroit from 2020 through 2023."), "answer").plan.measures[0].id, "arrests.all_crime");
+// Codex arrests review 06: a charge is never an offense count; Group B arrests are counted alone; handgun possession is
+// a weapon law violation; a person's condition or breakdown on Group B arrests uses their own columns.
+assert.notEqual(ask("How many gun charges in Detroit in 2023?").kind, "answer");
+assert.notEqual(ask("DUI arrests involving robbery in Detroit in 2023").kind, "answer");
+assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.weapon_law");
+const juvDui = as(ask("juvenile DUI arrests in Detroit in 2023"), "answer");
+assert.deepEqual([juvDui.plan.measures[0].id, juvDui.plan.filters[0]], ["group_b_arrests.dui", { kind: "attribute", dimension: "group_b_arrest.age", op: "between", values: [1, 17] }]);
+assert.equal(as(ask("DUI arrests by age in Detroit in 2023"), "answer").plan.groupings.at(-1)!.dimension, "group_b_arrest.age");
+// Jeff 2026-11-12 ("Yes, B then A"): every national arrest by a person's attribute over several years is declined as too
+// large for now, one year offered in words (never run); one year, a crime, a state, or no breakdown still answer.
+for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for consistent reporters", "show me nationwide arrests by age by year for 2015 to 2025 for consistent reporters"]) {
+  const d = as(ask(q), "decline");
+  assert.match(d.explanation, /takes too long to count here\. Ask for one year/, q);
+  assert.ok(!d.alternative, q);
+}
+for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrests for violent crimes by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025", "arrests by sex by year in Texas from 2021 to 2025"])
+  as(ask(q), "answer");
 const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
 // Several measures by month: a column each, and the months a crime is blank named.

@@ -76,7 +76,7 @@ const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const list = (xs: string[]) => xs.map(q).join(", ");
 const ident = (s: string) => `"${s.replace(/"/g, '""')}"`;
 
-type Entity = "victim" | "offense" | "incident" | "offender" | "arrestee";
+type Entity = "victim" | "offense" | "incident" | "offender" | "arrestee" | "group_b_arrest";
 type Read = (table: string) => string;
 /**
  * Joins. A segment reaches its incident's other segments by the incident's keys alone. `key_occurrence` is NOT an
@@ -165,6 +165,8 @@ const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
     return [`offender.${x}`, x === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(unknownAs(`f.${x}`)))];
   })),
   arrestee: { "arrestee.race": own(unknownAs("a.race")), "arrestee.sex": own(unknownAs("a.sex")), "arrestee.ethnicity": own(unknownAs("a.ethnicity")), "arrestee.age": age("a") },
+  // Arrests for one Group B offense (DUI, disorderly conduct ...): the standalone arrest's own columns (job AR6).
+  group_b_arrest: { "group_b_arrest.race": own(unknownAs("a.race")), "group_b_arrest.sex": own(unknownAs("a.sex")), "group_b_arrest.ethnicity": own(unknownAs("a.ethnicity")), "group_b_arrest.age": age("a") },
 };
 
 /**
@@ -236,6 +238,18 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
       FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${parts.own("a")}` };
   }
+  // Job AR6: arrests for a Group B offense (DUI, disorderly conduct, trespass ...) are standalone Group B arrest reports,
+  // one per arrestee line, the FBI's identical repeats left out (as in every arrest, increment 7). They have no incident:
+  // a condition on an incident, or a grouping beyond the arrestee's own columns, has nothing to apply to.
+  const gb = measureId.match(/^group_b_arrests\.([a-z_]+)$/);
+  if (gb) {
+    const gbCodes = MEASURE_CODES[gb[1]] ?? [];
+    if (!gbCodes.length || !gbCodes.every((c) => GROUP_B.has(c))) return { error: `"${measureId}" has no Group B offense codes` };
+    if (unit !== "group_b_arrest" && unit !== "arrest") return { error: `"${measureId}" counts arrests` };
+    if (joins.trim() || parts.rest("a").trim()) return { error: "Group B arrests have no incident report: only the arrestee's own sex, race, ethnicity and age apply" };
+    return { entity: "group_b_arrest", sql: `SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("group_b_arrest")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND a.identical_to_line_no IS NULL${parts.own("a")}` };
+  }
   // Exactly <kind>.<measure>, with a measure whose codes are known.
   const m = measureId.match(/^(offenses|incidents|victims|offenders|arrests)\.([a-z_]+)$/);
   const codes = m ? MEASURE_CODES[m[2]] ?? EXTRA_CODES[m[2]] : undefined;
@@ -274,9 +288,9 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   return { error: `measure "${measureId}" counted by ${unit} has no executable definition in v0` };
 }
 
-const ENTITY_OF: Record<string, Entity> = { offenses: "offense", incidents: "incident", victims: "victim", offenders: "offender", arrests: "arrestee" };
+const ENTITY_OF: Record<string, Entity> = { offenses: "offense", incidents: "incident", victims: "victim", offenders: "offender", arrests: "arrestee", group_b_arrests: "group_b_arrest" };
 /** The alias of the counted unit's row in unitsSql. */
-const UNIT_ALIAS: Record<Entity, string> = { offense: "o", incident: "o", victim: "v", offender: "f", arrestee: "a" };
+const UNIT_ALIAS: Record<Entity, string> = { offense: "o", incident: "o", victim: "v", offender: "f", arrestee: "a", group_b_arrest: "a" };
 /**
  * Increment 7: a condition on a person's own attribute, on alias `x`: `in` a set of sex, race or ethnicity codes, or an
  * age `between` two years (P30: NN, NB and BB are under one year, in a range starting at 1 or below; "00" Unknown and a
@@ -318,7 +332,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const yearSet = period.kind === "years" ? [...period.years].sort((a, b) => a - b) : null;
   if (yearSet && !plan.groupings.some((g) => g.dimension === "time.year")) return no("v0 compiles a set of years grouped by year");
   if (plan.measures.length !== 1) return no("v0 compiles one measure");
-  const isArrest = plan.measures[0].id.startsWith("arrests.");
+  const isArrest = /^(?:arrests|group_b_arrests)\./.test(plan.measures[0].id);
   if (plan.timeBasis !== (isArrest ? "arrest_date" : "incident_date"))
     return no(isArrest ? "v0 places arrests by arrest date (P50)" : `v0 places units by incident date, not ${plan.timeBasis}`);
   if (plan.measures[0].filters?.length) return no("v0 compiles plan-level filters only");
@@ -468,7 +482,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
-  if (units.entity === "arrestee") statements.push("arrests_counted_once");
+  if (units.entity === "arrestee" || units.entity === "group_b_arrest") statements.push("arrests_counted_once");
+  // Jeff 2026-11-12: a national arrest count is the arrests reported, not the FBI's national estimate.
+  if (isArrest && plan.geography.places.some((p) => p.kind === "national")) statements.push("arrests_not_estimated");
   const people = peopleFacts(plan);
   if (people.throughIncident) statements.push("arrests_through_incident");
   if (people.allArrests) statements.push("arrests_include_group_b");
@@ -486,6 +502,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const key = `(u.data_year, u.ori, u.incident_num, u.sub)`;
   const ikey = `(u.data_year, u.ori, u.incident_num)`;
   const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
+  // Speed (job AR6): every arrest with no condition already counts every arrest, so a month with any arrest is a month
+  // with a count and the any-arrest scan (a second read of every arrest table) adds nothing.
+  const anyArrest = isArrest && !(m.id === "arrests.all_crime" && !plan.filters.length && !m.filters?.length);
   // In grid mode every month and status is per agency (O: the ori column and join key).
   const O = grid ? "ori, " : "";
   const parts = [
@@ -498,12 +517,24 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // The month's own total of the measure: the evidence for the month and every share's denominator.
     `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
     `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den, coalesce(t.ni, 0) AS deni,
-      CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN 'EVIDENCE_CONFLICT'
+      CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN ${
+        // Arrests (Jeff 2026-11-12, "Yes, count them"): a month's status describes its crime reports, not its arrests; an
+        // arrest dated in a month reported as zero crimes or not reported (an arrest on an older incident, say) is real
+        // and counted, not a conflict. Crimes keep the conflict rule.
+        isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}${anyArrest ? `
+           WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
-      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym))`,
+      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${anyArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,
   ];
+  // Arrests (job AR3, following Jeff's "Yes, count them"): a month with any arrest (Group A not M, or a standalone Group
+  // B arrest) is a reported month for every arrest question, whatever its status, so an agency that sent arrests in a
+  // month with no crime report has a known 0 for arrests of another kind, not a blank.
+  if (anyArrest) parts.splice(parts.length - 1, 0, `any_arrest AS (SELECT DISTINCT ${O}ym FROM (
+      SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("arrestee")} WHERE coalesce(multiple_arrestee_indicator, '') <> 'M'
+      UNION ALL SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("group_b_arrest")} WHERE identical_to_line_no IS NULL)
+      WHERE ${oriIs("ori")} AND ym BETWEEN ${q(from)} AND ${q(to)})`);
   if (g.length) {
     // Every category that occurs in the place and period, in every month.
     // In grid mode, a placeholder category when none occurs (Codex state-categories review 01.1): the cross join below

@@ -163,4 +163,26 @@ assert.match(readQuestion("fatal shootings in Houston since 2015", 2026).text, /
 // Jeff's example: only the pure filler "me the" is left, so the rest is answered as asked.
 assert.deepEqual(unreadOf("plot me the number of assaults in Glassboro NJ from 2010 to 2024"), ["me the"]);
 
+// Arrests (2026-11-11): every arrest with no crime named, an age range on the counted person, "cases", Group B names.
+const rq = (q: string) => readQuestion(q, 2026, "2026-09");
+assert.equal(rq("How many arrests were made in 2024 in the United States?").text, "All crime arrests in 2024 in the United States?");
+assert.equal(rq("arrests for robbery in Texas in 2024").text, "arrests for robbery in Texas in 2024", "a crime named is never every arrest");
+assert.equal(rq("how many arrests in 2024 for robbery in Texas").text.startsWith("All crime"), false);
+assert.equal(rq("How many arrests for peeping tom in Ohio in 2024").text.startsWith("All crime"), false, "a Group B crime named (Codex arrests 01.1)");
+for (const q of ["arrests in Ohio in 2024 for robbery", "arrests for Robbery in Ohio in 2024"]) assert.equal(rq(q).text.startsWith("All crime"), false, q);
+for (const q of ["arrests of people under age 18 by year in Minneapolis, MN, from 2020 through 2025", "nationwide arrests by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025"])
+  assert.equal(rq(q).text.includes("All crime arrests"), true, q);
+for (const q of ["how many arrests nationally in 2024 by sex", "how many arrests in Guntersville, Alabama in 2024"])
+  assert.equal(rq(q).text.startsWith("All crime arrests"), true, q);
+const ages = rq("show me all arrestees ages 18 to 21 in vermont by year");
+assert.equal(ages.text, "All crime arrests in vermont by year");
+assert.deepEqual(ages.people?.where, [{ who: "arrestee", attr: "age", range: [18, 21], paired: false }]);
+assert.deepEqual(rq("murder victims aged 18 to 24 in Memphis in 2024").people?.where, [{ who: "victim", attr: "age", range: [18, 24], paired: false }]);
+assert.equal(rq("arrests of people under 18 in Minneapolis in 2024").text, "All crime arrests under 18 in Minneapolis in 2024");
+assert.equal(rq("nationwide arrests by age by year for 2017 to 2025").text, "All crime arrests nationally by age by year for 2017 to 2025", "the place word kept (AR1)");
+assert.deepEqual(rq("juvenile arrests nationally in 2024").people?.where, [{ who: "arrestee", attr: "age", range: [1, 17], paired: false }]);
+assert.equal(rq("What's the trend in negligent manslaughter cases over the past decade?").text.includes("cases"), false, "Jeff 2026-11-11: 'cases' is the normal count");
+for (const q of ["disorderly conduct arrests in Ohio in 2024", "liquor law violation arrests in Ohio in 2024", "curfew arrests in Ohio in 2024", "trespassing arrests in Ohio in 2024"])
+  assert.deepEqual(rq(q).ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], q);
+
 console.log("nibrs shadow reading: general wording forms read; boundaries keep their meaning");

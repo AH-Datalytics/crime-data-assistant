@@ -212,6 +212,11 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "arrestee.race": { header: "Arrestee race", plural: "arrestee race", names: RACE_CODES },
   "arrestee.ethnicity": { header: "Arrestee ethnicity", plural: "arrestee ethnicity", names: ETHNICITY_CODES },
   "arrestee.age": { header: "Arrestee age", plural: "arrestee age group", names: null },
+  // Arrests (2026-11-11): Group B arrests (DUI, disorderly conduct ...) by the arrestee's own attributes too.
+  "group_b_arrest.sex": { header: "Arrestee sex", plural: "arrestee sex", names: SEX },
+  "group_b_arrest.race": { header: "Arrestee race", plural: "arrestee race", names: RACE_CODES },
+  "group_b_arrest.ethnicity": { header: "Arrestee ethnicity", plural: "arrestee ethnicity", names: ETHNICITY_CODES },
+  "group_b_arrest.age": { header: "Arrestee age", plural: "arrestee age group", names: null },
   // P65: a victim by the offenders its relationship segments link to it.
   "victim_offender.offender_sex": { header: "Linked offender sex", plural: "the sex of the linked offenders", names: { ...SEX, no_relationship: "No relationship reported" } },
   "victim_offender.offender_race": { header: "Linked offender race", plural: "the race of the linked offenders", names: { ...RACE_CODES, no_relationship: "No relationship reported" } },

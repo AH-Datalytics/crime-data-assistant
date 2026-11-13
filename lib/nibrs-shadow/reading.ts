@@ -112,6 +112,11 @@ const PHRASES: [RegExp, string][] = [
   // Never a time ("year to date", "to the most recent data", "to present": job CW2).
   [/^\s*compare\s+((?:(?!\b(?:from|between|through)\b).)+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!\d|(?:the\s+)?(?:date|most|present|today|now|current|latest|recent|end|last|this|next|previous|early|mid|late|spring|summer|fall|autumn|winter|first|second|third|fourth|beginning|start|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b)/gi, "$1 and "],
   [/\bin\s+the\s+state\s+of\s+/gi, "in "],
+  // Jeff 2026-11-11: "cases" is the source's normal count for the crime (victims for crimes against people, offenses
+  // otherwise), so the word itself adds nothing.
+  [/\b(?:number\s+of\s+)?cases\s+of\s+/gi, ""],
+  [/\s+cases\b/gi, ""],
+  [/\barrests\s+(?:were\s+|have\s+been\s+)?made\b/gi, "arrests"],
   [/\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)(?:\s+state)?\s+(?:statewide|state\s+average|as\s+a\s+whole)\b/gi, "$1"],
   // Time words read, never dropped: "by months", "year-to-date", "over 5 years", "going back to 1980".
   [/\b(by|per)\s+months\b/gi, "$1 month"],
@@ -586,8 +591,27 @@ function readPeople(text0: string): { text: string; people: People | null } {
     const noun = /^\s*\S+\s+(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b/i.exec(text.slice(m.index))?.[1].toLowerCase();
     p.where.push({ who: noun === "arrests" ? "arrestee" : noun === "offenders" ? "offender" : "victim", attr: "age", range: UNDER18, paired: false });
   });
+  // Arrests (2026-11-11): "arrests of people ..." are arrests; an age range ("aged 18 to 21", "ages 18-24", "between the
+  // ages of 18 and 24") is the counted person's own, the arrestee's for arrests, the victim's or offender's otherwise.
+  text = text.replace(/\b(arrests?|arrestees|victims|offenders)\s+of\s+(?:people|persons|individuals)\b/gi, "$1");
+  const counted = /\b(arrest(?:s|ees?)?)\b/i.test(text) ? "arrestee" : /\boffenders?\b/i.test(text) ? "offender" : /\bvictims?\b/i.test(text) ? "victim" : null;
+  if (counted) cut(/,?\s*\b(?:who\s+(?:were|are)\s+)?(?:aged?|ages|between\s+(?:the\s+)?ages?\s+(?:of\s+)?)\s*(\d{1,2})\s*(?:to|-|–|through|and)\s*(\d{1,2})\b(?:\s+years?\s+old)?/i, (m) => {
+    const lo = Number(m[1]), hi = Number(m[2]);
+    if (lo <= hi) p.where.push({ who: counted, attr: "age", range: [lo, hi], paired: false });
+  });
   // Every arrest, with no crime named.
-  if (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text)) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
+  // A crime the reader finds anywhere is never every arrest ("arrests in Ohio in 2024 for robbery": Codex arrests review).
+  const crimeNamed = accountNibrsRequest(text).parts.some((x) => x.concept === "measure" && x.state === "recognized");
+  if (!crimeNamed && (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text))) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
+  // Arrests (2026-11-11): "how many arrests ...", "show me all arrestees ...", "the total number of arrests ..." with no
+  // crime named are every arrest too.
+  else {
+    const all = /^\s*(?:please\s+)?(?:how\s+many\s+|(?:can\s+you\s+)?show\s+(?:me\s+)?|give\s+me\s+|what\s+(?:is|was|were)\s+)?(?:the\s+)?(?:total\s+)?(?:number\s+of\s+)?(?:all\s+)?(?:(?:total|overall)\s+)?(?:(nationwide|national|statewide)\s+)?(?:arrests|arrestees)\s+(?=(?:in|for|by|nationally|nationwide|statewide|across|under|over|aged?|ages|from|since|between|per|each)\b|(?:19|20)\d{2}\b)/i.exec(text);
+    // Never when the reader finds a crime named anywhere ("how many arrests in 2024 for robbery", "peeping tom"): the
+    // reader's own measures decide, never a word list (Codex arrests review 01: "Guntersville", "by sex").
+    // A place word before "arrests" ("nationwide arrests") is kept (job AR1).
+    if (all && !crimeNamed) text = `All crime arrests ${all[1] ? (/^state/i.test(all[1]) ? "statewide " : "nationally ") : ""}${text.slice(all[0].length)}`;
+  }
   const any = p.by || p.where.length || p.ask || p.unsupported;
   return { text, people: any ? p : null };
 }

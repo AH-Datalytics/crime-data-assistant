@@ -68,6 +68,9 @@ assert.ok(onRobbery.sql.includes("o2.offense_code IN ('120')"));
 const every = ok(compilePlan({ ...allArrests, filters: [] }, year(2024), t));
 for (const s of ["group_b_arrest", "UNION ALL", "identical_to_line_no IS NULL", "<> 'M'"]) assert.ok(every.sql.includes(s), s);
 assert.deepEqual(every.statements, ["arrests_counted_once", "arrests_include_group_b"]);
+// Jeff 2026-11-12: a national arrest count says it is the arrests reported, not the FBI's estimate; an agency's does not.
+const nat = ok(compilePlan({ ...allArrests, filters: [], geography: { places: [{ kind: "national" }], combine: "separate" } }, year(2024), { ...t, agencies: ["TNMPD0000"] }));
+assert.ok(nat.statements.includes("arrests_not_estimated") && !every.statements.includes("arrests_not_estimated"), JSON.stringify(nat.statements));
 const byArrestee = ok(compilePlan({ ...allArrests, filters: [], groupings: [{ dimension: "arrestee.race", unknown: "visible", absent: "show" }] }, year(2024), t));
 assert.ok(byArrestee.sql.includes("ELSE a.race END AS g0"));
 // Codex increment-7 review 04.1: a condition only on the arrestee ("juvenile arrests") still counts every arrest, with

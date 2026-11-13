@@ -3666,12 +3666,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-cee738e4e7": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines reports.",
+"status": "reviewed",
+"by": "coordinator-2026-11-11",
+"why": "NIBRS records hotels and motels as a location, so larceny at hotels can be counted (coordinator correction 2026-11-11, not an owner verdict)",
 "expected": {
-"outcome": "decline",
-"reason": "Reports are not a supported counting unit."
+"outcome": "answer",
+"source": "nibrs"
 }
 },
 "QL-ct-cf73c94c19": {
@@ -8536,12 +8536,16 @@
 "by": "codex-second-1"
 },
 "QL-hist-ed6716c675": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines cases.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-cases",
+"why": "Jeff 2026-11-11: 'cases' is the source's normal count for the crime; female homicide victims in Homicide Reports",
 "expected": {
-"outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-hist-ed68b532cf": {
@@ -9160,12 +9164,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-0d8d1b2bb0": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines cases.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-cases",
+"why": "Jeff 2026-11-11: 'cases' is the source's normal count; offenses cleared and reported by state",
 "expected": {
-"outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"outcome": "answer",
+"source": "nibrs"
 }
 },
 "QL-nibrs-0da45d83fb": {
@@ -9431,12 +9435,16 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-19e59a7de1": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines cases.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-cases",
+"why": "Jeff 2026-11-11: 'cases' is the source's normal count; negligent manslaughter",
 "expected": {
-"outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs",
+"shr"
+]
 }
 },
 "QL-nibrs-19ed4b3622": {
@@ -10123,12 +10131,13 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-3a9ac4d930": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines cases.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-cases",
+"why": "Jeff 2026-11-11: 'cases' is the source's normal count; motor vehicle theft offenses cleared by arrest",
 "expected": {
-"outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"outcome": "answer",
+"source": "nibrs",
+"answer": "the earlier question, changed as asked"
 }
 },
 "QL-nibrs-3abf54e9a1": {
@@ -10865,12 +10874,16 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-57b2a81ee6": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines cases.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-cases",
+"why": "Jeff 2026-11-11: 'cases' is the source's normal count; rape counted by victim (crimes against people)",
 "expected": {
-"outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs",
+"historical"
+]
 }
 },
 "QL-nibrs-5807bef26e": {
@@ -14232,12 +14245,12 @@
 }
 },
 "QL-nibrs-f537a53f41": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 explicitly declines cases.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-cases",
+"why": "Jeff 2026-11-11: 'cases' is the source's normal count; intimate partner violence counted by victim",
 "expected": {
-"outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"outcome": "answer",
+"source": "nibrs"
 }
 },
 "QL-nibrs-f5e5798781": {
@@ -20173,15 +20186,11 @@
 },
 "QL-nibrs-4460b1fddb": {
 "status": "reviewed",
-"by": "jeff-2026-11-11-S1",
-"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"by": "coordinator-2026-11-11",
+"why": "Offender age for robbery, murder and aggravated assault together is NIBRS's; the Homicide Reports relabel didn't fit several crimes (coordinator correction 2026-11-11, not an owner verdict)",
 "expected": {
 "outcome": "answer",
-"source": "shr",
-"source_any": [
-"shr",
-"nibrs"
-]
+"source": "nibrs"
 }
 },
 "QL-nibrs-44aa895016": {
@@ -21229,7 +21238,12 @@
 },
 "QL-shr-27c5ddb400": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-11",
+"why": "Murders by month before 2017 come from Homicide Reports, by month; Current Trends starts in 2017 (coordinator correction 2026-11-11, not an owner verdict)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-27dfbeb67c": {
 "status": "reviewed",
@@ -21497,7 +21511,12 @@
 },
 "QL-shr-7884bfbb73": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-11",
+"why": "Murders by month before 2017 come from Homicide Reports, by month; Current Trends starts in 2017 (coordinator correction 2026-11-11, not an owner verdict)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-790734af5a": {
 "status": "reviewed",
@@ -21773,7 +21792,13 @@
 },
 "QL-shr-db4007884b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-11",
+"why": "Murders by month before 2017 come from Homicide Reports, by month; Current Trends starts in 2017 (coordinator correction 2026-11-11, not an owner verdict)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"answer": "the earlier question, changed as asked"
+}
 },
 "QL-shr-dbbf8f8032": {
 "status": "draft",

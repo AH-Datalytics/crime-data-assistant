@@ -86,6 +86,7 @@ export type CellEvidence = {
  *   04.3: a condition excludes victims with no relationship, where a grouping shows them);
  * - offender_records: a plan that counts offenders (P44: offender records, the segment convention);
  * - unknown_not_counted: a plan with a condition on a person's sex, race, ethnicity or age (increment 7);
+ * - arrests_not_estimated: a national arrest count (Jeff 2026-11-12): the arrests reported, not the FBI's national estimate;
  * - circumstance_unknown: a plan filtered by a victim's circumstance (element 31, coordinator 2026-11-04): agencies often
  *   record it as unknown (Chicago: every 2024 murder), which a filtered count can't show and a breakdown does.
  */
@@ -104,6 +105,7 @@ export const ANSWER_STATEMENTS = {
   offender_records: "Offenders are counted as listed in each incident report, not as distinct people; an incident with no information about its offender counts one unknown offender.",
   unknown_not_counted: "A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted.",
   circumstance_unknown: "Many agencies record a victim's circumstance as unknown, so a count for one circumstance can be lower than the number of such crimes.",
+  arrests_not_estimated: "These are arrests reported to the FBI, not the FBI's estimate of all arrests nationwide.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 /**
@@ -112,12 +114,12 @@ export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
  * the plan calls for is still carried in the answer's `answerStatements` (the contract and the scorer check them there,
  * and the page can show them on request); only these are written into the text.
  */
-export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "circumstance_unknown"]);
+export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "circumstance_unknown", "arrests_not_estimated"]);
 /** The text lines of the statements shown (SHOWN), in order. */
 export const shownStatements = (statements: readonly AnswerStatement[]) => statements.filter((s) => SHOWN.has(s)).map((s) => ANSWER_STATEMENTS[s]);
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
 export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs", categories_overlap: "nibrs", arrests_counted_once: "nibrs", clearance_as_of_file: "nibrs", clearance_arrest_first: "nibrs", arrests_through_incident: "nibrs",
-  arrests_include_group_b: "nibrs", pair_linked: "nibrs", pair_condition: "nibrs", offender_records: "nibrs", unknown_not_counted: "nibrs", circumstance_unknown: "nibrs" };
+  arrests_include_group_b: "nibrs", pair_linked: "nibrs", pair_condition: "nibrs", offender_records: "nibrs", unknown_not_counted: "nibrs", circumstance_unknown: "nibrs", arrests_not_estimated: "nibrs" };
 const PERSON = /^(?:victim|offender|arrestee)\.(?:sex|race|ethnicity|age)$|^victim_offender\.offender_(?:sex|race|ethnicity|age)$/;
 /** Increment 7: the plan's people conditions, groupings and units, for the statements above. */
 export function peopleFacts(plan: NibrsPlan): { pair: boolean; pairCondition: boolean; personFilter: boolean; allArrests: boolean; throughIncident: boolean; offenders: boolean } {
@@ -259,7 +261,8 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
   if (plan.source === "nibrs" && !national && env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts belongs to a national plan only");
   const multi = plan.groupings.some((g) => g.multiValue);
   if (plan.source === "nibrs" && multi !== env.answerStatements.includes("categories_overlap")) out.push("categories_overlap is required exactly when a grouping is multi-valued");
-  const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee");
+  const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee" || m.unit === "group_b_arrest");
+  if (plan.source === "nibrs" && (national && arrests) !== env.answerStatements.includes("arrests_not_estimated")) out.push("arrests_not_estimated is required exactly for a national arrest count");
   if (plan.source === "nibrs" && arrests !== env.answerStatements.includes("arrests_counted_once")) out.push("arrests_counted_once is required exactly when the plan counts arrests");
   const people = peopleFacts(plan);
   if (plan.source === "nibrs" && people.throughIncident !== env.answerStatements.includes("arrests_through_incident")) out.push("arrests_through_incident is required exactly when the plan counts every arrest on an incident");

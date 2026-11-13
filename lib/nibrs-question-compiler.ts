@@ -27,6 +27,8 @@ import {
   type NibrsSpec, type NPlace, type NPeriod, type Unit, type Statistic, type SeriesSpec, type BreakdownSpec, type ShareSpec, type RankSpec, type ChangeSpec,
 } from "./nibrs-question-types";
 import { placeIs, type PlaceSet, type NibrsApplied } from "./nibrs-legacy-binding";
+/** A Group B offense (DUI, disorderly conduct ...) exists only as arrests (2026-11-11: every Group B measure, not only DUI). */
+const isGroupBMeasure = (m: string) => (MEASURE_CODES[m] ?? []).length > 0 && MEASURE_CODES[m].every((c) => GROUP_B.has(c));
 import { recordWhyFacts } from "./why-scope";
 
 export type Row = Record<string, string | number | null>;
@@ -294,7 +296,7 @@ const TABLES: Table[] = [
 function defaultUnit(measure: string): Unit {
   if (measure === "domestic_violence" || measure === "drug_possession") return "incidents";
   if (measure === "hate_crime" || measure === "carjacking") return "offenses";
-  if (measure === "dui") return "arrests";
+  if (isGroupBMeasure(measure)) return "arrests";
   if (measure === "motor_vehicle_property" || measure === "property_value") return "dollars";
   const codes = MEASURE_CODES[measure] ?? [];
   return codes.length && codes.every((c) => PERSON_CODES.has(c)) ? "victims" : "offenses";
@@ -321,7 +323,7 @@ function selectTable(n: Need): Table | null {
     const unitOk = t.unit === n.unit || (n.unit === "arrests" && t.unit === "arrests");
     if (!unitOk) continue;
     if (!n.dims.every((d) => t.dims[d])) continue;
-    if (n.measure === "dui" && t.key !== "arrestee_demo") continue;
+    if (isGroupBMeasure(n.measure) && t.key !== "arrestee_demo") continue;
     return t;
   }
   return null;
@@ -698,7 +700,7 @@ async function compileNibrsSpecTypes(spec: NibrsSpec, ctx: CompileContext): Prom
 
 type RunFn = (sql: string) => Promise<Record<string, unknown>[]>;
 const grainOfPlace = (p: NPlace): "agency" | "state" | "national" => (p.kind === "agency" ? "agency" : p.kind);
-const unitLabelOf = (t: Table, codes: string[], measure: string): string => (measure === "dui" ? "arrests" : t.unitLabel ? t.unitLabel(codes) : t.unit);
+const unitLabelOf = (t: Table, codes: string[], measure: string): string => (isGroupBMeasure(measure) ? "arrests" : t.unitLabel ? t.unitLabel(codes) : t.unit);
 const declineNoTable = (measure: string, unit: Unit, dims: string[], place: NPlace): string => {
   const parts = [`${MEASURE_LABEL[measure] ?? measure} ${unit}`, ...dims.map((d) => (d.includes(":") ? filterLabel(d) : `by ${d}`))];
   const where = place.kind === "agency" ? "for an agency" : place.kind === "state" ? "for a state" : "nationally";
@@ -744,7 +746,7 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
         const person = allCodes.filter((c) => PERSON_CODES.has(c));
         const other = allCodes.filter((c) => !PERSON_CODES.has(c));
         if (person.length) groups.push({ codes: person, unit: "victims" });
-        if (other.length) groups.push({ codes: other, unit: measure === "drug_possession" ? "incidents" : measure === "dui" ? "arrests" : "offenses" });
+        if (other.length) groups.push({ codes: other, unit: measure === "drug_possession" ? "incidents" : isGroupBMeasure(measure) ? "arrests" : "offenses" });
       }
       const monthly = spec.grain === "month" || spec.grain === "rolling";
       const picked = groups.map((g) => ({ g, t: selectTable({ measure, codes: g.codes, unit: g.unit === "incidents" && !family && measure === "drug_possession" && !filterDims.length ? "offenses" : g.unit, dims: filterDims, grain: grainOfPlace(place), monthly, filters: spec.filters }) }));

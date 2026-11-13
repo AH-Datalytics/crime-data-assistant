@@ -997,7 +997,8 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (/\bvictims?\b/i.test(question) && plan.measures.every((m) => m.unit === "offense")) want.push("property_counted_by_offense");
   if ([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property")) want.push("property_not_attributed");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
-  if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
+  if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee" || m.unit === "group_b_arrest")) want.push("arrests_counted_once");
+  if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee" || m.unit === "group_b_arrest") && plan.geography.places.some((p) => p.kind === "national")) want.push("arrests_not_estimated");
   // Increment 7: every arrest (Group B included) or arrests through an incident; the linked offenders; offender records;
   // a condition on a person.
   const people = peopleFacts(plan);
