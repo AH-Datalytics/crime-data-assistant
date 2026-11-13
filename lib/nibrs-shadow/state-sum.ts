@@ -252,8 +252,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
     const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT unnest([${list(everySet.length ? everySet : [""])}]))), 0) AS n_every
-      FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)` : ""}
-      WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
+      FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
+     ` : ""} WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
     const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2]]);
     const deliverView = (every: boolean, p: NibrsPlan) => {
       const sums = sumsFor(every).filter((r) => keptYears.includes(Number(r[0])));
