@@ -221,6 +221,19 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.match(early.delivered!.text[1], /^No monthly figures for Memphis, Tennessee go back to 1999; yearly figures go back to 1999 in Crime Index\. Showing yearly figures from 1999\.$/);
     // A span inside the monthly sources is answered as before.
     assert.equal(withBuild("Memphis robberies per month since 2019").kind, "answer");
+    // Codex span review 06: an explicit month range reaching only yearly years gets the yearly figures (the asked end year kept);
+    // a span ending inside NIBRS labels each choice with the years it really covers; a rate and a crime Crime Index lacks
+    // get no yearly choice or note.
+    const rangeEarly = withBuild("Memphis robberies per month from January 1960 to March 2010") as ShadowOutcome & { period?: unknown; delivered?: { text: string[] } };
+    assert.equal(rangeEarly.kind, "historical", JSON.stringify(rangeEarly).slice(0, 200));
+    assert.match(rangeEarly.delivered!.text[1], /^No monthly figures for Memphis, Tennessee go back to 1960; yearly figures go back to 1960 in Crime Index\. Showing yearly figures from 1960\.$/);
+    const mid = withBuild("Memphis robberies per month from 1960 to 2020") as ShadowOutcome & { options?: { label: string }[] };
+    assert.equal(mid.kind, "clarify", JSON.stringify(mid).slice(0, 200));
+    assert.deepEqual(mid.options!.map((o) => o.label), ["Yearly, 1960 to 2020 (Crime Index)", "Monthly, January 2017 to December 2020 (NIBRS)"]);
+    assert.notEqual((withBuild("Memphis robbery rate per month since 1960") as { options?: unknown }).options && withBuild("Memphis robbery rate per month since 1960").kind, "clarify", "a rate gets no choices");
+    const cj = withBuild("Memphis carjackings per month since 1960") as ShadowOutcome & { delivered?: { text: string[] } };
+    assert.equal(cj.kind, "answer", JSON.stringify(cj).slice(0, 200));
+    assert.doesNotMatch(cj.delivered!.text[1], /Crime Index/, "no Crime Index series for carjackings: not named");
   }
   // Item 3: an agency beside its state or the nation answers; combined, a count beside a rate, a clearance rate and
   // a month keep their declines; no period asks which.

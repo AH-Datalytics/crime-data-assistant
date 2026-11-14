@@ -364,10 +364,12 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
     const hb = deps.historical, rel = deps.release;
     type Choice = { label: string; kind: "yearly" | "current" | "nibrs"; from: string; out: ShadowOutcome };
     const choices: Choice[] = [];
-    if (hb) {
-      const out = fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins);
+    // The yearly choice: the same question over the whole years it covers, the asked end year kept (Codex span review 06.2-3).
+    const yFrom = Math.max(startYear, hb?.firstYear ?? startYear), yTo = Math.min(Number(a.endMonth.slice(0, 4)), hb?.lastYear ?? Number(a.endMonth.slice(0, 4)));
+    if (hb && yTo >= yFrom) {
+      const out = fromLedger(filled(filled(ledger, "grain", "year", "by year"), "period", yFrom === yTo ? `year:${yFrom}` : `range:${yFrom}:${yTo}`, yFrom === yTo ? `in ${yFrom}` : `from ${yFrom} to ${yTo}`), deps, pins);
       if (out.kind !== "decline" && out.kind !== "route" && out.kind !== "clarify")
-        choices.push({ label: `Yearly, ${Math.max(startYear, hb.firstYear)} to ${hb.lastYear} (Crime Index)`, kind: "yearly", from: String(Math.max(startYear, hb.firstYear)), out });
+        choices.push({ label: `Yearly, ${yFrom} to ${yTo} (Crime Index)`, kind: "yearly", from: String(yFrom), out });
     }
     // A monthly source is offered only when the asked period reaches into its months ("in 1999" has none).
     // The asked end is kept, never widened to the source's latest month.
@@ -377,25 +379,28 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
       if (out.kind === "current") choices.push({ label: `Monthly, ${monthName(a.ct.first)} to ${monthName(ctEnd)} (Current Trends)`, kind: "current", from: a.ct.first, out });
     }
     // The agency's first reported NIBRS month, never before the release's first.
-    let nFirst = rel.firstMonth;
+    let nFirst: string | null = rel.firstMonth;
     try {
       const r = deps.execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND status IN ('REPORTED_CRIMES', 'REPORTED_ZERO')`)[0]?.[0];
       const n = Number(r);
-      if (Number.isFinite(n) && n > 190000) { const m = `${Math.floor(n / 100)}-${String(n % 100).padStart(2, "0")}`; if (m > nFirst) nFirst = m; }
-    } catch { /* the release's first month stands */ }
+      // No reported month at all: the agency has no monthly NIBRS figures to offer (Codex span review 06.4).
+      if (r === null || r === undefined) nFirst = null;
+      else if (Number.isFinite(n) && n > 190000) { const m = `${Math.floor(n / 100)}-${String(n % 100).padStart(2, "0")}`; if (m > nFirst) nFirst = m; }
+    } catch { /* the query could not say: the release's first month stands */ }
     const nEnd = a.endMonth < rel.lastMonth ? a.endMonth : rel.lastMonth;
-    if (a.endMonth >= nFirst) {
+    if (nFirst && a.endMonth >= nFirst) {
       const l = Object.assign(filled(ledger, "period", `monthrange:${nFirst}:${nEnd}`, `from ${monthName(nFirst)}`), { nibrsAsked: true });
       const out = fromLedger(l, deps, pins);
       if (out.kind === "answer") choices.push({ label: `Monthly, ${monthName(nFirst)} to ${monthName(nEnd)} (NIBRS)`, kind: "nibrs", from: nFirst, out });
     }
     if (!choices.length) return null;
-    const yearlyFrom = String(hb ? Math.max(startYear, hb.firstYear) : startYear);
+    const yearlyChoice = choices.find((c) => c.kind === "yearly");
+    const yearlyFrom = yearlyChoice ? yearlyChoice.from : String(startYear);
     if (choices.length === 1) {
       const only = choices[0];
       const said = only.kind === "yearly"
         ? `No monthly figures for ${agency} go back to ${startYear}; yearly figures go back to ${yearlyFrom} in Crime Index. Showing yearly figures from ${yearlyFrom}.`
-        : `Monthly figures for ${agency} start in ${monthName(only.from)} (${only.kind === "current" ? "Current Trends" : "NIBRS"})${hb ? `; yearly figures go back to ${yearlyFrom} in Crime Index` : ""}. Showing ${only.kind === "current" ? "Current Trends" : "NIBRS"} monthly figures from ${monthName(only.from)}.`;
+        : `Monthly figures for ${agency} start in ${monthName(only.from)} (${only.kind === "current" ? "Current Trends" : "NIBRS"})${yearlyChoice ? `; yearly figures go back to ${yearlyFrom} in Crime Index` : ""}. Showing ${only.kind === "current" ? "Current Trends" : "NIBRS"} monthly figures from ${monthName(only.from)}.`;
       const d = (only.out as unknown as { delivered?: { text: string[] } }).delivered;
       if (d) d.text.splice(1, 0, said);
       // Said on purpose: the yearly figures stand in for the months asked (not a breakdown dropped by mistake).
@@ -1472,16 +1477,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // A supporting column (P72) isn't built for Current Trends: said, never dropped (Codex monthly-rates review 02).
     if (span && form && place && flags(ledger0).column)
       return decline("unsupported_capability", `This isn't available yet: a ${flags(ledger0).column === "population" ? "population" : "supporting"} column beside Current Trends figures. Ask without the column.`);
+    // Monthly for one agency that reaches back before Current Trends' first month: the choices first, not the clipped
+    // months (Jeff 2026-11-14; Codex span review 06.1). Counts only.
+    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count") {
+      const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
+      if (ch) return ch;
+    }
     if (span && form && place) {
       const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form, statistic: sp.statistic === "rate" ? "rate" : "count",
         ...(form === "rolling" && sp.window?.months ? { window: { months: sp.window.months, average: sp.window.average } } : {}),
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
-      // Monthly for one agency back before Current Trends starts: the choices that exist (Jeff 2026-11-14).
-      if (/outside them/.test(r.explanation) && form === "months" && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked) {
-        const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
-        if (ch) return ch;
-      }
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
   }
@@ -2226,7 +2232,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (covered?.kind === "decline" && covered.reason === "unsupported_capability" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) return covered;
     // Monthly for one agency back before NIBRS starts: the choices that exist for it (Jeff 2026-11-14).
     const onePlace = plan.geography.places.length === 1 ? plan.geography.places[0] : null;
-    if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month")) {
+    if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month") && plan.statistics.every((st) => st.kind === "count")) {
       const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), endMonth: period.to });
       if (ch) return ch;
     }

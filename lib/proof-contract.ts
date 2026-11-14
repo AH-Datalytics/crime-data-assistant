@@ -173,7 +173,7 @@ export const OUTCOME_CATALOG = [
   // ── decline_data (7) ──────────────────────────────────────────────────────────────────────
   { action: "decline_data", reason: "no_rows_in_source", stores: ["query_log", "shared_charts"] },
   { action: "decline_data", reason: "all_values_null", stores: ["query_log"] },
-  { action: "decline_data", reason: "outside_source_years", stores: ["query_log"] },       // ∗
+  { action: "decline_data", reason: "outside_the_source_years", stores: ["query_log"] },   // ∗
   { action: "decline_data", reason: "not_in_source", stores: ["query_log"] },              // ∗
   { action: "decline_data", reason: "agency_identity_unavailable", stores: ["query_log"] },
   // Integration (Codex Gate A vocabulary ruling): `reporting_coverage_insufficient` is the NIBRS
