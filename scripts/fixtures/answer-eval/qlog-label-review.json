@@ -3675,11 +3675,13 @@
 },
 "QL-ct-cee738e4e7": {
 "status": "reviewed",
-"by": "coordinator-2026-11-11",
-"why": "NIBRS records hotels and motels as a location, so larceny at hotels can be counted (coordinator correction 2026-11-11, not an owner verdict)",
+"by": "jeff-2026-11-13-rule2",
+"why": "Jeff: larceny reports at hotels asks which place (hotels are recorded; 'reports' is wording)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"about_any": [
+"which place"
+]
 }
 },
 "QL-ct-cf73c94c19": {
@@ -8545,14 +8547,12 @@
 },
 "QL-hist-ed6716c675": {
 "status": "reviewed",
-"by": "jeff-2026-11-11-cases",
-"why": "Jeff 2026-11-11: 'cases' is the source's normal count for the crime; female homicide victims in Homicide Reports",
+"by": "jeff-2026-11-13-rule2",
+"why": "Jeff: a garbled crime word asks which kind of crime; never read as homicide",
 "expected": {
-"outcome": "answer",
-"source": "shr",
-"source_any": [
-"shr",
-"nibrs"
+"outcome": "clarify",
+"about_any": [
+"which kind of crime"
 ]
 }
 },
@@ -21419,12 +21419,14 @@
 "by": "codex-second-1"
 },
 "QL-shr-53b3a9db91": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P31 explicitly declines gun violence.",
+"status": "reviewed",
+"by": "jeff-2026-11-13-rule2",
+"why": "Jeff D14: gun violence asks fatal or non-fatal shootings",
 "expected": {
-"outcome": "decline",
-"reason": "Gun violence is not a supported measure."
+"outcome": "clarify",
+"about_any": [
+"fatal or non-fatal shootings"
+]
 }
 },
 "QL-shr-57f28e29f7": {
@@ -21576,12 +21578,14 @@
 "by": "codex-second-1"
 },
 "QL-shr-9a8fa53b3a": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P31 explicitly declines gun violence.",
+"status": "reviewed",
+"by": "jeff-2026-11-13-rule2",
+"why": "Jeff D14: gun violence asks fatal or non-fatal shootings",
 "expected": {
-"outcome": "decline",
-"reason": "Gun violence is not a supported measure."
+"outcome": "clarify",
+"about_any": [
+"fatal or non-fatal shootings"
+]
 }
 },
 "QL-shr-9a8fa879dc": {
