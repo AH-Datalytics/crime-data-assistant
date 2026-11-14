@@ -356,7 +356,7 @@ function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number
  * One choice left answers with it and says why. Null when none runs (the plain decline stands).
  */
 let inSpanChoices = false;
-function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; startMonth: string; endMonth: string; murder?: boolean; ct?: { first: string; last: string } }): ShadowOutcome | null {
+function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; startMonth: string; endMonth: string; ct?: { first: string; last: string } }): ShadowOutcome | null {
   if (inSpanChoices) return null;
   inSpanChoices = true;
   try {
@@ -371,19 +371,6 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
       const out = fromLedger(filled(filled(ledger, "grain", "year", "by year"), "period", yFrom === yTo ? `year:${yFrom}` : `range:${yFrom}:${yTo}`, yFrom === yTo ? `in ${yFrom}` : `from ${yFrom} to ${yTo}`), deps, pins);
       if (out.kind !== "decline" && out.kind !== "route" && out.kind !== "clarify")
         choices.push({ label: `Yearly, ${yFrom} to ${yTo} (Crime Index)`, kind: "yearly", from: String(yFrom), out });
-    }
-    // Murder and homicide: Homicide Reports' months from 1985 (Jeff 2026-11-14, D37: it is their monthly source), from the
-    // asked start when later, to the asked end or its latest month. Run past Current Trends (skipCurrent) so it is
-    // Homicide Reports that answers.
-    if (a.murder && deps.shr) {
-      const hrFirst = a.startMonth > `${SHR_FIRST_YEAR}-01` ? a.startMonth : `${SHR_FIRST_YEAR}-01`;
-      // An ask with no end of its own ("since 1990") reaches the other source's latest month: Homicide Reports then run to theirs.
-      const openEnd = a.endMonth >= (a.ct ? a.ct.last : rel.lastMonth);
-      const hrEnd = !openEnd && a.endMonth < deps.shr.latestMonth ? a.endMonth : deps.shr.latestMonth;
-      if (hrEnd >= hrFirst) {
-        const out = fromLedger(Object.assign(filled(ledger, "period", `monthrange:${hrFirst}:${hrEnd}`, `from ${monthName(hrFirst)}`), { skipCurrent: true }), deps, pins);
-        if (out.kind === "shr") choices.push({ label: `Monthly, ${monthName(hrFirst)} to ${monthName(hrEnd)} (Homicide Reports)`, kind: "hr", from: hrFirst, out });
-      }
     }
     // A monthly source is offered only when the asked period reaches into its months ("in 1999" has none).
     // The asked end is kept, never widened to the source's latest month.
@@ -408,10 +395,6 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
       if (out.kind === "answer") choices.push({ label: `Monthly, ${monthName(nFirst)} to ${monthName(nEnd)} (NIBRS)`, kind: "nibrs", from: nFirst, out });
     }
     if (!choices.length) return null;
-    // Murder by month entirely before every other monthly source and inside Homicide Reports' years: answered from
-    // Homicide Reports, no ask (Jeff 2026-11-14).
-    const hrChoice = choices.find((c) => c.kind === "hr");
-    if (hrChoice && a.startMonth >= `${SHR_FIRST_YEAR}-01` && deps.shr && a.endMonth <= deps.shr.latestMonth && a.endMonth < (a.ct?.first ?? "9999-99") && a.endMonth < (nFirst ?? "9999-99")) return hrChoice.out;
     const yearlyChoice = choices.find((c) => c.kind === "yearly");
     const yearlyFrom = yearlyChoice ? yearlyChoice.from : String(startYear);
     if (choices.length === 1) {
@@ -424,7 +407,7 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
       // Said on purpose: the yearly figures stand in for the months asked (not a breakdown dropped by mistake).
       return Object.assign(only.out, { spanChoice: true });
     }
-    return { kind: "clarify", about: "which would you like", question: ledger.question, ...(hrChoice && hrChoice.from === a.startMonth ? {} : { note: `No single source has monthly figures for ${agency} back to ${startYear}.` }),
+    return { kind: "clarify", about: "which would you like", question: ledger.question, note: `No single source has monthly figures for ${agency} back to ${startYear}.`,
       options: choices.map((c) => ({ label: c.label, continuation: c.out, ...(c.kind === "yearly" ? { role: "by_year" as const } : {}) })) };
   } finally { inSpanChoices = false; }
 }
@@ -1499,12 +1482,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // A supporting column (P72) isn't built for Current Trends: said, never dropped (Codex monthly-rates review 02).
     if (span && form && place && flags(ledger0).column)
       return decline("unsupported_capability", `This isn't available yet: a ${flags(ledger0).column === "population" ? "population" : "supporting"} column beside Current Trends figures. Ask without the column.`);
+    // Murder and homicide by month for one agency, the span starting before Current Trends' first month: Homicide Reports'
+    // answer, no ask (Jeff 2026-11-14: "just give the SHR data since that's the only source that covers that"; only when
+    // the monthly span reaches outside Current Trends). It shows its own span; nothing is joined to Current Trends' months.
+    const murderish = ["murder", "homicide"].includes(sp.measures[0]);
+    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && murderish && deps.shr) {
+      const hrFirst = span[0] > `${SHR_FIRST_YEAR}-01` ? span[0] : `${SHR_FIRST_YEAR}-01`;
+      const hrEnd = span[1] >= cur.lastMonth || span[1] > deps.shr.latestMonth ? deps.shr.latestMonth : span[1];
+      if (hrEnd >= hrFirst) {
+        const out = fromLedger(Object.assign(filled(ledger, "period", `monthrange:${hrFirst}:${hrEnd}`, `from ${monthName(hrFirst)}`), { skipCurrent: true }), deps, pins);
+        if (out.kind === "shr") return out;
+      }
+    }
     // Monthly for one agency that reaches back before Current Trends' first month: the choices first, not the clipped
-    // months (Jeff 2026-11-14; Codex span review 06.1). Counts only.
-    // Murder and homicide get Homicide Reports (by month, from 1985) among the choices, or its answer alone when the period is
-    // before every other monthly source (Jeff 2026-11-14, D37).
-    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count") {
-      const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), startMonth: span[0], endMonth: span[1], murder: ["murder", "homicide"].includes(sp.measures[0]), ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
+    // months (Jeff 2026-11-14; Codex span review 06.1). Counts only; murder and homicide are Homicide Reports' above.
+    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && !murderish) {
+      const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), startMonth: span[0], endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
       if (ch) return ch;
     }
     if (span && form && place) {
