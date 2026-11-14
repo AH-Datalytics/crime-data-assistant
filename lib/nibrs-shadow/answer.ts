@@ -356,13 +356,14 @@ function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number
  * One choice left answers with it and says why. Null when none runs (the plain decline stands).
  */
 let inSpanChoices = false;
-function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; endMonth: string; ct?: { first: string; last: string } }): ShadowOutcome | null {
+function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; startMonth: string; endMonth: string; ct?: { first: string; last: string } }): ShadowOutcome | null {
   if (inSpanChoices) return null;
   inSpanChoices = true;
   try {
     const { ledger, deps, pins, agency, ori, startYear } = a;
     const hb = deps.historical, rel = deps.release;
-    type Choice = { label: string; kind: "yearly" | "current" | "nibrs"; from: string; out: ShadowOutcome };
+    type Choice = { label: string; kind: "yearly" | "hr" | "current" | "nibrs"; from: string; out: ShadowOutcome };
+    const sourceName = (k: Choice["kind"]) => (k === "hr" ? "Homicide Reports" : k === "current" ? "Current Trends" : k === "nibrs" ? "NIBRS" : "Crime Index");
     const choices: Choice[] = [];
     // The yearly choice: the same question over the whole years it covers, the asked end year kept (Codex span review 06.2-3).
     const yFrom = Math.max(startYear, hb?.firstYear ?? startYear), yTo = Math.min(Number(a.endMonth.slice(0, 4)), hb?.lastYear ?? Number(a.endMonth.slice(0, 4)));
@@ -400,7 +401,7 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
       const only = choices[0];
       const said = only.kind === "yearly"
         ? `No monthly figures for ${agency} go back to ${startYear}; yearly figures go back to ${yearlyFrom} in Crime Index. Showing yearly figures from ${yearlyFrom}.`
-        : `Monthly figures for ${agency} start in ${monthName(only.from)} (${only.kind === "current" ? "Current Trends" : "NIBRS"})${yearlyChoice ? `; yearly figures go back to ${yearlyFrom} in Crime Index` : ""}. Showing ${only.kind === "current" ? "Current Trends" : "NIBRS"} monthly figures from ${monthName(only.from)}.`;
+        : `Monthly figures for ${agency} start in ${monthName(only.from)} (${sourceName(only.kind)})${yearlyChoice ? `; yearly figures go back to ${yearlyFrom} in Crime Index` : ""}. Showing ${sourceName(only.kind)} monthly figures from ${monthName(only.from)}.`;
       const d = (only.out as unknown as { delivered?: { text: string[] } }).delivered;
       if (d) d.text.splice(1, 0, said);
       // Said on purpose: the yearly figures stand in for the months asked (not a breakdown dropped by mistake).
@@ -1431,7 +1432,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Current Trends (design note 2026-11-03, section 4): a Part I offense by month for a Current Trends agency, a state,
   // a region or the nation, unless another source is named (P01) or a detail is asked (NIBRS's or SHR's). Counts only
   // for now. An agency Current Trends doesn't have goes on to NIBRS (P01's fallback).
-  if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
+  if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !(ledger0 as { skipCurrent?: boolean }).skipCurrent && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
     && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite && (d.spec.statistic === "count" || d.spec.statistic === "rate") && d.spec.measures.length === 1
     && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length === 1
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
@@ -1481,12 +1482,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // A supporting column (P72) isn't built for Current Trends: said, never dropped (Codex monthly-rates review 02).
     if (span && form && place && flags(ledger0).column)
       return decline("unsupported_capability", `This isn't available yet: a ${flags(ledger0).column === "population" ? "population" : "supporting"} column beside Current Trends figures. Ask without the column.`);
+    // Murder and homicide by month for one agency, the span starting before Current Trends' first month: Homicide Reports'
+    // answer, no ask (Jeff 2026-11-14: "just give the SHR data since that's the only source that covers that"; only when
+    // the monthly span reaches outside Current Trends). It shows its own span; nothing is joined to Current Trends' months.
+    const murderish = ["murder", "homicide"].includes(sp.measures[0]);
+    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && murderish && deps.shr) {
+      const hrFirst = span[0] > `${SHR_FIRST_YEAR}-01` ? span[0] : `${SHR_FIRST_YEAR}-01`;
+      const hrEnd = span[1] >= cur.lastMonth || span[1] > deps.shr.latestMonth ? deps.shr.latestMonth : span[1];
+      if (hrEnd >= hrFirst) {
+        const out = fromLedger(Object.assign(filled(ledger, "period", `monthrange:${hrFirst}:${hrEnd}`, `from ${monthName(hrFirst)}`), { skipCurrent: true }), deps, pins);
+        if (out.kind === "shr") return out;
+      }
+    }
     // Monthly for one agency that reaches back before Current Trends' first month: the choices first, not the clipped
-    // months (Jeff 2026-11-14; Codex span review 06.1). Counts only.
-    // Not murder or homicide: Homicide Reports by month is those questions' own source (D37); they keep their paths.
-    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count"
-      && !["murder", "homicide"].includes(sp.measures[0])) {
-      const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
+    // months (Jeff 2026-11-14; Codex span review 06.1). Counts only; murder and homicide are Homicide Reports' above.
+    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && !murderish) {
+      const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), startMonth: span[0], endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
       if (ch) return ch;
     }
     if (span && form && place) {
@@ -2240,7 +2251,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const onePlace = plan.geography.places.length === 1 ? plan.geography.places[0] : null;
     if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month") && plan.statistics.every((st) => st.kind === "count")
       && !plan.measures.some((m) => /^(?:victims|offenses|incidents)\.(?:murder|homicide)(?![a-z_])/.test(m.id))) {
-      const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), endMonth: period.to });
+      const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), startMonth: period.from, endMonth: period.to });
       if (ch) return ch;
     }
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);
