@@ -348,6 +348,64 @@ function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number
   } finally { inByYear = false; }
 }
 
+/**
+ * A monthly question for one agency that reaches back before any monthly source (Jeff 2026-11-14, "Kansas City robberies per
+ * month since 1960"): no single source has monthly figures back that far, so the choices that exist for that agency are
+ * offered, yearly first: yearly from the start year (Crime Index), monthly from Current Trends' first month (when the
+ * agency is in Current Trends), monthly from the agency's first NIBRS month. Each runs the same question on that source.
+ * One choice left answers with it and says why. Null when none runs (the plain decline stands).
+ */
+let inSpanChoices = false;
+function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; endMonth: string; ct?: { first: string; last: string } }): ShadowOutcome | null {
+  if (inSpanChoices) return null;
+  inSpanChoices = true;
+  try {
+    const { ledger, deps, pins, agency, ori, startYear } = a;
+    const hb = deps.historical, rel = deps.release;
+    type Choice = { label: string; kind: "yearly" | "current" | "nibrs"; from: string; out: ShadowOutcome };
+    const choices: Choice[] = [];
+    if (hb) {
+      const out = fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins);
+      if (out.kind !== "decline" && out.kind !== "route" && out.kind !== "clarify")
+        choices.push({ label: `Yearly, ${Math.max(startYear, hb.firstYear)} to ${hb.lastYear} (Crime Index)`, kind: "yearly", from: String(Math.max(startYear, hb.firstYear)), out });
+    }
+    // A monthly source is offered only when the asked period reaches into its months ("in 1999" has none).
+    // The asked end is kept, never widened to the source's latest month.
+    const ctEnd = a.ct && a.endMonth < a.ct.last ? a.endMonth : a.ct?.last ?? a.endMonth;
+    if (a.ct && a.endMonth >= a.ct.first) {
+      const out = fromLedger(filled(ledger, "period", `monthrange:${a.ct.first}:${ctEnd}`, `from ${monthName(a.ct.first)}`), deps, pins);
+      if (out.kind === "current") choices.push({ label: `Monthly, ${monthName(a.ct.first)} to ${monthName(ctEnd)} (Current Trends)`, kind: "current", from: a.ct.first, out });
+    }
+    // The agency's first reported NIBRS month, never before the release's first.
+    let nFirst = rel.firstMonth;
+    try {
+      const r = deps.execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND status IN ('REPORTED_CRIMES', 'REPORTED_ZERO')`)[0]?.[0];
+      const n = Number(r);
+      if (Number.isFinite(n) && n > 190000) { const m = `${Math.floor(n / 100)}-${String(n % 100).padStart(2, "0")}`; if (m > nFirst) nFirst = m; }
+    } catch { /* the release's first month stands */ }
+    const nEnd = a.endMonth < rel.lastMonth ? a.endMonth : rel.lastMonth;
+    if (a.endMonth >= nFirst) {
+      const l = Object.assign(filled(ledger, "period", `monthrange:${nFirst}:${nEnd}`, `from ${monthName(nFirst)}`), { nibrsAsked: true });
+      const out = fromLedger(l, deps, pins);
+      if (out.kind === "answer") choices.push({ label: `Monthly, ${monthName(nFirst)} to ${monthName(nEnd)} (NIBRS)`, kind: "nibrs", from: nFirst, out });
+    }
+    if (!choices.length) return null;
+    const yearlyFrom = String(hb ? Math.max(startYear, hb.firstYear) : startYear);
+    if (choices.length === 1) {
+      const only = choices[0];
+      const said = only.kind === "yearly"
+        ? `No monthly figures for ${agency} go back to ${startYear}; yearly figures go back to ${yearlyFrom} in Crime Index. Showing yearly figures from ${yearlyFrom}.`
+        : `Monthly figures for ${agency} start in ${monthName(only.from)} (${only.kind === "current" ? "Current Trends" : "NIBRS"})${hb ? `; yearly figures go back to ${yearlyFrom} in Crime Index` : ""}. Showing ${only.kind === "current" ? "Current Trends" : "NIBRS"} monthly figures from ${monthName(only.from)}.`;
+      const d = (only.out as unknown as { delivered?: { text: string[] } }).delivered;
+      if (d) d.text.splice(1, 0, said);
+      // Said on purpose: the yearly figures stand in for the months asked (not a breakdown dropped by mistake).
+      return Object.assign(only.out, { spanChoice: true });
+    }
+    return { kind: "clarify", about: "which would you like", question: ledger.question, note: `No single source has monthly figures for ${agency} back to ${startYear}.`,
+      options: choices.map((c) => ({ label: c.label, continuation: c.out, ...(c.kind === "yearly" ? { role: "by_year" as const } : {}) })) };
+  } finally { inSpanChoices = false; }
+}
+
 /** The reason a reader decline gives, as a limitation reason; "reader" when its words name none of them. */
 function readerReason(explanation: string): LimitationReason | "reader" {
   if (/below the level of an agency/.test(explanation)) return "below_agency_level";
@@ -726,7 +784,9 @@ export function answerDimensions(o: ShadowOutcome): string[] | null {
  * same way, since each answers this question.
  */
 function everyBreakdown(question: string, o: ShadowOutcome): ShadowOutcome {
-  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => (x.continuation ? { ...x, continuation: everyBreakdown(question, x.continuation) } : x)) };
+  // A yearly choice offered on purpose beside monthly ones (span choices, Jeff 2026-11-14) is not a dropped breakdown.
+  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => (x.continuation && x.role !== "by_year" ? { ...x, continuation: everyBreakdown(question, x.continuation) } : x)) };
+  if ((o as { spanChoice?: boolean }).spanChoice) return o;
   const dims = answerDimensions(o);
   if (!dims) return o;
   const missing = missingGroupings(question, dims);
@@ -1034,7 +1094,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && !STAFFING.test(ledger0.question) && !OUTSIDE.some(([re]) => re.test(ledger0.question))
     // A state's agencies asked for ("which agencies are in Tennessee in 2023") are listed (item 11b), not a crime asked.
     && !(clause0("entity").some((p) => p.value === "agency") && clause0("place").length === 1 && /^state:/.test(String(clause0("place")[0].value)));
-  if (!named && (clause0("measure").length || noCrime)) {
+  // Jeff 2026-11-14: when both the crime and the place are missing, the place is asked first (the crime ask follows once
+  // a place is chosen): "Crimes Against Property" asks which place, then which crime.
+  const placeFirst = !clause0("place").length;
+  if (!named && !placeFirst && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
     const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
@@ -1150,7 +1213,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // Never a clearance ("the share of murders cleared": Codex review 13.1), which isn't a Homicide Reports detail.
       const cleared = !!flags(ledger0).clearance || ledger0.parts.some((p) => p.clause === 0 && (p.concept === "clearance" || p.concept === "clearance-reason"));
       if (nation.kind === "decline" && murderish && detail && !cleared)
-        return { kind: "route", source: "shr", explanation: "Cities ranked by a homicide detail (a weapon, a share, the victims' age, race or sex) come from Homicide Reports (FBI SHR). Homicide Reports aren't available here yet; the Homicide Reports tab has them." };
+        return { kind: "route", source: "shr", explanation: "Cities ranked by a homicide detail (a weapon, a share, the victims' age, race or sex) come from Homicide Reports. Homicide Reports aren't available here yet; the Homicide Reports tab has them." };
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
@@ -1161,7 +1224,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
   if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked && !deps.shr)
-    return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
+    return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports, which count the homicides agencies reported to the FBI, not a complete national estimate. Homicide Reports aren't available here yet." };
   // Item 11 (bad-decline audit 2026-11-06): population on its own, for agencies, states or the nation.
   const list = agencyListQuestion(ledger, ledger0, deps);
   // A list is for one year: the year is asked with buttons that run (Codex population review 02.3: "Every year
@@ -1414,6 +1477,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         ...(form === "rolling" && sp.window?.months ? { window: { months: sp.window.months, average: sp.window.average } } : {}),
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
+      // Monthly for one agency back before Current Trends starts: the choices that exist (Jeff 2026-11-14).
+      if (/outside them/.test(r.explanation) && form === "months" && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked) {
+        const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
+        if (ch) return ch;
+      }
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
   }
@@ -2034,9 +2102,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // A Homicide Reports question SHR-A can't answer yet (a rolling window, two weapons compared) is routed, as before
     // (job SA1); a NIBRS-only detail beside it (a location), no period named, or NIBRS's own views go on to NIBRS's path.
     if (catG.every((g) => shrDetailDim(g.dimension)) && filterDims.every((ds) => ds.every(shrDetailDim)) && !plan.defaults.some((d) => d.path === "period") && !flags(ledger0).consistent && !flags(ledger0).quarter)
-      return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR); this form of the question isn't available here yet." };
+      return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports; this form of the question isn't available here yet." };
   } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
-    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
+    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports, which count the homicides agencies reported to the FBI. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
   if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
@@ -2143,7 +2211,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
       && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
     if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
-      return shrOutcome(plan, deps, ledger0) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
+      return shrOutcome(plan, deps, ledger0) ?? { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports, which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
     // Never "the data" for NIBRS's years alone: Crime Index has yearly figures for cities and counties back to its first
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").
     // Arrests (Jeff 2026-11-11): answered from NIBRS's first year, saying the earlier years aren't in this data, until a
@@ -2156,6 +2224,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // The covered years themselves can't be answered (every national arrest by age over several years: job AR6): that
     // reason is the true one, not the years outside the data.
     if (covered?.kind === "decline" && covered.reason === "unsupported_capability" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) return covered;
+    // Monthly for one agency back before NIBRS starts: the choices that exist for it (Jeff 2026-11-14).
+    const onePlace = plan.geography.places.length === 1 ? plan.geography.places[0] : null;
+    if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month")) {
+      const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), endMonth: period.to });
+      if (ch) return ch;
+    }
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);
     return decline("outside_release_coverage", `NIBRS figures here cover ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so they don't include ${periodWords(period.from, period.to)}.${byYear ? ` Crime Index has yearly figures: cities and counties from ${deps.historical?.firstYear ?? 1930}, states and the nation from 1960.` : ""}`,
       { notBuilt: true, alternative: covered && runsNow(covered) ? { label: `From ${firstY}, the first year in the data`, continuation: covered, role: "nearest_question" } : byYear });

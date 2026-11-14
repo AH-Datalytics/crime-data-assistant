@@ -171,7 +171,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   let breakdown: ShrQuestion["breakdown"] = null;
   if (cats.length) {
     const dim = NIBRS_DIM[cats[0].dimension];
-    if (!dim) return { why: "a detail SHR doesn't record" };
+    if (!dim) return { why: "a detail Homicide Reports don't record" };
     // A victim has one record; offenders' details count offenders (P29: "by" a group means the offenders).
     if (dim.startsWith("offender.") !== (unit === "offenders") && !RECORD_DIMS.has(dim)) return { why: "a person's detail for the other unit" };
     breakdown = { dim, ...(cats[0].bins ? { bins: cats[0].bins.map((b) => [b.from ?? 0, b.to ?? 120] as [number, number]) } : {}) };
@@ -188,7 +188,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     if (!c) return { why: "a negated condition" };
     const { f, group } = c;
     const dim = NIBRS_DIM[f.dimension];
-    if (!dim) return { why: "a detail SHR doesn't record" };
+    if (!dim) return { why: "a detail Homicide Reports don't record" };
     if (/age$/.test(dim)) {
       if (f.op !== "between" || !f.values || f.values.length !== 2) return { why: "this age condition" };
       filters.push({ dim, ages: [Number(f.values[0]), Number(f.values[1])], ...(group !== undefined ? { group } : {}) });
@@ -196,7 +196,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     }
     if (f.op !== "in" || !f.values?.length) return { why: "this condition" };
     const codes = codesOf(dim, f.values);
-    if (!codes) return { why: "a code SHR records differently" };
+    if (!codes) return { why: "a code Homicide Reports record differently" };
     // A justifiable homicide asked for (a felon killed by police or a citizen) is counted as asked (S4).
     if (dim === "circumstance" && codes.every((c) => c === "80" || c === "81")) measure = "justifiable";
     filters.push({ dim, codes, ...(group !== undefined ? { group } : {}) });
@@ -335,7 +335,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const span = periodWords(sq.from, sq.to);
   const what = shrWhat(sq);
   const text = [`${where}: ${what}${sq.breakdown ? ` by ${DIM_WORDS[sq.breakdown.dim]}` : ""}${sq.grain === "year" ? " by year" : sq.grain === "month" ? " by month" : ""}, ${span}.`,
-    "From the FBI's Supplementary Homicide Reports (SHR): the homicides agencies reported to the FBI, each victim counted."];
+    "From the FBI's Supplementary Homicide Reports: the homicides agencies reported to the FBI, each victim counted."];
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."

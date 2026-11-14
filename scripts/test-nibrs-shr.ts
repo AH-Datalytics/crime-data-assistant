@@ -53,18 +53,18 @@ assert.deepEqual(spouse.filters, [{ dim: "relationship", codes: ["HU", "WI", "XH
 // Codex SHR-A review 01.2: only translations that keep the meaning. A grandparent alone, NIBRS "Other", or a handgun
 // without its automatic code is narrower than SHR's code: NIBRS keeps it.
 const rel = (values: string[]) => shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values }] }), { from: "2024-01", to: "2024-12" }, build);
-assert.deepEqual(rel(["GP"]), { why: "a code SHR records differently" });
+assert.deepEqual(rel(["GP"]), { why: "a code Homicide Reports record differently" });
 assert.deepEqual((rel(["OF", "GP", "GC", "SS"]) as ShrQuestion).filters[0].codes, ["OF"]);
 const weap = (values: string[]) => shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values }] }), { from: "2024-01", to: "2024-12" }, build);
-assert.deepEqual(weap(["12"]), { why: "a code SHR records differently" });
-assert.deepEqual(weap(["90"]), { why: "a code SHR records differently" });
+assert.deepEqual(weap(["12"]), { why: "a code Homicide Reports record differently" });
+assert.deepEqual(weap(["90"]), { why: "a code Homicide Reports record differently" });
 assert.deepEqual((weap(["12", "12A"]) as ShrQuestion).filters[0].codes, ["12"]);
 // S4: a felon killed by police is a justifiable homicide, counted as asked.
 const police = shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "victim_circumstance.circumstance", op: "in", values: ["21"] }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion;
 assert.equal(police.measure, "justifiable");
 // What SHR doesn't record the same way stays on NIBRS's path.
-assert.deepEqual(shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["35"] }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a code SHR records differently" });
-assert.deepEqual(shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "offense.location_type", op: "in", values: ["20"] }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a detail SHR doesn't record" });
+assert.deepEqual(shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["35"] }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a code Homicide Reports record differently" });
+assert.deepEqual(shrQuestionOf(plan({ filters: [{ kind: "attribute", dimension: "offense.location_type", op: "in", values: ["20"] }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a detail Homicide Reports don't record" });
 assert.deepEqual(shrQuestionOf(plan({ statistics: [{ kind: "rate", as: "r", measure: "murder" }] }), { from: "2024-01", to: "2024-12" }, build), { why: "a rate or another statistic" });
 assert.deepEqual(shrQuestionOf(plan({ measures: [{ id: "victims.robbery", as: "robbery" }] }), { from: "2024-01", to: "2024-12" }, build), { why: "not a homicide count" });
 assert.deepEqual(shrQuestionOf(plan({ geography: { places: [{ kind: "national" }, { kind: "state", code: "TX" }], combine: "separate" } }), { from: "2024-01", to: "2024-12" }, build), { why: "several places" });
