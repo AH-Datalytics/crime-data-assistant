@@ -634,6 +634,17 @@ function otherStates(question: string, deps: ShadowDeps): ShadowOutcome | null {
  * elsewhere is held to the same rule.
  */
 export function withoutDeadButtons(o: ShadowOutcome): ShadowOutcome {
+  if (o.kind === "decline") {
+    // The buttons beside a decline, and the choices an answer offers, hold asks of their own (a forecast's "which New
+    // York"): a button whose ask is left with no choice that runs is not shown.
+    const alternative = o.alternative ? pruneAsk(o.alternative) : null, more = o.more?.flatMap((x) => pruneAsk(x) ?? []);
+    return alternative === o.alternative && (!o.more || more!.length === o.more.length && more!.every((x, i) => x === o.more![i]))
+      ? o : { ...o, alternative, ...(o.more ? { more } : {}) };
+  }
+  if (o.kind === "answer" && o.buttons?.length) {
+    const buttons = o.buttons.flatMap((x) => pruneAsk(x) ?? []);
+    return buttons.length === o.buttons.length && buttons.every((x, i) => x === o.buttons![i]) ? o : { ...o, buttons };
+  }
   if (o.kind !== "clarify") return o;
   const options: ShadowOption[] = [], dead: ShadowOutcome[] = [];
   let changed = false;
@@ -646,6 +657,13 @@ export function withoutDeadButtons(o: ShadowOutcome): ShadowOutcome {
   }
   if (!options.length) return dead[0] ?? o;
   return changed ? { ...o, options } : o;
+}
+
+/** A button that holds an ask: the ask pruned, or the button gone when no choice in it runs. Any other button is as it was. */
+function pruneAsk(x: ShadowOption): ShadowOption | null {
+  if (x.continuation?.kind !== "clarify") return x;
+  const c = withoutDeadButtons(x.continuation);
+  return !runsNow(c) ? null : c === x.continuation ? x : { ...x, continuation: c };
 }
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {

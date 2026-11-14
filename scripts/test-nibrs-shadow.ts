@@ -1758,6 +1758,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(deadPaths(o), [], `${q}: a button leads to a decline`);
   }
   assert.ok(asks >= 5, "the questions above are mostly asks");
+  // The ask behind a decline's alternative is held to the same rule (a forecast's "which New York").
+  const fc = ask("Will robberies rise in New York next year?");
+  assert.ok(fc.kind === "decline", fc.kind);
+  if (fc.kind === "decline" && fc.alternative?.continuation) assert.deepEqual(deadPaths(fc.alternative.continuation), [], "the forecast's alternative");
   // An ask whose buttons all decline is the decline they ended in, with its reason; one with a single live button keeps it.
   const none = ask("how bad is crime in LA right now?");
   assert.ok(none.kind === "decline" && /how bad is|right now/.test(none.explanation), JSON.stringify(none).slice(0, 300));
