@@ -2698,6 +2698,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "request accounting stage 3b (why questions): unit checks of spans, topics, templates and the scoped inner run, plus the wiring structure; no database, no route, no network"
+    },
+    {
+      "id": "test-policy-rows",
+      "tier": "F",
+      "script": "scripts/test-policy-rows.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "answer policy rows are never lost in a merge: every row id of docs/policy/nibrsai-answer-policy.csv is listed in scripts/fixtures/policy-row-ids.txt and the check fails on a deleted, unlisted or duplicate row; reads two files, no database, no model, no network"
     }
   ]
 }
