@@ -3663,7 +3663,15 @@
 },
 "QL-ct-ce71b6141f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-14",
+"why": "Jeff 2026-11-14 (policy D37): a plain murder count by month for one agency answers from Homicide Reports, from 1985 (\"SHR by month would be preferred, NIBRS gives far fewer years\")",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr"
+]
+}
 },
 "QL-ct-cee738e4e7": {
 "status": "reviewed",
@@ -17309,7 +17317,15 @@
 },
 "QL-shr-fd1eae2239": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-14",
+"why": "Jeff 2026-11-14 (policy D37): a plain murder count by month for one agency answers from Homicide Reports, from 1985 (\"SHR by month would be preferred, NIBRS gives far fewer years\")",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr"
+]
+}
 },
 "QL-shr-fdc54d4a2d": {
 "status": "reviewed",

@@ -552,10 +552,8 @@ assert.deepEqual(as(noPeriod.options[0].continuation!, "answer").period, { from:
 const ytd = as(noPeriod.options[1].continuation!, "answer");
 assert.deepEqual(ytd.period, { from: "2026-01", to: "2026-09" });
 assert.ok(ytd.delivered.text.includes("The data runs through September 2026: this covers January through September 2026."), "D06: the months covered are named");
-const trend = as(ask("Carjackings in Memphis by month"), "clarify");
-assert.deepEqual(trend.options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
-assert.equal(as(trend.options[0].continuation!, "decline").notBuilt, true, "2016 is before this build");
-assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-09" });
+// All years by default (Jeff 2026-11-11): a trend with no range is answered for every month in the data, not asked.
+assert.deepEqual(as(ask("Carjackings in Memphis by month"), "answer").period, { from: "2017-01", to: "2026-09" });
 // No Historical build here: no crime-kind button could run, so a plain decline, never dead buttons (coordinator 2026-11-02).
 assert.match(as(ask("How many crimes were there in Detroit in 2024?"), "decline").explanation, /^This isn.t available here yet./, "no source that is not loaded is named");
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
@@ -568,9 +566,9 @@ assert.deepEqual(balt.options.map((o) => as(o.continuation!, "answer").plan.geog
   { kind: "agency", ori: "MDBPD0000", label: "Baltimore, Maryland" }, { kind: "agency", ori: "MD0030100", label: "Baltimore County, Maryland" }]);
 const stl = as(ask("St Louis carjackings per month"), "clarify");
 assert.equal(stl.about, "which St. Louis");
-const stlCity = as(stl.options[0].continuation!, "clarify");
-assert.equal(stlCity.about, "which range of years", "the place is chosen; the period is asked next");
-assert.equal(as(stlCity.options[1].continuation!, "answer").plan.geography.places[0].kind === "agency" && (as(stlCity.options[1].continuation!, "answer").plan.geography.places[0] as { ori: string }).ori, "MOSPD0000");
+// The place is chosen, then every month in the data (all years by default, Jeff 2026-11-11).
+const stlCity = as(stl.options[0].continuation!, "answer");
+assert.equal((stlCity.plan.geography.places[0] as { ori: string }).ori, "MOSPD0000");
 const wa = as(ask("Shoplifting in Washington in 2024"), "clarify");
 assert.equal(as(wa.options[1].continuation!, "answer").plan.geography.places[0].kind, "state", "Washington state: a state sum (increment 5)");
 
@@ -674,6 +672,17 @@ for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for
 for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrests for violent crimes by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025", "arrests by sex by year in Texas from 2021 to 2025"])
   as(ask(q), "answer");
 const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
+// Jeff 2026-11-11, all years by default: by year / per month / a trend with no range is every year the source has, said.
+const perYear = as(ask("Carjackings per year in houston"), "answer");
+assert.equal(perYear.delivered.text[1], "No years were given, so every year in the data is shown: 2017 through 2025.");
+const perMonth = as(ask("Houston carjackings per month"), "answer");
+assert.match(perMonth.delivered.text[1], /^No years were given, so every year in the data is shown: January 2017 through September 2026\.$/);
+assert.equal(as(ask("Carjackings in Detroit in 2023"), "answer").delivered.text.some((t) => /No years were given/.test(t)), false, "a period given: no note");
+// Codex all-years review 01: a quarterly default stops at the latest complete year; "all years" never overrides a grain or
+// a range the question names.
+assert.deepEqual(as(ask("Carjackings in Memphis by quarter"), "answer").period, { from: "2017-01", to: "2025-12" });
+assert.deepEqual(as(ask("Carjackings in Memphis by month for all years since 2020"), "answer").period, { from: "2020-01", to: "2026-09" });
+assert.equal(ask("carjackings in Detroit").kind, "clarify", "no grain: the period is still asked");
 assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
 // Several measures by month: a column each, and the months a crime is blank named.
 const two = as(ask("Carjackings and shoplifting in Detroit by month in 2024"), "answer");
@@ -688,7 +697,7 @@ assert.equal(as(ask("Shoplifting in Memphis in November 2026"), "decline").expla
 // P52: the upload month itself is not reported.
 assert.equal(as(ask("Shoplifting in Memphis in October 2026"), "decline").explanation, "October 2026 is not in the data; the latest month available is September 2026.");
 assert.deepEqual(as(ask("Shoplifting in New York in 2024"), "clarify").options.map((o) => o.label), ["New York City", "New York state"]);
-assert.deepEqual(as(ask("Shoplifting in Memphis by month"), "clarify").options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
+assert.deepEqual(as(ask("Shoplifting in Memphis by month"), "answer").period, { from: "2017-01", to: "2026-09" }, "all years by default (Jeff 2026-11-11)");
 
 assert.equal(periodWords("2021-01", "2025-12"), "2021 to 2025");
 assert.equal(periodWords("2021-03", "2025-06"), "March 2021 through June 2025");
@@ -740,13 +749,14 @@ assert.equal(scoreShadow(label(np), mute, r, ctx, both(84)).result!.outcome, "in
 const unv = scoreShadow(label(np), noPeriod, r, ctx).result!;
 assert.equal(gates([unv])[0].categories.find((x) => x.name === "wrong answers")!.status, "not measured");
 // Answers behind a second question are found and checked by their path of buttons.
+// (All years by default: a trend now answers once the place is chosen, so a question with no grain is the path here.)
+const stl0 = as(ask("St Louis carjackings"), "clarify");
 const stlCase = label({ action: "clarify", about: "which St. Louis", options: [
-  { label: "St. Louis city, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" },
-  { label: "St. Louis County, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" }] });
-const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every year available", Array.from({ length: 117 }, (_, i) => {
-  const m = `${2017 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`; return { key: m, value: m === "2024-03" ? null : v, status: m === "2024-03" ? "UNKNOWN" : "VALUE" }; })]]);
-assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(7)).result!.values, "not measured", "the county's answers have no values");
-assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(6)).result!.outcome, "wrong_answer");
+  { label: "St. Louis city, Missouri", leads_to: "clarify", meaning: null, next_about: "which period" },
+  { label: "St. Louis County, Missouri", leads_to: "clarify", meaning: null, next_about: "which period" }] });
+const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|The latest complete year (2025)", [{ key: "", value: v, status: "VALUE" }]]]);
+assert.equal(scoreShadow(stlCase, stl0, r, ctx, deep(84)).result!.values, "not measured", "the county's answers have no values");
+assert.equal(scoreShadow(stlCase, stl0, r, ctx, deep(83)).result!.outcome, "wrong_answer");
 
 // Codex review 3: every delivered answer is checked, expected by the label or not, and fixed sentences are checked on
 // button answers (P11 behind a period button).

@@ -2049,6 +2049,30 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
     const thisYear = Number(release.lastMonth.slice(0, 4));
     const trend = !!spec.grain && spec.grain !== "total";
+    // Jeff 2026-11-11, "All years by default": "by year", "per month", "over time" with no range is every year the source
+    // has, said, never asked. By year (or quarter): NIBRS's first year through the latest complete year; by month or a
+    // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
+    if (trend) {
+      const firstY = release.firstMonth.slice(0, 4);
+      const monthly = (spec.grain === "month" || !!(spec as { window?: unknown }).window) && !flags(ledger0).quarter;
+      // Murder detail is Homicide Reports' from its own first year; everything else NIBRS's.
+      // Homicide Reports' span first (from 1985) for a murder DETAIL (a weapon, a victim's or offender's trait, a relationship:
+      // a filter or a category), and for a plain murder count BY MONTH (Jeff 2026-11-14: "SHR by month would be preferred,
+      // NIBRS gives far fewer years"). A plain yearly count stays with NIBRS and Crime Index (D3, reported counts).
+      const murderMeasure = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id));
+      const murderOnly = murderMeasure && (plan.filters.length > 0 || plan.groupings.some((g) => !g.dimension.startsWith("time.")) || monthly);
+      const starts = murderOnly ? [String(SHR_FIRST_YEAR), firstY] : [firstY];
+      for (const start of starts) {
+        const all = fromLedger(filled(ledger, "period", monthly ? `since:${start}` : `range:${start}:${lcy}`, "every year available"), deps, pins);
+        if (all.kind === "shr") return all;
+        if (all.kind === "answer") {
+          const span = monthly ? `${monthName(`${start}-01`)} through ${monthName(release.lastMonth)}` : `${start} through ${lcy}`;
+          return { ...all, delivered: { ...all.delivered, text: [all.delivered.text[0], `No years were given, so every year in the data is shown: ${span}.`, ...all.delivered.text.slice(1)] } };
+        }
+        // Another question first ("which New York"): asked, its answers already for every year.
+        if (all.kind === "clarify" && all.about !== "which period" && all.about !== "which range of years") return all;
+      }
+    }
     const opts: ShadowOption[] = trend
       ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps, pins) },
          { label: "Every year available", continuation: fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), deps, pins) },

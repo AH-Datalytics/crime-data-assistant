@@ -389,6 +389,16 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     readings.push({ kind: "phrase", from: m, to: t });
     return t;
   });
+  // All years by default (Jeff 2026-11-11): "going back as far as possible", "for every year available", "all years" mean
+  // every year the source has. With no grain and no range named they read as "by year"; with either (by month for all
+  // years since 2020) they are only dropped. Codex all-years review 01.2.
+  text = text.replace(/(?<![A-Za-z])\s*(?:,\s*)?(?:going\s+back\s+as\s+far\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|as\s+far\s+back\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|for\s+every\s+year\s+(?:available|you\s+have)|(?:for\s+)?all\s+(?:available\s+)?years(?:\s+available)?)\b/i, (m, offset: number, whole: string) => {
+    const rest = (whole.slice(0, offset) + whole.slice(offset + m.length));
+    const own = /\b(?:by|per|each|every)\s+(?:year|month|quarter|week|day)s?\b|\b(?:annual(?:ly)?|monthly|quarterly|yearly)\b|\b(?:since|from|between|through|during|over\s+(?:the\s+)?(?:past|last)|(?:past|last)\s+(?:\d+|few|two|three|four|five|ten))\b|\b(?:19|20)\d{2}\b/i.test(rest);
+    const t = own ? "" : `${/\s$|^$/.test(whole.slice(0, offset)) ? "" : " "}by year`;
+    readings.push({ kind: "phrase", from: m.trim(), to: t.trim() });
+    return t;
+  });
   // "How has X changed / trended / fared ..." (Jeff 2026-11-11, "the word 'how'"): X by year over the period named; with
   // no period, X over time, whose period is asked; a change between two years ("changed from 2024 to 2025") is left to
   // the change reading (job CW1). Applied here, not in PHRASES, so the rest of the question is seen.
