@@ -335,7 +335,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const span = periodWords(sq.from, sq.to);
   const what = shrWhat(sq);
   const text = [`${where}: ${what}${sq.breakdown ? ` by ${DIM_WORDS[sq.breakdown.dim]}` : ""}${sq.grain === "year" ? " by year" : sq.grain === "month" ? " by month" : ""}, ${span}.`,
-    "From the FBI's Supplementary Homicide Reports (SHR): the homicides agencies reported to the FBI, each victim counted."];
+    "From the FBI's Supplementary Homicide Reports: the homicides agencies reported to the FBI, each victim counted."];
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
