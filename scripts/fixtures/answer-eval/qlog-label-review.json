@@ -2124,7 +2124,12 @@
 },
 "QL-ct-712995f787": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time",
+"expected": {
+"outcome": "decline",
+"reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
+}
 },
 "QL-ct-7139af215e": {
 "status": "draft",
@@ -3191,15 +3196,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-b441170070": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Staffing does not resolve the generic crime category.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period"
-]
+"outcome": "decline",
+"reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
 }
 },
 "QL-ct-b4745ffc27": {
@@ -3212,7 +3214,12 @@
 },
 "QL-ct-b59cfdca3c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-11: decline national and state staffing",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
+}
 },
 "QL-ct-b609093962": {
 "status": "reviewed",
@@ -5192,7 +5199,12 @@
 },
 "QL-hist-1621806352": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-11: decline national and state staffing",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
+}
 },
 "QL-hist-1630a3afab": {
 "status": "reviewed",
@@ -7676,15 +7688,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-b441170070": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Staffing does not resolve the generic crime measure.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period"
-]
+"outcome": "decline",
+"reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
 }
 },
 "QL-hist-b45ca517a6": {
@@ -7701,7 +7710,12 @@
 },
 "QL-hist-b59cfdca3c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-11: decline national and state staffing",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
+}
 },
 "QL-hist-b683936167": {
 "status": "reviewed",
