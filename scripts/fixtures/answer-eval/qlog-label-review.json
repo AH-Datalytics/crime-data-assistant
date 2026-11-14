@@ -345,7 +345,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "place",
 "period"
 ]
@@ -519,7 +519,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "place"
 ]
 }
@@ -10974,7 +10974,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "which Baltimore"
 ]
 }
@@ -13620,7 +13620,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "place",
 "period"
 ]
@@ -13744,7 +13744,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "place"
 ]
 }
@@ -14919,7 +14919,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "period"
 ]
 }
@@ -16496,7 +16496,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "place",
 "period"
 ]
@@ -18171,7 +18171,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).",
 "which Baltimore"
 ]
 }
@@ -21433,14 +21433,12 @@
 "by": "codex-second-1"
 },
 "QL-shr-53b3a9db91": {
-"status": "reviewed",
-"by": "jeff-2026-11-13-rule2",
-"why": "Jeff D14: gun violence asks fatal or non-fatal shootings",
+"status": "draft",
+"by": "codex-second-1",
+"why": "P31 explicitly declines gun violence.",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"fatal or non-fatal shootings"
-]
+"outcome": "decline",
+"reason": "Gun violence is not a supported measure."
 }
 },
 "QL-shr-57f28e29f7": {
@@ -21592,14 +21590,12 @@
 "by": "codex-second-1"
 },
 "QL-shr-9a8fa53b3a": {
-"status": "reviewed",
-"by": "jeff-2026-11-13-rule2",
-"why": "Jeff D14: gun violence asks fatal or non-fatal shootings",
+"status": "draft",
+"by": "codex-second-1",
+"why": "P31 explicitly declines gun violence.",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"fatal or non-fatal shootings"
-]
+"outcome": "decline",
+"reason": "Gun violence is not a supported measure."
 }
 },
 "QL-shr-9a8fa879dc": {
