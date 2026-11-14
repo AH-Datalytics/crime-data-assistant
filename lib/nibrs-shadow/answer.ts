@@ -320,9 +320,20 @@ function filledAll(ledger: RequestLedger, concept: string, values: string[][]): 
 const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
 const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).";
-/** An answer from Homicide Reports, or a question whose choices lead to one (a period asked first). */
-const fromHomicideReports = (o: ShadowOutcome, depth = 0): boolean =>
-  o.kind === "shr" || (o.kind === "clarify" && depth < 3 && o.options.some((x) => !!x.continuation && fromHomicideReports(x.continuation, depth + 1)));
+/**
+ * The outcome kept to Homicide Reports (Jeff 2026-11-14: a button named SHR never answers from another source): an SHR answer as it
+ * is; a question whose choices lead to one, with the choices that lead elsewhere taken out (a typed entry stays); otherwise none.
+ */
+const onlyHomicideReports = (o: ShadowOutcome, depth = 0): ShadowOutcome | null => {
+  if (o.kind === "shr") return o;
+  if (o.kind !== "clarify" || depth >= 3) return null;
+  const options = o.options.flatMap((x) => {
+    if (!x.continuation) return [x];
+    const kept = onlyHomicideReports(x.continuation, depth + 1);
+    return kept ? [{ ...x, continuation: kept }] : [];
+  });
+  return options.some((x) => x.continuation) ? { ...o, options } : null;
+};
 /**
  * A whole-years version of a question finer than years, run now (its button never dead-ends). Never nested: a
  * question still finer than years once by year (rolling windows) gets no alternative (Codex routing review 01.1).
@@ -614,13 +625,14 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     // their sources. Each choice that runs is offered, the one that can't is left out and said (never a dead button); the
     // SHR choice only when the answer really comes from Homicide Reports; the ask is made when at least one runs.
     const fatal = shadowAnswer(as("murders with a firearm"), { ...deps, rewritten: true });
-    const assaultsRun = runsNow(assaults), fatalRuns = runsNow(fatal) && fromHomicideReports(fatal);
+    const fatalShr = runsNow(fatal) ? onlyHomicideReports(fatal) : null;
+    const assaultsRun = runsNow(assaults), fatalRuns = !!fatalShr;
     if (assaultsRun || fatalRuns) {
       const options: ShadowOption[] = [];
-      if (fatalRuns) options.push({ label: "Firearm murders (SHR)", continuation: fatal });
+      if (fatalShr) options.push({ label: "Firearm murders (SHR)", continuation: fatalShr });
       if (assaultsRun) options.push({ label: "Aggravated assault involving a firearm (NIBRS)", continuation: assaults });
       const gone = !assaultsRun ? { what: "Aggravated assault involving a firearm (NIBRS)", why: (assaults as { explanation?: string }).explanation ?? "" }
-        : !fatalRuns ? { what: "Firearm murders (SHR)", why: (fatal as { explanation?: string }).explanation ?? "Homicide Reports don't answer it for this place and period." } : null;
+        : !fatalRuns ? { what: "Firearm murders (SHR)", why: (fatal as { explanation?: string }).explanation ?? "Homicide Reports don't answer it for the periods offered here." } : null;
       return { kind: "clarify", about: SHOOTING_ASK, question, options, ...(gone ? { note: `${gone.what} isn't available for this question: ${gone.why}`.trim() } : {}) };
     }
   }
