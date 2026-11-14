@@ -345,7 +345,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "place",
 "period"
 ]
@@ -519,7 +519,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "place"
 ]
 }
@@ -2124,7 +2124,12 @@
 },
 "QL-ct-712995f787": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time",
+"expected": {
+"outcome": "decline",
+"reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
+}
 },
 "QL-ct-7139af215e": {
 "status": "draft",
@@ -3191,15 +3196,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-b441170070": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Staffing does not resolve the generic crime category.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period"
-]
+"outcome": "decline",
+"reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
 }
 },
 "QL-ct-b4745ffc27": {
@@ -3212,7 +3214,12 @@
 },
 "QL-ct-b59cfdca3c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-11: decline national and state staffing",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
+}
 },
 "QL-ct-b609093962": {
 "status": "reviewed",
@@ -3675,11 +3682,13 @@
 },
 "QL-ct-cee738e4e7": {
 "status": "reviewed",
-"by": "coordinator-2026-11-11",
-"why": "NIBRS records hotels and motels as a location, so larceny at hotels can be counted (coordinator correction 2026-11-11, not an owner verdict)",
+"by": "jeff-2026-11-13-rule2",
+"why": "Jeff: larceny reports at hotels asks which place (hotels are recorded; 'reports' is wording)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"about_any": [
+"which place"
+]
 }
 },
 "QL-ct-cf73c94c19": {
@@ -5190,7 +5199,12 @@
 },
 "QL-hist-1621806352": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-11: decline national and state staffing",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
+}
 },
 "QL-hist-1630a3afab": {
 "status": "reviewed",
@@ -7674,15 +7688,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-b441170070": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Staffing does not resolve the generic crime measure.",
+"status": "reviewed",
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period"
-]
+"outcome": "decline",
+"reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
 }
 },
 "QL-hist-b45ca517a6": {
@@ -7699,7 +7710,12 @@
 },
 "QL-hist-b59cfdca3c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-11-staffing",
+"why": "Jeff 2026-11-11: decline national and state staffing",
+"expected": {
+"outcome": "decline",
+"reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
+}
 },
 "QL-hist-b683936167": {
 "status": "reviewed",
@@ -8545,14 +8561,12 @@
 },
 "QL-hist-ed6716c675": {
 "status": "reviewed",
-"by": "jeff-2026-11-11-cases",
-"why": "Jeff 2026-11-11: 'cases' is the source's normal count for the crime; female homicide victims in Homicide Reports",
+"by": "jeff-2026-11-13-rule2",
+"why": "Jeff: a garbled crime word asks which kind of crime; never read as homicide",
 "expected": {
-"outcome": "answer",
-"source": "shr",
-"source_any": [
-"shr",
-"nibrs"
+"outcome": "clarify",
+"about_any": [
+"which kind of crime"
 ]
 }
 },
@@ -10960,7 +10974,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "which Baltimore"
 ]
 }
@@ -13606,7 +13620,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "place",
 "period"
 ]
@@ -13730,7 +13744,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "place"
 ]
 }
@@ -14905,7 +14919,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "period"
 ]
 }
@@ -16482,7 +16496,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "place",
 "period"
 ]
@@ -18157,7 +18171,7 @@
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"fatal or non-fatal shootings",
+"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
 "which Baltimore"
 ]
 }

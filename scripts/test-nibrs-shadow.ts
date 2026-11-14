@@ -105,6 +105,7 @@ const deps: ShadowDeps = {
   target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: stub,
 };
 const ask = (q: string) => shadowAnswer(q, deps);
+const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
 
 // Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
@@ -299,13 +300,15 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   // 2. Bare shootings ask fatal or non-fatal (D14) when a choice runs; fatal and mass shootings keep their declines.
   const s = ask("Shootings in Chicago in 2024");
   if (s.kind === "clarify") {
-    assert.equal(s.about, "fatal or non-fatal shootings");
-    // Jeff 2026-11-10: the two named as such; the fatal one points to Homicide Reports until they answer here.
-    assert.deepEqual(s.options.map((o) => o.label), ["Fatal shootings (Homicide Reports)", "Aggravated assaults with a firearm (NIBRS)"]);
-    assert.ok(s.options[0].continuation?.kind === "route" && s.options[0].continuation.source === "shr");
+    assert.equal(s.about, SENT);
+    // Jeff 2026-11-14: the sentence is the ask and the choices are named with their sources. These deps hold no Homicide Reports,
+    // so the firearm murders choice is left out and said, never offered as a button that would answer from NIBRS.
+    assert.deepEqual(s.options.map((o) => o.label), ["Aggravated assault involving a firearm (NIBRS)"]);
+    assert.match(s.note ?? "", /^Firearm murders isn't available for this question: /);
+    assert.ok(s.options[0].continuation && s.options[0].continuation.kind !== "decline");
   } else assert.equal(s.kind, "decline");
-  assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
-  assert.notEqual((ask("mass shootings in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
+  assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, SENT);
+  assert.notEqual((ask("mass shootings in 2024") as { about?: string }).about, SENT);
   // Ask instead of decline (Jeff 2026-11-10, bad-declines plan clusters 1, 11, 12, 16): only a reader's decline whose
   // unread words are all filler is asked instead, and only an ask is given, never an answer.
   {
@@ -346,7 +349,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
     for (const q of ["national crime scorecard", "Crime trends compared to similar cities"]) assert.equal((ask(q) as { about?: string }).about, "which kind of crime", q);
     // The shootings ask never leaves out an average (Codex 01.2).
-    assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, "fatal or non-fatal shootings");
+    assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, SENT);
     // A question about what data there is is never asked about a crime instead (Codex 01.4: "do we have").
     for (const q of ["Do you have any data for NYC?", "does Olathe KS report NIBRS data?", "do you have shootings data", "Do we have data for the United States?"]) assert.notEqual(ask(q).kind, "clarify", q);
     // A year that can't be read: the years are asked.
@@ -388,7 +391,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   // Codex root-causes review 01: combined places and a count beside a rate keep the decline; "police shootings" and
   // "shooting incidents" are never rewritten as firearm murders or assaults.
   for (const q of ["murders in Ohio and Texas combined in 2024", "Ohio murder count vs Texas murder rate in 2024", "How many murders in Ohio vs Texas murder rate in 2024", "Ohio murder counts vs Texas murder rates in 2024"]) assert.notEqual(ask(q).kind, "srs", q);
-  for (const q of ["police shootings in Chicago in 2024", "shooting incidents in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
+  for (const q of ["police shootings in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, SENT, q);
+  // Jeff 2026-11-14 (D14): "shooting incidents" and "people shot" are asked like "shootings"; the choices name what they count.
+  for (const q of ["shooting incidents in Houston", "people shot in Dallas"]) assert.equal((ask(q) as { about?: string }).about, SENT, q);
 }
 // A bare "assault" (coordinator 2026-11-06): read, never "I couldn't tell what this asks"; Crime Index and Current Trends
 // answer aggravated assault, named; NIBRS asks which kind, offering only kinds that run.

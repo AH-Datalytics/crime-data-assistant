@@ -34,6 +34,9 @@ R = lambda p: re.compile(p, re.I)
 TAB_SOURCE = {"historical": "historical", "current": "rtci", "nibrs": "nibrs", "shr": "shr", "hate_crime": "hate_crime"}
 TAB_SHORT = {"historical": "hist", "current": "ct", "nibrs": "nibrs", "shr": "shr", "hate_crime": "hc"}
 
+# Jeff 2026-11-14: the shootings ask as the user reads it (lib/nibrs-shadow/answer.ts SHOOTING_ASK).
+SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+
 # ---------------------------------------------------------------------------------------------- word lists
 NOT_A_QUESTION = R(r"^(?:hi|hello|hey|test(?:ing)?|thanks?|thank you|ok|okay|yes|no|asdf+|\?+|\.+)$")
 COURT = R(r"\b(?:convict\w*|sentenc\w*|prosecut(?!ion declined)\w*|court\w*|trial\w*|jail\w*|prison\w*|incarcerat\w*|recidiv\w*|parole|probation|plea|bail|defendants?)\b")
@@ -332,13 +335,13 @@ def label_first(q, tab):
         if same_name_ask(p, q, q0) and w not in missing:
             missing.append(w)
     if SHOOTING.search(q) and not R(r"fatal|homicid|murder|killed|deaths?|injur|aggravated").search(q):
-        missing.insert(0, "fatal or non-fatal shootings")
+        missing.insert(0, SHOOTING_ASK)
     if NEW_YORK.search(q) and not has_state(q.replace("New York", "").replace("new york", "")) and not any(p for p in named if p != "new york"):
         missing.append("which New York")
     if not PERIOD.search(q) and not SERIES.search(q):
         missing.append("period")
     if missing:
-        rule = {"crime": "R09", "violent, property or both": "R09b", "place": "R10", "period": "R13", "fatal or non-fatal shootings": "R09s", "which New York": "R11", "rolling window": "R16"}.get(missing[0], "R11")
+        rule = {"crime": "R09", "violent, property or both": "R09b", "place": "R10", "period": "R13", SHOOTING_ASK: "R09s", "which New York": "R11", "rolling window": "R16"}.get(missing[0], "R11")
         note = {"R09": "D31", "R09b": "D09", "R09s": "D14", "R10": "P12/D31", "R13": "P06/D31", "R11": "several places have this name (P26 for New York)", "R16": "P94: rolling with no length"}[rule]
         return ("clarify", " / ".join(missing), None, rule, "draft", note)
     years = [int(y) for y in YEAR.findall(q)]

@@ -2200,10 +2200,10 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ],
-    "about": "fatal or non-fatal shootings"
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "draft",
@@ -4501,9 +4501,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -8460,9 +8460,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -9482,10 +9482,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "Jeff 2026-11-11: staffing and a crime in one question is declined, one dataset at a time (P99, P100)"
+    "rule": "R11>2nd",
+    "drafted_by": "jeff-2026-11-11-staffing",
+    "reviewed_by": "jeff-2026-11-11-staffing",
+    "notes": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time"
    }
   },
   {
@@ -11082,9 +11082,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -13339,9 +13339,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -14430,11 +14430,11 @@
     "reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Jeff 2026-11-11: staffing and a crime in one question is declined, one dataset at a time (P99, P100)"
+    "drafted_by": "jeff-2026-11-11-staffing",
+    "reviewed_by": "jeff-2026-11-11-staffing",
+    "notes": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time"
    }
   },
   {
@@ -14503,10 +14503,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-staffing",
+    "reviewed_by": "jeff-2026-11-11-staffing",
+    "notes": "Jeff 2026-11-11: decline national and state staffing"
    }
   },
   {
@@ -16592,20 +16592,19 @@
    "question": "how many larceny reports at hotels in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which place"
+    ],
+    "about": "which place"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "coordinator-2026-11-11",
-    "reviewed_by": "coordinator-2026-11-11",
-    "notes": "NIBRS records hotels and motels as a location, so larceny at hotels can be counted (coordinator correction 2026-11-11, not an owner verdict)"
+    "drafted_by": "jeff-2026-11-13-rule2",
+    "reviewed_by": "jeff-2026-11-13-rule2",
+    "notes": "Jeff: larceny reports at hotels asks which place (hotels are recorded; 'reports' is wording)"
    }
   },
   {
@@ -23637,10 +23636,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-staffing",
+    "reviewed_by": "jeff-2026-11-11-staffing",
+    "notes": "Jeff 2026-11-11: decline national and state staffing"
    }
   },
   {
@@ -35734,11 +35733,11 @@
     "reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Jeff 2026-11-11: staffing and a crime in one question is declined, one dataset at a time (P99, P100)"
+    "drafted_by": "jeff-2026-11-11-staffing",
+    "reviewed_by": "jeff-2026-11-11-staffing",
+    "notes": "Jeff 2026-11-12: staffing and a crime in one question is declined, one dataset at a time"
    }
   },
   {
@@ -35837,10 +35836,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index): Jeff 2026-11-11, decline national and state staffing"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-11-staffing",
+    "reviewed_by": "jeff-2026-11-11-staffing",
+    "notes": "Jeff 2026-11-11: decline national and state staffing"
    }
   },
   {
@@ -40220,24 +40219,19 @@
    "question": "Number of cases of female ho. Ici",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "source_any": [
-     "shr",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which kind of crime"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which kind of crime"
    },
    "label": {
     "status": "reviewed",
     "rule": "R08>2nd",
-    "drafted_by": "jeff-2026-11-11-cases",
-    "reviewed_by": "jeff-2026-11-11-cases",
-    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count for the crime; female homicide victims in Homicide Reports"
+    "drafted_by": "jeff-2026-11-13-rule2",
+    "reviewed_by": "jeff-2026-11-13-rule2",
+    "notes": "Jeff: a garbled crime word asks which kind of crime; never read as homicide"
    }
   },
   {
@@ -43132,9 +43126,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -50376,9 +50370,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ]
    },
@@ -51558,11 +51552,11 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "which Baltimore",
      "which Los Angeles"
     ],
-    "about": "fatal or non-fatal shootings"
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "draft",
@@ -55698,9 +55692,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place",
      "period"
     ]
@@ -56344,9 +56338,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place",
      "period"
     ]
@@ -57022,9 +57016,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ]
    },
@@ -58748,9 +58742,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -59599,9 +59593,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place",
      "period"
     ]
@@ -63933,11 +63927,11 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place",
      "period"
     ],
-    "about": "fatal or non-fatal shootings"
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "draft",
@@ -64426,10 +64420,10 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ],
-    "about": "fatal or non-fatal shootings"
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "draft",
@@ -69983,10 +69977,10 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "period"
     ],
-    "about": "fatal or non-fatal shootings"
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "draft",
@@ -71758,9 +71752,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ]
    },
@@ -72505,9 +72499,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "period"
     ]
    },
@@ -72788,9 +72782,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ]
    },
@@ -74965,9 +74959,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -75989,9 +75983,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -78314,9 +78308,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "place"
     ]
    },
@@ -78669,9 +78663,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "period"
     ]
    },
@@ -78903,9 +78897,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -84808,10 +84802,10 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "which Baltimore"
     ],
-    "about": "fatal or non-fatal shootings"
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "draft",
@@ -90973,9 +90967,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -105723,9 +105717,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings",
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
      "period"
     ]
    },
@@ -107929,9 +107923,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -108879,9 +108873,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "fatal or non-fatal shootings",
+    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {

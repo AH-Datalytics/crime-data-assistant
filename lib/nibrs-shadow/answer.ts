@@ -318,6 +318,22 @@ function filledAll(ledger: RequestLedger, concept: string, values: string[][]): 
 }
 /** A button's continuation that runs now: not a decline, and not a route to a source not loaded here (Current Trends). */
 const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
+/** Jeff 2026-11-14: the shootings ask, as the user reads it. */
+const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
+/**
+ * The outcome kept to Homicide Reports (Jeff 2026-11-14: a button named SHR never answers from another source): an SHR answer as it
+ * is; a question whose choices lead to one, with the choices that lead elsewhere taken out (a typed entry stays); otherwise none.
+ */
+const onlyHomicideReports = (o: ShadowOutcome, depth = 0): ShadowOutcome | null => {
+  if (o.kind === "shr") return o;
+  if (o.kind !== "clarify" || depth >= 3) return null;
+  const options = o.options.flatMap((x) => {
+    if (!x.continuation) return [x];
+    const kept = onlyHomicideReports(x.continuation, depth + 1);
+    return kept ? [{ ...x, continuation: kept }] : [];
+  });
+  return options.some((x) => x.continuation) ? { ...o, options } : null;
+};
 /**
  * A whole-years version of a question finer than years, run now (its button never dead-ends). Never nested: a
  * question still finer than years once by year (rolling windows) gets no alternative (Codex routing review 01.1).
@@ -590,7 +606,9 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const fillerUnread = ledger.question === question && !COVERAGE_QUESTION.test(question)
     // Filler with no meaning of its own: "average" or "up" left out would change what the choices answer (Codex 01.2).
     ? ledger.parts.filter((p) => p.clause === 0 && p.state === "not-interpreted" && fillerOnly(p.text) && !meaningful(p.text)) : [];
-  const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
+  // Also "shooting incidents" and "people shot" (Jeff 2026-11-14, D14): the choices name what they count (aggravated assaults
+  // with a firearm, murders with a firearm), so the words they replace lose nothing.
+  const bareShooting = !!shooting && /^(?:shootings?|shooting\s+incidents?|people\s+(?:who\s+(?:were|got)\s+)?shot)$/i.test(shooting.text.trim())
     && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
     && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept) || fillerUnread.includes(p));
   if (shooting && bareShooting && !deps.rewritten && inOriginal(question, ledger, shooting, "") !== null && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
@@ -602,10 +620,21 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     // as such. Until Homicide Reports answer here, the fatal choice points to them (Jeff: "A is fine for now"), the one
     // button that doesn't run; the NIBRS choice runs, and the ask is made only when it does.
     const assaults = shadowAnswer(as("aggravated assaults with a firearm"), { ...deps, rewritten: true });
-    if (runsNow(assaults)) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options: [
-      { label: "Fatal shootings (Homicide Reports)", continuation: { kind: "route", source: "shr",
-        explanation: "Fatal shootings are murders with a firearm, counted in Homicide Reports (FBI SHR). Homicide Reports aren't available here yet; the Homicide Reports tab has them." } },
-      { label: "Aggravated assaults with a firearm (NIBRS)", continuation: assaults }] };
+    // Jeff 2026-11-14 ("If somebody asks for shootings it says we don't track non-fatal shootings but they can choose firearm
+    // murders (SHR) or aggravated assault involving a firearm (NIBRS)"): the sentence is the ask, the two choices named with
+    // their sources. Each choice that runs is offered, the one that can't is left out and said (never a dead button); the
+    // SHR choice only when the answer really comes from Homicide Reports; the ask is made when at least one runs.
+    const fatal = shadowAnswer(as("murders with a firearm"), { ...deps, rewritten: true });
+    const fatalShr = runsNow(fatal) ? onlyHomicideReports(fatal) : null;
+    const assaultsRun = runsNow(assaults), fatalRuns = !!fatalShr;
+    if (assaultsRun || fatalRuns) {
+      const options: ShadowOption[] = [];
+      if (fatalShr) options.push({ label: "Firearm murders", continuation: fatalShr });
+      if (assaultsRun) options.push({ label: "Aggravated assault involving a firearm (NIBRS)", continuation: assaults });
+      const gone = !assaultsRun ? { what: "Aggravated assault involving a firearm (NIBRS)", why: (assaults as { explanation?: string }).explanation ?? "" }
+        : !fatalRuns ? { what: "Firearm murders", why: (fatal as { explanation?: string }).explanation ?? "Homicide Reports don't answer it for the periods offered here." } : null;
+      return { kind: "clarify", about: SHOOTING_ASK, question, options, ...(gone ? { note: `${gone.what} isn't available for this question: ${gone.why}`.trim() } : {}) };
+    }
   }
   // A bare "assault" (coordinator 2026-11-06, "San Francisco assaults per month"): Crime Index and Current Trends hold
   // aggravated assault only, so their answer is given, named as aggravated assaults; asking would offer one choice.
