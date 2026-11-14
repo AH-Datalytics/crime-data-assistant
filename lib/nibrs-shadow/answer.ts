@@ -1101,7 +1101,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && !(clause0("entity").some((p) => p.value === "agency") && clause0("place").length === 1 && /^state:/.test(String(clause0("place")[0].value)));
   // Jeff 2026-11-14: when both the crime and the place are missing, the place is asked first (the crime ask follows once
   // a place is chosen): "Crimes Against Property" asks which place, then which crime.
-  const placeFirst = !clause0("place").length;
+  // Not when words are unrecognized (a misspelled place: "st augustian fl crime"): a place was named, the crime is asked first.
+  const placeFirst = !clause0("place").length && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "unrecognized");
   if (!named && !placeFirst && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
@@ -1479,7 +1480,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline("unsupported_capability", `This isn't available yet: a ${flags(ledger0).column === "population" ? "population" : "supporting"} column beside Current Trends figures. Ask without the column.`);
     // Monthly for one agency that reaches back before Current Trends' first month: the choices first, not the clipped
     // months (Jeff 2026-11-14; Codex span review 06.1). Counts only.
-    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count") {
+    // Not murder or homicide: Homicide Reports by month is those questions' own source (D37); they keep their paths.
+    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count"
+      && !["murder", "homicide"].includes(sp.measures[0])) {
       const ch = spanChoices({ ledger, deps, pins, agency: place.label, ori: place.ori, startYear: Number(span[0].slice(0, 4)), endMonth: span[1], ct: { first: cur.finalFirstMonth, last: cur.lastMonth } });
       if (ch) return ch;
     }
@@ -2232,7 +2235,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (covered?.kind === "decline" && covered.reason === "unsupported_capability" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) return covered;
     // Monthly for one agency back before NIBRS starts: the choices that exist for it (Jeff 2026-11-14).
     const onePlace = plan.geography.places.length === 1 ? plan.geography.places[0] : null;
-    if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month") && plan.statistics.every((st) => st.kind === "count")) {
+    if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month") && plan.statistics.every((st) => st.kind === "count")
+      && !plan.measures.some((m) => /^(?:victims|offenses|incidents)\.(?:murder|homicide)(?![a-z_])/.test(m.id))) {
       const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), endMonth: period.to });
       if (ch) return ch;
     }
