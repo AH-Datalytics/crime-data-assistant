@@ -22141,10 +22141,10 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which place",
+     "place",
      "period"
     ],
-    "about": "which place"
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
