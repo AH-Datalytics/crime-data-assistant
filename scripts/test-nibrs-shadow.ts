@@ -678,6 +678,10 @@ assert.equal(perYear.delivered.text[1], "No years were given, so every year in t
 const perMonth = as(ask("Houston carjackings per month"), "answer");
 assert.match(perMonth.delivered.text[1], /^No years were given, so every year in the data is shown: January 2017 through September 2026\.$/);
 assert.equal(as(ask("Carjackings in Detroit in 2023"), "answer").delivered.text.some((t) => /No years were given/.test(t)), false, "a period given: no note");
+// Codex all-years review 01: a quarterly default stops at the latest complete year; "all years" never overrides a grain or
+// a range the question names.
+assert.deepEqual(as(ask("Carjackings in Memphis by quarter"), "answer").period, { from: "2017-01", to: "2025-12" });
+assert.deepEqual(as(ask("Carjackings in Memphis by month for all years since 2020"), "answer").period, { from: "2020-01", to: "2026-09" });
 assert.equal(ask("carjackings in Detroit").kind, "clarify", "no grain: the period is still asked");
 assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
 // Several measures by month: a column each, and the months a crime is blank named.

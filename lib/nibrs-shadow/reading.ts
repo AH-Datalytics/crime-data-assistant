@@ -103,9 +103,6 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
-  // All years by default (Jeff 2026-11-11): "going back as far as possible", "every year available" are by year with no
-  // range, which is every year the source has.
-  [/\s*(?:,\s*)?(?:going\s+back\s+as\s+far\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|as\s+far\s+back\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|for\s+every\s+year\s+(?:available|you\s+have)|(?:for\s+)?all\s+(?:available\s+)?years(?:\s+available)?)\b/gi, " by year"],
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.
@@ -390,6 +387,16 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });
+    return t;
+  });
+  // All years by default (Jeff 2026-11-11): "going back as far as possible", "for every year available", "all years" mean
+  // every year the source has. With no grain and no range named they read as "by year"; with either (by month for all
+  // years since 2020) they are only dropped. Codex all-years review 01.2.
+  text = text.replace(/(?<![A-Za-z])\s*(?:,\s*)?(?:going\s+back\s+as\s+far\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|as\s+far\s+back\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|for\s+every\s+year\s+(?:available|you\s+have)|(?:for\s+)?all\s+(?:available\s+)?years(?:\s+available)?)\b/i, (m, offset: number, whole: string) => {
+    const rest = (whole.slice(0, offset) + whole.slice(offset + m.length));
+    const own = /\b(?:by|per|each|every)\s+(?:year|month|quarter|week|day)s?\b|\b(?:annual(?:ly)?|monthly|quarterly|yearly)\b|\b(?:since|from|between|through|during|over\s+(?:the\s+)?(?:past|last)|(?:past|last)\s+(?:\d+|few|two|three|four|five|ten))\b|\b(?:19|20)\d{2}\b/i.test(rest);
+    const t = own ? "" : `${/\s$|^$/.test(whole.slice(0, offset)) ? "" : " "}by year`;
+    readings.push({ kind: "phrase", from: m.trim(), to: t.trim() });
     return t;
   });
   // "How has X changed / trended / fared ..." (Jeff 2026-11-11, "the word 'how'"): X by year over the period named; with

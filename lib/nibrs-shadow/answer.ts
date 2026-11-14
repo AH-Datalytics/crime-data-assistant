@@ -2054,14 +2054,20 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
     if (trend) {
       const firstY = release.firstMonth.slice(0, 4);
-      const monthly = spec.grain === "month" || !!(spec as { window?: unknown }).window;
-      const all = fromLedger(filled(ledger, "period", monthly ? `since:${firstY}` : `range:${firstY}:${lcy}`, "every year available"), deps, pins);
-      if (all.kind === "answer") {
-        const span = monthly ? `${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}` : `${firstY} through ${lcy}`;
-        return { ...all, delivered: { ...all.delivered, text: [all.delivered.text[0], `No years were given, so every year in the data is shown: ${span}.`, ...all.delivered.text.slice(1)] } };
+      const monthly = (spec.grain === "month" || !!(spec as { window?: unknown }).window) && !flags(ledger0).quarter;
+      // Murder detail is Homicide Reports' from its own first year; everything else NIBRS's.
+      const murderOnly = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id));
+      const starts = murderOnly ? [String(SHR_FIRST_YEAR), firstY] : [firstY];
+      for (const start of starts) {
+        const all = fromLedger(filled(ledger, "period", monthly ? `since:${start}` : `range:${start}:${lcy}`, "every year available"), deps, pins);
+        if (all.kind === "shr") return all;
+        if (all.kind === "answer") {
+          const span = monthly ? `${monthName(`${start}-01`)} through ${monthName(release.lastMonth)}` : `${start} through ${lcy}`;
+          return { ...all, delivered: { ...all.delivered, text: [all.delivered.text[0], `No years were given, so every year in the data is shown: ${span}.`, ...all.delivered.text.slice(1)] } };
+        }
+        // Another question first ("which New York"): asked, its answers already for every year.
+        if (all.kind === "clarify" && all.about !== "which period" && all.about !== "which range of years") return all;
       }
-      // Another question first ("which New York"): asked, its answers already for every year.
-      if (all.kind === "clarify" && all.about !== "which period" && all.about !== "which range of years") return all;
     }
     const opts: ShadowOption[] = trend
       ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps, pins) },
