@@ -22140,18 +22140,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
+     "place",
      "period"
-    ]
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-14",
+    "reviewed_by": "jeff-2026-11-14",
+    "notes": "Both the crime and the place are missing: the place is asked first (Jeff 2026-11-14, policy D40)"
    }
   },
   {

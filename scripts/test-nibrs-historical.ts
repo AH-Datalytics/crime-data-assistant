@@ -207,6 +207,37 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const combined = withBuild("Murders in Memphis and Dallas combined in 2023");
   assert.ok(combined.kind === "decline" && /can't be combined across agencies/.test(combined.explanation) && combined.alternative?.question === "Murders in Memphis and Dallas in 2023", JSON.stringify(combined).slice(0, 300));
   assert.notEqual(withBuild("Robberies in Memphis in 2023 according to NIBRS").kind, "historical");
+  // Jeff 2026-11-14, span choices: monthly for one agency back before any monthly source. With Crime Index and NIBRS both
+  // reaching it, the choices are asked, yearly first, each running the same question on its own source.
+  {
+    const ch = withBuild("Memphis robberies per month since 1960") as ShadowOutcome & { options?: { label: string; continuation?: ShadowOutcome }[]; note?: string };
+    assert.equal(ch.kind, "clarify", JSON.stringify(ch).slice(0, 300));
+    assert.equal(ch.note, "No single source has monthly figures for Memphis, Tennessee back to 1960.");
+    assert.deepEqual(ch.options!.map((o) => o.label), [`Yearly, 1960 to ${build.lastYear} (Crime Index)`, "Monthly, January 2017 to September 2026 (NIBRS)"]);
+    assert.deepEqual(ch.options!.map((o) => o.continuation!.kind), ["historical", "answer"]);
+    // Entirely before every monthly source: only the yearly figures reach it, so they answer, saying why.
+    const early = withBuild("Memphis robberies per month in 1999") as ShadowOutcome & { delivered?: { text: string[] } };
+    assert.equal(early.kind, "historical", JSON.stringify(early).slice(0, 200));
+    assert.match(early.delivered!.text[1], /^No monthly figures for Memphis, Tennessee go back to 1999; yearly figures go back to 1999 in Crime Index\. Showing yearly figures from 1999\.$/);
+    // A span inside the monthly sources is answered as before.
+    assert.equal(withBuild("Memphis robberies per month since 2019").kind, "answer");
+    // Codex span review 06: an explicit month range reaching only yearly years gets the yearly figures (the asked end year kept);
+    // a span ending inside NIBRS labels each choice with the years it really covers; a rate and a crime Crime Index lacks
+    // get no yearly choice or note.
+    const rangeEarly = withBuild("Memphis robberies per month from January 1960 to March 2010") as ShadowOutcome & { period?: unknown; delivered?: { text: string[] } };
+    assert.equal(rangeEarly.kind, "historical", JSON.stringify(rangeEarly).slice(0, 200));
+    assert.match(rangeEarly.delivered!.text[1], /^No monthly figures for Memphis, Tennessee go back to 1960; yearly figures go back to 1960 in Crime Index\. Showing yearly figures from 1960\.$/);
+    const mid = withBuild("Memphis robberies per month from 1960 to 2020") as ShadowOutcome & { options?: { label: string }[] };
+    assert.equal(mid.kind, "clarify", JSON.stringify(mid).slice(0, 200));
+    assert.deepEqual(mid.options!.map((o) => o.label), ["Yearly, 1960 to 2020 (Crime Index)", "Monthly, January 2017 to December 2020 (NIBRS)"]);
+    assert.notEqual((withBuild("Memphis robbery rate per month since 1960") as { options?: unknown }).options && withBuild("Memphis robbery rate per month since 1960").kind, "clarify", "a rate gets no choices");
+    // Codex span review 07: only the months are excused by a yearly stand-in; another named breakdown is still checked.
+    const dropped = withBuild("Memphis shoplifting by month and year since 1960") as ShadowOutcome & { options?: unknown };
+    assert.ok(!(dropped.kind === "answer"), "a monthly-only answer must not silently drop the year breakdown: " + JSON.stringify(dropped).slice(0, 160));
+    const cj = withBuild("Memphis carjackings per month since 1960") as ShadowOutcome & { delivered?: { text: string[] } };
+    assert.equal(cj.kind, "answer", JSON.stringify(cj).slice(0, 200));
+    assert.doesNotMatch(cj.delivered!.text[1], /Crime Index/, "no Crime Index series for carjackings: not named");
+  }
   // Item 3: an agency beside its state or the nation answers; combined, a count beside a rate, a clearance rate and
   // a month keep their declines; no period asks which.
   for (const q of ["Murder rate in Memphis and Tennessee in 2023", "Memphis vs national murders in 2023", "Murders in Memphis compared to Tennessee and the US in 2023"]) {

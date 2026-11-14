@@ -347,7 +347,8 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     for (const q of ["Do you have any data for NYC?", "Do we have data for the United States?", "does Olathe KS report NIBRS data?"]) assert.ok(covers(q), q);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
-    for (const q of ["national crime scorecard", "Crime trends compared to similar cities"]) assert.equal((ask(q) as { about?: string }).about, "which kind of crime", q);
+    // Both crime and place missing: the place is asked first (Jeff 2026-11-14); a place named asks the crime.
+    for (const q of ["national crime scorecard", "Crime trends compared to similar cities"]) assert.equal((ask(q) as { about?: string }).about, q.startsWith("national") ? "which kind of crime" : "which place", q);
     // The shootings ask never leaves out an average (Codex 01.2).
     assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, SENT);
     // A question about what data there is is never asked about a crime instead (Codex 01.4: "do we have").
@@ -1663,9 +1664,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
 }
 // A period starting before the data: the covered part, to the month asked, never widened (Codex period review 01.1).
 {
-  const before = as(ask("Shoplifting in Memphis from January 2016 to March 2024"), "decline");
-  const cont = before.alternative?.continuation;
-  assert.ok(cont && cont.kind === "answer" && cont.period.from === "2017-01" && cont.period.to === "2024-03", JSON.stringify(before.alternative).slice(0, 300));
+  // Jeff 2026-11-14: the one monthly source that reaches into the span answers, saying why; the asked end is kept.
+  const before = as(ask("Shoplifting in Memphis from January 2016 to March 2024"), "answer");
+  assert.deepEqual(before.period, { from: "2017-01", to: "2024-03" });
+  assert.equal(before.delivered.text[1], "Monthly figures for Memphis, Tennessee start in January 2017 (NIBRS). Showing NIBRS monthly figures from January 2017.");
   assert.equal(readQuestion("Chicago robberies after 2010", 2026, "2026-09").ledger.parts.find((p) => p.concept === "period")?.value, "since:2011", "after 2010 starts with 2011");
 }
 // Coordinator 2026-11-02 (the redesign's retest of #96). 1: a breakdown the question names is never dropped.

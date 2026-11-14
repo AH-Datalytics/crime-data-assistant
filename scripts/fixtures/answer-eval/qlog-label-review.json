@@ -4891,7 +4891,15 @@
 },
 "QL-hist-062bebbfe0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-14",
+"why": "Both the crime and the place are missing: the place is asked first (Jeff 2026-11-14, policy D40)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"period"
+]
+}
 },
 "QL-hist-065852d143": {
 "status": "draft",
