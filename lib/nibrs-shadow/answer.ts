@@ -590,7 +590,9 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const fillerUnread = ledger.question === question && !COVERAGE_QUESTION.test(question)
     // Filler with no meaning of its own: "average" or "up" left out would change what the choices answer (Codex 01.2).
     ? ledger.parts.filter((p) => p.clause === 0 && p.state === "not-interpreted" && fillerOnly(p.text) && !meaningful(p.text)) : [];
-  const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
+  // Also "shooting incidents" and "people shot" (Jeff 2026-11-14, D14): the choices name what they count (aggravated assaults
+  // with a firearm, murders with a firearm), so the words they replace lose nothing.
+  const bareShooting = !!shooting && /^(?:shootings?|shooting\s+incidents?|people\s+(?:who\s+(?:were|got)\s+)?shot)$/i.test(shooting.text.trim())
     && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
     && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept) || fillerUnread.includes(p));
   if (shooting && bareShooting && !deps.rewritten && inOriginal(question, ledger, shooting, "") !== null && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
@@ -602,10 +604,18 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     // as such. Until Homicide Reports answer here, the fatal choice points to them (Jeff: "A is fine for now"), the one
     // button that doesn't run; the NIBRS choice runs, and the ask is made only when it does.
     const assaults = shadowAnswer(as("aggravated assaults with a firearm"), { ...deps, rewritten: true });
-    if (runsNow(assaults)) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options: [
-      { label: "Fatal shootings (Homicide Reports)", continuation: { kind: "route", source: "shr",
-        explanation: "Fatal shootings are murders with a firearm, counted in Homicide Reports (FBI SHR). Homicide Reports aren't available here yet; the Homicide Reports tab has them." } },
-      { label: "Aggravated assaults with a firearm (NIBRS)", continuation: assaults }] };
+    // Fatal shootings run now that Homicide Reports answer here (Jeff 2026-11-14): each choice that runs is offered, the one
+    // that can't is left out and said (never a dead button), and the ask is made when at least one runs. A fatal choice that
+    // doesn't run keeps pointing to the Homicide Reports tab beside a NIBRS choice that does.
+    const fatal = shadowAnswer(as("murders with a firearm"), { ...deps, rewritten: true });
+    const assaultsRun = runsNow(assaults), fatalRuns = runsNow(fatal);
+    if (assaultsRun || fatalRuns) {
+      const fatalChoice: ShadowOption = { label: "Fatal shootings (Homicide Reports)", continuation: fatalRuns ? fatal : { kind: "route", source: "shr",
+        explanation: "Fatal shootings are murders with a firearm, counted in Homicide Reports (FBI SHR). The Homicide Reports tab has them." } };
+      return { kind: "clarify", about: "fatal or non-fatal shootings", question,
+        options: assaultsRun ? [fatalChoice, { label: "Aggravated assaults with a firearm (NIBRS)", continuation: assaults }] : [fatalChoice],
+        ...(assaultsRun ? {} : { note: `Aggravated assaults with a firearm isn't available for this question: ${(assaults as { explanation?: string }).explanation ?? ""}`.trim() }) };
+    }
   }
   // A bare "assault" (coordinator 2026-11-06, "San Francisco assaults per month"): Crime Index and Current Trends hold
   // aggravated assault only, so their answer is given, named as aggravated assaults; asking would offer one choice.

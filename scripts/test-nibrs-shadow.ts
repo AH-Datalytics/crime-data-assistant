@@ -300,9 +300,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   const s = ask("Shootings in Chicago in 2024");
   if (s.kind === "clarify") {
     assert.equal(s.about, "fatal or non-fatal shootings");
-    // Jeff 2026-11-10: the two named as such; the fatal one points to Homicide Reports until they answer here.
+    // Jeff 2026-11-10: the two named as such; the fatal one runs now that murders with a firearm are answered here (2026-11-14).
     assert.deepEqual(s.options.map((o) => o.label), ["Fatal shootings (Homicide Reports)", "Aggravated assaults with a firearm (NIBRS)"]);
-    assert.ok(s.options[0].continuation?.kind === "route" && s.options[0].continuation.source === "shr");
+    assert.ok(s.options[0].continuation && s.options[0].continuation.kind !== "decline");
   } else assert.equal(s.kind, "decline");
   assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
   assert.notEqual((ask("mass shootings in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
@@ -388,7 +388,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   // Codex root-causes review 01: combined places and a count beside a rate keep the decline; "police shootings" and
   // "shooting incidents" are never rewritten as firearm murders or assaults.
   for (const q of ["murders in Ohio and Texas combined in 2024", "Ohio murder count vs Texas murder rate in 2024", "How many murders in Ohio vs Texas murder rate in 2024", "Ohio murder counts vs Texas murder rates in 2024"]) assert.notEqual(ask(q).kind, "srs", q);
-  for (const q of ["police shootings in Chicago in 2024", "shooting incidents in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
+  for (const q of ["police shootings in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
+  // Jeff 2026-11-14 (D14): "shooting incidents" and "people shot" are asked like "shootings"; the choices name what they count.
+  for (const q of ["shooting incidents in Houston", "people shot in Dallas"]) assert.equal((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
 }
 // A bare "assault" (coordinator 2026-11-06): read, never "I couldn't tell what this asks"; Crime Index and Current Trends
 // answer aggravated assault, named; NIBRS asks which kind, offering only kinds that run.
