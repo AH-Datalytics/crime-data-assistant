@@ -319,7 +319,7 @@ function filledAll(ledger: RequestLedger, concept: string, values: string[][]): 
 /** A button's continuation that runs now: not a decline, and not a route to a source not loaded here (Current Trends). */
 const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
-const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).";
+const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 /**
  * The outcome kept to Homicide Reports (Jeff 2026-11-14: a button named SHR never answers from another source): an SHR answer as it
  * is; a question whose choices lead to one, with the choices that lead elsewhere taken out (a typed entry stays); otherwise none.
@@ -629,10 +629,10 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const assaultsRun = runsNow(assaults), fatalRuns = !!fatalShr;
     if (assaultsRun || fatalRuns) {
       const options: ShadowOption[] = [];
-      if (fatalShr) options.push({ label: "Firearm murders (SHR)", continuation: fatalShr });
+      if (fatalShr) options.push({ label: "Firearm murders", continuation: fatalShr });
       if (assaultsRun) options.push({ label: "Aggravated assault involving a firearm (NIBRS)", continuation: assaults });
       const gone = !assaultsRun ? { what: "Aggravated assault involving a firearm (NIBRS)", why: (assaults as { explanation?: string }).explanation ?? "" }
-        : !fatalRuns ? { what: "Firearm murders (SHR)", why: (fatal as { explanation?: string }).explanation ?? "Homicide Reports don't answer it for the periods offered here." } : null;
+        : !fatalRuns ? { what: "Firearm murders", why: (fatal as { explanation?: string }).explanation ?? "Homicide Reports don't answer it for the periods offered here." } : null;
       return { kind: "clarify", about: SHOOTING_ASK, question, options, ...(gone ? { note: `${gone.what} isn't available for this question: ${gone.why}`.trim() } : {}) };
     }
   }

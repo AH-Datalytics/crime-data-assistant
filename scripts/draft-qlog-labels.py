@@ -35,7 +35,7 @@ TAB_SOURCE = {"historical": "historical", "current": "rtci", "nibrs": "nibrs", "
 TAB_SHORT = {"historical": "hist", "current": "ct", "nibrs": "nibrs", "shr": "shr", "hate_crime": "hc"}
 
 # Jeff 2026-11-14: the shootings ask as the user reads it (lib/nibrs-shadow/answer.ts SHOOTING_ASK).
-SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS)."
+SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
 
 # ---------------------------------------------------------------------------------------------- word lists
 NOT_A_QUESTION = R(r"^(?:hi|hello|hey|test(?:ing)?|thanks?|thank you|ok|okay|yes|no|asdf+|\?+|\.+)$")

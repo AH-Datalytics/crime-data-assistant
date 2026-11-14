@@ -648,10 +648,10 @@ ROWS = [
      "Decided 2026-11-11 (Jeff: \"P101 - agreed\")", NEW),
     ("P102", "\"Shootings in Chicago\", \"shooting incidents in Houston\", \"people shot in Dallas\" (a shootings question; \"gun violence\" keeps its own decline, P31)",
      "Asked \"fatal or non-fatal shootings\" (D14's wording), which overclaims: the data has no non-fatal shooting counts.",
-     "The app says: \"We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).\" Two buttons, named with their sources: \"Firearm murders (SHR)\" and \"Aggravated assault involving a firearm (NIBRS)\". A choice that can't run for the question (NIBRS starts in 2017; no Homicide Reports filing) is left out and a note says why; the SHR button is offered only when the answer really comes from Homicide Reports.",
-     "Firearm murders (SHR); aggravated assault involving a firearm (NIBRS).",
+     "The app says: \"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).\" Two buttons (the firearm murders answer names its own source, Homicide Reports; \"SHR\" is an internal name and is never shown): \"Firearm murders\" and \"Aggravated assault involving a firearm (NIBRS)\". A choice that can't run for the question (NIBRS starts in 2017; no Homicide Reports filing) is left out and a note says why; the firearm murders button is offered only when the answer really comes from Homicide Reports.",
+     "Firearm murders; aggravated assault involving a firearm (NIBRS).",
      "Jeff: \"We solved this many times ages ago ... If somebody asks for shootings it says we don't track non-fatal shootings but they can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS)\". Replaces D14's wording.",
-     "Decided 2026-11-14 (Jeff: \"yes on both\")", NEW),
+     "Decided 2026-11-14 (Jeff: \"yes on both\", then \"it shouldn't say (SHR), that's just the source\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),

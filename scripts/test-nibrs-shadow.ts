@@ -105,7 +105,7 @@ const deps: ShadowDeps = {
   target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: stub,
 };
 const ask = (q: string) => shadowAnswer(q, deps);
-const SENT = "We don't track non-fatal shootings. You can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS).";
+const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
 
 // Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
@@ -302,9 +302,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   if (s.kind === "clarify") {
     assert.equal(s.about, SENT);
     // Jeff 2026-11-14: the sentence is the ask and the choices are named with their sources. These deps hold no Homicide Reports,
-    // so the SHR choice is left out and said, never offered as a button that would answer from NIBRS.
+    // so the firearm murders choice is left out and said, never offered as a button that would answer from NIBRS.
     assert.deepEqual(s.options.map((o) => o.label), ["Aggravated assault involving a firearm (NIBRS)"]);
-    assert.match(s.note ?? "", /^Firearm murders \(SHR\) isn't available for this question: /);
+    assert.match(s.note ?? "", /^Firearm murders isn't available for this question: /);
     assert.ok(s.options[0].continuation && s.options[0].continuation.kind !== "decline");
   } else assert.equal(s.kind, "decline");
   assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, SENT);
