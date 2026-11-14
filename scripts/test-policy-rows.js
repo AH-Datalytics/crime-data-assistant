@@ -31,8 +31,10 @@ function records(text) {
     if (quoted) {
       if (c === '"') { if (s[i + 1] === '"') { field += '"'; i++; } else quoted = false; }
       else field += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ",") { row.push(field); field = ""; }
+    } else if (c === '"') {
+      if (field !== "") throw new Error(`a quote inside an unquoted field (record ${out.length + 1})`);
+      quoted = true;
+    } else if (c === ",") { row.push(field); field = ""; }
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && s[i + 1] === "\n") i++;
       row.push(field); field = "";
@@ -40,16 +42,23 @@ function records(text) {
       row = [];
     } else field += c;
   }
+  if (quoted) throw new Error("an unterminated quoted field");
   if (field !== "" || row.length) { row.push(field); out.push(row); }
   return out;
 }
 
-const idsOf = (csvText) => records(csvText).slice(1).map((r) => r[0].trim()).filter(Boolean);
+const idsOf = (csvText) => records(csvText).slice(1).map((r, i) => {
+  const id = r[0].trim();
+  if (!id) throw new Error(`a policy row has no id (record ${i + 2}): ${r.join(",").slice(0, 60)}`);
+  return id;
+});
 const listed = (listText) => listText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
 
 /** Pure check, for the self-test: what is wrong with a CSV against a list. */
 function problems(csvText, listText) {
-  const ids = idsOf(csvText), want = listed(listText);
+  let ids;
+  try { ids = idsOf(csvText); } catch (e) { return [`the CSV is malformed: ${e.message}`]; }
+  const want = listed(listText);
   const have = new Set(ids), known = new Set(want);
   const out = [];
   const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
@@ -71,6 +80,9 @@ function problems(csvText, listText) {
   if (!/not in .*: D4/.test(problems(csv + "D4,d\n", list).join(" "))) throw new Error("self-test: an unlisted row must be found");
   if (!/share an id: D1/.test(problems(csv + "D1,again\n", list).join(" "))) throw new Error("self-test: a duplicate id must be found");
   if (idsOf("﻿id,topic\r\nD1,x\r\nD2,y\r\n").join() !== "D1,D2") throw new Error("self-test: BOM and CRLF");
+  if (!/malformed.*quote/.test(problems(header + 'P"1"2,x\n', "P12\n").join(" "))) throw new Error("self-test: a quote inside an unquoted field must be refused");
+  if (!/malformed.*unterminated/.test(problems(header + 'D1,"open\n', "D1\n").join(" "))) throw new Error("self-test: an unterminated quote must be refused");
+  if (!/malformed.*no id/.test(problems(header + ",orphan row\n", "").join(" "))) throw new Error("self-test: a row without an id must be refused");
 }
 
 const csvText = fs.readFileSync(CSV, "utf8");

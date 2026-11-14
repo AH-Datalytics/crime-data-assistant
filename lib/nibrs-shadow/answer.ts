@@ -377,7 +377,9 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
     // Homicide Reports that answers.
     if (a.murder && deps.shr) {
       const hrFirst = a.startMonth > `${SHR_FIRST_YEAR}-01` ? a.startMonth : `${SHR_FIRST_YEAR}-01`;
-      const hrEnd = a.endMonth < deps.shr.latestMonth ? a.endMonth : deps.shr.latestMonth;
+      // An ask with no end of its own ("since 1990") reaches the other source's latest month: Homicide Reports then run to theirs.
+      const openEnd = a.endMonth >= (a.ct ? a.ct.last : rel.lastMonth);
+      const hrEnd = !openEnd && a.endMonth < deps.shr.latestMonth ? a.endMonth : deps.shr.latestMonth;
       if (hrEnd >= hrFirst) {
         const out = fromLedger(Object.assign(filled(ledger, "period", `monthrange:${hrFirst}:${hrEnd}`, `from ${monthName(hrFirst)}`), { skipCurrent: true }), deps, pins);
         if (out.kind === "shr") choices.push({ label: `Monthly, ${monthName(hrFirst)} to ${monthName(hrEnd)} (Homicide Reports)`, kind: "hr", from: hrFirst, out });
@@ -409,7 +411,7 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
     // Murder by month entirely before every other monthly source and inside Homicide Reports' years: answered from
     // Homicide Reports, no ask (Jeff 2026-11-14).
     const hrChoice = choices.find((c) => c.kind === "hr");
-    if (hrChoice && a.startMonth >= `${SHR_FIRST_YEAR}-01` && a.endMonth < (a.ct?.first ?? "9999-99") && a.endMonth < (nFirst ?? "9999-99")) return hrChoice.out;
+    if (hrChoice && a.startMonth >= `${SHR_FIRST_YEAR}-01` && deps.shr && a.endMonth <= deps.shr.latestMonth && a.endMonth < (a.ct?.first ?? "9999-99") && a.endMonth < (nFirst ?? "9999-99")) return hrChoice.out;
     const yearlyChoice = choices.find((c) => c.kind === "yearly");
     const yearlyFrom = yearlyChoice ? yearlyChoice.from : String(startYear);
     if (choices.length === 1) {
@@ -422,7 +424,7 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
       // Said on purpose: the yearly figures stand in for the months asked (not a breakdown dropped by mistake).
       return Object.assign(only.out, { spanChoice: true });
     }
-    return { kind: "clarify", about: "which would you like", question: ledger.question, note: `No single source has monthly figures for ${agency} back to ${startYear}.`,
+    return { kind: "clarify", about: "which would you like", question: ledger.question, ...(hrChoice && hrChoice.from === a.startMonth ? {} : { note: `No single source has monthly figures for ${agency} back to ${startYear}.` }),
       options: choices.map((c) => ({ label: c.label, continuation: c.out, ...(c.kind === "yearly" ? { role: "by_year" as const } : {}) })) };
   } finally { inSpanChoices = false; }
 }
