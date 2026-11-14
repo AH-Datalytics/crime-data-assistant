@@ -9576,7 +9576,7 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -9588,7 +9588,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Monthly counts require monthly data with unavailable years named."
+    "notes": "Monthly counts require monthly data with unavailable years named. Jeff 2026-11-14: monthly murder outside Current Trends coverage is answered from Homicide Reports."
    }
   },
   {
@@ -30733,7 +30733,7 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -30745,7 +30745,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Monthly murder counts require monthly data."
+    "notes": "Monthly murder counts require monthly data. Jeff 2026-11-14: monthly murder outside Current Trends coverage is answered from Homicide Reports."
    }
   },
   {
@@ -74876,11 +74876,7 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
+    "source": "shr",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -74889,10 +74885,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
+    "rule": "R14>2nd",
+    "drafted_by": "codex-second-1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "notes": "Monthly murder counts before Current Trends are Homicide Reports (Jeff 2026-11-14)."
    }
   },
   {

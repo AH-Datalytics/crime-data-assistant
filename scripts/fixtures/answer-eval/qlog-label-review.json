@@ -2158,10 +2158,10 @@
 "QL-ct-71a6e80fb6": {
 "status": "draft",
 "by": "codex-second-1",
-"why": "Monthly counts require monthly data with unavailable years named.",
+"why": "Monthly counts require monthly data with unavailable years named. Jeff 2026-11-14: monthly murder outside Current Trends coverage is answered from Homicide Reports.",
 "expected": {
 "outcome": "answer",
-"source": "rtci"
+"source": "shr"
 }
 },
 "QL-ct-71c5382a59": {
@@ -6683,10 +6683,10 @@
 "QL-hist-71a6e80fb6": {
 "status": "draft",
 "by": "codex-second-1",
-"why": "Monthly murder counts require monthly data.",
+"why": "Monthly murder counts require monthly data. Jeff 2026-11-14: monthly murder outside Current Trends coverage is answered from Homicide Reports.",
 "expected": {
 "outcome": "answer",
-"source": "rtci"
+"source": "shr"
 }
 },
 "QL-hist-71d3299cb7": {
@@ -16192,7 +16192,12 @@
 },
 "QL-shr-9b3abc5d13": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "codex-second-1",
+"why": "Monthly murder counts before Current Trends are Homicide Reports (Jeff 2026-11-14).",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-9b90cb23ee": {
 "status": "reviewed",
