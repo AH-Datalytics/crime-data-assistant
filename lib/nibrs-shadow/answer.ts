@@ -2056,10 +2056,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const firstY = release.firstMonth.slice(0, 4);
       const monthly = (spec.grain === "month" || !!(spec as { window?: unknown }).window) && !flags(ledger0).quarter;
       // Murder detail is Homicide Reports' from its own first year; everything else NIBRS's.
-      // Only a murder DETAIL (a weapon, a victim's or offender's trait, a relationship: a filter or a category): a plain murder
-      // count by month or year stays with Current Trends and NIBRS (runner AY1: two wrong answers, "Brighton AL murders by month").
-      const murderOnly = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
-        && (plan.filters.length > 0 || plan.groupings.some((g) => !g.dimension.startsWith("time.")));
+      // Homicide Reports' span first (from 1985) for a murder DETAIL (a weapon, a victim's or offender's trait, a relationship:
+      // a filter or a category), and for a plain murder count BY MONTH (Jeff 2026-11-14: "SHR by month would be preferred,
+      // NIBRS gives far fewer years"). A plain yearly count stays with NIBRS and Crime Index (D3, reported counts).
+      const murderMeasure = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id));
+      const murderOnly = murderMeasure && (plan.filters.length > 0 || plan.groupings.some((g) => !g.dimension.startsWith("time.")) || monthly);
       const starts = murderOnly ? [String(SHR_FIRST_YEAR), firstY] : [firstY];
       for (const start of starts) {
         const all = fromLedger(filled(ledger, "period", monthly ? `since:${start}` : `range:${start}:${lcy}`, "every year available"), deps, pins);
