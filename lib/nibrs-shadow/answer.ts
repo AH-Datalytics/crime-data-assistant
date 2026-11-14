@@ -788,13 +788,14 @@ export function answerDimensions(o: ShadowOutcome): string[] | null {
  * (named-groupings.ts) is a grouping of the answer, or the question is declined. A clarify's choices are checked the
  * same way, since each answers this question.
  */
-function everyBreakdown(question: string, o: ShadowOutcome): ShadowOutcome {
-  // A yearly choice offered on purpose beside monthly ones (span choices, Jeff 2026-11-14) is not a dropped breakdown.
-  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => (x.continuation && x.role !== "by_year" ? { ...x, continuation: everyBreakdown(question, x.continuation) } : x)) };
-  if ((o as { spanChoice?: boolean }).spanChoice) return o;
+function everyBreakdown(question: string, o: ShadowOutcome, yearlyStandsIn = false): ShadowOutcome {
+  // A yearly choice offered on purpose beside monthly ones (span choices, Jeff 2026-11-14) replaces the months asked, and
+  // only the months: any other breakdown the question names is still checked (Codex span review 07).
+  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => (x.continuation ? { ...x, continuation: everyBreakdown(question, x.continuation, x.role === "by_year") } : x)) };
   const dims = answerDimensions(o);
   if (!dims) return o;
-  const missing = missingGroupings(question, dims);
+  const stands = yearlyStandsIn || !!(o as { spanChoice?: boolean }).spanChoice;
+  const missing = missingGroupings(question, dims).filter((m) => !(stands && m === "month"));
   return missing.length ? decline("unsupported_capability", `This isn't available yet: this answer by ${missing.join(" and ")} together with the rest of the question.`,
     { detail: `breakdown dropped: ${missing.join(", ")}` }) : o;
 }

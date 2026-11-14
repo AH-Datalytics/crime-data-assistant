@@ -231,6 +231,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.equal(mid.kind, "clarify", JSON.stringify(mid).slice(0, 200));
     assert.deepEqual(mid.options!.map((o) => o.label), ["Yearly, 1960 to 2020 (Crime Index)", "Monthly, January 2017 to December 2020 (NIBRS)"]);
     assert.notEqual((withBuild("Memphis robbery rate per month since 1960") as { options?: unknown }).options && withBuild("Memphis robbery rate per month since 1960").kind, "clarify", "a rate gets no choices");
+    // Codex span review 07: only the months are excused by a yearly stand-in; another named breakdown is still checked.
+    const dropped = withBuild("Memphis shoplifting by month and year since 1960") as ShadowOutcome & { options?: unknown };
+    assert.ok(!(dropped.kind === "answer"), "a monthly-only answer must not silently drop the year breakdown: " + JSON.stringify(dropped).slice(0, 160));
     const cj = withBuild("Memphis carjackings per month since 1960") as ShadowOutcome & { delivered?: { text: string[] } };
     assert.equal(cj.kind, "answer", JSON.stringify(cj).slice(0, 200));
     assert.doesNotMatch(cj.delivered!.text[1], /Crime Index/, "no Crime Index series for carjackings: not named");
