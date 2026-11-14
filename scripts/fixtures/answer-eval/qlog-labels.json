@@ -16564,10 +16564,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "shr"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -16577,10 +16576,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-14",
+    "reviewed_by": "jeff-2026-11-14",
+    "notes": "Jeff 2026-11-14 (policy D37): a plain murder count by month for one agency answers from Homicide Reports, from 1985 (\"SHR by month would be preferred, NIBRS gives far fewer years\")"
    }
   },
   {
@@ -79634,10 +79633,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "shr"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -79647,10 +79645,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-14",
+    "reviewed_by": "jeff-2026-11-14",
+    "notes": "Jeff 2026-11-14 (policy D37): a plain murder count by month for one agency answers from Homicide Reports, from 1985 (\"SHR by month would be preferred, NIBRS gives far fewer years\")"
    }
   },
   {
