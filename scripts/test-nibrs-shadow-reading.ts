@@ -186,3 +186,6 @@ for (const q of ["disorderly conduct arrests in Ohio in 2024", "liquor law viola
   assert.deepEqual(rq(q).ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], q);
 
 console.log("nibrs shadow reading: general wording forms read; boundaries keep their meaning");
+
+// All years by default (Jeff 2026-11-11): "going back as far as possible" is by year with no range.
+assert.equal(rq("indianapolis homicide counts going back as far as possible").text, "indianapolis homicide counts by year");

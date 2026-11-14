@@ -103,6 +103,9 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
+  // All years by default (Jeff 2026-11-11): "going back as far as possible", "every year available" are by year with no
+  // range, which is every year the source has.
+  [/\s*(?:,\s*)?(?:going\s+back\s+as\s+far\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|as\s+far\s+back\s+as\s+(?:possible|you\s+can|the\s+data\s+goes)|for\s+every\s+year\s+(?:available|you\s+have)|(?:for\s+)?all\s+(?:available\s+)?years(?:\s+available)?)\b/gi, " by year"],
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.

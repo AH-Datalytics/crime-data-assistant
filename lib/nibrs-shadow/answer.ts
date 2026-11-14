@@ -2049,6 +2049,20 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
     const thisYear = Number(release.lastMonth.slice(0, 4));
     const trend = !!spec.grain && spec.grain !== "total";
+    // Jeff 2026-11-11, "All years by default": "by year", "per month", "over time" with no range is every year the source
+    // has, said, never asked. By year (or quarter): NIBRS's first year through the latest complete year; by month or a
+    // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
+    if (trend) {
+      const firstY = release.firstMonth.slice(0, 4);
+      const monthly = spec.grain === "month" || !!(spec as { window?: unknown }).window;
+      const all = fromLedger(filled(ledger, "period", monthly ? `since:${firstY}` : `range:${firstY}:${lcy}`, "every year available"), deps, pins);
+      if (all.kind === "answer") {
+        const span = monthly ? `${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}` : `${firstY} through ${lcy}`;
+        return { ...all, delivered: { ...all.delivered, text: [all.delivered.text[0], `No years were given, so every year in the data is shown: ${span}.`, ...all.delivered.text.slice(1)] } };
+      }
+      // Another question first ("which New York"): asked, its answers already for every year.
+      if (all.kind === "clarify" && all.about !== "which period" && all.about !== "which range of years") return all;
+    }
     const opts: ShadowOption[] = trend
       ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps, pins) },
          { label: "Every year available", continuation: fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), deps, pins) },
