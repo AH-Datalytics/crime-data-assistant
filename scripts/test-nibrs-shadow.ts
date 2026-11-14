@@ -301,7 +301,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   if (s.kind === "clarify") {
     assert.equal(s.about, "fatal or non-fatal shootings");
     // Jeff 2026-11-10: the two named as such; the fatal one runs now that murders with a firearm are answered here (2026-11-14).
-    assert.deepEqual(s.options.map((o) => o.label), ["Fatal shootings (Homicide Reports)", "Aggravated assaults with a firearm (NIBRS)"]);
+    assert.deepEqual(s.options.map((o) => o.label), ["Fatal shootings (murders with a firearm)", "Aggravated assaults with a firearm (NIBRS)"]);
     assert.ok(s.options[0].continuation && s.options[0].continuation.kind !== "decline");
   } else assert.equal(s.kind, "decline");
   assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, "fatal or non-fatal shootings");

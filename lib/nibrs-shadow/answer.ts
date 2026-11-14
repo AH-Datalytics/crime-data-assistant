@@ -604,17 +604,19 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     // as such. Until Homicide Reports answer here, the fatal choice points to them (Jeff: "A is fine for now"), the one
     // button that doesn't run; the NIBRS choice runs, and the ask is made only when it does.
     const assaults = shadowAnswer(as("aggravated assaults with a firearm"), { ...deps, rewritten: true });
-    // Fatal shootings run now that Homicide Reports answer here (Jeff 2026-11-14): each choice that runs is offered, the one
-    // that can't is left out and said (never a dead button), and the ask is made when at least one runs. A fatal choice that
-    // doesn't run keeps pointing to the Homicide Reports tab beside a NIBRS choice that does.
+    // Fatal shootings are murders with a firearm and run now that they are answered here (Jeff 2026-11-14): each choice that
+    // runs is offered, the one that can't is left out and said (never a dead button, never a pointer), and the ask is made
+    // when at least one runs. The fatal choice is named by what it counts, as D14 words it, not by a source: the answer names
+    // its own source.
     const fatal = shadowAnswer(as("murders with a firearm"), { ...deps, rewritten: true });
     const assaultsRun = runsNow(assaults), fatalRuns = runsNow(fatal);
     if (assaultsRun || fatalRuns) {
-      const fatalChoice: ShadowOption = { label: "Fatal shootings (Homicide Reports)", continuation: fatalRuns ? fatal : { kind: "route", source: "shr",
-        explanation: "Fatal shootings are murders with a firearm, counted in Homicide Reports (FBI SHR). The Homicide Reports tab has them." } };
-      return { kind: "clarify", about: "fatal or non-fatal shootings", question,
-        options: assaultsRun ? [fatalChoice, { label: "Aggravated assaults with a firearm (NIBRS)", continuation: assaults }] : [fatalChoice],
-        ...(assaultsRun ? {} : { note: `Aggravated assaults with a firearm isn't available for this question: ${(assaults as { explanation?: string }).explanation ?? ""}`.trim() }) };
+      const options: ShadowOption[] = [];
+      if (fatalRuns) options.push({ label: "Fatal shootings (murders with a firearm)", continuation: fatal });
+      if (assaultsRun) options.push({ label: "Aggravated assaults with a firearm (NIBRS)", continuation: assaults });
+      const gone = !assaultsRun ? { what: "Aggravated assaults with a firearm", o: assaults } : !fatalRuns ? { what: "Fatal shootings (murders with a firearm)", o: fatal } : null;
+      return { kind: "clarify", about: "fatal or non-fatal shootings", question, options,
+        ...(gone ? { note: `${gone.what} isn't available for this question: ${(gone.o as { explanation?: string }).explanation ?? ""}`.trim() } : {}) };
     }
   }
   // A bare "assault" (coordinator 2026-11-06, "San Francisco assaults per month"): Crime Index and Current Trends hold
