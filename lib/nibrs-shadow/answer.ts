@@ -1101,8 +1101,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && !(clause0("entity").some((p) => p.value === "agency") && clause0("place").length === 1 && /^state:/.test(String(clause0("place")[0].value)));
   // Jeff 2026-11-14: when both the crime and the place are missing, the place is asked first (the crime ask follows once
   // a place is chosen): "Crimes Against Property" asks which place, then which crime.
-  // Not when words are unrecognized (a misspelled place: "st augustian fl crime"): a place was named, the crime is asked first.
-  const placeFirst = !clause0("place").length && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "unrecognized");
+  // Not when an unrecognized phrase looks like a place that was named but not found ("st augustian fl crime": it ends in a state
+  // abbreviation): a place was named, so the crime is asked first. Other unread words don't stop the place being asked first.
+  const STATE_END = /\s(?:al|ak|az|ar|ca|co|ct|de|fl|ga|ia|il|ks|ky|md|mi|mn|mo|ms|mt|nc|nd|ne|nh|nj|nm|nv|ny|ri|sc|sd|tn|tx|ut|va|vt|wa|wi|wv|wy|dc)\.?$/i;
+  const placeFirst = !clause0("place").length && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "unrecognized" && STATE_END.test(p.text.trim()));
   if (!named && !placeFirst && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
