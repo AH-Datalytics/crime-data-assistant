@@ -34,6 +34,10 @@ const DV: Record<string, string[]> = {
 };
 /** Today's age groups (scripts/nibrs-auto-update.py age_group_expr), as bins; special codes stay their own categories. */
 /** Today's age groups (P30). */
+/** Time of day (Jeff 2026-11-15): morning 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight, night midnight to 6 AM. */
+export const HOUR_BINS = [
+  { label: "Morning", from: 6, to: 11 }, { label: "Afternoon", from: 12, to: 17 }, { label: "Evening", from: 18, to: 23 }, { label: "Night", from: 0, to: 5 },
+];
 export const AGE_BINS = [
   { label: "Under 18", from: 1, to: 17 }, { label: "18-24", from: 18, to: 24 }, { label: "25-34", from: 25, to: 34 },
   { label: "35-44", from: 35, to: 44 }, { label: "45-54", from: 45, to: 54 }, { label: "55-64", from: 55, to: 64 },
@@ -133,7 +137,7 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "circumstance": return ent === "victim" ? g("victim_circumstance.circumstance", { multiValue: "each_value" }) : null;
     case "offense": return ent === "offense" ? g("offense.offense") : g("victim_offense.offense", { multiValue: "each_value" });
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
-    case "hour": return g("incident.hour");
+    case "hour": return g("incident.hour", { bins: HOUR_BINS });
     case "drug": return g("property_drug.drug", { multiValue: "each_value" });
     default: return null;
   }

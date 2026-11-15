@@ -129,6 +129,7 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
 /** "Violent crime" by a victim's or offender's age: NIBRS crimes against persons (no robbery named: Jeff 2026-11-15). */
 export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.";
 /** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
+export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
 export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
 export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
 /** Increment 7: a person condition in words: "under 18", "aged 18 to 24", "female", "recorded as Black". */
@@ -205,6 +206,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "victim.sex": { header: "Victim sex", plural: "sex", names: SEX },
   "victim.ethnicity": { header: "Victim ethnicity", plural: "ethnicity", names: ETHNICITY_CODES },
   "victim.age": { header: "Victim age", plural: "age group", names: null },
+  "incident.hour": { header: "Time of day", plural: "time of day", names: null },
   "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
   "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },

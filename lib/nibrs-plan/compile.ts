@@ -148,16 +148,24 @@ function clearanceCond(read: Read, a: string, dimension: string, values: string[
     `(SELECT max(i4.cleared_exceptionally) FROM ${read("incident")} i4 WHERE ${sameIncident("i4", a)})`);
   return `(${clearanceCols(type)[dimension]}) IN (${list(values)})`;
 }
+/**
+ * Time of day (Jeff 2026-11-15): the incident's hour (two characters, '00' to '23') in the plan's bins: morning 6 to 11,
+ * afternoon 12 to 17, evening 18 to 23, night 0 to 5. An hour that is not a number is Unknown.
+ */
+const hourGroup = (a: string): Groupable => ({ col: "ih.incident_hour", age: true,
+  join: (read) => `LEFT JOIN ${read("incident")} ih ON ${sameIncident("ih", a)}`,
+  binned: (bins) => `CASE ${bins.map((b) => `WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN ${b.from} AND ${b.to} THEN ${q(b.label)}`).join(" ")} ELSE 'Unknown' END` });
 const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
   victim: { "victim.race": own(unknownAs("v.race")), "victim.sex": own(unknownAs("v.sex")), "victim.ethnicity": own(unknownAs("v.ethnicity")), "victim.age": age("v"),
     "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
     // Element 31 (coordinator 2026-11-04): up to two per victim, each counted once under each (categories_overlap).
     "victim_circumstance.circumstance": { col: "vc.circumstance", multi: true, join: (read) => `LEFT JOIN ${read("victim_circumstance")} vc ON ${sameVictim("vc", "v")}` },
+    "incident.hour": hourGroup("v"),
     ...offenderGroupings("v"), ...Object.fromEntries(OFFENDER_ATTRS.map((x) => [`victim_offender.offender_${x}`, pairAttr(x)])), ...clearance("v") },
   offense: { "offense.location_type": own("o.location_type"),
     "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
-    ...offenderGroupings("o"), ...clearance("o") },
-  incident: { ...clearance("o") },
+    "incident.hour": hourGroup("o"), ...offenderGroupings("o"), ...clearance("o") },
+  incident: { "incident.hour": hourGroup("o"), ...clearance("o") },
   // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted
   // as one offender, whatever its blank fields hold; its attributes are Unknown (P86: one Unknown row).
   offender: Object.fromEntries(OFFENDER_ATTRS.map((x) => {

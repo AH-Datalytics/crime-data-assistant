@@ -624,6 +624,14 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.equal(as(ask2.options![0].continuation!, "answer").plan.measures[0].id, "victims.person_crimes");
   assert.equal(as(ask2.options![1].continuation!, "answer").plan.measures[0].id, "offenders.person_crimes");
 }
+// Time of day (Jeff 2026-11-15): the incident's hour in four buckets, the line saying which hours each holds.
+{
+  const before = sqls.length;
+  ask("Robberies in Detroit by time of day in 2023");
+  const sql = sqls.slice(before).find((x) => /ih\.incident_hour/.test(x));
+  assert.ok(sql, "the query groups the incident's hour");
+  assert.ok(/BETWEEN 6 AND 11 THEN 'Morning'/.test(sql!) && /BETWEEN 0 AND 5 THEN 'Night'/.test(sql!), "the buckets are 6-11, 12-17, 18-23 and 0-5");
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
