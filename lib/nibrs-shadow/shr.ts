@@ -498,20 +498,21 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   if (!entries.some((e) => e.filedAll)) return { kind: "shr-decline", explanation: `No city agency${floor} filed Homicide Reports in every year of ${years}.` };
   const { ranked, tie } = rankAgencies(entries, rk.direction, rk.limit);
   if (!ranked.length) return { kind: "shr-decline", explanation: `None of the cities${floor} that filed Homicide Reports in ${years} has a murder victim to rank.` };
-  const notFiled = entries.filter((e) => !e.filedAll).map((e) => e.name).sort((a, z) => a.localeCompare(z));
   const unitWords = shrUnitWords(sq);
-  const detail = rk.filters.map(filterWords).join(" ").replace(/^victims (?=aged)/, "").replace(/ victims (?=aged)/, " ");
+  // A weapon reads "killed with a firearm"; an age "aged 13 to 19" (Jeff 2026-11-15).
+  const detail = rk.filters.map(filterWords).join(" ").replace(/^victims (?=aged)/, "").replace(/ victims (?=aged)/, " ").replace(/\bwith a /, "killed with a ");
   const what = rk.share ? `share of ${unitWords}${detail ? ` ${detail}` : ""}` : `${unitWords}${detail ? ` ${detail}` : ""}`;
   const most = rk.direction === "top" ? (rk.share ? "highest" : "most") : (rk.share ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
-  const text = [`Cities${floor}: the ${ranked.length} with the ${most} ${what}, ${years}.`,
-    `Ranked: city agencies (Crime Index's city geography, whatever the agency) that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""}; ties are ordered by agency name.`];
+  const text = [`Cities${rk.minPopulation ? ` of ${fmt(rk.minPopulation)} or more` : ""} with the ${most} ${what}, ${years}.`,
+    `Ranked: city agencies that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""}. Ties are ordered by agency name.`];
   if (tie) { const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`; text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`); }
-  if (notFiled.length) text.push(`Not ranked because they filed no Homicide Reports ${fromY === toY ? `in ${fromY}` : `in every year of ${fromY} to ${toY}`}: ${notFiled.length <= 5 ? andList(notFiled) : `${notFiled.length} city agencies`}.`);
+  // Jeff 2026-11-15: no left-out city is named; one plain note.
+  text.push("Not every city reports Homicide Reports data. Cities that did not report in this period are not ranked.");
   text.push(rk.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.");
   if (rk.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
-  if (rk.share) text.push("Each share is the city's victims with this detail over all of its murder victims in the period.");
+  if (rk.share) text.push("Share = the city's victims with this detail out of all its murder victims in the period.");
   text.push(SHR_SOURCE);
   const header = ucFirst(rk.share ? `share of ${unitWords}${detail ? ` ${detail}` : ""} (%)` : what);
   const period = { from: rk.from, to: rk.to };

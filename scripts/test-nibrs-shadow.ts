@@ -1756,7 +1756,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(fire.delivered.table.rows, [["DALLAS, TX", 90], ["HOUSTON, TX", 80]]);
     assert.ok(fire.question.ranking && fire.question.share && fire.question.filters[0].dim === "weapon");
   }
-  for (const [q, text] of [["Big cities with the highest number of homicides by knife or sharp object", "homicide victims with a weapon recorded as knife or cutting instrument"],
+  for (const [q, text] of [["Big cities with the highest number of homicides by knife or sharp object", "homicide victims killed with a weapon recorded as knife or cutting instrument"],
     ["Big cities with the highest % of teenage homicide victims", "share of homicide victims aged 13 to 19"],
     ["Big cities with the highest proportion of teenage homicide victims (13-19)", "share of homicide victims aged 13 to 19"]]) {
     const ask1 = as(shadowAnswer(q, rdeps), "clarify");

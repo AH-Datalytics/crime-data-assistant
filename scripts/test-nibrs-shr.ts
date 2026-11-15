@@ -164,8 +164,11 @@ const ranked = answerShrRanking(rk, build, hist, (s) => { sqlSeen.push(s); retur
 assert.ok(ranked.kind === "shr", JSON.stringify(ranked));
 if (ranked.kind === "shr") {
   assert.deepEqual(ranked.delivered.table.rows, [["DALLAS, TX", 90], ["OMAHA, NE", 90], ["HOUSTON, TX", 80], ["NEW YORK, NY", 40]], "Chicago filed nothing and Philadelphia has no victim: neither is ranked");
-  assert.ok(ranked.delivered.text[0].startsWith("Cities with a population of 250,000 or more: the 4 with the highest share of murder victims with a firearm, 2024."), ranked.delivered.text[0]);
-  assert.ok(ranked.delivered.text.some((t) => t === "Not ranked because they filed no Homicide Reports in 2024: CHICAGO, IL."), JSON.stringify(ranked.delivered.text));
+  assert.equal(ranked.delivered.text[0], "Cities of 250,000 or more with the highest share of murder victims killed with a firearm, 2024.");
+  assert.equal(ranked.delivered.text[1], "Ranked: city agencies that filed Homicide Reports in 2024 and had at least one murder victim. Ties are ordered by agency name.");
+  assert.ok(ranked.delivered.text.includes("Share = the city's victims with this detail out of all its murder victims in the period."));
+  assert.ok(!ranked.delivered.text.some((t) => /CHICAGO|Not ranked/.test(t)), "no left-out city is named");
+  assert.ok(ranked.delivered.text.some((t) => t === "Not every city reports Homicide Reports data. Cities that did not report in this period are not ranked."), JSON.stringify(ranked.delivered.text));
   assert.equal(ranked.meaning.statistic, "rank");
   assert.deepEqual(ranked.question.ranking, { direction: "top", limit: 20, minPopulation: 250000 });
 }
