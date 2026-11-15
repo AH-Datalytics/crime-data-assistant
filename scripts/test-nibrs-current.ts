@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, agencyMonthPopulations, answerCurrent, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -30,9 +30,26 @@ assert.equal(currentRate(88, 100000, 0), null);
 // P96: a month's rate uses its own population: current_crime's row from Current Trends' first month, the same year's
 // published population before it; never another month's or year's (Codex monthly-rates review 01.1).
 {
-  const fake = (sql: string): unknown[][] => (sql.includes("current_crime") ? [["2025-05", 2_000_000]] : [[2024, 1_900_000]]);
+  const fake = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2025]] : sql.includes("current_crime") ? [["2025-05", 2_000_000]] : [[2024, 1_900_000], [2025, 1_950_000]]);
   const pops = agencyMonthPopulations({ root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" }, "X", ["2023-06", "2024-03", "2025-05", "2025-06"], fake);
   assert.deepEqual([...pops.values()], [null, 1_900_000, 2_000_000, null]);
+}
+// The current year's months with no population of their own take the latest completed year's (Jeff 2026-11-14); a past
+// month without one keeps no rate (P96); the year after the current one does not carry.
+{
+  const fake = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2025]] : sql.includes("current_crime") ? [["2025-05", 2_000_000]] : [[2024, 1_900_000], [2025, 1_950_000]]);
+  const bld = { root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
+  const pops = agencyMonthPopulations(bld, "X", ["2025-05", "2025-06", "2026-03", "2027-01"], fake);
+  assert.deepEqual([...pops.values()], [2_000_000, null, 1_950_000, null]);
+  // The boundary is the build's latest completed year, not the agency's own latest year: an agency whose last
+  // population is 2024 does not get 2025 months (P96), nor 2026 ones (Codex population review 01.1).
+  const old = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2025]] : sql.includes("current_crime") ? [] : [[2024, 100_000]]);
+  assert.deepEqual([...agencyMonthPopulations(bld, "X", ["2025-06", "2026-03"], old).values()], [null, null]);
+  // A total, year-to-date or rolling rate takes the same carried denominator as the months (Codex 01.2).
+  const own = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2025]] : sql.includes("current_crime") ? [] : [[100_000]]);
+  assert.equal(agencyPopulation(bld, "X", "2026-02", own), 100_000);
+  assert.equal(agencyPopulation(bld, "X", "2027-02", own), null, "2027 does not carry");
+  assert.equal(agencyPopulation(bld, "X", "2025-11", own), null, "a past month does not carry");
 }
 assert.equal(currentRate(null, 100000, 8), null);
 assert.equal(currentRate(5, 0, 8), null);

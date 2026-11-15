@@ -9,6 +9,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import { fmt, periodWords, SRS_SOURCE } from "./deliver";
 import type { HistoricalAgency, HistoricalAnswer, HistoricalBuild, HistoricalDecline } from "./historical";
 import { stateName } from "./places";
+import { carriedPopulation } from "./population-carry";
 import { srsPopulation, SRS_YEARS, type SrsPlace } from "./srs";
 
 /** One place, in the order asked: an agency (the Crime Index build) or a state or the nation (the historical file). */
@@ -29,14 +30,18 @@ export function answerPopulation(places: PopulationPlace[], from: number, to: nu
   // The years either source holds, the rest named; none held: declined, the range named.
   const first = Math.min(...(agencies.length ? [build.firstYear] : []), ...(geos.length ? [SRS_YEARS.first] : []));
   const last = Math.max(...(agencies.length ? [build.lastYear] : []), ...(geos.length ? [SRS_YEARS.last] : []));
-  const wanted = range(from, to), covered = wanted.filter((y) => y >= first && y <= last), outside = wanted.filter((y) => !covered.includes(y));
+  // The year after the latest completed one is answered with that year's population (population-carry.ts).
+  const reach = last + 1;
+  const wanted = range(from, to), covered = wanted.filter((y) => y >= first && y <= reach), outside = wanted.filter((y) => !covered.includes(y));
   const yearsWords = (a: number, b: number) => (a === b ? String(a) : `${a} through ${b}`);
-  const span = `Population figures in the data cover ${first} through ${last}`;
+  // A carried year in the table is covered too: the text never says "through 2025" beside a 2026 row.
+  const span = `Population figures in the data cover ${first} through ${covered.some((y) => y > last) ? reach : last}`;
   if (!covered.length) return { kind: "historical-decline", explanation: `${span}, so ${yearsWords(from, to)} ${from === to ? "is" : "are"} outside them.` };
   const got = agencies.length ? execute(`SELECT ori, year, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
-    + `WHERE ori IN (${agencies.map((a) => q(a.ori)).join(", ")}) AND year BETWEEN ${covered[0]} AND ${covered[covered.length - 1]} ORDER BY ori, year`) : [];
+    + `WHERE ori IN (${agencies.map((a) => q(a.ori)).join(", ")}) AND year BETWEEN ${Math.min(covered[0], build.lastYear)} AND ${covered[covered.length - 1]} ORDER BY ori, year`) : [];
   const pop = new Map(got.map((r) => [`${r[0]}|${r[1]}`, r[2] === null || r[2] === undefined ? null : Number(r[2])]));
-  const value = (p: PopulationPlace, y: number): number | null => ("agency" in p ? pop.get(`${p.agency.ori}|${y}`) ?? null : srsPopulation(p.geo, y));
+  const value = (p: PopulationPlace, y: number): number | null => ("agency" in p
+    ? carriedPopulation((x) => pop.get(`${p.agency.ori}|${x}`) ?? null, y, build.lastYear) : srsPopulation(p.geo, y));
   // A series starts at its first year with a figure for any place, as a crime series does.
   const firstFigure = covered.findIndex((y) => places.some((p) => value(p, y) !== null));
   if (firstFigure < 0) return { kind: "historical-decline", explanation: `Crime Index has no population for ${places.length > 1 ? "these places" : nameOf(places[0])} in ${yearsWords(covered[0], covered[covered.length - 1])}: not available in this data.` };
@@ -99,12 +104,14 @@ function nameOf(p: PopulationPlace): string {
 export function answerAgencyList(state: string, year: number, build: HistoricalBuild, execute: (sql: string) => unknown[][],
   label: (ori: string) => string | null): HistoricalAnswer | HistoricalDecline {
   const where = stateName(state);
-  if (year < build.firstYear || year > build.lastYear)
+  if (year < build.firstYear || year > build.lastYear + 1)
     return { kind: "historical-decline", explanation: `Agency figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${year} is outside them.` };
+  // The year after the latest completed one lists that year's agencies and populations (population-carry.ts).
+  const readYear = Math.min(year, build.lastYear);
   // The build's state is the ORI's first two letters, which are the postal code except Nebraska's "NB" (Codex
   // population review 02.1: Nebraska's list was empty).
   const code = state === "NE" ? "NB" : state;
-  const got = execute(`SELECT ori, name, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE state = ${q(code)} AND year = ${year}`);
+  const got = execute(`SELECT ori, name, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE state = ${q(code)} AND year = ${readYear}`);
   if (!got.length) return { kind: "historical-decline", explanation: `Crime Index publishes no agencies for ${where} in ${year}.` };
   const rows = got.map((r) => ({ ori: String(r[0]), label: label(String(r[0])) ?? `${String(r[1])}, ${where}`, population: r[2] === null || r[2] === undefined ? null : Number(r[2]) }))
     .sort((a, b) => (a.population === null ? 1 : 0) - (b.population === null ? 1 : 0) || (b.population ?? 0) - (a.population ?? 0) || a.label.localeCompare(b.label));

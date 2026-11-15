@@ -7,6 +7,7 @@
  * The file has the seven offenses' totals, year-over-year change and rates per 100,000 (its "capita" columns) for each
  * state and the nation, 1960-2025, and its own violent and property sums, which are read as given, never re-added.
  */
+import { carriedPopulation } from "./population-carry";
 import fs from "node:fs";
 import path from "node:path";
 import type { Meaning } from "../answer-eval/case";
@@ -206,6 +207,9 @@ export function answerSrsSeveral(q: Omit<SrsQuestion, "place">, places: SrsPlace
 
 /** The Crime Index population of a state or the nation for a year (coverage's denominator, P61's note); null when absent. */
 export function srsPopulation(p: SrsPlace, year: number): number | null {
-  const r = rowFor(crime(), p, year);
-  return r && r.population !== "" ? Number(r.population) : null;
+  const own = (y: number): number | null => { const r = rowFor(crime(), p, y); return r && r.population !== "" ? Number(r.population) : null; };
+  // The current year takes the latest completed year's population until it is formally reported (population-carry.ts).
+  return carriedPopulation(own, year, srsLastYear());
 }
+/** The latest completed year the state and national file holds, read from the file. */
+const srsLastYear = () => crime().reduce((m, r) => Math.max(m, Number(r.year)), 0);

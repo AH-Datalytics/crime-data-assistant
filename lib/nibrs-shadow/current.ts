@@ -14,6 +14,7 @@
  *   rate        count / current population x 100,000 (decision B, P58, P59): every month known, never one month,
  *               never with a missing or zero population
  */
+import { carriesTo } from "./population-carry";
 import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
@@ -97,6 +98,18 @@ export function groupMonths(b: CurrentBuild, states: string[] | null, measure: s
 /** An agency's current population: its row's in `month`, else its latest earlier row's; null when none is above zero. */
 export function agencyPopulation(b: CurrentBuild, ori: string, month: Month, execute: (sql: string) => unknown[][]): number | null {
   const r = execute(`SELECT population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0 AND printf('%04d-%02d', year, month) <= ${q(month)} ORDER BY year DESC, month DESC LIMIT 1`)[0];
+  if (r) return Number(r[0]);
+  // None yet in Current Trends: the current year takes the latest completed year's population (population-carry.ts).
+  const last = completedYear(b, execute);
+  return last !== null && carriesTo(Number(month.slice(0, 4)), last) ? completedYearPopulation(b, ori, last, execute) : null;
+}
+/** The build's latest completed year: the last year Crime Index publishes agency figures for, read from the build. */
+function completedYear(b: CurrentBuild, execute: (sql: string) => unknown[][]): number | null {
+  const r = execute(`SELECT max(year) FROM read_parquet('${b.root}/agency_crime.parquet')`)[0];
+  return r && r[0] !== null && r[0] !== undefined ? Number(r[0]) : null;
+}
+function completedYearPopulation(b: CurrentBuild, ori: string, last: number, execute: (sql: string) => unknown[][]): number | null {
+  const r = execute(`SELECT population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND year = ${last} AND population > 0`)[0];
   return r ? Number(r[0]) : null;
 }
 /**
@@ -110,7 +123,14 @@ export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWante
     .map((r) => [String(r[0]), Number(r[1])] as [string, number]));
   const yearly = new Map(execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
     .map((r) => [Number(r[0]), Number(r[1])] as [number, number]));
-  return new Map(monthsWanted.map((m) => [m, m >= b.firstMonth ? cur.get(m) ?? null : yearly.get(Number(m.slice(0, 4))) ?? null]));
+  // The current year's months (the year after the latest completed one) with no population of their own take that
+  // completed year's (Jeff 2026-11-14, population-carry.ts); a past month without one keeps no rate (P96).
+  const lastYear = completedYear(b, execute) ?? Math.max(0, ...yearly.keys());
+  return new Map(monthsWanted.map((m) => {
+    const y = Number(m.slice(0, 4));
+    const own = m >= b.firstMonth ? cur.get(m) ?? null : yearly.get(y) ?? null;
+    return [m, own ?? (m >= b.firstMonth && carriesTo(y, lastYear) ? yearly.get(lastYear) ?? null : null)];
+  }));
 }
 /**
  * A group's rate (decision B; Codex review 01.1): over its sample agencies with every month of the span known for the

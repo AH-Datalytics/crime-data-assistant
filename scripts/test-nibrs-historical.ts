@@ -5,6 +5,9 @@
 import assert from "node:assert/strict";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { carriedPopulation } from "../lib/nibrs-shadow/population-carry";
+import { srsPopulation } from "../lib/nibrs-shadow/srs";
+import { answerAgencyList, answerPopulation } from "../lib/nibrs-shadow/population";
 import { answerCurrentRanking, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { rankAgencies } from "../lib/nibrs-plan/transforms";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
@@ -325,8 +328,14 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(JSON.stringify(dal.delivered.table.rows) === JSON.stringify([["2023", 1302868]]) && dal.delivered.text.some((t) => /no population for Dallas, Texas in 2022, so the table starts in 2023/.test(t)), JSON.stringify(dal.delivered));
   const none = shadowAnswer("Population of Memphis", base);
   assert.ok(none.kind === "clarify" && none.about === "which period", JSON.stringify(none).slice(0, 200));
-  const later = shadowAnswer("Texas population in 2026", base);
+  // Jeff 2026-11-14: the current year takes the latest completed year's population (population-carry.ts), so 2026 answers
+  // (with 2025's figure, no note) and only 2027 is outside.
+  const later = shadowAnswer("Texas population in 2027", base);
   assert.ok(later.kind === "decline" && later.reason === "outside_release_coverage", JSON.stringify(later).slice(0, 200));
+  const current = shadowAnswer("Texas population in 2026", base);
+  assert.ok(current.kind === "historical" && !current.delivered.text.some((t) => /outside|carried/.test(t)), JSON.stringify(current).slice(0, 300));
+  const since = shadowAnswer("Texas population since 2026", base);
+  assert.ok(since.kind === "historical", JSON.stringify(since).slice(0, 300));
   // Codex population review 01.1: a qualifier the reader kept aside is never dropped (a region read as the nation, a
   // change, NIBRS asked by name).
   for (const q of ["Population in the Northeast in 2023", "Percent change in US population from 2022 to 2023", "Population of Memphis in 2023 according to NIBRS"]) {
@@ -810,5 +819,40 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = shadowAnswer(q, base as never) as { kind: string; explanation?: string };
     assert.ok(!(o.kind === "decline" && (GROUP.test(o.explanation ?? "") || /^NIBRS doesn't include /.test(o.explanation ?? ""))), `${q}: ${JSON.stringify(o).slice(0, 240)}`);
   }
+}
+// The current year's population (Jeff 2026-11-14, population-carry.ts): the year right after the latest completed one
+// takes that year's population, silently; later years stay outside; the year's own figure always wins.
+{
+  const own = (m: Record<number, number>) => (y: number) => m[y] ?? null;
+  assert.equal(carriedPopulation(own({ 2025: 600 }), 2026, 2025), 600, "2026 carries 2025's");
+  assert.equal(carriedPopulation(own({ 2025: 600 }), 2027, 2025), null, "2027 stays outside");
+  assert.equal(carriedPopulation(own({ 2025: 600, 2026: 650 }), 2026, 2025), 650, "the year's own figure wins");
+  assert.equal(carriedPopulation(own({ 2024: 590 }), 2026, 2025), null, "nothing is invented when the completed year has none");
+  assert.equal(carriedPopulation(own({ 2024: 590 }), 2025, 2024), 590, "the latest completed year is read from the data, not written down");
+  assert.equal(carriedPopulation(own({ 2024: 590 }), 2026, 2024), null, "a gap of two years is not carried");
+  // States and the nation: the file ends in 2025; 2026 shows 2025's figure, 2027 none.
+  const nation = { kind: "national" } as const, ca = { kind: "state", code: "CA" } as const;
+  assert.ok(srsPopulation(nation, 2025)! > 300_000_000);
+  assert.equal(srsPopulation(nation, 2026), srsPopulation(nation, 2025));
+  assert.equal(srsPopulation(ca, 2026), srsPopulation(ca, 2025));
+  assert.equal(srsPopulation(nation, 2027), null);
+  // Population on its own for 2026: an agency and the nation show 2025's figure as the 2026 value, no relabel.
+  const memphis = { ori: "TNMPD0000", label: "Memphis, TN", name: "Memphis", state: "TN" };
+  const exec25 = (sql: string): unknown[][] => (/year BETWEEN (\d{4}) AND 2026/.test(sql) ? [["TNMPD0000", 2025, 610000]] : []);
+  const r26 = answerPopulation([{ agency: memphis }], 2026, 2026, false, build, exec25);
+  assert.ok(r26.kind === "historical" && JSON.stringify(r26.delivered.table.rows) === "[[610000]]" && /in 2026\./.test(r26.delivered.text[0]), JSON.stringify(r26));
+  assert.ok(r26.kind === "historical" && !r26.delivered.text.some((t) => /outside|carr|2025/.test(t)), "silent: no note");
+  const n26 = answerPopulation([{ geo: nation }], 2025, 2026, true, build, exec25);
+  assert.ok(n26.kind === "historical" && n26.delivered.table.rows.length === 2 && n26.delivered.table.rows[0][1] === n26.delivered.table.rows[1][1], JSON.stringify(n26));
+  // "Since 2026" and a span through 2026 answer the carried year, and the text never says "through 2025" beside a 2026 row.
+  const wide = answerPopulation([{ geo: nation }], 2025, 2027, true, build, exec25);
+  assert.ok(wide.kind === "historical" && wide.delivered.text.some((t) => /cover 1960 through 2026/.test(t) && /2027 is outside/.test(t)) && !wide.delivered.text.some((t) => /through 2025/.test(t)), JSON.stringify(wide).slice(0, 400));
+  const n27 = answerPopulation([{ geo: nation }], 2027, 2027, false, build, exec25);
+  assert.equal(n27.kind, "historical-decline");
+  // A state's agencies listed for 2026 read 2025's rows.
+  const listSql: string[] = [];
+  const l26 = answerAgencyList("TN", 2026, build, (sql) => (listSql.push(sql), [["TNMPD0000", "Memphis", 610000]]), () => "Memphis, TN");
+  assert.ok(l26.kind === "historical" && listSql[0].includes("year = 2025"), JSON.stringify(l26).slice(0, 300));
+  assert.equal(answerAgencyList("TN", 2027, build, () => [], () => null).kind, "historical-decline");
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");
