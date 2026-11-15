@@ -599,6 +599,15 @@ assert.equal(as(ask("Drug possession in Detroit in 2023"), "answer").plan.measur
 const drugsMonth = as(ask("Drug crimes in Detroit in 2024"), "answer");
 assert.ok(drugsMonth.delivered.text.includes("No combined total of drug crimes is given: the available evidence does not establish every part."));
 assert.ok(!drugsMonth.delivered.text.some((t) => /^Together/.test(t)));
+// Drug crimes by year (Jeff 2026-11-15): each part per year plus the total as a third column, "Drug crimes together".
+const drugsYears = as(ask("Drug crimes in Detroit from 2021 to 2023"), "answer");
+assert.deepEqual(drugsYears.delivered.table.columns.map((c) => c.header), ["Year", "Drug/narcotic violation offenses", "Drug equipment violation offenses", "Drug crimes together"]);
+assert.equal(drugsYears.delivered.text[0], "Drug crimes are drug/narcotic violations plus drug equipment violations.");
+assert.deepEqual(drugsYears.delivered.contractProblems, []);
+// Marijuana (Jeff 2026-11-15): "Marijuana possession arrests", with one line saying what is counted.
+const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
+assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
+assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 

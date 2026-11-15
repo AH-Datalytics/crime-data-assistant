@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -2094,6 +2094,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+    // By period the total is a third column, "Drug crimes together" (Jeff 2026-11-15): counted as its own measure over both codes
+    // (the two offenses never overlap), so it carries its own evidence and is blank when either part is not established.
+    if (plan.groupings.some((g) => g.dimension.startsWith("time."))) {
+      plan.measures.push({ id: "offenses.drug_crimes", unit: "offense", as: "drug_crimes_together" });
+      plan.statistics.push({ kind: "count", as: "drug_crimes_together_count", measure: "drug_crimes_together" });
+    }
   }
   plan.measures.forEach((m, i) => {
     const name = m.id.replace(/^[a-z_]+\./, "");
@@ -2256,7 +2262,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
   if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
-    || (several && (catG.length || !counts)) || (combined && timeG.length))
+    || (several && (catG.length || !counts)) || (combined && timeG.length && combined.label !== "drug crimes"))
     return decline("unsupported_capability", "This isn't available yet: this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share.");
 
   // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
@@ -2431,7 +2437,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (unnamed) return decline("unsupported_capability", "This isn't available yet: this weapon or relationship selection.");
   const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
     // P84 (Jeff 2026-11-01): how the phrase was read.
-    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
+    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
+    // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.
+    ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : [])];
   // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here
   // in time (job AR6: 2021-2025 by age took 8 minutes, 2017-2025 more than 15). Declined, with one year offered in
   // words (never run in advance, which would cost as much) until the national arrest query is made faster (Jeff

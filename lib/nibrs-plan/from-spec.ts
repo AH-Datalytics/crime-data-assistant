@@ -95,7 +95,9 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
   const person = ["victim", "offender", "arrestee", "group_b_arrest"].includes(ent) ? ent : "victim";
   switch (dim) {
     case "sex": case "race": case "ethnicity": return onEntity(person, attr(`${person}.${dim}`, [val]));
-    case "age": return val === "Under 18" ? onEntity(person, attr(`${person}.age`, [1, 17], "between")) : null;
+    // "Juvenile crime" is an offender's age (Jeff 2026-11-15), the incident's offender: a count of offenses or incidents names no person of its own.
+    case "age": return val !== "Under 18" ? null : ["victim", "offender", "arrestee", "group_b_arrest"].includes(ent) ? onEntity(person, attr(`${person}.age`, [1, 17], "between"))
+      : { kind: "exists", scope: "incident", entity: "offender", where: [attr("offender.age", [1, 17], "between")] };
     case "weapon": return { kind: "exists", scope: ent === "arrestee" ? "arrestee" : ent, entity: "offense_weapon", where: [attr("offense_weapon.weapon", val === "firearm" ? FIREARM : [val])] };
     case "location": return onEntity("offense", attr("offense.location_type", val === "commercial" ? COMMERCIAL_LOCATION_CODES : [val]));
     // Counting property, the loss type applies to the counted segments; counting anything else, to the incident.

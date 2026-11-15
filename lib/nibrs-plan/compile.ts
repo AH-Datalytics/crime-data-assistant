@@ -307,7 +307,7 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
   return null;
 }
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
-const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
+const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
 
 /**
  * The agencies of a place and their populations (increment 4), from the canonical agency table's batch-header rows:
@@ -442,6 +442,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       else if (on === "offense offense.offense incident arrestee")
         // Increment 6: an arrest on an incident that has an offense with one of the codes.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense")} o2 WHERE ${sameIncident("o2", "a")} AND o2.offense_code IN (${list(values)}))`);
+      else if (on === "property_drug property_drug.drug_type incident arrestee")
+        // Marijuana and the like: an arrest on an incident whose property records the drug (the drug is the incident's, not the arrestee's).
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("property_drug")} d2 WHERE ${sameIncident("d2", "a")} AND d2.drug_type IN (${list(values)}))`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
       else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")
