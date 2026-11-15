@@ -91,11 +91,13 @@ export type ShrQuestion = {
   measure: "murder" | "homicide" | "justifiable"; unit: "victims" | "offenders"; place: ShrPlace;
   /** Months inclusive ("1985-01".."2024-12"), already cut to 1985 and the release's latest month. */
   from: string; to: string; grain: "total" | "year" | "month";
-  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][] } | null; share: boolean;
+  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
   /** A ranking of the nation's cities by this question's count or share (answerShrRanking): the direction, the cut and the population floor. */
   ranking?: { direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+  /** Sentences the answer adds (what the source does not record of what was asked), after the counting rules. */
+  notes?: string[];
 };
 export type ShrAnswer = {
   kind: "shr"; question: ShrQuestion; period: { from: string; to: string };
@@ -114,13 +116,15 @@ const NIBRS_DIM: Record<string, ShrDim> = { "victim.age": "victim.age", "victim.
 /** NIBRS relationship codes -> SHR's (SHR names the side: husband or wife, mother or father). */
 const RELATIONSHIP_OF: Record<string, string[]> = { SE: ["HU", "WI"], CS: ["CH", "CW"], PA: ["MO", "FA"], SB: ["BR", "SI"], CH: ["SO", "DA"], IL: ["IL"],
   SP: ["SF", "SM"], SC: ["SS", "SD"], AQ: ["AQ"], FR: ["FR"], NE: ["NE"], BG: ["BF", "GF"], HR: ["HO"],
-  XS: ["XH", "XW"], EE: ["EE"], ER: ["ER"], OK: ["OK"], ST: ["ST"], RU: ["UN"] };
+  XS: ["XH", "XW"], XR: [], EE: ["EE"], ER: ["ER"], OK: ["OK"], ST: ["ST"], RU: ["UN"] };
 /** NIBRS homicide circumstances SHR records the same way. */
 const CIRCUMSTANCE_OF: Record<string, string[]> = { "04": ["46"], "05": ["47"], "20": ["80"], "21": ["81"] };
 // NIBRS "Other" (90) is narrower than SHR's "other or unknown", so it isn't translated (Codex SHR-A review 01.2).
 const SHR_WEAPON_CODES = new Set(["11", "12", "13", "14", "15", "20", "30", "40", "50", "60", "65", "70", "85"]);
 /** NIBRS's other family members (other, grandparent, grandchild, stepsibling) together are SHR's "other family". */
 const OTHER_FAMILY = ["OF", "GP", "GC", "SS"];
+/** Jeff 2026-11-15: the one sentence said when the intimate partner set is asked and Homicide Reports can't hold part of it. */
+const NO_EX_PARTNERS = "This data source does not record ex-boyfriend and ex-girlfriend relationships.";
 function codesOf(dim: ShrDim, values0: readonly (string | number)[]): string[] | null {
   const out = new Set<string>();
   let values = values0.map(String);
@@ -143,7 +147,7 @@ function codesOf(dim: ShrDim, values0: readonly (string | number)[]): string[] |
     if (!got) return null;
     got.forEach((g) => out.add(g));
   }
-  return [...out];
+  return out.size ? [...out] : null;
 }
 /** The postal state of an ORI (its first two letters; NB is Nebraska and GM Guam, as the FBI writes them). */
 const ORI_STATE: Record<string, string> = { NB: "NE", GM: "GU" };
@@ -154,7 +158,7 @@ export const stateOfOri = (ori: string) => ORI_STATE[ori.slice(0, 2)] ?? ori.sli
  * place (an agency, a state or the nation), one murder measure counted by victims or offenders, counts (and each
  * category's share), by year or month, at most one breakdown; every filter a detail SHR records the same way.
  */
-export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: ShrBuild): ShrQuestion | { why: string } {
+export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: ShrBuild, opts: { compare?: boolean } = {}): ShrQuestion | { why: string } {
   if (plan.measures.length !== 1) return { why: "several crimes" };
   const m = /^(victims|offenders|offenses)\.(murder|homicide|justifiable_homicide)$/.exec(plan.measures[0].id);
   if (!m) return { why: "not a homicide count" };
@@ -186,9 +190,22 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
   // Counted per condition, whatever its group (Codex SHR-A review 02.2).
   const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [NIBRS_DIM[c.f.dimension]] : []));
-  if (new Set(recordDims).size !== recordDims.length) return { why: "two values of one record detail compared" };
+  // "Gun murders versus knife murders" (the question says compare, versus or vs): the two values are two categories of the
+  // one breakdown, never both on a record that has one weapon (Jeff 2026-11-15 order, item 2).
+  let weaponGroups: { label: string; codes: string[] }[] | null = null;
+  if (new Set(recordDims).size !== recordDims.length) {
+    const onlyWeapons = recordDims.length === 2 && recordDims.every((d) => d === "weapon") && conditions.length === 2 && conditions.every((c) => c && c.f.op === "in" && c.f.values && c.group !== undefined);
+    if (!(opts.compare && onlyWeapons && !breakdown)) return { why: "two values of one record detail compared" };
+    const sets = conditions.map((c) => codesOf("weapon", c!.f.values!));
+    if (sets.some((x) => !x) || sets[0]!.some((c) => sets[1]!.includes(c))) return { why: "a code Homicide Reports record differently" };
+    const label = (codes: string[]) => (codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => SHR_WEAPON[c] ?? c).join(" or "));
+    weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
+    breakdown = { dim: "weapon", groups: weaponGroups };
+  }
+  const notes: string[] = [];
   for (const c of conditions) {
     if (!c) return { why: "a negated condition" };
+    if (weaponGroups && NIBRS_DIM[c.f.dimension] === "weapon") continue;
     const { f, group } = c;
     const dim = NIBRS_DIM[f.dimension];
     if (!dim) return { why: "a detail Homicide Reports don't record" };
@@ -200,6 +217,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     if (f.op !== "in" || !f.values?.length) return { why: "this condition" };
     const codes = codesOf(dim, f.values);
     if (!codes) return { why: "a code Homicide Reports record differently" };
+    if (dim === "relationship" && f.values.map(String).includes("XR") && !notes.includes(NO_EX_PARTNERS)) notes.push(NO_EX_PARTNERS);
     // A justifiable homicide asked for (a felon killed by police or a citizen) is counted as asked (S4).
     if (dim === "circumstance" && codes.every((c) => c === "80" || c === "81")) measure = "justifiable";
     filters.push({ dim, codes, ...(group !== undefined ? { group } : {}) });
@@ -211,7 +229,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   if (period.from > build.latestMonth) return { why: "after the latest month" };
   const from = period.from < first ? first : period.from;
   const grain = time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
-  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
+  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(notes.length ? { notes } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
 }
 
 /* ------------------------------------------------------------------ the answer */
@@ -238,6 +256,7 @@ function condition(f: ShrFilter, a: string): string {
 function categorySql(sq: ShrQuestion, a: string): string {
   const b = sq.breakdown!;
   const col = RECORD_DIMS.has(b.dim) ? `r.${DIM_COLUMN[b.dim]}` : `CASE WHEN ${a}.in_record THEN ${a}.${DIM_COLUMN[b.dim]} END`;
+  if (b.groups) return `CASE ${b.groups.map((g, i) => `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`).join(" ")} END`;
   if (!b.bins) return col;
   const ageCol = `CASE WHEN ${a}.in_record THEN ${a}.age END`;
   return `CASE ${b.bins.map(([lo, hi], i) => `WHEN ${ageCol} BETWEEN ${lo} AND ${hi} THEN '${i}'`).join(" ")} END`;
@@ -250,6 +269,7 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
   const theirs = sq.filters.filter((f) => !own.includes(f));
   const where = [`r.counted`, measureWhere(sq), placeWhere(sq.place), `r.data_year * 100 + r.offense_month BETWEEN ${ym(sq.from)} AND ${ym(sq.to)}`,
     ...own.map((f) => condition(f, "p")),
+    ...(sq.breakdown?.groups ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
     // A detail of the other person: any one of the record's (an offender's sex for victims: "killed by women"); the
     // conditions of one group are that same person's (01.3).
     ...[...new Set(theirs.map((f, i) => f.group ?? `solo${i}`))].map((g) => {
@@ -295,6 +315,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const blankPeriod = (p: typeof periods[number]) => (sq.grain === "total" ? Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some((y) => !counted(y)) : !counted(p.year));
   const cats: { code: string; label: string }[] = !sq.breakdown ? [] : (() => {
     const b = sq.breakdown;
+    if (b.groups) return b.groups.map((g, i) => ({ code: String(i), label: g.label }));
     if (b.bins) return [...b.bins.map(([lo, hi], i) => ({ code: String(i), label: hi >= 120 ? `${lo} and older` : `${lo} to ${hi}` })), { code: "", label: "Unknown" }];
     const seen = new Set(got.map((r) => (r[nk - 1] === null ? "" : String(r[nk - 1]))));
     const labels = DIM_LABELS[b.dim] ?? {};
@@ -345,6 +366,8 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     : "Justifiable homicides are felons killed by police or by a private citizen, as the agencies reported them.");
   if (sq.filters.some((f) => RECORD_DIMS.has(f.dim)) || (sq.breakdown && RECORD_DIMS.has(sq.breakdown.dim)))
     text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
+  // What the source does not record of what was asked comes before the coverage lines, so it is read first.
+  for (const n of sq.notes ?? []) text.push(n);
   if (sq.place.kind === "agency") {
     const gaps = periods.filter((p) => blankPeriod(p)).map((p) => p.year);
     if (gaps.length) text.push(`A blank ${sq.grain === "month" ? "month" : "year"} is one in which ${sq.place.label} filed no Homicide Reports.`);
@@ -426,6 +449,7 @@ const ucFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export function shrCategoryCodes(sq: ShrQuestion): Record<string, string[] | string> | null {
   const b = sq.breakdown;
   if (!b) return null;
+  if (b.groups) return Object.fromEntries(b.groups.map((g) => [g.label, g.codes]));
   if (b.bins) return Object.fromEntries([...b.bins.map(([lo, hi]) => [hi >= 120 ? `${lo} and older` : `${lo} to ${hi}`, `age ${lo}-${hi}`]), ["Unknown", "no age, a code that isn't an age, or a victim beyond the record's 11"]]);
   const labels = DIM_LABELS[b.dim] ?? {};
   const out: Record<string, string[] | string> = {};

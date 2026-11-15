@@ -672,6 +672,12 @@ ROWS = [
      "\"Big cities with highest share of murders via firearm in 2024\" ranks Dallas, Houston and the other filing cities by share.",
      "Jeff 2026-11-15 via coordinator: \"Get 1 and 2 moving\" (SHR-B, Homicide Reports placeholders). The ranking wording and the 13 to 19 reading of teenage are Engine 2.0's, Jeff approved the lines on 2026-11-15, with the note on left-out cities in place of naming them.",
      "Decided 2026-11-15 (Jeff)", NEW),
+    ("P106", "\"Compare gun murders vs knife murders nationally by year\", \"How have intimate partner homicides trended nationwide?\"",
+     "Both asked \"which range of years\" and offered a choice of years, because the engine could not answer the form (two weapons compared; the ex-boyfriend and ex-girlfriend code has no Homicide Reports equal).",
+     "Two weapons compared (the question says compare, versus or vs) are two categories of one breakdown by weapon: a gun (all firearm codes together) and a knife, each its own row, by year or total, from Homicide Reports. Intimate partner in Homicide Reports is husband, wife, common-law husband or wife, boyfriend, girlfriend, same-sex partner, ex-husband or ex-wife; the answer says: \"This data source does not record ex-boyfriend and ex-girlfriend relationships.\" and nothing else about it. A weapon named alone (a handgun without its automatic code) still stays with its own path.",
+     "\"Compare gun murders vs knife murders nationally by year\" shows Firearm and Knife or cutting instrument per year.",
+     "Jeff 2026-11-15 via coordinator: the intimate partner set and the sentence, in his words; the two-weapon comparison as a breakdown over the chosen codes.",
+     "Decided 2026-11-15 (Jeff)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
