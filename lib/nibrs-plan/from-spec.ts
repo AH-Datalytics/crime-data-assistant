@@ -15,6 +15,7 @@ import { GROUP_B, MEASURE_CODES, PERSON_CODES, type NibrsSpec, type NPeriod, typ
 import { COMMERCIAL_LOCATION_CODES } from "../nibrs-codes";
 import type { AttributeFilter, CountingUnit, Filter, Grouping, MeasureSpec, NibrsPlan, PartBinding, PartRef, Period, Place, Statistic, Transform } from "./plan";
 import { PLAN_VERSION } from "./plan";
+import { isTrendWord } from "./validate";
 
 export type AdapterDeps = {
   semanticVersion: string;
@@ -333,7 +334,14 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       }
       case "period": return "period";
       case "combine": return "period";
-      case "grain": { const i = gi((g) => g.dimension === (v === "month" ? "time.month" : "time.year")); return i >= 0 ? `groupings[${i}]` : null; }
+      case "grain": {
+        const i = gi((g) => g.dimension === (v === "month" ? "time.month" : "time.year"));
+        if (i >= 0) return `groupings[${i}]`;
+        // The word "trend" is read as a yearly grain but asks for no particular one: beside "by month" it is the series over
+        // time that the month grouping already is ("the carjacking trend in Chicago by month for 2024").
+        const j = v === "year" && isTrendWord(p.text) ? gi((g) => g.dimension.startsWith("time.")) : -1;
+        return j >= 0 ? `groupings[${j}]` : null;
+      }
       case "rolling": { const i = ti("rolling"); return i >= 0 ? `transforms[${i}]` : null; }
       case "filter": case "clearance-reason": return filterPath.get(v) ?? null;
       case "breakdown": { const i = gi((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo.")); return i >= 0 ? `groupings[${i}]` : null; }

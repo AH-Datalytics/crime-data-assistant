@@ -2100,6 +2100,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // D18: carjacking by offense; an offense has one location.
     if (m.id === "incidents.carjacking" && !clause0("unit").length) {
       plan.measures[i] = { ...m, id: "offenses.carjacking", unit: "offense" };
+      // A weapon selected was scoped to the incident (the unit the measure had); counted by offense it is the offense's own weapon
+      // ("firearm carjackings per month in Houston").
+      const toOffense = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "incident" ? { ...f, scope: "offense" } : f);
+      plan.filters = plan.filters.map(toOffense);
+      plan.measures[i] = { ...plan.measures[i], ...(m.filters ? { filters: m.filters.map(toOffense) } : {}) };
       plan.groupings = plan.groupings.map(({ multiValue, ...g }) => (g.dimension === "offense.location_type" ? g : { ...g, ...(multiValue ? { multiValue } : {}) }));
     }
     // P11: victims of a property crime -> offenses, with the fixed sentence. The unit part is answered differently by

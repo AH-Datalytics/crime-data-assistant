@@ -1843,4 +1843,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(deadPaths(f as ShadowOutcome), [], `${prev} / ${next}`);
   }
 }
+// "The carjacking trend ... by month": the word "trend" beside an explicit grain is the series, not a grain left unapplied
+// (query-log ids QL-nibrs-0db9574c2f and its kin, group 4). A firearm selected on carjackings is the offense's own weapon.
+{
+  const trend = as(ask("Show me the carjacking trend in Houston by month for 2024"), "answer");
+  assert.ok(trend.plan.groupings.some((g) => g.dimension === "time.month"), "trend by month is a monthly series");
+  const gun = as(ask("Firearm carjackings per month in Houston since 2019"), "answer");
+  assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
+  assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

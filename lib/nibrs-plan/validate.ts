@@ -15,6 +15,8 @@ import { PLAN_VERSION } from "./plan";
 import type { SemanticDimension, SemanticLayer } from "./semantic";
 import { pathCardinality } from "./semantic";
 
+/** "trend" (and "over time") are read as a yearly grain but name none: any time grouping is the series they ask for. */
+export const isTrendWord = (text: string) => !/year|annual/i.test(text);
 export type PlanProblem = { rule: string; path: string; message: string };
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -407,7 +409,8 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
     }
     case "grain": {
       const want = v === "month" ? "time.month" : v === "year" ? "time.year" : null;
-      return want && (t as { dimension?: string }).dimension === want ? null : `grouping at ${path} is not by ${v}`;
+      const dimension = (t as { dimension?: string }).dimension;
+      return want && (dimension === want || (v === "year" && isTrendWord(part.text) && !!dimension?.startsWith("time."))) ? null : `grouping at ${path} is not by ${v}`;
     }
     case "breakdown": {
       const dim = String(t.dimension ?? "");
