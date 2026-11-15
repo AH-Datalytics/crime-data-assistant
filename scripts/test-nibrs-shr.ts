@@ -191,6 +191,37 @@ assert.equal(answerShrRanking({ ...rk, filters: [{ dim: "offender.sex", codes: [
 assert.equal(answerShrRanking(rk, build, hist, () => rankRows.map((r) => [...r.slice(0, 4), false, 0, 0])).kind, "shr-decline");
 assert.equal(answerShrRanking(rk, build, hist, () => []).kind, "shr-decline");
 
+// Item 2 (Jeff 2026-11-15 order): two weapons compared are two categories of one breakdown, only when the question compares.
+const gunKnife = plan({ filters: [
+  { kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["20"] }] },
+  { kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"] }] }],
+  geography: { places: [{ kind: "national" }], combine: "separate" } });
+assert.deepEqual(shrQuestionOf(gunKnife, { from: "2024-01", to: "2024-12" }, build), { why: "two values of one record detail compared" }, "no compare word: left alone");
+const cmp = shrQuestionOf(gunKnife, { from: "2024-01", to: "2024-12" }, build, { compare: true }) as ShrQuestion;
+assert.ok(!("why" in cmp), JSON.stringify(cmp));
+assert.deepEqual(cmp.breakdown, { dim: "weapon", groups: [{ label: "Knife or cutting instrument", codes: ["20"] }, { label: "Firearm", codes: ["11", "12", "13", "14", "15"] }] });
+assert.deepEqual(cmp.filters, []);
+const sqlC = shrSql(cmp, build);
+assert.match(sqlC, /r\.weapon IN \('20', '11', '12', '13', '14', '15'\)/, "only the compared weapons");
+assert.match(sqlC, /CASE WHEN r\.weapon IN \('20'\) THEN '0' WHEN r\.weapon IN \('11', '12', '13', '14', '15'\) THEN '1' END/);
+const cmpAns = answerShr(cmp, build, (s2) => (/shr_agency_year/.test(s2) ? [[2024, 10, []]] : /nation_crime|sum\(population\)/.test(s2) ? [] : [["0", 7], ["1", 9]]));
+assert.ok(cmpAns.kind === "shr" && JSON.stringify(cmpAns.delivered.table.rows) === '[["Knife or cutting instrument",7],["Firearm",9]]', JSON.stringify(cmpAns));
+// Two weapons that overlap, or a code Homicide Reports can't hold, stay as they were.
+assert.ok("why" in (shrQuestionOf(plan({ ...gunKnife, filters: [gunKnife.filters[0], gunKnife.filters[0]] }), { from: "2024-01", to: "2024-12" }, build, { compare: true })));
+// Intimate partner: spouse, common-law spouse, boyfriend or girlfriend, ex-spouse, same-sex partner; the ex-boyfriend and
+// ex-girlfriend code has no Homicide Reports equal and Jeff's one sentence says so.
+const partner = shrQuestionOf(plan({ geography: { places: [{ kind: "national" }], combine: "separate" }, filters: [{ kind: "exists", scope: "victim", entity: "victim_offender",
+  where: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["SE", "CS", "BG", "XS", "XR", "HR"] }] }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion;
+assert.ok(!("why" in partner), JSON.stringify(partner));
+assert.deepEqual(partner.filters[0].codes, ["HU", "WI", "CH", "CW", "BF", "GF", "XH", "XW", "HO"]);
+assert.deepEqual(partner.notes, ["This data source does not record ex-boyfriend and ex-girlfriend relationships."]);
+const pAns = answerShr(partner, build, (s2) => (/shr_agency_year/.test(s2) ? [[2024, 10, []]] : /nation_crime|sum\(population\)/.test(s2) ? [] : [[5]]));
+assert.ok(pAns.kind === "shr" && pAns.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."), JSON.stringify(pAns));
+// The ex-relationship code alone has nothing to count.
+assert.ok("why" in shrQuestionOf(plan({ geography: { places: [{ kind: "national" }], combine: "separate" }, filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["XR"] }] }), { from: "2024-01", to: "2024-12" }, build));
+// No note when the question asks a spouse only.
+assert.equal((shrQuestionOf(plan({ geography: { places: [{ kind: "national" }], combine: "separate" }, filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["SE"] }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion).notes, undefined);
+
 // Filters in words.
 assert.equal(filterWords({ dim: "weapon", codes: ["11", "12", "13", "14", "15"] }), "with a firearm");
 assert.equal(filterWords({ dim: "victim.sex", codes: ["F"] }), "where the victim's sex was female");

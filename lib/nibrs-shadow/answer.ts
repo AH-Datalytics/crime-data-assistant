@@ -947,7 +947,8 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
       period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
     } else period = { from: r.from, to: r.to };
   } catch { return null; }
-  const sq = shrQuestionOf(plan, period, deps.shr);
+  const compare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "versus") || /\bcompar/i.test(ledger0.question);
+  const sq = shrQuestionOf(plan, period, deps.shr, { compare });
   if ("why" in sq) return null;
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);

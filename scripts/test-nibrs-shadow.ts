@@ -1797,6 +1797,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A rate, or both agencies combined by month, is still not this table.
   assert.notEqual(ask("Dallas vs Houston murder rates per month in 2024").kind, "answer");
 }
+// Item 2 and the intimate partner rule (Jeff 2026-11-15), through the engine: two weapons compared, and the trend of
+// intimate partner homicides with no years named, are Homicide Reports answers; the one sentence about ex-partners is said.
+{
+  const cstub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? Array.from({ length: 42 }, (_, i) => [1985 + i, 100, ["ori9:A"]])
+    : /nation_crime/.test(sql) ? Array.from({ length: 42 }, (_, i) => [1985 + i, 1000]) : /sum\(population\)/.test(sql) ? [[800]]
+    : /GROUP BY/.test(sql) ? (/k1/.test(sql) ? [[2024, "0", 7], [2024, "1", 9]] : /k0/.test(sql) && /CASE WHEN r\.weapon/.test(sql) ? [["0", 7], ["1", 9]] : [[2024, 11]]) : []);
+  const cdeps = { ...deps, execute: cstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const gk = shadowAnswer("Compare gun murders vs knife murders nationally in 2024", cdeps);
+  assert.equal(gk.kind, "shr", JSON.stringify(gk).slice(0, 300));
+  if (gk.kind === "shr") assert.deepEqual(gk.delivered.table.rows.map((r) => r[0]), ["Knife or cutting instrument", "Firearm"]);
+  const ip = shadowAnswer("How have intimate partner homicides trended nationwide?", cdeps);
+  assert.equal(ip.kind, "shr", JSON.stringify(ip).slice(0, 300));
+  if (ip.kind === "shr") assert.ok(ip.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."));
+  // Without a compare word, two weapons stay off this path.
+  assert.notEqual(shadowAnswer("Handgun murders and rifle murders nationally in 2024", cdeps).kind, "shr");
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.
