@@ -219,6 +219,9 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
     }
     case "breakdown": {
       const clearanceDim = spec.dim === "clearance-type" || spec.dim === "clearance-method";
+      // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person (Jeff 2026-11-15).
+      const whose = spec.measure === "violent_crime" && !spec.unit ? (spec.dim === "age" ? "victim" : /^(victim|offender)-age$/.exec(spec.dim)?.[1]) : undefined;
+      if (whose) spec = { ...spec, measure: "person_crimes", unit: whose === "victim" ? "victims" : "offenders" };
       const unit = spec.dim === "victim-offender-race" ? "victim_offender" : clearanceDim ? "offense" : unitFor(spec.measure, spec.unit);
       if (unit === "fbi_standard" && !["location", "hour", "offense"].includes(spec.dim)) {
         return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by ${spec.dim}: a mixed-unit composite has no single counted person` };
@@ -226,6 +229,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       // Today's clearance breakdowns count every offense, with "not cleared" as its own category, so the parts sum to
       // the reported total; "by exception by type" narrows to the exceptional clearances (its filter).
       addMeasure(spec.measure, unit, spec.measure);
+      if (whose) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
       const p = resolve(spec.place);

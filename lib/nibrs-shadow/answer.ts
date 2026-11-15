@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, PERSON_CRIMES_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -2002,6 +2002,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const ppl = flags(ledger0).people;
   if (ppl && (ppl.by || ppl.where.length)) {
     if (plan.measures.length !== 1) return decline("unsupported_capability", "This isn't available yet: a person's attributes for several crimes.");
+    // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person, not the FBI's four-crime
+    // violent crime (Jeff 2026-11-15); a firearm selected is the victim's offense weapon (offenders' is not built).
+    if (ppl.by && !ppl.by.paired && ppl.by.who === "offender" && plan.measures[0].id === "violent_crime.ucr") {
+      plan.measures[0] = { ...plan.measures[0], id: "offenders.person_crimes", unit: "offender" };
+      plan.filters = plan.filters.map((f): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "incident" ? { ...f, scope: "offender" } : f));
+    }
     const unit = plan.measures[0].unit;
     const between = (dimension: string, r: [number, number]) => ({ kind: "attribute" as const, dimension, op: "between" as const, values: r });
     for (const w of ppl.where) {
@@ -2439,7 +2445,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // P84 (Jeff 2026-11-01): how the phrase was read.
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
     // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.
-    ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : [])];
+    ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
+    // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
+    ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : [])];
   // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here
   // in time (job AR6: 2021-2025 by age took 8 minutes, 2017-2025 more than 15). Declined, with one year offered in
   // words (never run in advance, which would cost as much) until the national arrest query is made faster (Jeff

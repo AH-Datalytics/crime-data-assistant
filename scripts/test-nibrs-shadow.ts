@@ -608,6 +608,22 @@ assert.deepEqual(drugsYears.delivered.contractProblems, []);
 const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
 assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
 assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
+// Violent crime by age (Jeff 2026-11-15): NIBRS crimes against persons for the victim or the offender, with the line saying so.
+for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "victims"], ["violent crimes by offender age in Detroit in 2023", "offenders"]] as const) {
+  const raw = ask(q);
+  if (raw.kind !== "answer") console.error("VCAGE", q, JSON.stringify(raw).slice(0, 700));
+  const o = as(raw, "answer");
+  assert.equal(o.plan.measures[0].id, `${who}.person_crimes`, q);
+  assert.ok(o.delivered.text.includes("Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking."), q);
+  assert.ok(!o.delivered.text.some((t) => /robber/i.test(t)), "robbery is not named");
+  assert.deepEqual(o.delivered.contractProblems, [], q);
+}
+{
+  const ask2 = as(ask("violent crimes by age in Detroit in 2023"), "clarify");
+  assert.deepEqual(ask2.options!.map((o) => o.label), ["Victims", "Offenders"], "the existing victim-or-offender ask");
+  assert.equal(as(ask2.options![0].continuation!, "answer").plan.measures[0].id, "victims.person_crimes");
+  assert.equal(as(ask2.options![1].continuation!, "answer").plan.measures[0].id, "offenders.person_crimes");
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 

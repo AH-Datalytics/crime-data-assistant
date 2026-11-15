@@ -126,6 +126,8 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
   }
   return null;
 }
+/** "Violent crime" by a victim's or offender's age: NIBRS crimes against persons (no robbery named: Jeff 2026-11-15). */
+export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.";
 /** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
 export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
 export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
