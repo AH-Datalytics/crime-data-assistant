@@ -221,7 +221,7 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   if (measureId === "incidents.carjacking") {
     if (unit !== "incident") return { error: `carjacking is counted by incident, not ${unit}` };
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o
+      FROM ${read("offense")} o ${joins}
       WHERE o.offense_code = '120' AND EXISTS (
         SELECT 1 FROM ${read("property")} p
         WHERE p.data_year = o.data_year AND p.ori = o.ori AND p.incident_num = o.incident_num

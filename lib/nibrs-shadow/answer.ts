@@ -2008,7 +2008,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (plan.measures.length !== 1) return decline("unsupported_capability", "This isn't available yet: a person's attributes for several crimes.");
     // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person, not the FBI's four-crime
     // violent crime (Jeff 2026-11-15); a firearm selected is the victim's offense weapon (offenders' is not built).
-    if (ppl.by && !ppl.by.paired && ppl.by.who === "offender" && plan.measures[0].id === "violent_crime.ucr") {
+    if (ppl.by && !ppl.by.paired && ppl.by.who === "offender" && ppl.by.attr === "age" && ["violent_crime.ucr", "offenders.violent_crime"].includes(plan.measures[0].id)) {
       plan.measures[0] = { ...plan.measures[0], id: "offenders.person_crimes", unit: "offender" };
       plan.filters = plan.filters.map((f): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "incident" ? { ...f, scope: "offender" } : f));
     }

@@ -224,7 +224,8 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
     case "breakdown": {
       const clearanceDim = spec.dim === "clearance-type" || spec.dim === "clearance-method";
       // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person (Jeff 2026-11-15).
-      const whose = spec.measure === "violent_crime" && !spec.unit ? (spec.dim === "age" ? "victim" : /^(victim|offender)-age$/.exec(spec.dim)?.[1]) : undefined;
+      const explicit = spec.unit === "offenders" ? "offender" : spec.unit === "victims" ? "victim" : undefined;
+      const whose = spec.measure === "violent_crime" && (!spec.unit || explicit) ? (spec.dim === "age" ? (explicit ?? "victim") : /^(victim|offender)-age$/.exec(spec.dim)?.[1]) : undefined;
       if (whose) spec = { ...spec, measure: "person_crimes", unit: whose === "victim" ? "victims" : "offenders" };
       const unit = spec.dim === "victim-offender-race" ? "victim_offender" : clearanceDim ? "offense" : unitFor(spec.measure, spec.unit);
       if (unit === "fbi_standard" && !["location", "hour", "offense"].includes(spec.dim)) {

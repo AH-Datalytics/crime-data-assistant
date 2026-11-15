@@ -640,6 +640,20 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.match(d.explanation, /violent crime in the United States broken down by victim age over several years takes too long to count here/);
   assert.equal(sqls.slice(before).filter((x) => /person_crimes|victim_offense/.test(x) && /GROUP BY/.test(x) && /victim/.test(x)).length, 0, "nothing heavy is run");
 }
+// Codex review of the group-4 branch: the explicit units get the person-crimes definition, race and sex keep theirs, and a
+// carjacking incident by time of day has its join.
+for (const [q, id] of [["violent crime victims by age in Detroit in 2023", "victims.person_crimes"], ["violent crime offenders by age in Detroit in 2023", "offenders.person_crimes"]] as const)
+  assert.equal(as(ask(q), "answer").plan.measures[0].id, id, q);
+for (const q of ["violent crimes by offender race in Detroit in 2023", "violent crimes by offender sex in Detroit in 2023"]) {
+  const o = ask(q);
+  if (o.kind === "answer") assert.ok(!/person_crimes/.test(o.plan.measures[0].id), `${q}: race and sex keep the four-crime definition`);
+}
+{
+  const before = sqls.length;
+  ask("Carjacking incidents by time of day in Detroit in 2023");
+  const sql = sqls.slice(before).find((x) => /ih\.incident_hour/.test(x));
+  assert.ok(sql && /LEFT JOIN .* ih ON/.test(sql), "the hour join is in the carjacking incident query");
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
