@@ -632,6 +632,13 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.ok(sql, "the query groups the incident's hour");
   assert.ok(/BETWEEN 6 AND 11 THEN 'Morning'/.test(sql!) && /BETWEEN 0 AND 5 THEN 'Night'/.test(sql!), "the buckets are 6-11, 12-17, 18-23 and 0-5");
 }
+// Violent crime by age nationally over several years is too large to count here: declined in words, never run (BD3 out-of-memory).
+{
+  const before = sqls.length;
+  const d = as(ask("show me nationwide violent crimes by victim age by year for 2017 to 2025"), "decline");
+  assert.match(d.explanation, /violent crime in the United States broken down by victim age over several years takes too long to count here/);
+  assert.equal(sqls.slice(before).filter((x) => /person_crimes|victim_offense/.test(x) && /GROUP BY/.test(x) && /victim/.test(x)).length, 0, "nothing heavy is run");
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
