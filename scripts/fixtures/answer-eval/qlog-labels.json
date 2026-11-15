@@ -17944,24 +17944,19 @@
    "question": "Compare NYC and LA murders by month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which LA"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which LA"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-15-which-la",
+    "reviewed_by": "jeff-2026-11-15-which-la",
+    "notes": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA"
    }
   },
   {
@@ -18308,24 +18303,19 @@
    "question": "Compare NYC and LA murders per month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which LA"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which LA"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-15-which-la",
+    "reviewed_by": "jeff-2026-11-15-which-la",
+    "notes": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA"
    }
   },
   {

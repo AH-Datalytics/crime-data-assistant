@@ -4030,7 +4030,14 @@
 },
 "QL-ct-e0f3926385": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-15-which-la",
+"why": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which LA"
+]
+}
 },
 "QL-ct-e159083c6a": {
 "status": "reviewed",
@@ -4109,7 +4116,14 @@
 },
 "QL-ct-e72003a2ec": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-15-which-la",
+"why": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which LA"
+]
+}
 },
 "QL-ct-e7610c3d67": {
 "status": "reviewed",
