@@ -29,6 +29,8 @@ export const MEASURE_CODES: Record<string, string[]> = {
   shoplifting: ["23C"], theft: ["23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H"], arson: ["200"], drug_possession: ["35A"], dui: ["90D"],
   // NIBRS crimes against persons (Jeff 2026-11-15: "violent crime" by an offender's or victim's age is these, not the four
   // crimes of the FBI's standard violent crime, and no robbery); justifiable homicide (09C) is no crime and stays out.
+  // NIBRS crimes against property (Jeff 2026-11-15: the broader definition for the Property button on a victim-age question).
+  against_property: ["120", "200", "210", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240", "250", "26A", "26B", "26C", "26D", "26E", "26F", "26G", "270", "280", "290", "510"],
   person_crimes: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "36A", "36B", "100", "64A", "64B"],
   violent_crime: ["09A", "11A", "11B", "11C", "120", "13A"], property_crime: ["200", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240"],
   // NIBRS's assault offenses (coordinator 2026-11-06, a bare "assault" asked about): intimidation, and all three.
@@ -45,7 +47,7 @@ export const FAMILIES = new Set<string>(["domestic_violence", "hate_crime", "car
 export const GROUP_B = new Set(["90A", "90B", "90C", "90D", "90E", "90F", "90G", "90H", "90I", "90J", "90Z"]);
 
 export const MEASURE_LABEL: Record<string, string> = {
-  person_crimes: "violent crime",
+  person_crimes: "violent crime", against_property: "property crime",
   murder: "murder", homicide: "homicide", rape: "rape", robbery: "robbery", aggravated_assault: "aggravated assault", simple_assault: "simple assault",
   sex_offense: "sex offense", burglary: "burglary", theft_from_motor_vehicle: "theft from motor vehicle", motor_vehicle_theft: "motor vehicle theft",
   shoplifting: "shoplifting", theft: "theft", arson: "arson", drug_possession: "drug possession", dui: "DUI", violent_crime: "violent crime",

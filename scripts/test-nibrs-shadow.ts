@@ -654,6 +654,18 @@ for (const q of ["violent crimes by offender race in Detroit in 2023", "violent 
   const sql = sqls.slice(before).find((x) => /ih\.incident_hour/.test(x));
   assert.ok(sql && /LEFT JOIN .* ih ON/.test(sql), "the hour join is in the carjacking incident query");
 }
+// Property crime by a victim's age (Jeff 2026-11-15): victims of NIBRS crimes against property, the short line, Unknown for non-persons.
+{
+  const o = as(ask("property crimes by victim age in Detroit in 2023"), "answer");
+  assert.equal(o.plan.measures[0].id, "victims.against_property");
+  assert.ok(o.delivered.text.includes("Counts victims of NIBRS crimes against property, such as robbery, burglary, theft, fraud and vandalism. Businesses and other victims that are not people have no age and show as Unknown."));
+  assert.deepEqual(o.delivered.contractProblems, []);
+  // Other property victim counts stay by offense (P11).
+  assert.equal(as(ask("burglary victims in Detroit in 2023 according to NIBRS"), "answer").plan.measures[0].id, "offenses.burglary");
+  const kind = as(ask("victim age breakdown in Detroit in 2023"), "clarify");
+  assert.deepEqual(kind.options.map((x) => x.label), ["Violent crime", "Property crime", "Another crime"]);
+  assert.equal(kind.options[2].entry, "which crime");
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
