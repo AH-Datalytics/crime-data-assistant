@@ -19,8 +19,8 @@ import { firstNeeded, monthRange, rollingSums, unknownRuns } from "./rolling";
 
 export const HATE_FIRST_YEAR = 1991;
 export const HATE_SOURCE = "Source: FBI Hate Crime Statistics.";
-/** The hate crime database's own mandatory caveat on reporting (hate_crime_caveats, "reporting"), word for word. */
-export const HATE_REPORTING_CAVEAT = "Hate crime reporting is voluntary. Many agencies report zero hate crimes — this reflects non-reporting, NOT an absence of hate crimes. Zero does not mean zero.";
+/** The caveat on reporting, in the shorter words Jeff approved (2026-11-15); the database's own caveat text is longer and is not used. */
+export const HATE_REPORTING_CAVEAT = "Hate crime reporting is voluntary. Many agencies report zero hate crimes, which reflects non-reporting, not an absence of hate crimes.";
 
 /** Where the export is: its release id, the first and latest incident dates and the last complete month. */
 export type HateBuild = { root: string; release: string; firstDate: string; latestDate: string; latestMonth: string };
