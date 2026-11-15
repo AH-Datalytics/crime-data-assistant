@@ -15,7 +15,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { fmt, monthName, periodWords } from "./deliver";
 import { stateName } from "./places";
-import { firstNeeded, monthRange, rollingSums, unknownRuns } from "./rolling";
+import { firstNeeded, monthRange, rollingSums } from "./rolling";
 
 export const HATE_FIRST_YEAR = 1991;
 export const HATE_SOURCE = "Source: FBI Hate Crime Statistics.";
@@ -162,12 +162,12 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
       for (const c of cells) rows.push([c.ym, c.value]);
       text.push(`${head} in ${where} by month, ${span}.`);
     } else {
-      const roll = rollingSums(cells, hq.window!, hq.from, hq.to);
+      // A window is complete from the data's first month on; the first months of 1991 have none and are not shown (no blank rows, no
+      // gap sentence: the start line says where the data begin). Months with no row are 0 here, as the reporting caveat says.
+      const roll = rollingSums(cells, hq.window!, hq.from, hq.to).filter((r) => r.value !== null);
       columns.push({ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "count" }, header: `${head}, rolling ${hq.window} months` });
       for (const r of roll) rows.push([r.ym, r.value]);
       text.push(`${head} in ${where}, rolling ${hq.window} months, ${span}.`);
-      const runs = unknownRuns(roll);
-      if (runs.length) notes.push(`A rolling total is blank where a month in its window is not known: ${runs.map((r) => (r.length > 1 ? `${monthName(r[0])} to ${monthName(r[r.length - 1])}` : monthName(r[0]))).join(", ")}.`);
     }
   }
   text.push(HATE_REPORTING_CAVEAT);

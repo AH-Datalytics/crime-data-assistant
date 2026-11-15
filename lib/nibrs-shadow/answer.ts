@@ -2322,6 +2322,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return decline("unsupported_capability", "This isn't available yet: rankings.");
   // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime; by category too (coordinator
   // 2026-11-02), each category's quarter compiled as the sum of its months with its share of the quarter.
+  // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): before
+  // NIBRS's own checks (its data start, its state and national limits do not apply to them), a plan for a hate crime or a bias is answered there or declined plainly,
+  // never run on NIBRS and never shown the weapon-or-relationship sentence.
+  if (plan.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias"))
+    return hateOutcome(plan, deps, ledger0) ?? notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   const quarterly = !!flags(ledger0).quarter;
   const quarterCats = quarterly && plan.groupings.length === 2 && plan.groupings[0].dimension === "time.month" && !plan.groupings[1].dimension.startsWith("time.");
   if (quarterly && (plan.measures.length !== 1 || plan.transforms.length || plan.geography.places.length !== 1 || plan.geography.places[0].kind !== "agency"
@@ -2460,11 +2465,6 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (r.kind === "years") { yearSet = [...r.years].sort((a, b) => a - b); period = { from: `${yearSet[0]}-01`, to: `${yearSet[yearSet.length - 1]}-12` }; }
     else period = { from: r.from, to: r.to };
   } catch (e) { return notYet(String(e)); }
-  // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): before
-  // NIBRS's own period checks (its data start does not limit them), a plan for a hate crime or a bias is answered there or declined plainly,
-  // never run on NIBRS and never shown the weapon-or-relationship sentence.
-  if (plan.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias"))
-    return hateOutcome(plan, deps, ledger0) ?? notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   if (period.from > release.lastMonth) {
     const y = release.lastMonth.slice(0, 4);
     return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the data; the latest month available is ${monthName(release.lastMonth)}.`,

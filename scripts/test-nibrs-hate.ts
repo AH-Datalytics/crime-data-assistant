@@ -65,6 +65,11 @@ assert.equal(partial.period.to, "2026-09");
 // NIBRS's data start does not limit hate crimes (1991 on): "since 2015" is a series, not a NIBRS coverage decline.
 const since = as(ask("hate crimes in Texas by year since 2015"), "hate");
 assert.equal(since.period.from, "2015-01");
+// A rolling window is complete from the data's first month: the first 11 months of 1991 are not shown, with no blank row and no gap sentence.
+const roll = as(ask("hate crimes in Texas rolling 12 months since 1991"), "hate");
+assert.equal(roll.delivered.table.rows[0][0], "1991-12");
+assert.ok(roll.delivered.table.rows.every((r) => r[1] !== null), "no blank row");
+assert.ok(!roll.delivered.text.some((x) => /rolling total is blank/.test(x)), "no gap sentence");
 // Without a build, or for a shape this source does not answer, a plain decline: never a NIBRS answer, never the weapon sentence.
 const noBuild = as(ask("anti-Hispanic hate crimes in Texas in 2024", { ...deps, hate: undefined }), "decline");
 assert.ok(!/weapon or relationship/.test(noBuild.explanation));
