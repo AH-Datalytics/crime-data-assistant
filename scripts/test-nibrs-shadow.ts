@@ -665,6 +665,12 @@ for (const q of ["violent crimes by offender race in Detroit in 2023", "violent 
   const kind = as(ask("victim age breakdown in Detroit in 2023"), "clarify");
   assert.deepEqual(kind.options.map((x) => x.label), ["Violent crime", "Property crime", "Another crime"]);
   assert.equal(kind.options[2].entry, "which crime");
+  // The crime typed after "Another crime" completes the question: age, place and year kept.
+  const typed = shadowFollowUp("victim age breakdown in Detroit in 2023", "murder", deps);
+  const done = as(typed as ShadowOutcome, "answer");
+  assert.equal(done.plan.measures[0].id, "victims.murder");
+  assert.equal(done.plan.groupings.some((g) => g.dimension === "victim.age"), true);
+  assert.equal(done.period.from, "2023-01");
 }
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
