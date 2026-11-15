@@ -15,6 +15,7 @@ import { GROUP_B, MEASURE_CODES, PERSON_CODES, type NibrsSpec, type NPeriod, typ
 import { COMMERCIAL_LOCATION_CODES } from "../nibrs-codes";
 import type { AttributeFilter, CountingUnit, Filter, Grouping, MeasureSpec, NibrsPlan, PartBinding, PartRef, Period, Place, Statistic, Transform } from "./plan";
 import { PLAN_VERSION } from "./plan";
+import { isTrendWord } from "./validate";
 
 export type AdapterDeps = {
   semanticVersion: string;
@@ -33,6 +34,10 @@ const DV: Record<string, string[]> = {
 };
 /** Today's age groups (scripts/nibrs-auto-update.py age_group_expr), as bins; special codes stay their own categories. */
 /** Today's age groups (P30). */
+/** Time of day (Jeff 2026-11-15): morning 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight, night midnight to 6 AM. */
+export const HOUR_BINS = [
+  { label: "Morning", from: 6, to: 11 }, { label: "Afternoon", from: 12, to: 17 }, { label: "Evening", from: 18, to: 23 }, { label: "Night", from: 0, to: 5 },
+];
 export const AGE_BINS = [
   { label: "Under 18", from: 1, to: 17 }, { label: "18-24", from: 18, to: 24 }, { label: "25-34", from: 25, to: 34 },
   { label: "35-44", from: 35, to: 44 }, { label: "45-54", from: 45, to: 54 }, { label: "55-64", from: 55, to: 64 },
@@ -94,7 +99,9 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
   const person = ["victim", "offender", "arrestee", "group_b_arrest"].includes(ent) ? ent : "victim";
   switch (dim) {
     case "sex": case "race": case "ethnicity": return onEntity(person, attr(`${person}.${dim}`, [val]));
-    case "age": return val === "Under 18" ? onEntity(person, attr(`${person}.age`, [1, 17], "between")) : null;
+    // "Juvenile crime" is an offender's age (Jeff 2026-11-15), the incident's offender: a count of offenses or incidents names no person of its own.
+    case "age": return val !== "Under 18" ? null : ["victim", "offender", "arrestee", "group_b_arrest"].includes(ent) ? onEntity(person, attr(`${person}.age`, [1, 17], "between"))
+      : { kind: "exists", scope: "incident", entity: "offender", where: [attr("offender.age", [1, 17], "between")] };
     case "weapon": return { kind: "exists", scope: ent === "arrestee" ? "arrestee" : ent, entity: "offense_weapon", where: [attr("offense_weapon.weapon", val === "firearm" ? FIREARM : [val])] };
     case "location": return onEntity("offense", attr("offense.location_type", val === "commercial" ? COMMERCIAL_LOCATION_CODES : [val]));
     // Counting property, the loss type applies to the counted segments; counting anything else, to the incident.
@@ -130,7 +137,7 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "circumstance": return ent === "victim" ? g("victim_circumstance.circumstance", { multiValue: "each_value" }) : null;
     case "offense": return ent === "offense" ? g("offense.offense") : g("victim_offense.offense", { multiValue: "each_value" });
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
-    case "hour": return g("incident.hour");
+    case "hour": return g("incident.hour", { bins: HOUR_BINS });
     case "drug": return g("property_drug.drug", { multiValue: "each_value" });
     default: return null;
   }
@@ -216,6 +223,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
     }
     case "breakdown": {
       const clearanceDim = spec.dim === "clearance-type" || spec.dim === "clearance-method";
+      // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person (Jeff 2026-11-15).
+      const explicit = spec.unit === "offenders" ? "offender" : spec.unit === "victims" ? "victim" : undefined;
+      const whose = spec.measure === "violent_crime" && (!spec.unit || explicit) ? (spec.dim === "age" ? (explicit ?? "victim") : /^(victim|offender)-age$/.exec(spec.dim)?.[1]) : undefined;
+      if (whose) spec = { ...spec, measure: "person_crimes", unit: whose === "victim" ? "victims" : "offenders" };
       const unit = spec.dim === "victim-offender-race" ? "victim_offender" : clearanceDim ? "offense" : unitFor(spec.measure, spec.unit);
       if (unit === "fbi_standard" && !["location", "hour", "offense"].includes(spec.dim)) {
         return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by ${spec.dim}: a mixed-unit composite has no single counted person` };
@@ -223,6 +234,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       // Today's clearance breakdowns count every offense, with "not cleared" as its own category, so the parts sum to
       // the reported total; "by exception by type" narrows to the exceptional clearances (its filter).
       addMeasure(spec.measure, unit, spec.measure);
+      if (whose) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
       const p = resolve(spec.place);
@@ -333,7 +345,14 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       }
       case "period": return "period";
       case "combine": return "period";
-      case "grain": { const i = gi((g) => g.dimension === (v === "month" ? "time.month" : "time.year")); return i >= 0 ? `groupings[${i}]` : null; }
+      case "grain": {
+        const i = gi((g) => g.dimension === (v === "month" ? "time.month" : "time.year"));
+        if (i >= 0) return `groupings[${i}]`;
+        // The word "trend" is read as a yearly grain but asks for no particular one: beside "by month" it is the series over
+        // time that the month grouping already is ("the carjacking trend in Chicago by month for 2024").
+        const j = v === "year" && isTrendWord(p.text) ? gi((g) => g.dimension.startsWith("time.")) : -1;
+        return j >= 0 ? `groupings[${j}]` : null;
+      }
       case "rolling": { const i = ti("rolling"); return i >= 0 ? `transforms[${i}]` : null; }
       case "filter": case "clearance-reason": return filterPath.get(v) ?? null;
       case "breakdown": { const i = gi((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo.")); return i >= 0 ? `groupings[${i}]` : null; }

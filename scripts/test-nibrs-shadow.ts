@@ -599,6 +599,61 @@ assert.equal(as(ask("Drug possession in Detroit in 2023"), "answer").plan.measur
 const drugsMonth = as(ask("Drug crimes in Detroit in 2024"), "answer");
 assert.ok(drugsMonth.delivered.text.includes("No combined total of drug crimes is given: the available evidence does not establish every part."));
 assert.ok(!drugsMonth.delivered.text.some((t) => /^Together/.test(t)));
+// Drug crimes by year (Jeff 2026-11-15): each part per year plus the total as a third column, "Drug crimes together".
+const drugsYears = as(ask("Drug crimes in Detroit from 2021 to 2023"), "answer");
+assert.deepEqual(drugsYears.delivered.table.columns.map((c) => c.header), ["Year", "Drug/narcotic violation offenses", "Drug equipment violation offenses", "Drug crimes together"]);
+assert.equal(drugsYears.delivered.text[0], "Drug crimes are drug/narcotic violations plus drug equipment violations.");
+assert.deepEqual(drugsYears.delivered.contractProblems, []);
+// Marijuana (Jeff 2026-11-15): "Marijuana possession arrests", with one line saying what is counted.
+const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
+assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
+assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
+// Violent crime by age (Jeff 2026-11-15): NIBRS crimes against persons for the victim or the offender, with the line saying so.
+for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "victims"], ["violent crimes by offender age in Detroit in 2023", "offenders"]] as const) {
+  const raw = ask(q);
+  if (raw.kind !== "answer") console.error("VCAGE", q, JSON.stringify(raw).slice(0, 700));
+  const o = as(raw, "answer");
+  assert.equal(o.plan.measures[0].id, `${who}.person_crimes`, q);
+  assert.ok(o.delivered.text.includes("Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking."), q);
+  assert.ok(!o.delivered.text.some((t) => /robber/i.test(t)), "robbery is not named");
+  assert.deepEqual(o.delivered.contractProblems, [], q);
+}
+{
+  const ask2 = as(ask("violent crimes by age in Detroit in 2023"), "clarify");
+  assert.deepEqual(ask2.options!.map((o) => o.label), ["Offender", "Victim"], "Jeff's words on this ask");
+  assert.equal(as(ask2.options![0].continuation!, "answer").plan.measures[0].id, "offenders.person_crimes");
+  assert.equal(as(ask2.options![1].continuation!, "answer").plan.measures[0].id, "victims.person_crimes");
+  assert.deepEqual(as(ask("murders by age in Detroit in 2023"), "clarify").options!.map((o) => o.label), ["Victims", "Offenders"], "other questions keep their own buttons");
+}
+// Time of day (Jeff 2026-11-15): the incident's hour in four buckets, the line saying which hours each holds.
+{
+  const before = sqls.length;
+  ask("Robberies in Detroit by time of day in 2023");
+  const sql = sqls.slice(before).find((x) => /ih\.incident_hour/.test(x));
+  assert.ok(sql, "the query groups the incident's hour");
+  assert.ok(/BETWEEN 6 AND 11 THEN 'Morning'/.test(sql!) && /BETWEEN 0 AND 5 THEN 'Night'/.test(sql!), "the buckets are 6-11, 12-17, 18-23 and 0-5");
+}
+// Violent crime by age nationally over several years is too large to count here: declined in words, never run (BD3 out-of-memory).
+{
+  const before = sqls.length;
+  const d = as(ask("show me nationwide violent crimes by victim age by year for 2017 to 2025"), "decline");
+  assert.match(d.explanation, /violent crime in the United States broken down by victim age over several years takes too long to count here/);
+  assert.equal(sqls.slice(before).filter((x) => /person_crimes|victim_offense/.test(x) && /GROUP BY/.test(x) && /victim/.test(x)).length, 0, "nothing heavy is run");
+}
+// Codex review of the group-4 branch: the explicit units get the person-crimes definition, race and sex keep theirs, and a
+// carjacking incident by time of day has its join.
+for (const [q, id] of [["violent crime victims by age in Detroit in 2023", "victims.person_crimes"], ["violent crime offenders by age in Detroit in 2023", "offenders.person_crimes"]] as const)
+  assert.equal(as(ask(q), "answer").plan.measures[0].id, id, q);
+for (const q of ["violent crimes by offender race in Detroit in 2023", "violent crimes by offender sex in Detroit in 2023"]) {
+  const o = ask(q);
+  if (o.kind === "answer") assert.ok(!/person_crimes/.test(o.plan.measures[0].id), `${q}: race and sex keep the four-crime definition`);
+}
+{
+  const before = sqls.length;
+  ask("Carjacking incidents by time of day in Detroit in 2023");
+  const sql = sqls.slice(before).find((x) => /ih\.incident_hour/.test(x));
+  assert.ok(sql && /LEFT JOIN .* ih ON/.test(sql), "the hour join is in the carjacking incident query");
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
@@ -1842,5 +1897,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const f = shadowFollowUp(prev, next, deps);
     assert.deepEqual(deadPaths(f as ShadowOutcome), [], `${prev} / ${next}`);
   }
+}
+// "The carjacking trend ... by month": the word "trend" beside an explicit grain is the series, not a grain left unapplied
+// (query-log ids QL-nibrs-0db9574c2f and its kin, group 4). A firearm selected on carjackings is the offense's own weapon.
+{
+  const trend = as(ask("Show me the carjacking trend in Houston by month for 2024"), "answer");
+  assert.ok(trend.plan.groupings.some((g) => g.dimension === "time.month"), "trend by month is a monthly series");
+  const gun = as(ask("Firearm carjackings per month in Houston since 2019"), "answer");
+  assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
+  assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

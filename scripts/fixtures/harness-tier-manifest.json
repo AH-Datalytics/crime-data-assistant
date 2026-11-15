@@ -2716,6 +2716,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "answer policy rows are never lost in a merge: every row id of docs/policy/nibrsai-answer-policy.csv is listed in scripts/fixtures/policy-row-ids.txt and the check fails on a deleted, unlisted or duplicate row; reads two files, no database, no model, no network"
+    },
+    {
+      "id": "test-no-residents",
+      "tier": "F",
+      "script": "scripts/test-no-residents.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "no user-visible \"residents\" in lib/nibrs-shadow (Jeff 2026-11-15): reads source files only, no database, no model, no network"
     }
   ]
 }

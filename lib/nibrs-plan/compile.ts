@@ -148,16 +148,24 @@ function clearanceCond(read: Read, a: string, dimension: string, values: string[
     `(SELECT max(i4.cleared_exceptionally) FROM ${read("incident")} i4 WHERE ${sameIncident("i4", a)})`);
   return `(${clearanceCols(type)[dimension]}) IN (${list(values)})`;
 }
+/**
+ * Time of day (Jeff 2026-11-15): the incident's hour (two characters, '00' to '23') in the plan's bins: morning 6 to 11,
+ * afternoon 12 to 17, evening 18 to 23, night 0 to 5. An hour that is not a number is Unknown.
+ */
+const hourGroup = (a: string): Groupable => ({ col: "ih.incident_hour", age: true,
+  join: (read) => `LEFT JOIN ${read("incident")} ih ON ${sameIncident("ih", a)}`,
+  binned: (bins) => `CASE ${bins.map((b) => `WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN ${b.from} AND ${b.to} THEN ${q(b.label)}`).join(" ")} ELSE 'Unknown' END` });
 const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
   victim: { "victim.race": own(unknownAs("v.race")), "victim.sex": own(unknownAs("v.sex")), "victim.ethnicity": own(unknownAs("v.ethnicity")), "victim.age": age("v"),
     "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
     // Element 31 (coordinator 2026-11-04): up to two per victim, each counted once under each (categories_overlap).
     "victim_circumstance.circumstance": { col: "vc.circumstance", multi: true, join: (read) => `LEFT JOIN ${read("victim_circumstance")} vc ON ${sameVictim("vc", "v")}` },
+    "incident.hour": hourGroup("v"),
     ...offenderGroupings("v"), ...Object.fromEntries(OFFENDER_ATTRS.map((x) => [`victim_offender.offender_${x}`, pairAttr(x)])), ...clearance("v") },
   offense: { "offense.location_type": own("o.location_type"),
     "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
-    ...offenderGroupings("o"), ...clearance("o") },
-  incident: { ...clearance("o") },
+    "incident.hour": hourGroup("o"), ...offenderGroupings("o"), ...clearance("o") },
+  incident: { "incident.hour": hourGroup("o"), ...clearance("o") },
   // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted
   // as one offender, whatever its blank fields hold; its attributes are Unknown (P86: one Unknown row).
   offender: Object.fromEntries(OFFENDER_ATTRS.map((x) => {
@@ -213,7 +221,7 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   if (measureId === "incidents.carjacking") {
     if (unit !== "incident") return { error: `carjacking is counted by incident, not ${unit}` };
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o
+      FROM ${read("offense")} o ${joins}
       WHERE o.offense_code = '120' AND EXISTS (
         SELECT 1 FROM ${read("property")} p
         WHERE p.data_year = o.data_year AND p.ori = o.ori AND p.incident_num = o.incident_num
@@ -307,7 +315,7 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
   return null;
 }
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
-const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
+const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
 
 /**
  * The agencies of a place and their populations (increment 4), from the canonical agency table's batch-header rows:
@@ -442,6 +450,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       else if (on === "offense offense.offense incident arrestee")
         // Increment 6: an arrest on an incident that has an offense with one of the codes.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense")} o2 WHERE ${sameIncident("o2", "a")} AND o2.offense_code IN (${list(values)}))`);
+      else if (on === "property_drug property_drug.drug_type incident arrestee")
+        // Marijuana and the like: an arrest on an incident whose property records the drug (the drug is the incident's, not the arrestee's).
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("property_drug")} d2 WHERE ${sameIncident("d2", "a")} AND d2.drug_type IN (${list(values)}))`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
       else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")

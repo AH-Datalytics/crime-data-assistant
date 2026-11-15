@@ -278,7 +278,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   }
 
   const period = { from: `${covered[0]}-01`, to: `${covered[covered.length - 1]}-12` };
-  const rateMeaning = hq.statistic === "rate" ? { denominator: "the agency's residents as published by Crime Index, per 100,000" } : {};
+  const rateMeaning = hq.statistic === "rate" ? { denominator: "the agency's population as published by Crime Index, per 100,000" } : {};
   const notes = [...outsideLine, ...(hq.notes ?? [])];
   // Several agencies in one year: a row each, side by side (never combined: the file has no cohort to combine).
   if (several && !hq.byYear && covered.length === 1) {
@@ -487,7 +487,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
       filters: [states ? "states (not the District of Columbia)" : unit, ...(floor ? [`population ${fmt(rq.minPopulation!)} or more`] : [])],
       measures: [{ name: m.name, unit: m.unit }], period, groupings: [states ? "state" : "agency"], statistic: "rank",
       rank: { by: rate ? `${m.name} rate` : m.words, direction: rq.direction, limit: rq.limit },
-      ...(rate ? { denominator: `the ${states ? "state" : "agency"}'s residents as published by Crime Index, per 100,000` } : {}) },
+      ...(rate ? { denominator: `the ${states ? "state" : "agency"}'s population as published by Crime Index, per 100,000` } : {}) },
     delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: states ? "geo.state" : "geo.agency" }, header: states ? "State" : "Agency" }, { binding: { kind: "statistic", as: "x" }, header }],
       rows: ranked.map((a) => [a.name, a.value]) }, text },
     read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
@@ -536,7 +536,7 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
   const text = [`The ${set.length} largest cities in ${where} by population (${sq.to}): ${what}, ${span}.`,
     // Every city with the Nth city's population, wherever the tie starts (Codex rankings review 02.1).
     ...(set.length > sq.n ? [`${set.filter((r) => num(r[3]) === num(set[sq.n - 1][3])).length} cities tie at the ${ordinal(sq.n)} largest population, so ${set.length} are shown.`] : []),
-    `The cities are Crime Index's city agencies with the most residents as published for ${sq.to}, largest first; "city" is the geography, whatever the agency.`];
+    `The cities are Crime Index's city agencies with the largest populations as published for ${sq.to}, largest first; "city" is the geography, whatever the agency.`];
   const blanks = rows.filter((r) => r[r.length - 1] === null).length;
   if (blanks) text.push(`A blank means Crime Index has no ${m.name} ${rate ? "rate" : "figure"} for that city that year.`);
   if (rate) {
@@ -557,7 +557,7 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
     meaning: { source: "historical", places: [national ? { kind: "national", name: "United States" } : { kind: "state", name: where, state: sq.state }],
       filters: [`the ${set.length} largest city agencies by population (${sq.to})`], measures: [{ name: m.name, unit: m.unit }], period,
       groupings: ["agency", ...(years.length > 1 ? ["year"] : [])], statistic: rate ? "rate" : "count",
-      ...(rate ? { denominator: "the agency's residents as published by Crime Index, per 100,000" } : {}) },
+      ...(rate ? { denominator: "the agency's population as published by Crime Index, per 100,000" } : {}) },
     delivered: { table: { columns, rows }, text },
     read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
@@ -613,7 +613,7 @@ export function answerHistoricalRegion(hq: HistoricalRegionQuestion, build: Hist
     question: { measure: hq.measure, agencies: [], from: hq.from, to: hq.to, byYear: rows[0].length > 1, statistic: hq.statistic, comparison: null },
     meaning: { source: "historical", places: [{ kind: "national", name }], filters: [`the states of ${hq.region.name}`], measures: [{ name: m.name, unit: m.unit }], period,
       groupings: rows[0].length > 1 ? ["year"] : [], statistic: rate ? "rate" : "count",
-      ...(rate ? { denominator: "the states' summed residents as published by Crime Index, per 100,000" } : {}) },
+      ...(rate ? { denominator: "the states' summed populations as published by Crime Index, per 100,000" } : {}) },
     delivered: { table: { columns, rows }, text },
     read: { table: "state_crime", column: `${m.col}_total`, release: build.release },
   };
@@ -670,14 +670,14 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
   if (!multi) {
     const y = per.get(cq.from)!;
     const share = y.popAll > 0 ? Math.round((y.pop * 1000) / y.popAll) / 10 : null;
-    text.push(`${y.reporting.length} of ${y.members} agencies in the county reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}: ${y.reporting.join(", ")}.`);
+    text.push(`${y.reporting.length} of ${y.members} agencies in the county reported${share !== null ? `, covering ${share}% of the people in the agencies' areas with a population` : ""}: ${y.reporting.join(", ")}.`);
     if (y.missing.length) text.push(`No figure: ${y.missing.join(", ")}.`);
   } else {
     // Each year's reporting agencies and share (Codex rankings-B review 01.7).
     for (const yr of years) {
       const y = per.get(yr)!;
       const share = y.popAll > 0 ? Math.round((y.pop * 1000) / y.popAll) / 10 : null;
-      text.push(`${yr}: ${y.reporting.length} of ${y.members} agencies reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}${y.reporting.length ? `: ${y.reporting.join(", ")}` : ""}${y.missing.length ? `; no figure: ${y.missing.join(", ")}` : ""}.`);
+      text.push(`${yr}: ${y.reporting.length} of ${y.members} agencies reported${share !== null ? `, covering ${share}% of the people in the agencies' areas with a population` : ""}${y.reporting.length ? `: ${y.reporting.join(", ")}` : ""}${y.missing.length ? `; no figure: ${y.missing.join(", ")}` : ""}.`);
     }
   }
   if (rate && [...per.values()].some((y) => y.total !== null && y.popMissing)) text.push("A year with a reporting agency whose population isn't published has no rate.");
@@ -690,7 +690,7 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
     kind: "historical", period,
     question: { measure: cq.measure, agencies: [], from: cq.from, to: cq.to, byYear: multi, statistic: cq.statistic, comparison: null, countywide: { members: [...members.values()] } },
     meaning: { source: "historical", places: [{ kind: "county", name: where, state: cq.state }], filters: ["every reporting agency in the county (P70)"], measures: [{ name: m.name, unit: m.unit }], period,
-      groupings: multi ? ["year"] : [], statistic: rate ? "rate" : "count", ...(rate ? { denominator: "the reporting agencies' summed residents, per 100,000" } : {}) } as unknown as HistoricalAnswer["meaning"],
+      groupings: multi ? ["year"] : [], statistic: rate ? "rate" : "count", ...(rate ? { denominator: "the reporting agencies' summed populations, per 100,000" } : {}) } as unknown as HistoricalAnswer["meaning"],
     delivered: { table: { columns, rows }, text },
     read: { table: "agency_crime + agency_fips_county", column: `${m.col}_total`, release: build.release },
   };

@@ -793,7 +793,7 @@ type Values = "match" | "mismatch" | "not measured";
  */
 function matchMeasure(m: NibrsPlan["measures"][number], defs: string[]): string | null {
   const name = m.id.replace(/^[a-z_]+\./, "");
-  const codes = MEASURE_CODES[name] ?? ({ drug_equipment: ["35B"] } as Record<string, string[]>)[name];
+  const codes = MEASURE_CODES[name] ?? ({ drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] } as Record<string, string[]>)[name];
   if (!codes && name !== "carjacking") return null;
   const unit = { victim: /victim/i, offense: /offense/i, offender: /offender/i, arrest: /arrest/i, arrestee: /arrest/i }[m.unit as string];
   const named = (d: string) => new Set(d.match(/\b(?:\d{2}[A-Z]|\d{3})\b/g) ?? []);

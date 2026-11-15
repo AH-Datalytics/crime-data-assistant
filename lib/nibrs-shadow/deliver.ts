@@ -91,7 +91,7 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
   }
   if (f.kind === "exists" && !f.negate && f.entity === "offender" && f.scope === "incident") {
     const ws = f.where.map((w) => (w.kind === "attribute" && w.dimension.startsWith("offender.") ? personWords(w) : null));
-    return ws.every(Boolean) ? `with an offender ${ws.join(" and ")} in the incident` : null;
+    return ws.every(Boolean) ? `with an offender ${ws.join(" and ")}` : null;
   }
   if (f.kind === "exists" && !f.negate && f.entity === "victim_offender" && f.scope === "victim" && f.where.every((w) => w.kind === "attribute" && w.dimension.startsWith("victim_offender.offender_"))) {
     const ws = f.where.map((w) => personWords({ ...w, dimension: w.dimension.replace("victim_offender.offender_", "offender.") }));
@@ -118,6 +118,7 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     const n = named(WEAPON_TYPES);
     return n && `with a weapon recorded as ${n}`;
   }
+  if (f.entity === "property_drug" && f.where[0].dimension === "property_drug.drug_type" && v === "E") return MARIJUANA_WORDS;
   if (f.where[0].dimension === "victim_offender.relationship") {
     if (v === "ST") return "by a stranger";
     const n = named(RELATIONSHIP_LABEL);
@@ -125,6 +126,13 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
   }
   return null;
 }
+/** "Violent crime" by a victim's or offender's age: NIBRS crimes against persons (no robbery named: Jeff 2026-11-15). */
+export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.";
+/** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
+export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
+export const NIGHT_LINE = "Many agencies record midnight when the time is not known, so night may be overstated.";
+export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
+export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
 /** Increment 7: a person condition in words: "under 18", "aged 18 to 24", "female", "recorded as Black". */
 function personWords(w: { dimension: string; op: string; values?: (string | number)[] }): string | null {
   const attr = w.dimension.split(".")[1], vs = (w.values ?? []).map(String);
@@ -140,6 +148,7 @@ export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): st
   // Increment 6: every arrest on an incident with the condition ("arrests on incidents where a firearm was stolen").
   // Increment 7: with no condition on the incident, every arrest (standalone Group B arrests included).
   if (m.id === "arrests.all_crime") return [peopleFacts(plan).throughIncident ? "arrests on incidents" : "arrests", ...filters].join(" ");
+  if (name === "drug_possession" && m.unit === "arrest" && filters.includes(MARIJUANA_WORDS)) return ["marijuana possession arrests", ...filters.filter((x) => x !== MARIJUANA_WORDS)].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
@@ -198,6 +207,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "victim.sex": { header: "Victim sex", plural: "sex", names: SEX },
   "victim.ethnicity": { header: "Victim ethnicity", plural: "ethnicity", names: ETHNICITY_CODES },
   "victim.age": { header: "Victim age", plural: "age group", names: null },
+  "incident.hour": { header: "Time of day", plural: "time of day", names: null },
   "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
   "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
@@ -490,7 +500,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
   const time = plan.groupings.find((g) => g.dimension.startsWith("time."))?.dimension;
   const at = (name: string) => columns.indexOf(name);
   const ip = at("period");
-  const stats = plan.measures.map((m) => ({ as: plan.statistics.find((s) => "measure" in s && s.measure === m.as)!.as, what: measureWords(plan, m) }));
+  const stats = plan.measures.map((m) => ({ as: plan.statistics.find((s) => "measure" in s && s.measure === m.as)!.as, what: m.id === "offenses.drug_crimes" ? "drug crimes together" : measureWords(plan, m) }));
   const labels: Record<string, string> = {};
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
@@ -509,7 +519,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
   })]);
   const table: ResultTable = { columns: tableCols, rows: tableRows };
   const when = periodWords(effective.from, effective.to);
-  const names = stats.map((s) => s.what);
+  const names = stats.filter((s) => s.what !== "drug crimes together").map((s) => s.what);
   const list = names.length > 2 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join(" and ");
   const text: string[] = [];
   if (combined) text.push(combined.definition);

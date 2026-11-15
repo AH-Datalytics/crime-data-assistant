@@ -116,6 +116,8 @@ for (const [name, codes] of Object.entries(MEASURE_CODES)) {
 }
 // D19: drug equipment violations (35B), the second part of drug crimes, which the question vocabulary does not name yet.
 for (const u of ["offense", "incident", "offender", "arrest"] as CountingUnit[]) MEASURES.push(measure(`${{ offense: "offenses", incident: "incidents", offender: "offenders", arrest: "arrests" }[u as string]}.drug_equipment`, u, u === "arrest" ? ["incident_date", "arrest_date"] : ["incident_date"]));
+// Drug crimes together (35A and 35B), the total column of drug crimes by year: counted by offense.
+MEASURES.push(measure("offenses.drug_crimes", "offense"));
 // Property crimes also record victims (lesson 6): victims are a unit for every crime against property here.
 for (const name of ["theft", "theft_from_motor_vehicle", "motor_vehicle_theft", "burglary", "shoplifting", "arson", "property_crime"]) MEASURES.push(measure(`victims.${name}`, "victim"));
 for (const [name, units] of Object.entries({
@@ -151,7 +153,7 @@ const DIMENSIONS: SemanticDimension[] = [
   // Increment 7 (P65): the attributes of the offender a victim's relationship segment links to it.
   dim("victim_offender.offender_sex", "victim_offender", { values: SEX }), dim("victim_offender.offender_race", "victim_offender", { values: RACE_CODES }),
   dim("victim_offender.offender_ethnicity", "victim_offender", { values: ETHNICITY_CODES }), dim("victim_offender.offender_age", "victim_offender", { numeric: AGE }),
-  dim("victim_offense.offense", "victim_offense"), dim("incident.hour", "incident"),
+  dim("victim_offense.offense", "victim_offense"), dim("incident.hour", "incident", { numeric: { min: 0, max: 23, special: {} } }),
   dim("victim_circumstance.circumstance", "victim_circumstance", { values: CIRCUMSTANCE }),
 ];
 

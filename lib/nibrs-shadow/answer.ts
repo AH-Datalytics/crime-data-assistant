@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, PERSON_CRIMES_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -1142,6 +1142,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       ? fromLedger(Object.assign(withParts(ledger0, ledger0.parts.filter((p) => p !== part)), { people: { ...ppl0, ask: null, by: { who: "offender" as const, attr, paired: false } } }), deps, pins)
       : victims;
     if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    // "Violent crime" by age: Jeff's words, "Offender" and "Victim" (2026-11-15; this question only).
+    if (attr === "age" && /\bviolent\s+crimes?\b/i.test(ledger0.question))
+      return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
+        { label: "Offender", continuation: offenders }, { label: "Victim", continuation: victims }] };
     return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
       { label: "Victims", continuation: victims }, { label: "Offenders", continuation: offenders }] };
   }
@@ -2002,6 +2006,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const ppl = flags(ledger0).people;
   if (ppl && (ppl.by || ppl.where.length)) {
     if (plan.measures.length !== 1) return decline("unsupported_capability", "This isn't available yet: a person's attributes for several crimes.");
+    // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person, not the FBI's four-crime
+    // violent crime (Jeff 2026-11-15); a firearm selected is the victim's offense weapon (offenders' is not built).
+    if (ppl.by && !ppl.by.paired && ppl.by.who === "offender" && ppl.by.attr === "age" && ["violent_crime.ucr", "offenders.violent_crime"].includes(plan.measures[0].id)) {
+      plan.measures[0] = { ...plan.measures[0], id: "offenders.person_crimes", unit: "offender" };
+      plan.filters = plan.filters.map((f): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "incident" ? { ...f, scope: "offender" } : f));
+    }
     const unit = plan.measures[0].unit;
     const between = (dimension: string, r: [number, number]) => ({ kind: "attribute" as const, dimension, op: "between" as const, values: r });
     for (const w of ppl.where) {
@@ -2094,12 +2104,23 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+    // By period the total is a third column, "Drug crimes together" (Jeff 2026-11-15): counted as its own measure over both codes
+    // (the two offenses never overlap), so it carries its own evidence and is blank when either part is not established.
+    if (plan.groupings.some((g) => g.dimension.startsWith("time."))) {
+      plan.measures.push({ id: "offenses.drug_crimes", unit: "offense", as: "drug_crimes_together" });
+      plan.statistics.push({ kind: "count", as: "drug_crimes_together_count", measure: "drug_crimes_together" });
+    }
   }
   plan.measures.forEach((m, i) => {
     const name = m.id.replace(/^[a-z_]+\./, "");
     // D18: carjacking by offense; an offense has one location.
     if (m.id === "incidents.carjacking" && !clause0("unit").length) {
       plan.measures[i] = { ...m, id: "offenses.carjacking", unit: "offense" };
+      // A weapon selected was scoped to the incident (the unit the measure had); counted by offense it is the offense's own weapon
+      // ("firearm carjackings per month in Houston").
+      const toOffense = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "incident" ? { ...f, scope: "offense" } : f);
+      plan.filters = plan.filters.map(toOffense);
+      plan.measures[i] = { ...plan.measures[i], ...(m.filters ? { filters: m.filters.map(toOffense) } : {}) };
       plan.groupings = plan.groupings.map(({ multiValue, ...g }) => (g.dimension === "offense.location_type" ? g : { ...g, ...(multiValue ? { multiValue } : {}) }));
     }
     // P11: victims of a property crime -> offenses, with the fixed sentence. The unit part is answered differently by
@@ -2251,7 +2272,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
   if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
-    || (several && (catG.length || !counts)) || (combined && timeG.length))
+    || (several && (catG.length || !counts)) || (combined && timeG.length && combined.label !== "drug crimes"))
     return decline("unsupported_capability", "This isn't available yet: this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share.");
 
   // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
@@ -2399,6 +2420,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     checked = { ...checked, statistics: [...checked.statistics, { kind: "agencies", as: "agencies", measure: s0.measure }] };
   }
 
+  // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): a
+  // NIBRS plan for a hate crime or a bias is never run, and never shows the weapon-or-relationship sentence.
+  if (checked.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias"))
+    return notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
   // A state's city agencies (a ranking) are the release's agencies with a population for that year, as answered.
   const cityMembers = new Map<string, string[]>();
@@ -2426,7 +2451,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (unnamed) return decline("unsupported_capability", "This isn't available yet: this weapon or relationship selection.");
   const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
     // P84 (Jeff 2026-11-01): how the phrase was read.
-    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
+    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
+    // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.
+    ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
+    // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
+    ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
+    // Time of day (Jeff 2026-11-15): the buckets, one line under the table.
+    ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE, NIGHT_LINE] : [])];
   // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here
   // in time (job AR6: 2021-2025 by age took 8 minutes, 2017-2025 more than 15). Declined, with one year offered in
   // words (never run in advance, which would cost as much) until the national arrest query is made faster (Jeff
@@ -2435,6 +2466,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && checked.measures.some((m) => m.id === "arrests.all_crime") && checked.groupings.some((g) => !g.dimension.startsWith("time."));
   if (nationalEveryArrestBreakdown && period.from.slice(0, 4) !== period.to.slice(0, 4))
     return decline("unsupported_capability", `This isn't available yet: every arrest in the United States broken down by ${checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension.split(".")[1]).join(" and ")} over several years takes too long to count here. Ask for one year, for example "nationwide arrests by age in ${release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1}", or for one crime or one state.`);
+  // The same for violent crime by a person's age, nationally over several years (BD3: 2017-2025 by victim age ran DuckDB out of
+  // memory): the arrest sentence's pattern, one year offered in words, never run in advance.
+  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.person_crimes$/.test(m.id))
+    && checked.groupings.some((g) => !g.dimension.startsWith("time.")) && period.from.slice(0, 4) !== period.to.slice(0, 4)) {
+    const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
+    const who = checked.measures[0].unit === "offender" ? "offender" : "victim";
+    return decline("unsupported_capability", `This isn't available yet: violent crime in the United States broken down by ${who} age over several years takes too long to count here. Ask for one year, for example "nationwide violent crimes by ${who} age in ${lastYear}", or for one state.`);
+  }
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
   const placesNote = sheriffNote(deps, checked.geography.places.flatMap((p) => (p.kind === "agency" ? [p.ori] : [])), ledger0.question);
