@@ -64,6 +64,7 @@ export type HateQuestion = {
   grain: "total" | "year" | "month" | "rolling"; window?: number; bias: { code: string; name: string } | null;
   /** The first year asked when it was before the data start (the answer says so). */ askedFrom?: string;
   /** Said when the span asked reached past the last complete month. */ cutAt?: string;
+  /** No range was named for a series: every year the data have is shown, and the answer says so. */ allYears?: boolean;
 };
 export type HateAnswer = {
   kind: "hate"; question: HateQuestion; period: { from: string; to: string };
@@ -171,6 +172,7 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
     }
   }
   text.push(HATE_REPORTING_CAVEAT);
+  if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${fromY} through ${toY}.`);
   if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${hq.askedFrom} through ${HATE_FIRST_YEAR - 1} aren't included.`);
   // The data's last complete month ends the answer when it is not a December: the year (or span) asked may reach past it.
   if (hq.to === build.latestMonth && !hq.to.endsWith("-12")) {

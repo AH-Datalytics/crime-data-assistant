@@ -70,6 +70,12 @@ const roll = as(ask("hate crimes in Texas rolling 12 months since 1991"), "hate"
 assert.equal(roll.delivered.table.rows[0][0], "1991-12");
 assert.ok(roll.delivered.table.rows.every((r) => r[1] !== null), "no blank row");
 assert.ok(!roll.delivered.text.some((x) => /rolling total is blank/.test(x)), "no gap sentence");
+// No period named: a count asks which period (D31), as every count does; a series with no range is every year the data have, said.
+const noPeriod = as(ask("hate crime data in Texas"), "clarify");
+assert.equal(noPeriod.about, "which period");
+const everyYear = as(ask("hate crimes by year in Texas"), "hate");
+assert.equal(everyYear.period.from, "1991-01");
+assert.ok(everyYear.delivered.text.includes("No years were given, so every year in the data is shown: 1991 through 2026."), everyYear.delivered.text.join(" / "));
 // Without a build, or for a shape this source does not answer, a plain decline: never a NIBRS answer, never the weapon sentence.
 const noBuild = as(ask("anti-Hispanic hate crimes in Texas in 2024", { ...deps, hate: undefined }), "decline");
 assert.ok(!/weapon or relationship/.test(noBuild.explanation));

@@ -58,7 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
-import { answerHate, hateQuestionOf, type HateAnswer, type HateBuild } from "./hate";
+import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, type HateAnswer, type HateBuild } from "./hate";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
@@ -970,9 +970,12 @@ const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:female
 function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
   if (!deps.hate || flags(ledger0).consistent || flags(ledger0).quarter) return null;
   let period: { from: string; to: string };
+  // No range named for a series: every year the hate crime data have, said (Jeff 2026-11-11, "All years by default").
+  const allYears = plan.defaults.some((x) => x.path === "period");
   try {
     const r = resolvePeriod(plan.period, { ...deps.release, lastMonth: deps.hate.latestMonth });
-    if (r.kind === "years") {
+    if (allYears) period = { from: `${HATE_FIRST_YEAR}-01`, to: deps.hate.latestMonth };
+    else if (r.kind === "years") {
       const ys = [...r.years].sort((a, b) => a - b);
       if (ys.some((y, i) => i > 0 && y !== ys[i - 1] + 1)) return null;
       period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
@@ -980,7 +983,7 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
   } catch { return null; }
   const hq = hateQuestionOf(plan, period, deps.hate);
   if ("why" in hq) return null;
-  const a = answerHate(hq, deps.hate, deps.execute);
+  const a = answerHate(allYears ? { ...hq, allYears: true } : hq, deps.hate, deps.execute);
   return a.kind === "hate" ? a : decline("outside_release_coverage", a.explanation);
 }
 function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
@@ -2325,7 +2328,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): before
   // NIBRS's own checks (its data start, its state and national limits do not apply to them), a plan for a hate crime or a bias is answered there or declined plainly,
   // never run on NIBRS and never shown the weapon-or-relationship sentence.
-  if (plan.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias"))
+  // A hate crime count with no period named and no series asked is asked about first, as every count is (D31/P06: the "which period"
+  // ask below); a series (by year, by month, rolling) with no range is every year the data have (Jeff 2026-11-11, "All years by default").
+  const hateSpec = d.spec as { period?: { form: string }; grain?: string };
+  const hateAsksPeriod = hateSpec.period?.form === "none" && (!hateSpec.grain || hateSpec.grain === "total");
+  if (!hateAsksPeriod && (plan.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias")))
     return hateOutcome(plan, deps, ledger0) ?? notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   const quarterly = !!flags(ledger0).quarter;
   const quarterCats = quarterly && plan.groupings.length === 2 && plan.groupings[0].dimension === "time.month" && !plan.groupings[1].dimension.startsWith("time.");
