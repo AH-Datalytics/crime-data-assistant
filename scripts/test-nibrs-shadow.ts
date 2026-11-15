@@ -1779,6 +1779,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   }
   const juv = shadowAnswer("Big cities with the highest share of juvenile homicide victims in 2024", rdeps);
   assert.ok(juv.kind !== "shr", JSON.stringify(juv).slice(0, 200));
+}
 // Group 5: several agencies by month (a row per agency and month; a month not reported is blank, never 0).
 {
   const m = as(ask("Dallas vs Austin murders by month in 2024"), "answer");
