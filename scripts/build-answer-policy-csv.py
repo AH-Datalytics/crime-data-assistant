@@ -690,6 +690,54 @@ ROWS = [
      "\"North Carolina firearm homicides rolling over 12 months since 2018\" shows Month and the rolling 12-month total.",
      "Coordinator 2026-11-15: GO on the rolling window helper and its first use; the wording lines are Engine 2.0's, for Jeff to confirm.",
      "Built 2026-11-15; wording to confirm", NEW),
+    ("P107",
+     "\"juvenile crime in Texas in 2024\" (a count of offenses or incidents with a juvenile)",
+     "A juvenile was read as a victim under 18 and the question declined.",
+     "Juvenile means an offender under 18, never a victim. Everywhere a count is of an offender under 18 the words are the short form \"with an offender under 18\" (never \"in the incident\").",
+     "\"Robberies with an offender under 18\".",
+     "Jeff 2026-11-15: \"Juvenile crime refers to offender age, not victim\"; short form \"Those work\".",
+     "Decided (Jeff 2026-11-15)",
+     ""),
+    ("P108",
+     "\"violent crimes by offender age in Texas in 2024\", \"violent crimes by victim age\" (violent crime by a person's age)",
+     "Declined: violent crime is four crimes of two units with no single counted person.",
+     "Ask victim or offender when the question does not say (the existing Victims / Offenders ask). Answer from NIBRS crimes against persons (homicide, kidnapping, sex offenses, assault, intimidation and human trafficking; no robbery, no justifiable homicide) counted per victim for victim age and per offender for offender age, and say so in one line. Offender age may show Unknown. Nationally over several years: declined in words (too large to count here), as arrests are.",
+     "Line: \"Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.\" Offender with a firearm is not built.",
+     "Jeff 2026-11-15: \"Violent crime by age should ask offender or victim and then give NIBRS violent crimes and say so, NOT the 4 SRS ones\"; \"No need to call out robbery\".",
+     "Decided (Jeff 2026-11-15)",
+     ""),
+    ("P109",
+     "\"drug offenses in Houston from 2020 to 2024\" (drug crimes over several years)",
+     "Declined: a combined total by period was not built.",
+     "A table by year with each part per year and a third column \"Drug crimes together\" (the sum, blank when a part is not established), under the definition line. Gun crime and stabbings by year are not built.",
+     "Column \"Drug crimes together\"; definition line \"Drug crimes are drug/narcotic violations plus drug equipment violations.\"",
+     "Jeff 2026-11-15: \"Yes on drug and time of day\".",
+     "Decided (Jeff 2026-11-15)",
+     ""),
+    ("P110",
+     "\"marijuana possession arrests in Texas since 2020\"",
+     "Declined with a misleading weapon-or-relationship sentence.",
+     "Answer arrests on incidents where marijuana was recorded among the drugs, named \"Marijuana possession arrests\", with one definition line.",
+     "Line: \"Counts arrests on incidents where marijuana was recorded among the drugs.\"",
+     "Jeff 2026-11-15: \"Those work\" (marijuana form).",
+     "Decided (Jeff 2026-11-15)",
+     ""),
+    ("P111",
+     "\"robberies by time of day nationally\"",
+     "Declined: a breakdown by two things at once.",
+     "A breakdown by the incident's hour in four groups, each shown with its count and share, and an Unknown row for an hour not recorded, with one line naming the hours.",
+     "Morning 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight, night midnight to 6 AM. Line: \"Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.\"",
+     "Jeff 2026-11-15: \"Yes on drug and time of day\" (the coordinator's buckets).",
+     "Decided (Jeff 2026-11-15)",
+     ""),
+    ("P112",
+     "Any answer, ask or note that gave a population in words",
+     "Some wording said residents.",
+     "Never \"residents\": say \"people\" or \"population\" (\"per 1,000 people\", \"largest populations\", \"the people in the agencies' areas\").",
+     "Check: scripts/test-no-residents.js.",
+     "Jeff 2026-11-15: \"we dont say residents\"; \"1,000 people\".",
+     "Decided (Jeff 2026-11-15)",
+     ""),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
@@ -813,8 +861,8 @@ TOPIC = {
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
 
-out = os.path.join(os.path.dirname(__file__), "..", "docs", "policy", "nibrsai-answer-policy.csv")
-os.makedirs(os.path.dirname(out), exist_ok=True)
+out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "docs", "policy", "nibrsai-answer-policy.csv")
+os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
 with open(out, "w", encoding="utf-8-sig", newline="") as f:
     w = csv.writer(f, lineterminator="\n")  # LF: the repo's checkout gate rejects CRLF
     w.writerow(["id", "topic", "decision needed", "situation (example wording)", "what the app does today", "proposed behavior", "exact default or choices offered", "why", "status", "test cases"])
