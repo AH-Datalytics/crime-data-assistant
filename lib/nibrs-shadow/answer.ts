@@ -1044,6 +1044,40 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 
+/**
+ * Several named agencies' murder details from Homicide Reports (Jeff 2026-11-15, source rule: details are Homicide
+ * Reports', never NIBRS by default): each agency answered as one place, then one table Agency | ... with the agencies
+ * side by side, a blank where an agency filed nothing. Null when any one can't be answered as asked (the caller keeps its
+ * path); a decline from Homicide Reports (nothing filed anywhere) is the decline.
+ */
+function shrSeveral(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
+  const places = plan.geography.places;
+  if (places.length < 2 || !places.every((p) => p.kind === "agency") || plan.geography.combine === "combined") return null;
+  const answers: ShrAnswer[] = [];
+  for (const p of places) {
+    const one = { ...plan, geography: { ...plan.geography, places: [p] }, groupings: plan.groupings.filter((g) => !g.dimension.startsWith("geo.")) } as NibrsPlan;
+    const o = shrOutcome(one, deps, ledger0);
+    if (!o || o.kind !== "shr") return o && o.kind === "decline" ? o : null;
+    answers.push(o);
+  }
+  const first = answers[0];
+  const agencyOf = (a: ShrAnswer) => (a.question.place.kind === "agency" ? a.question.place : null)!;
+  const names = answers.map((a) => agencyOf(a).label);
+  const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
+  const columns = [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Agency" }, ...first.delivered.table.columns];
+  const rows = answers.flatMap((a) => a.delivered.table.rows.map((r) => [shortAgency(agencyOf(a).label), ...r]));
+  // The lines: the first title with every agency named, then each answer's other lines once (its own agency lines kept).
+  const title = first.delivered.text[0].replace(/^[^:]*:/, `${listed}:`);
+  const rest: string[] = [];
+  for (const a of answers) for (const t of a.delivered.text.slice(1)) if (!rest.includes(t) && !/^Source: /.test(t)) rest.push(t);
+  const text = [title, ...rest, first.delivered.text[first.delivered.text.length - 1]];
+  return { ...first, question: { ...first.question, places: answers.slice(1).map((a) => a.question.place) },
+    meaning: { ...first.meaning, places: answers.map((a) => a.question.place), groupings: ["agency", ...first.meaning.groupings] },
+    delivered: { table: { columns, rows }, text } };
+}
+/** "Dallas, Texas" is "Dallas" in a table's agency column. */
+const shortAgency = (label: string) => label.split(",")[0];
+
 const FORECAST_SENTENCE = "The data records past crime and cannot predict the future.";
 
 /** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
@@ -2306,7 +2340,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
   if (!stateMode && murderDetail) {
-    const s = shrOutcome(plan, deps, ledger0);
+    const s = plan.geography.places.length > 1 ? shrSeveral(plan, deps, ledger0) : shrOutcome(plan, deps, ledger0);
     if (s) return s;
   }
   // With a release, a state or national detail SHR can't answer as asked (a location beside it, a rate) goes on to

@@ -1912,6 +1912,22 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(nc.kind, "shr", JSON.stringify(nc).slice(0, 300));
   if (nc.kind === "shr") { assert.equal(nc.delivered.table.rows.length, 36); assert.deepEqual(nc.delivered.table.rows[0], ["2018-01", 24]); }
 }
+// Several agencies' murder details by month come from Homicide Reports (Jeff 2026-11-15): one table Agency | Month | count,
+// a blank where an agency filed nothing, one source line.
+{
+  const hs = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [[2024, 1, ["ori9:X"]]] : /agency_crime/.test(sql) ? [] : /AS k1/.test(sql) ? Array.from({ length: 12 }, (_, m) => [2024, m + 1, 3]) : []);
+  const d2 = { ...deps, execute: hs, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const two = shadowAnswer("Compare Chicago and Houston firearm murders by month in 2024", d2);
+  assert.equal(two.kind, "shr", JSON.stringify(two).slice(0, 300));
+  if (two.kind === "shr") {
+    assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murder victims"]);
+    assert.equal(two.delivered.table.rows.length, 24);
+    assert.deepEqual(two.delivered.table.rows[0], ["Chicago", "2024-01", 3]);
+    assert.equal(two.delivered.text[0], "Chicago, Illinois and Houston, Texas: murder victims with a firearm by month, 2024.");
+    assert.equal(two.delivered.text.filter((t) => /^Source: /.test(t)).length, 1);
+  }
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.

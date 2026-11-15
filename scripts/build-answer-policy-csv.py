@@ -738,6 +738,12 @@ ROWS = [
      "Jeff 2026-11-15: \"we dont say residents\"; \"1,000 people\".",
      "Decided (Jeff 2026-11-15)",
      ""),
+    ("P116", "\"Compare Chicago and Houston firearm murders by month\"",
+     "Answered from NIBRS (a table of months), because Homicide Reports could be asked for one place only.",
+     "Several named agencies' murder details by month (or by year) come from Homicide Reports, like one agency's: one table Agency | Month | count with one source line; a month or year an agency filed no reports is blank, never 0, with its own line. No years named: every month from 1985.",
+     "\"Compare Chicago and Houston firearm murders by month\" is a Homicide Reports table.",
+     "Jeff 2026-11-15 via coordinator: murder details are Homicide Reports', same table shape, blanks where a city did not file.",
+     "Decided 2026-11-15 (Jeff)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
