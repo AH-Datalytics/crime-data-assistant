@@ -366,6 +366,8 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     : "Justifiable homicides are felons killed by police or by a private citizen, as the agencies reported them.");
   if (sq.filters.some((f) => RECORD_DIMS.has(f.dim)) || (sq.breakdown && RECORD_DIMS.has(sq.breakdown.dim)))
     text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
+  // What the source does not record of what was asked comes before the coverage lines, so it is read first.
+  for (const n of sq.notes ?? []) text.push(n);
   if (sq.place.kind === "agency") {
     const gaps = periods.filter((p) => blankPeriod(p)).map((p) => p.year);
     if (gaps.length) text.push(`A blank ${sq.grain === "month" ? "month" : "year"} is one in which ${sq.place.label} filed no Homicide Reports.`);
@@ -382,7 +384,6 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
       text.push(`${y}: ${fmt(f.agencies)} agencies filed${s !== undefined ? `, covering ${s}% of the population Crime Index lists for ${sq.place.kind === "state" ? stateName(sq.place.code) : "the United States"}` : ""}.`);
     }
   }
-  for (const n of sq.notes ?? []) text.push(n);
   text.push(SHR_SOURCE);
   const period = { from: sq.from, to: sq.to };
   return {

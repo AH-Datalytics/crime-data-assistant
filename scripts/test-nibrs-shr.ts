@@ -217,6 +217,7 @@ assert.deepEqual(partner.filters[0].codes, ["HU", "WI", "CH", "CW", "BF", "GF", 
 assert.deepEqual(partner.notes, ["This data source does not record ex-boyfriend and ex-girlfriend relationships."]);
 const pAns = answerShr(partner, build, (s2) => (/shr_agency_year/.test(s2) ? [[2024, 10, []]] : /nation_crime|sum\(population\)/.test(s2) ? [] : [[5]]));
 assert.ok(pAns.kind === "shr" && pAns.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."), JSON.stringify(pAns));
+if (pAns.kind === "shr") assert.ok(pAns.delivered.text.indexOf("This data source does not record ex-boyfriend and ex-girlfriend relationships.") < pAns.delivered.text.findIndex((t) => /^2024: /.test(t)), "the note comes before the coverage lines");
 // The ex-relationship code alone has nothing to count.
 assert.ok("why" in shrQuestionOf(plan({ geography: { places: [{ kind: "national" }], combine: "separate" }, filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["XR"] }] }), { from: "2024-01", to: "2024-12" }, build));
 // No note when the question asks a spouse only.
