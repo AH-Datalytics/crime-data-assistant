@@ -58,7 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
-import { answerShr, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild } from "./shr";
+import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -952,6 +952,67 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
+/**
+ * Big cities ranked by a murder detail from Homicide Reports (SHR-B, Jeff 2026-11-11 order): "big cities with the highest
+ * share of murders by firearm in 2024", "... the most homicides by knife", "... the highest share of teenage homicide
+ * victims". Null when the question is anything else (the caller keeps its own path). Only the words read here are
+ * answered: a detail it doesn't recognise, a period shape other than one year or a range, or a floor other than "big"
+ * (250,000) leaves the question to the old route. With no period the period is asked, as every ranking asks.
+ */
+function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: ShadowDeps, rerun: (l: RequestLedger) => ShadowOutcome): ShadowOutcome | null {
+  if (!deps.shr || !deps.historical || !flags(ledger0).largeCities) return null;
+  const f = flags(ledger0);
+  if (f.consistent || f.quarter || f.nibrsAsked || f.clearance || f.property || f.composite || f.combined || f.region || f.column || f.forecast || f.court || f.offenders
+    || f.undefinedTerm || f.comparison || f.last12 || f.countywide || f.circumstance || f.shrDetail || f.arrestsThrough) return null;
+  const c0 = ledger0.parts.filter((p) => p.clause === 0);
+  // Only these parts are answered; a rate, a month grain, a change, a comparison or any other reading is not dropped but left to the old route.
+  const READ = new Set(["period", "share", "filter", "rank", "measure", "entity", "filler", "unrecognized", "punctuation", "unit", "statistic"]);
+  if (c0.some((p) => !READ.has(p.concept) || (p.concept === "statistic" && p.value !== "count") || (p.concept === "punctuation" && p.text.trim() !== "%" && p.state !== "context"))) return null;
+  const crimes = [...new Set(c0.filter((p) => p.concept === "measure").map((p) => String(p.value)))];
+  if (crimes.length !== 1 || !["murder", "homicide"].includes(crimes[0])) return null;
+  const rank = c0.find((p) => p.concept === "rank");
+  const rankVal = /^(top|bottom):(\d*)$/.exec(String(rank?.value ?? ""));
+  if (!rankVal || !c0.some((p) => p.concept === "entity" && p.value === "city")) return null;
+  // A unit other than victims, or a place, isn't read here.
+  if (c0.some((p) => (p.concept === "unit" && p.value !== "victims") || p.concept === "place" || p.concept === "clearance" || p.concept === "clearance-reason" || p.concept === "breakdown" || p.concept === "threshold")) return null;
+  // Details: a weapon the question names, and teenage victims (13 to 19, or the range written beside it).
+  const filters: ShrFilter[] = [];
+  for (const p of c0.filter((x) => x.concept === "filter")) {
+    const w = /^weapon:(firearm|20)$/.exec(String(p.value));
+    if (!w) return null;
+    filters.push({ dim: "weapon", codes: w[1] === "firearm" ? ["11", "12", "13", "14", "15"] : ["20"] });
+  }
+  const teen = !!f.people?.teen;
+  if (teen) filters.push({ dim: "victim.age", ages: [13, 19] });
+  if (!filters.length) return null;
+  // Words the reader couldn't place are only ones that change nothing here.
+  // "or sharp object" is the knife code's own name, only with a knife and no other weapon; "(13-19)" is the teen range.
+  const knifeOnly = filters.length === 1 && filters[0].codes?.join() === "20";
+  const harmless = new RegExp(`^(?:via|by|with${knifeOnly ? "|or sharp object" : ""}${teen ? "|\\(\\s*13\\s*(?:-|to|–)\\s*19\\s*\\)" : ""})$`, "i");
+  const periods = c0.filter((p) => p.concept === "period");
+  if (c0.some((p) => p.state === "not-interpreted" && !harmless.test(p.text.trim()) && !(p.concept === "period"))) return null;
+  // The people wording the reader took out ("teenage") must be only that.
+  if (f.people && (f.people.by || f.people.ask || f.people.unsupported || !teen || f.people.where.length !== 1 || f.people.where.some((w) => w.who !== "victim" || w.attr !== "age"))) return null;
+  const share = c0.some((p) => p.concept === "share" || (p.concept === "punctuation" && p.text.trim() === "%"));
+  const latest = deps.shr.latestMonth;
+  const lastComplete = Number(latest.slice(0, 4)) - (latest.endsWith("-12") ? 0 : 1);
+  if (!periods.length) {
+    return { kind: "clarify", about: "which period", question: ledger0.question, options: [
+      { label: `${lastComplete}`, continuation: rerun(filled(ledger, "period", `year:${lastComplete}`, `in ${lastComplete}`)) },
+      { label: "Other years", entry: "which years" }] };
+  }
+  const pv = /^(?:(year):(\d{4})|(range):(\d{4}):(\d{4}))$/.exec(String(periods[0].value ?? ""));
+  if (periods.length !== 1 || !pv) return null;
+  const fromY = Number(pv[2] ?? pv[4]), toY = Number(pv[2] ?? pv[5]);
+  if (fromY < SHR_FIRST_YEAR || fromY > toY) return null;
+  if (fromY > Number(latest.slice(0, 4)))
+    return decline("outside_release_coverage", `Homicide Reports in the data run through ${latest.slice(0, 4)}, so ${fromY} is outside them.`);
+  const to = toY >= Number(latest.slice(0, 4)) ? latest : `${toY}-12`;
+  const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
+    limit: rankVal[2] ? Number(rankVal[2]) : 20, minPopulation: 250000 }, deps.shr, deps.historical, deps.execute);
+  return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
+}
+
 const FORECAST_SENTENCE = "The data records past crime and cannot predict the future.";
 
 /** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
@@ -1237,6 +1298,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // The whole country's answer, or what it still asks (the period: job S2, the labels Jeff's decision moved); a
     // decline keeps the place asked, as before.
     if (flags(ledger0).largeCities || flags(ledger0).largestSet) {
+      const ranked = shrCityRanking(ledger, ledger0, deps, (l) => fromLedger(l, deps, pins));
+      if (ranked) return ranked;
       // "Big cities" that rank nothing ("Other large cities and violent crime"): the leftover "cities" and "other" aren't
       // a question of their own, so the whole country's is read without them (job S4).
       const ranks = ledger.parts.some((p) => p.clause === 0 && p.concept === "rank");

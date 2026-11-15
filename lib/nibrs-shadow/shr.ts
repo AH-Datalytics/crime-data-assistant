@@ -25,7 +25,8 @@ import type { ResultTable } from "../nibrs-plan/result";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { fmt, periodWords } from "./deliver";
 import { stateName } from "./places";
-import type { HistoricalBuild } from "./historical";
+import { citySql, cityNameSql, type HistoricalBuild } from "./historical";
+import { rankAgencies } from "../nibrs-plan/transforms";
 
 export const SHR_FIRST_YEAR = 1985;
 export const SHR_SOURCE = "Source: FBI Supplementary Homicide Reports.";
@@ -93,10 +94,12 @@ export type ShrQuestion = {
   filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][] } | null; share: boolean;
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
+  /** A ranking of the nation's cities by this question's count or share (answerShrRanking): the direction, the cut and the population floor. */
+  ranking?: { direction: "top" | "bottom"; limit: number; minPopulation: number | null };
 };
 export type ShrAnswer = {
   kind: "shr"; question: ShrQuestion; period: { from: string; to: string };
-  meaning: { source: "shr"; places: unknown[]; filters: string[]; measures: { name: string; unit: string }[]; period: { from: string; to: string }; groupings: string[]; statistic: "count" };
+  meaning: { source: "shr"; places: unknown[]; filters: string[]; measures: { name: string; unit: string }[]; period: { from: string; to: string }; groupings: string[]; statistic: "count" | "rank"; rank?: { by: string; direction: "top" | "bottom"; limit: number } };
   delivered: { table: ResultTable; text: string[] };
   read: { table: string; release: string };
 };
@@ -448,4 +451,77 @@ export function filterWords(f: ShrFilter): string {
   if (f.dim === "relationship") return `where the victim's relationship to the offender was ${list}`;
   if (f.dim === "circumstance") return `where the circumstance was ${list}`;
   return `where the ${f.dim.startsWith("victim") ? "victim" : "offender"}'s ${f.dim.split(".")[1]} was ${list}`;
+}
+
+/* ------------------------------------------------------------------ city rankings (SHR-B) */
+
+/**
+ * The nation's cities ranked by their murder victims with a detail (a weapon, a victim's age...), as a count or as the
+ * detail's share of the city's murder victims, from Homicide Reports. A city is a Crime Index city agency with the
+ * population asked (the same set as every other city ranking, citySql); only agencies that filed Homicide Reports in
+ * every year of the period are ranked, so no city is compared on a partial period (S3: a filing gap is blank, never 0).
+ */
+export type ShrRanking = { measure: "murder" | "homicide"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+
+export function shrRankingSql(rk: ShrRanking, build: ShrBuild, hist: HistoricalBuild): string {
+  const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: [], breakdown: null, share: false };
+  const fromY = Number(rk.from.slice(0, 4)), toY = Number(rk.to.slice(0, 4));
+  const popYear = Math.min(toY, hist.lastYear);
+  // The record's columns come through the subselect, so its conditions read them off the person row p.
+  const matched = rk.filters.length ? rk.filters.map((f) => condition(f, "p").replace(/\br\./g, "p.")).join(" AND ") : "TRUE";
+  return `WITH big AS (SELECT ori, ${cityNameSql()} AS name, state, population FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) `
+    + `WHERE year = ${popYear} AND ${citySql()}${rk.minPopulation ? ` AND population >= ${Math.floor(rk.minPopulation)}` : ""}), `
+    + `filed AS (SELECT agency_key FROM ${table(build, "shr_agency_year")} WHERE records > 0 AND data_year BETWEEN ${fromY} AND ${toY} GROUP BY agency_key HAVING count(DISTINCT data_year) = ${toY - fromY + 1}) `
+    + `SELECT big.ori, big.name, big.state, big.population, (('ori9:' || big.ori) IN (SELECT agency_key FROM filed)) AS filed_all, `
+    + `count(p.agency_key) AS total, count(p.agency_key) FILTER (WHERE ${matched}) AS matched FROM big `
+    + `LEFT JOIN (SELECT p.*, r.agency_key, r.weapon, r.relationship, r.circumstance FROM ${table(build, "shr_victim")} p JOIN ${table(build, "shr_record")} r USING (data_year, source_line_no) `
+    + `WHERE r.counted AND ${measureWhere(sq)} AND r.data_year * 100 + r.offense_month BETWEEN ${ym(rk.from)} AND ${ym(rk.to)}) p ON p.agency_key = 'ori9:' || big.ori `
+    + `GROUP BY big.ori, big.name, big.state, big.population`;
+}
+
+export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: HistoricalBuild, execute: (sql: string) => unknown[][]): ShrAnswer | ShrDecline {
+  const fromY = Number(rk.from.slice(0, 4)), toY = Number(rk.to.slice(0, 4));
+  // Offenders' details aren't a city ranking's here.
+  if (rk.filters.some((f) => f.dim.startsWith("offender.")))
+    return { kind: "shr-decline", explanation: "This isn't available yet: cities ranked by the offenders' details." };
+  const got = execute(shrRankingSql(rk, build, hist));
+  const entries = got.map((r) => {
+    const total = Number(r[5]), matched = Number(r[6]), filedAll = r[4] === true || r[4] === 1;
+    const value = !filedAll ? null : rk.share ? (total > 0 ? Math.round((matched * 1000) / total) / 10 : null) : matched;
+    return { ori: String(r[0]), name: `${String(r[1])}, ${String(r[2])}`, state: String(r[2]), population: num(r[3]), value, known: value !== null, filedAll, total, matched };
+  });
+  const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: rk.filters, breakdown: null, share: rk.share,
+    ranking: { direction: rk.direction, limit: rk.limit, minPopulation: rk.minPopulation } };
+  const floor = rk.minPopulation ? ` with a population of ${fmt(rk.minPopulation)} or more` : "";
+  const years = periodWords(rk.from, rk.to);
+  if (!entries.length) return { kind: "shr-decline", explanation: `Crime Index has no city agencies${floor} to rank for ${years}.` };
+  if (!entries.some((e) => e.filedAll)) return { kind: "shr-decline", explanation: `No city agency${floor} filed Homicide Reports in every year of ${years}.` };
+  const { ranked, tie } = rankAgencies(entries, rk.direction, rk.limit);
+  if (!ranked.length) return { kind: "shr-decline", explanation: `None of the cities${floor} that filed Homicide Reports in ${years} has a murder victim to rank.` };
+  const notFiled = entries.filter((e) => !e.filedAll).map((e) => e.name).sort((a, z) => a.localeCompare(z));
+  const unitWords = shrUnitWords(sq);
+  const detail = rk.filters.map(filterWords).join(" ").replace(/^victims (?=aged)/, "").replace(/ victims (?=aged)/, " ");
+  const what = rk.share ? `share of ${unitWords}${detail ? ` ${detail}` : ""}` : `${unitWords}${detail ? ` ${detail}` : ""}`;
+  const most = rk.direction === "top" ? (rk.share ? "highest" : "most") : (rk.share ? "lowest" : "fewest");
+  const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
+  const text = [`Cities${floor}: the ${ranked.length} with the ${most} ${what}, ${years}.`,
+    `Ranked: city agencies (Crime Index's city geography, whatever the agency) that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""}; ties are ordered by agency name.`];
+  if (tie) { const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`; text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`); }
+  if (notFiled.length) text.push(`Not ranked because they filed no Homicide Reports ${fromY === toY ? `in ${fromY}` : `in every year of ${fromY} to ${toY}`}: ${notFiled.length <= 5 ? andList(notFiled) : `${notFiled.length} city agencies`}.`);
+  text.push(rk.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
+    : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.");
+  if (rk.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
+  if (rk.share) text.push("Each share is the city's victims with this detail over all of its murder victims in the period.");
+  text.push(SHR_SOURCE);
+  const header = ucFirst(rk.share ? `share of ${unitWords}${detail ? ` ${detail}` : ""} (%)` : what);
+  const period = { from: rk.from, to: rk.to };
+  const table: ResultTable = { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: rk.share ? "share" : "count" }, header }],
+    rows: ranked.map((a) => [a.name, a.value]) };
+  return {
+    kind: "shr", question: sq, period,
+    meaning: { source: "shr", places: [{ kind: "national" }], filters: [...sq.filters.map(filterWords), ...(rk.minPopulation ? [`population ${fmt(rk.minPopulation)} or more`] : []), "city agencies"],
+      measures: [{ name: rk.measure, unit: "victim" }], period, groupings: ["agency"], statistic: "rank", rank: { by: what, direction: rk.direction, limit: rk.limit } },
+    delivered: { table, text },
+    read: { table: "shr_victim + shr_record + shr_agency_year", release: build.release },
+  };
 }

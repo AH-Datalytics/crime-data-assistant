@@ -97,6 +97,8 @@ export type People = {
   ask: "young adults" | "attackers" | "victims or offenders" | null;
   /** A person named for a unit that does not record them ("arrests ... by victim race"): declined, never re-read. */
   unsupported?: string;
+  /** "teen" or "teenage" was the word (ages 13 to 19 for a Homicide Reports ranking), not "juvenile" or "minor". */
+  teen?: boolean;
 };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
@@ -599,6 +601,7 @@ function readPeople(text0: string): { text: string; people: People | null } {
   cut(new RegExp(String.raw`,?\s*\bagainst\s+${JUV}\b`, "i"), () => { p.where.push({ who: "victim", attr: "age", range: UNDER18, paired: false }); });
   cut(/\b(?:juvenile|youth|teen(?:age)?|minor)\s+(?=(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b)/i, (m) => {
     const noun = /^\s*\S+\s+(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b/i.exec(text.slice(m.index))?.[1].toLowerCase();
+    if (/^teen/i.test(m[0])) p.teen = true;
     p.where.push({ who: noun === "arrests" ? "arrestee" : noun === "offenders" ? "offender" : "victim", attr: "age", range: UNDER18, paired: false });
   });
   // Arrests (2026-11-11): "arrests of people ..." are arrests; an age range ("aged 18 to 21", "ages 18-24", "between the

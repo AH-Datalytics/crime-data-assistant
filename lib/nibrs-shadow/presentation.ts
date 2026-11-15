@@ -332,11 +332,12 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
 /** Homicide Reports (shr.ts): a place's murder victims or offenders, by year or month, with a detail. */
 function shrPresentation(o: ShrAnswer, places: PlaceIndex): Presentation {
   const q = o.question;
-  const what = shrWhat(q);
+  const what = q.ranking && q.share ? `share of ${shrWhat(q)}` : shrWhat(q);
   const placeTitle = [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.kind === "state" ? (STATE_NAMES[q.place.code] ?? q.place.code) : "United States"];
   const groupings = [...(q.grain !== "total" ? [q.grain] : []), ...(q.breakdown ? [q.breakdown.dim.replace(".", " ")] : [])];
   const titleParts: TitleParts = { places: placeTitle, measure: what, ratePer: null, groupings, period: titlePeriod(o.period, q.grain === "year"),
-    partialLastYear: null, rollingMonths: null, ranking: null };
+    partialLastYear: null, rollingMonths: null,
+    ranking: q.ranking ? `cities${q.ranking.minPopulation ? ` of ${fmt(q.ranking.minPopulation)}+` : ""} with ${q.ranking.direction === "top" ? (q.share ? "the highest" : "the most") : (q.share ? "the lowest" : "the fewest")}` : null };
   const who = q.place.kind === "agency" ? reporter(places, [q.place.ori]) : `the agencies of ${q.place.kind === "state" ? (STATE_NAMES[q.place.code] ?? q.place.code) : "the United States"} that filed Homicide Reports`;
   const table = o.delivered.table;
   const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
