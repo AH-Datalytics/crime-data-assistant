@@ -966,7 +966,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
     || f.undefinedTerm || f.comparison || f.last12 || f.countywide || f.circumstance || f.shrDetail || f.arrestsThrough) return null;
   const c0 = ledger0.parts.filter((p) => p.clause === 0);
   // Only these parts are answered; a rate, a month grain, a change, a comparison or any other reading is not dropped but left to the old route.
-  const READ = new Set(["period", "share", "filter", "rank", "measure", "entity", "filler", "unrecognized", "punctuation", "unit", "statistic"]);
+  const READ = new Set(["period", "share", "filter", "rank", "measure", "entity", "filler", "opener", "which", "unrecognized", "punctuation", "unit", "statistic"]);
   if (c0.some((p) => !READ.has(p.concept) || (p.concept === "statistic" && p.value !== "count") || (p.concept === "punctuation" && p.text.trim() !== "%" && p.state !== "context"))) return null;
   const crimes = [...new Set(c0.filter((p) => p.concept === "measure").map((p) => String(p.value)))];
   if (crimes.length !== 1 || !["murder", "homicide"].includes(crimes[0])) return null;

@@ -154,7 +154,8 @@ const e = answerShr({ ...nat, breakdown: null, share: false, from: "1985-01", to
 assert.ok(e.kind === "shr" && e.delivered.text.includes("Homicide Reports here start in 1985, so 1976 through 1984 aren't included."));
 // SHR-B: the nation's cities ranked by a murder detail, from Homicide Reports. Only cities that filed in every year are
 // ranked; a share needs a murder victim; a count of 0 is a real 0.
-const rankRows = [["TXHPD0000", "HOUSTON", "TX", 2300000, true, 300, 240], ["TXDPD0000", "DALLAS", "TX", 1300000, true, 100, 90], ["ILCPD0000", "CHICAGO", "IL", 2700000, false, 0, 0],
+// Crime Index writes Nebraska as NB: shown as NE (the ORI table's own).
+const rankRows = [["NBOPD0000", "OMAHA", "NB", 500000, true, 10, 9], ["TXHPD0000", "HOUSTON", "TX", 2300000, true, 300, 240], ["TXDPD0000", "DALLAS", "TX", 1300000, true, 100, 90], ["ILCPD0000", "CHICAGO", "IL", 2700000, false, 0, 0],
   ["NYNPD0000", "NEW YORK", "NY", 8000000, true, 50, 20], ["PAPEP0000", "PHILADELPHIA", "PA", 1500000, true, 0, 0]];
 const fire = { dim: "weapon" as const, codes: ["11", "12", "13", "14", "15"] };
 const rk = { measure: "murder" as const, filters: [fire], share: true, from: "2024-01", to: "2024-12", direction: "top" as const, limit: 20, minPopulation: 250000 };
@@ -162,8 +163,8 @@ const sqlSeen: string[] = [];
 const ranked = answerShrRanking(rk, build, hist, (s) => { sqlSeen.push(s); return rankRows; });
 assert.ok(ranked.kind === "shr", JSON.stringify(ranked));
 if (ranked.kind === "shr") {
-  assert.deepEqual(ranked.delivered.table.rows, [["DALLAS, TX", 90], ["HOUSTON, TX", 80], ["NEW YORK, NY", 40]], "Chicago filed nothing and Philadelphia has no victim: neither is ranked");
-  assert.ok(ranked.delivered.text[0].startsWith("Cities with a population of 250,000 or more: the 3 with the highest share of murder victims with a firearm, 2024."), ranked.delivered.text[0]);
+  assert.deepEqual(ranked.delivered.table.rows, [["DALLAS, TX", 90], ["OMAHA, NE", 90], ["HOUSTON, TX", 80], ["NEW YORK, NY", 40]], "Chicago filed nothing and Philadelphia has no victim: neither is ranked");
+  assert.ok(ranked.delivered.text[0].startsWith("Cities with a population of 250,000 or more: the 4 with the highest share of murder victims with a firearm, 2024."), ranked.delivered.text[0]);
   assert.ok(ranked.delivered.text.some((t) => t === "Not ranked because they filed no Homicide Reports in 2024: CHICAGO, IL."), JSON.stringify(ranked.delivered.text));
   assert.equal(ranked.meaning.statistic, "rank");
   assert.deepEqual(ranked.question.ranking, { direction: "top", limit: 20, minPopulation: 250000 });
@@ -177,7 +178,7 @@ assert.match(shrRankingSql({ ...rk, from: "2020-01", to: "2024-12" }, build, his
 assert.match(shrRankingSql({ ...rk, from: "2026-01", to: "2026-09" }, build, hist), /year = 2025 AND/, "a year past Crime Index's last takes its last year's population");
 // A count: the 0 of Philadelphia is a real 0 and ranks at the bottom; the lowest first.
 const counts = answerShrRanking({ ...rk, share: false, direction: "bottom", limit: 2 }, build, hist, () => rankRows);
-assert.ok(counts.kind === "shr" && JSON.stringify(counts.delivered.table.rows) === '[["PHILADELPHIA, PA",0],["NEW YORK, NY",20]]', JSON.stringify(counts));
+assert.ok(counts.kind === "shr" && JSON.stringify(counts.delivered.table.rows) === '[["PHILADELPHIA, PA",0],["OMAHA, NE",9]]', JSON.stringify(counts));
 // A victim's own age, by its range; offenders' details are not a city ranking's.
 const teen = answerShrRanking({ ...rk, filters: [{ dim: "victim.age", ages: [13, 19] }] }, build, hist, (s) => (sqlSeen.push(s), rankRows));
 assert.ok(teen.kind === "shr" && teen.delivered.text[0].includes("share of murder victims aged 13 to 19"), JSON.stringify(teen));

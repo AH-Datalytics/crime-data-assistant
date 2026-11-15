@@ -488,7 +488,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   const entries = got.map((r) => {
     const total = Number(r[5]), matched = Number(r[6]), filedAll = r[4] === true || r[4] === 1;
     const value = !filedAll ? null : rk.share ? (total > 0 ? Math.round((matched * 1000) / total) / 10 : null) : matched;
-    return { ori: String(r[0]), name: `${String(r[1])}, ${String(r[2])}`, state: String(r[2]), population: num(r[3]), value, known: value !== null, filedAll, total, matched };
+    return { ori: String(r[0]), name: `${String(r[1])}, ${ORI_STATE[String(r[2])] ?? String(r[2])}`, state: ORI_STATE[String(r[2])] ?? String(r[2]), population: num(r[3]), value, known: value !== null, filedAll, total, matched };
   });
   const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: rk.filters, breakdown: null, share: rk.share,
     ranking: { direction: rk.direction, limit: rk.limit, minPopulation: rk.minPopulation } };

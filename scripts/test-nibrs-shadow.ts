@@ -1764,6 +1764,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const go = ask1.options[0].continuation!;
     assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].endsWith("2025."), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
   }
+  assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
   // Without a release it stays Homicide Reports' (the tab has them), as before.
   const old = shadowAnswer("Big cities with highest share of murders via firearm in 2024", deps);
   assert.ok(old.kind === "route" && old.source === "shr", JSON.stringify(old).slice(0, 200));
