@@ -1869,6 +1869,38 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Without a compare word, two weapons stay off this path.
   assert.notEqual(shadowAnswer("Handgun murders and rifle murders nationally in 2024", cdeps).kind, "shr");
 }
+// Jeff 2026-11-15: several agencies by month come from Current Trends (Crime Index) for the whole table, one source line;
+// an agency it has no figure for is blank; NIBRS only by name, and then an agency with no NIBRS reports is declined with
+// Crime Index offered.
+{
+  const ctStub = (sql: string): unknown[][] => {
+    if (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql)) {
+      const ori = /WHERE ori = '([^']+)'/.exec(sql)![1];
+      const [, from, to] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
+      const out: unknown[][] = [];
+      for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) out.push([`${y}-${String(m).padStart(2, "0")}`, ori === "TXHPD0000" && y === 2026 && m === 8 ? null : 11]);
+      return out;
+    }
+    return stub(sql);
+  };
+  const cdeps = { ...deps, execute: ctStub, current: { root: "/ct", release: "ct-test", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" } } as unknown as ShadowDeps;
+  const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
+  assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
+  if (sev.kind === "current") {
+    assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murders"]);
+    assert.equal(sev.delivered.table.rows.length, 2 * 116, "every month of 2017-01 to 2026-08 for each");
+    assert.ok(sev.delivered.text.includes("No years were given, so every month in the data is shown: January 2017 through August 2026."), JSON.stringify(sev.delivered.text));
+    assert.ok(sev.delivered.text.some((t) => /^No figure is known for August 2026 for Houston, Texas: shown blank, not zero\.$/.test(t)));
+    assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
+  }
+  // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
+  const nib = shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
+  assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
+  const none = { ...deps, execute: (sql: string) => stub(sql).map((r) => (typeof r[r.length - 1] === "string" && /^(VALUE|UNKNOWN|REPORTED_ZERO|EVIDENCE_CONFLICT)$/.test(String(r[r.length - 1])) ? [...r.slice(0, -2), null, "UNKNOWN"] : r)) } as unknown as ShadowDeps;
+  const dec = shadowAnswer("Dallas murders per month in 2024 according to NIBRS", none);
+  assert.ok(dec.kind === "decline" && dec.explanation === "NIBRS has no reports from the Dallas Police Department in this period.", JSON.stringify(dec).slice(0, 300));
+  if (dec.kind === "decline") assert.equal(dec.alternative?.label, 'Ask instead: "Dallas murders per month in 2024"');
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.
