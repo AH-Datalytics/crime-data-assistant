@@ -2546,7 +2546,7 @@ function populationQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps:
     else return "ask period";
   } else if (period.form === "year") [from, to] = [period.year, period.year];
   else if (period.form === "range") [from, to] = [period.from, period.to];
-  else if (period.form === "since") [from, to] = [period.from, lastYear];
+  else if (period.form === "since") [from, to] = [period.from, Math.max(lastYear, period.from)];
   else if (period.form === "last") [from, to] = [lastYear - period.n + 1, lastYear];
   else if (period.form === "lastyear") [from, to] = [thisYear - 1, thisYear - 1];
   else if (period.form === "latest") [from, to] = [lastYear, lastYear];

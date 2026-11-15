@@ -34,7 +34,8 @@ export function answerPopulation(places: PopulationPlace[], from: number, to: nu
   const reach = last + 1;
   const wanted = range(from, to), covered = wanted.filter((y) => y >= first && y <= reach), outside = wanted.filter((y) => !covered.includes(y));
   const yearsWords = (a: number, b: number) => (a === b ? String(a) : `${a} through ${b}`);
-  const span = `Population figures in the data cover ${first} through ${last}`;
+  // A carried year in the table is covered too: the text never says "through 2025" beside a 2026 row.
+  const span = `Population figures in the data cover ${first} through ${covered.some((y) => y > last) ? reach : last}`;
   if (!covered.length) return { kind: "historical-decline", explanation: `${span}, so ${yearsWords(from, to)} ${from === to ? "is" : "are"} outside them.` };
   const got = agencies.length ? execute(`SELECT ori, year, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
     + `WHERE ori IN (${agencies.map((a) => q(a.ori)).join(", ")}) AND year BETWEEN ${Math.min(covered[0], build.lastYear)} AND ${covered[covered.length - 1]} ORDER BY ori, year`) : [];

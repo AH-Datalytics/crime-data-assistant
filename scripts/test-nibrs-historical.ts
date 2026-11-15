@@ -334,6 +334,8 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(later.kind === "decline" && later.reason === "outside_release_coverage", JSON.stringify(later).slice(0, 200));
   const current = shadowAnswer("Texas population in 2026", base);
   assert.ok(current.kind === "historical" && !current.delivered.text.some((t) => /outside|carried/.test(t)), JSON.stringify(current).slice(0, 300));
+  const since = shadowAnswer("Texas population since 2026", base);
+  assert.ok(since.kind === "historical", JSON.stringify(since).slice(0, 300));
   // Codex population review 01.1: a qualifier the reader kept aside is never dropped (a region read as the nation, a
   // change, NIBRS asked by name).
   for (const q of ["Population in the Northeast in 2023", "Percent change in US population from 2022 to 2023", "Population of Memphis in 2023 according to NIBRS"]) {
@@ -842,6 +844,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(r26.kind === "historical" && !r26.delivered.text.some((t) => /outside|carr|2025/.test(t)), "silent: no note");
   const n26 = answerPopulation([{ geo: nation }], 2025, 2026, true, build, exec25);
   assert.ok(n26.kind === "historical" && n26.delivered.table.rows.length === 2 && n26.delivered.table.rows[0][1] === n26.delivered.table.rows[1][1], JSON.stringify(n26));
+  // "Since 2026" and a span through 2026 answer the carried year, and the text never says "through 2025" beside a 2026 row.
+  const wide = answerPopulation([{ geo: nation }], 2025, 2027, true, build, exec25);
+  assert.ok(wide.kind === "historical" && wide.delivered.text.some((t) => /cover 1960 through 2026/.test(t) && /2027 is outside/.test(t)) && !wide.delivered.text.some((t) => /through 2025/.test(t)), JSON.stringify(wide).slice(0, 400));
   const n27 = answerPopulation([{ geo: nation }], 2027, 2027, false, build, exec25);
   assert.equal(n27.kind, "historical-decline");
   // A state's agencies listed for 2026 read 2025's rows.
