@@ -1144,7 +1144,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (victims.kind === "decline" && offenders.kind === "decline") return victims;
     // "Violent crime" by age: Jeff's words, "Offender" and "Victim" (2026-11-15; this question only).
     if (attr === "age" && /\bviolent\s+crimes?\b/i.test(ledger0.question))
-      return { kind: "clarify", about: "offender or victim age", question: ledger0.question, options: [
+      return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
         { label: "Offender", continuation: offenders }, { label: "Victim", continuation: victims }] };
     return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
       { label: "Victims", continuation: victims }, { label: "Offenders", continuation: offenders }] };
