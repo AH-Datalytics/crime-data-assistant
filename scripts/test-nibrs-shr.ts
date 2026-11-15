@@ -222,6 +222,31 @@ if (pAns.kind === "shr") assert.ok(pAns.delivered.text.indexOf("This data source
 assert.ok("why" in shrQuestionOf(plan({ geography: { places: [{ kind: "national" }], combine: "separate" }, filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["XR"] }] }), { from: "2024-01", to: "2024-12" }, build));
 // No note when the question asks a spouse only.
 assert.equal((shrQuestionOf(plan({ geography: { places: [{ kind: "national" }], combine: "separate" }, filters: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["SE"] }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion).notes, undefined);
+// A rolling window (shared helper rolling.ts): each month is the total of itself and the 11 before; a month with no filing makes
+// every window that reaches it blank; the months before 1985 are blank, never 0.
+const rollQ = shrQuestionOf(plan({ filters: [firearm], groupings: [{ dimension: "time.month" }], transforms: [{ kind: "rolling", of: ["murder_count"], months: 12 }],
+  geography: { places: [{ kind: "state", code: "NC" }], combine: "separate" } }), { from: "2019-01", to: "2019-12" }, build) as ShrQuestion;
+assert.ok(!("why" in rollQ) && rollQ.rolling?.months === 12 && rollQ.grain === "month", JSON.stringify(rollQ));
+assert.ok("why" in shrQuestionOf(plan({ groupings: [{ dimension: "time.year" }], transforms: [{ kind: "rolling", of: ["murder_count"], months: 12 }] }), { from: "2019-01", to: "2019-12" }, build), "a rolling window is by month");
+const rollStub = (filedYears: number[]) => (s2: string) => (/shr_agency_year/.test(s2) ? filedYears.map((y) => [y, 10, []]) : /state_crime|sum\(population\)/.test(s2) ? []
+  : filedYears.flatMap((y) => Array.from({ length: 12 }, (_, m) => [y, m + 1, 3])));
+const rolled = answerShr(rollQ, build, rollStub([2018, 2019]));
+assert.ok(rolled.kind === "shr", JSON.stringify(rolled));
+if (rolled.kind === "shr") {
+  assert.equal(rolled.delivered.table.rows.length, 12);
+  assert.deepEqual(rolled.delivered.table.rows[0], ["2019-01", 36], "12 months of 3");
+  assert.equal(rolled.delivered.table.columns[1].header, "Rolling 12-month murder victims with a firearm");
+  assert.ok(rolled.delivered.text[0].startsWith("North Carolina: rolling 12-month murder victims with a firearm, 2019."), rolled.delivered.text[0]);
+}
+// 2018 filed nothing: 2019's windows that reach 2018 are blank, January 2019 through November 2019; December 2019 is its own 12 months.
+const gapped = answerShr(rollQ, build, rollStub([2019]));
+assert.ok(gapped.kind === "shr" && gapped.delivered.table.rows.slice(0, 11).every((r) => r[1] === null) && JSON.stringify(gapped.delivered.table.rows[11]) === '["2019-12",36]', JSON.stringify(gapped));
+if (gapped.kind === "shr") assert.ok(gapped.delivered.text.some((t) => t === "No total for January 2019 to November 2019: a month in its window has no Homicide Reports."), JSON.stringify(gapped.delivered.text));
+// Nothing filed anywhere in the span: said, as for any total.
+assert.equal(answerShr(rollQ, build, rollStub([])).kind, "shr-decline");
+// Windows reaching before 1985 are blank, not 0.
+const early85 = answerShr({ ...rollQ, from: "1985-01", to: "1985-12" }, build, rollStub([1985]));
+assert.ok(early85.kind === "shr" && early85.delivered.table.rows.slice(0, 11).every((r) => r[1] === null) && early85.delivered.table.rows[11][1] === 36, JSON.stringify(early85));
 
 // Filters in words.
 assert.equal(filterWords({ dim: "weapon", codes: ["11", "12", "13", "14", "15"] }), "with a firearm");
