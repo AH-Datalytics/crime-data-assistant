@@ -1742,6 +1742,44 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(!(x.kind === "route" && x.source === "shr"), `${q}: ${JSON.stringify(x).slice(0, 200)}`);
   }
 }
+// SHR-B: big cities ranked by a murder detail come from Homicide Reports when a release is loaded (Jeff's order after
+// the population carry); without a period the period is asked; the ask's button runs; a detail the reader didn't place
+// is never dropped silently.
+{
+  const rankStub = (sql: string): unknown[][] => (/WITH big AS/.test(sql)
+    ? [["TXHPD0000", "HOUSTON", "TX", 2300000, true, 300, 240], ["TXDPD0000", "DALLAS", "TX", 1300000, true, 100, 90], ["ILCPD0000", "CHICAGO", "IL", 2700000, false, 0, 0]] : []);
+  const rdeps = { ...deps, execute: rankStub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const fire = shadowAnswer("Big cities with highest share of murders via firearm in 2024", rdeps);
+  assert.equal(fire.kind, "shr", JSON.stringify(fire).slice(0, 300));
+  if (fire.kind === "shr") {
+    assert.deepEqual(fire.delivered.table.rows, [["DALLAS, TX", 90], ["HOUSTON, TX", 80]]);
+    assert.ok(fire.question.ranking && fire.question.share && fire.question.filters[0].dim === "weapon");
+  }
+  for (const [q, text] of [["Big cities with the highest number of homicides by knife or sharp object", "homicide victims killed with a weapon recorded as knife or cutting instrument"],
+    ["Big cities with the highest % of teenage homicide victims", "share of homicide victims aged 13 to 19"],
+    ["Big cities with the highest proportion of teenage homicide victims (13-19)", "share of homicide victims aged 13 to 19"]]) {
+    const ask1 = as(shadowAnswer(q, rdeps), "clarify");
+    assert.equal(ask1.about, "which period", q);
+    const go = ask1.options[0].continuation!;
+    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].endsWith("2025."), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
+  }
+  assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
+  // Without a release it stays Homicide Reports' (the tab has them), as before.
+  const old = shadowAnswer("Big cities with highest share of murders via firearm in 2024", deps);
+  assert.ok(old.kind === "route" && old.source === "shr", JSON.stringify(old).slice(0, 200));
+  // Another detail or a juvenile ("under 18") isn't this ranking's: still routed, never read as teens.
+  // Codex review: nothing the reader read is silently dropped; each of these stays off the ranking route.
+  for (const q of ["Big cities with highest firearm murder rates in 2024", "Big cities with highest share of firearm murders in 2024 by month",
+    "Big cities with highest share of firearm murders in 2024 compared with 2023", "Big cities with highest share of firearm murders of juvenile victims in 2024",
+    "Big cities with highest share of murders with a firearm during an argument in 2024", "Big cities with highest share of murders via firearm or sharp object in 2024",
+    "Big cities with the highest share of teenage homicide victims aged 15 to 17 in 2024"]) {
+    const x = shadowAnswer(q, rdeps);
+    assert.ok(x.kind !== "shr", `${q}: ${JSON.stringify(x).slice(0, 200)}`);
+  }
+  const juv = shadowAnswer("Big cities with the highest share of juvenile homicide victims in 2024", rdeps);
+  assert.ok(juv.kind !== "shr", JSON.stringify(juv).slice(0, 200));
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.
