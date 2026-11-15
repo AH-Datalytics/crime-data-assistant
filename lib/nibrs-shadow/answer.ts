@@ -52,7 +52,7 @@ import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
-import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
+import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
@@ -2535,7 +2535,7 @@ function populationQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps:
   }
   if (!places.length) return null;
   const build = deps.historical, thisYear = Number(deps.release.lastMonth.slice(0, 4));
-  const lastYear = Math.min(...places.map((p) => ("agency" in p ? build.lastYear : 2025)));
+  const lastYear = Math.min(...places.map((p) => ("agency" in p ? build.lastYear : SRS_YEARS.last)));
   const byYearAsked = grains.length > 0;
   let from: number, to: number;
   const period = periods.length ? periodOf(periods[0]) : null;
@@ -2551,7 +2551,8 @@ function populationQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps:
   else if (period.form === "lastyear") [from, to] = [thisYear - 1, thisYear - 1];
   else if (period.form === "latest") [from, to] = [lastYear, lastYear];
   else return decline("unsupported_capability", "Population figures are by year; ask for a year or a span of years.");
-  if (to > lastYear) return decline("outside_release_coverage", `Population figures in the data run through ${lastYear}; ${to > from ? `${lastYear + 1} through ${to} are` : `${to} is`} not in them.`);
+  // The year right after the latest completed one is answered with that year's population (population-carry.ts, Jeff 2026-11-14).
+  if (to > lastYear + 1) return decline("outside_release_coverage", `Population figures in the data run through ${lastYear + 1}; ${to > from ? `${lastYear + 2} through ${to} are` : `${to} is`} not in them.`);
   const oris = places.flatMap((p) => ("agency" in p ? [p.agency.ori] : []));
   const r = answerPopulation(places, from, to, byYearAsked || to > from, build, deps.execute,
     oris.length ? { agencyLine: reportedBy(oris.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {});

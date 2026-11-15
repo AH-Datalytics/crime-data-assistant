@@ -14,6 +14,7 @@
  *   rate        count / current population x 100,000 (decision B, P58, P59): every month known, never one month,
  *               never with a missing or zero population
  */
+import { carriesTo } from "./population-carry";
 import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
@@ -110,7 +111,14 @@ export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWante
     .map((r) => [String(r[0]), Number(r[1])] as [string, number]));
   const yearly = new Map(execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
     .map((r) => [Number(r[0]), Number(r[1])] as [number, number]));
-  return new Map(monthsWanted.map((m) => [m, m >= b.firstMonth ? cur.get(m) ?? null : yearly.get(Number(m.slice(0, 4))) ?? null]));
+  // The current year's months (the year after the latest completed one) with no population of their own take that
+  // completed year's (Jeff 2026-11-14, population-carry.ts); a past month without one keeps no rate (P96).
+  const lastYear = Math.max(0, ...yearly.keys());
+  return new Map(monthsWanted.map((m) => {
+    const y = Number(m.slice(0, 4));
+    const own = m >= b.firstMonth ? cur.get(m) ?? null : yearly.get(y) ?? null;
+    return [m, own ?? (m >= b.firstMonth && carriesTo(y, lastYear) ? yearly.get(lastYear) ?? null : null)];
+  }));
 }
 /**
  * A group's rate (decision B; Codex review 01.1): over its sample agencies with every month of the span known for the

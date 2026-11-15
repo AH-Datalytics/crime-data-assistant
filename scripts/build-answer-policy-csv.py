@@ -660,6 +660,12 @@ ROWS = [
      "Jeff 2026-11-14: \"no note when hidden. agreed on 2, one pr\" (the engine's standing rule, coordinator 2026-11-02: never a dead button).",
      "Decided 2026-11-14 (Jeff)",
      NEW),
+    ("P104", "\"Population of Chicago in 2026\", \"crime in the United States this year so far\" (coverage), a monthly rate for a 2026 month",
+     "A 2026 population does not exist in the data, so population on its own for 2026 was declined and a state or national sum reaching 2026 declined with \"has no 2026 population ..., so coverage cannot be stated\".",
+     "The year right after the latest completed year takes that completed year's population (2026 uses 2025's), silently: no note, no relabel. It applies to the population of an agency, a state or the nation, a state's agencies with their populations, the coverage line of a state or national sum, and the months of the current year in Current Trends rates. 2027 and later stay outside the data; the year's own figure always wins; a past month without a population keeps no rate (P96); the latest completed year is read from the data, never written down.",
+     "\"Population of Chicago in 2026\" shows 2025's figure as the 2026 value.",
+     "Jeff: \"population for 2026 should just assume 2025's population for agencies, states and the nation\" and \"the fbi sets current year population as the most recent completed year until the current year is formally reported\". The state and national crime file still ends in 2025, so 2026 crime figures from it stay outside its coverage.",
+     "Decided 2026-11-14 (Jeff)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
