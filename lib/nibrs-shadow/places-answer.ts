@@ -20,7 +20,7 @@ import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
 import { combineMonths, rankAgencies, rate, rollup, type Cell, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { agencyName, reportedBy, stateName } from "./places";
-import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
+import { deliverMonthly, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 
 type Decline = (explanation: string, detail?: string) => ShadowOutcome;
@@ -37,7 +37,10 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   // P96 (Jeff 2026-11-06): one agency's rate month by month, each month's count per 100,000, not annualized.
   const monthRate = isRate && !geoG && !yearG && plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency"
     && plan.groupings.length === 1 && plan.groupings[0].dimension === "time.month";
-  if (!monthRate && (plan.groupings.some((g) => !g.dimension.startsWith("geo.") && g.dimension !== "time.year") || (geoG && yearG)))
+  // Group 5: several named agencies by month, a count, one row per month and agency.
+  const monthMode = !isRate && !popStat && !!geoG && !yearG && plan.groupings.length === 2 && plan.groupings.some((g) => g.dimension === "time.month")
+    && plan.geography.places.length > 1 && plan.geography.combine !== "combined" && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length;
+  if (!monthRate && !monthMode && (plan.groupings.some((g) => !g.dimension.startsWith("geo.") && g.dimension !== "time.year") || (geoG && yearG)))
     return decline("This isn't available yet: several agencies by month, by year or by category.");
   // A set of years ("2019 and 2023") is those years only, each its own row; never the years between (Codex 02.1).
   const yearSet = plan.period.kind === "years" ? [...plan.period.years].sort((a, b) => a - b) : null;
@@ -155,6 +158,15 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     // P72: the population each month's rate used, when asked (Codex monthly-rates review 02).
     const delivered = deliverTable(plan, { dimension: "time.month", header: "Month" }, { as: st.as, header: `${Header} per 100,000 for the month` }, rows, lines, statements, deps.release.id, readings,
       support(cells.map((x) => popCell(pops.get(`${a.ori}|${Number(x.ym.slice(0, 4))}`)))));
+    return done(plan, period, c.query.sql, delivered, decline);
+  }
+  if (monthMode) {
+    const listed = agencies.map((a) => a.label);
+    const names = listed.length > 2 ? `${listed.slice(0, -1).join("; ")} and ${listed[listed.length - 1]}` : listed.join(" and ");
+    lines.push(`${names}: ${what} by month, ${when}.`, reporter);
+    for (const a of agencies) { const miss = rollup(byOri.get(a.ori) ?? []).missing; if (miss.length) lines.push(`No report is known for ${runs(miss)} for ${a.label}, shown blank.`); }
+    const delivered = deliverMonthly(plan, { dimension: geoG!.dimension, header: "Agency" }, { as: st.as, header: Header },
+      agencies.map((a) => ({ key: a.name, cells: byOri.get(a.ori) ?? [] })), lines, statements, deps.release.id, readings);
     return done(plan, period, c.query.sql, delivered, decline);
   }
   // One agency's values by year. Several agencies by year (combined or not) come later (Codex 02 re-check A).

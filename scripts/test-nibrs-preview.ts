@@ -83,8 +83,8 @@ assert.ok(other.kind === "decline" && other.buttons.every((b) => b.kind !== "oth
 // A button whose years this build does not hold is shown with the reason, never offered ("the last 10 complete
 // years" is 2016-2025; the build starts in 2017). An entry asks for the whole question again (no follow-up turns).
 // (All years by default, Jeff 2026-11-11: a trend for one agency now answers; the years are still asked where every
-// year can't be answered, as for several agencies by month.)
-const range = toPreview(shadowAnswer("Shoplifting in Memphis and Nashville by month", deps));
+// year can't be answered, as for several agencies by year; several agencies by month now answer.)
+const range = toPreview(shadowAnswer("Shoplifting in Memphis and Nashville by year", deps));
 assert.ok(range.kind === "clarify");
 if (range.kind === "clarify") {
   // Jeff 2026-11-14 ("no note when hidden"): a button whose answer is a decline is not shown at all; here neither year
