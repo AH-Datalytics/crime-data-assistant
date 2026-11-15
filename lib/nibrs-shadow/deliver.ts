@@ -130,6 +130,7 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
 export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.";
 /** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
+export const NIGHT_LINE = "Many agencies record midnight when the time is not known, so night may be overstated.";
 export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
 export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
 /** Increment 7: a person condition in words: "under 18", "aged 18 to 24", "female", "recorded as Black". */

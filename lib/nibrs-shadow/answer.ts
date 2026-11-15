@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, PERSON_CRIMES_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, PERSON_CRIMES_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -1142,6 +1142,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       ? fromLedger(Object.assign(withParts(ledger0, ledger0.parts.filter((p) => p !== part)), { people: { ...ppl0, ask: null, by: { who: "offender" as const, attr, paired: false } } }), deps, pins)
       : victims;
     if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    // "Violent crime" by age: Jeff's words, "Offender" and "Victim" (2026-11-15; this question only).
+    if (attr === "age" && /\bviolent\s+crimes?\b/i.test(ledger0.question))
+      return { kind: "clarify", about: "offender or victim age", question: ledger0.question, options: [
+        { label: "Offender", continuation: offenders }, { label: "Victim", continuation: victims }] };
     return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
       { label: "Victims", continuation: victims }, { label: "Offenders", continuation: offenders }] };
   }
@@ -2416,6 +2420,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     checked = { ...checked, statistics: [...checked.statistics, { kind: "agencies", as: "agencies", measure: s0.measure }] };
   }
 
+  // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): a
+  // NIBRS plan for a hate crime or a bias is never run, and never shows the weapon-or-relationship sentence.
+  if (checked.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias"))
+    return notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
   // A state's city agencies (a ranking) are the release's agencies with a population for that year, as answered.
   const cityMembers = new Map<string, string[]>();
@@ -2449,7 +2457,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
     ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
     // Time of day (Jeff 2026-11-15): the buckets, one line under the table.
-    ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE] : [])];
+    ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE, NIGHT_LINE] : [])];
   // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here
   // in time (job AR6: 2021-2025 by age took 8 minutes, 2017-2025 more than 15). Declined, with one year offered in
   // words (never run in advance, which would cost as much) until the national arrest query is made faster (Jeff

@@ -620,9 +620,10 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
 }
 {
   const ask2 = as(ask("violent crimes by age in Detroit in 2023"), "clarify");
-  assert.deepEqual(ask2.options!.map((o) => o.label), ["Victims", "Offenders"], "the existing victim-or-offender ask");
-  assert.equal(as(ask2.options![0].continuation!, "answer").plan.measures[0].id, "victims.person_crimes");
-  assert.equal(as(ask2.options![1].continuation!, "answer").plan.measures[0].id, "offenders.person_crimes");
+  assert.deepEqual(ask2.options!.map((o) => o.label), ["Offender", "Victim"], "Jeff's words on this ask");
+  assert.equal(as(ask2.options![0].continuation!, "answer").plan.measures[0].id, "offenders.person_crimes");
+  assert.equal(as(ask2.options![1].continuation!, "answer").plan.measures[0].id, "victims.person_crimes");
+  assert.deepEqual(as(ask("murders by age in Detroit in 2023"), "clarify").options!.map((o) => o.label), ["Victims", "Offenders"], "other questions keep their own buttons");
 }
 // Time of day (Jeff 2026-11-15): the incident's hour in four buckets, the line saying which hours each holds.
 {
