@@ -1874,7 +1874,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // Crime Index offered.
 {
   const ctStub = (sql: string): unknown[][] => {
-    if (/current_crime\.parquet.*UNION ALL/s.test(sql)) {
+    if (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql)) {
       const ori = /WHERE ori = '([^']+)'/.exec(sql)![1];
       const [, from, to] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
       const out: unknown[][] = [];
