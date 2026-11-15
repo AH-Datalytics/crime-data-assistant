@@ -177,6 +177,8 @@ export type CurrentPlace =
   | { kind: "group"; states: string[] | null; label: string };
 export type CurrentQuestion = {
   measure: string; place: CurrentPlace; from: Month; to: Month;
+  /** Several agencies by month (answerCurrentSeveral): `place` is the first, these the others. */
+  agencies?: { ori: string; label: string; name: string; state: string }[];
   /** "months": each month; "ytd" / "rolling": one total through `to` (its months computed here); "total": `from` through `to`. */
   form: "months" | "ytd" | "rolling" | "total";
   /** "rate" (decision B): only for a total of two or more months, every month known, and a population above zero. */
@@ -421,5 +423,42 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
       rows: shown.map((e) => [e.name, e.value]) } as unknown as ResultTable, text },
     coverage: [],
     read: { tables: ["current_crime", "agency_crime"], table: "current_crime", column: `${col}_total`, release: b.release },
+  };
+}
+
+/**
+ * Several named agencies by month for a count, from Current Trends (Jeff 2026-11-15: Crime Index by default; one source
+ * and one source line for the whole table): a row for each agency and month, each agency's months in order. An agency
+ * with no figure for a month is blank there, never 0, and a line says which months.
+ */
+export function answerCurrentSeveral(cq: { measure: string; places: Extract<CurrentPlace, { kind: "agency" }>[]; from: Month; to: Month; agencyLine?: string }, b: CurrentBuild,
+  execute: (sql: string) => unknown[][]): CurrentAnswer | CurrentDecline {
+  const col = CURRENT_MEASURE[cq.measure];
+  if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
+  const span = months(cq.from, cq.to);
+  const covered = span.filter((m) => m >= b.finalFirstMonth && m <= b.lastMonth);
+  const holds = `Current Trends figures in the data cover ${spanWords(b.finalFirstMonth, b.lastMonth)}`;
+  if (!covered.length) return { kind: "current-decline", explanation: `${holds}, so ${spanWords(span[0], span[span.length - 1])} ${span.length > 1 ? "are" : "is"} outside them.` };
+  const words = WORDS[col], one = SINGULAR[col];
+  const left = span.filter((m) => !covered.includes(m));
+  const outside = left.length ? [`${holds}; ${spanWords(left[0], left[left.length - 1])} ${left.length > 1 ? "are" : "is"} outside them.`] : [];
+  const per = cq.places.map((a) => ({ a, values: agencyMonths(b, a.ori, cq.measure, covered[0], covered[covered.length - 1], execute) }));
+  const names = cq.places.map((a) => a.label);
+  const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
+  const gapLines = per.flatMap(({ a, values }) => {
+    const blanks = covered.filter((m) => values.get(m) === null || values.get(m) === undefined);
+    return blanks.length ? [`No figure is known for ${blanks.map(monthWords).join(", ")} for ${a.label}: shown blank, not zero.`] : [];
+  });
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" },
+    { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
+  const rows = per.flatMap(({ a, values }) => covered.map((m) => [a.name, m, values.get(m) ?? null] as (string | number | null)[]));
+  const period = { from: covered[0], to: covered[covered.length - 1] };
+  const hm = HISTORICAL_MEASURE[cq.measure];
+  const first = cq.places[0];
+  return {
+    kind: "current", period, coverage: [], read: { tables: ["current_final", "current_crime"], table: "current_final + current_crime", column: `${col}_total`, release: b.release },
+    question: { measure: cq.measure, place: first, agencies: cq.places.slice(1), from: cq.from, to: cq.to, form: "months", statistic: "count" },
+    meaning: { source: "rtci", places: cq.places.map((a) => ({ kind: "agency" as const, name: a.name, state: a.state })), period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: ["agency", "month"], statistic: "count" },
+    delivered: { table: { columns, rows }, text: [`${listed}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...(cq.agencyLine ? [cq.agencyLine] : []), ...outside, ...gapLines, "Source: Crime Index."] },
   };
 }

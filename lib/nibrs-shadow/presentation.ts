@@ -311,11 +311,13 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
 function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation {
   const q = o.question, m = HISTORICAL_MEASURE[q.measure];
   const monthly = q.form === "months";
-  const placeTitle = [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.label.replace(/^The /, "")];
+  // Several agencies by month (current.ts answerCurrentSeveral): the first is the place, the rest are `agencies`.
+  const placeTitle = q.agencies?.length && q.place.kind === "agency" ? [q.place, ...q.agencies].map((a) => shortLabel(a.label))
+    : [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.label.replace(/^The /, "")];
   const rate = q.statistic === "rate";
-  const titleParts: TitleParts = { places: placeTitle, measure: m.words, ratePer: rate ? 100000 : null, groupings: monthly ? ["month"] : [], period: titlePeriod(o.period, false),
+  const titleParts: TitleParts = { places: placeTitle, measure: m.words, ratePer: rate ? 100000 : null, groupings: monthly ? (q.agencies?.length ? ["agency", "month"] : ["month"]) : [], period: titlePeriod(o.period, false),
     partialLastYear: null, rollingMonths: q.form === "rolling" ? 12 : null, ranking: null };
-  const who = q.place.kind === "agency" ? reporter(places, [q.place.ori]) : `the Consistent Reporting Agencies of ${q.place.label.replace(/^The /, "the ")}`;
+  const who = q.place.kind === "agency" ? reporter(places, [q.place, ...(q.agencies ?? [])].map((a) => a.ori)) : `the Consistent Reporting Agencies of ${q.place.label.replace(/^The /, "the ")}`;
   const table = o.delivered.table;
   const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
   const when = whenWords(o.period, monthly ? "month" : null);

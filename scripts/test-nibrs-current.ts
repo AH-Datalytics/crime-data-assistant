@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -128,5 +128,27 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const ch = answerCurrentChange({ measure: "murder", place: memphis, from: "2026-01", to: "2026-08", form: "total" }, ["2025-01", "2025-08"], ["2026-01", "2026-08"], build, execute);
   assert.ok(ch.kind === "current" && JSON.stringify(ch.delivered.table.rows) === "[[146,99,-47,-32.2]]");
   console.log("nibrs current: checked against the build", build.release);
+}
+// Several named agencies by month (Jeff 2026-11-15): one table from Current Trends, a row for each agency and month; an
+// agency with no figure for a month is blank there, never 0, with its own line; months outside the data are said.
+{
+  const two = (sql: string): unknown[][] => (sql.includes("'TXDPD0000'") ? [["2025-01", 7], ["2025-02", 8], ["2025-03", 9]] : sql.includes("'LANPD0000'") ? [["2025-01", null], ["2025-02", null], ["2025-03", null]] : []);
+  const dallas = { kind: "agency" as const, ori: "TXDPD0000", label: "Dallas, Texas", name: "Dallas", state: "TX" };
+  const nola = { kind: "agency" as const, ori: "LANPD0000", label: "New Orleans, Louisiana", name: "New Orleans", state: "LA" };
+  const sev = answerCurrentSeveral({ measure: "motor_vehicle_theft", places: [dallas, nola], from: "2025-01", to: "2025-03" }, b, two);
+  assert.ok(sev.kind === "current", JSON.stringify(sev));
+  if (sev.kind === "current") {
+    assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Motor vehicle thefts"]);
+    assert.deepEqual(sev.delivered.table.rows, [["Dallas", "2025-01", 7], ["Dallas", "2025-02", 8], ["Dallas", "2025-03", 9], ["New Orleans", "2025-01", null], ["New Orleans", "2025-02", null], ["New Orleans", "2025-03", null]]);
+    assert.equal(sev.delivered.text[0], "Dallas, Texas and New Orleans, Louisiana: motor vehicle thefts by month, January 2025 through March 2025.");
+    assert.ok(sev.delivered.text.includes("No figure is known for January 2025, February 2025, March 2025 for New Orleans, Louisiana: shown blank, not zero."), JSON.stringify(sev.delivered.text));
+    assert.ok(!sev.delivered.text.some((t) => /Dallas, Texas: shown blank/.test(t)));
+    assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
+    assert.equal(sev.question.agencies?.length, 1, "the first is the place, the rest the agencies");
+  }
+  // Months past the data are outside it; the whole span past it declines.
+  const out = answerCurrentSeveral({ measure: "murder", places: [dallas, nola], from: "2026-07", to: "2026-10" }, b, two);
+  assert.ok(out.kind === "current" && out.delivered.text.some((t) => /September 2026 through October 2026 are outside them/.test(t)), JSON.stringify(out));
+  assert.equal(answerCurrentSeveral({ measure: "murder", places: [dallas, nola], from: "2026-09", to: "2026-10" }, b, two).kind, "current-decline");
 }
 console.log("nibrs current: agency months, consistent group sums, cumulative totals never complete over unknown months");

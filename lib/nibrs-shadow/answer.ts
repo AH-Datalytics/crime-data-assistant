@@ -57,7 +57,7 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrent, answerCurrentChange, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
@@ -818,8 +818,38 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
       if (runsNow(continuation)) { offer = { label: near, continuation }; break; }
     }
   }
-  const base = withNextStep(everyBreakdown(question, fromLedger(ledger, deps)), ledger, deps, question);
+  const base = withNextStep(everyBreakdown(question, nibrsHasNoReports(fromLedger(ledger, deps), ledger, deps)), ledger, deps, question);
   return offer && base.kind === "clarify" && base.about === "which place" ? { ...base, options: [offer, ...base.options] } : base;
+}
+
+/**
+ * NIBRS asked for by name where an agency has no NIBRS reports (Jeff 2026-11-15, approved wording): the question is
+ * declined, naming the agencies, and Crime Index offered as the one option (the question without the NIBRS words runs
+ * from Crime Index, the default). Only where every month shown is unknown for the agency (no reports at all).
+ */
+function nibrsHasNoReports(o: ShadowOutcome, ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
+  if (o.kind !== "answer" || !flags(ledger0).nibrsAsked) return o;
+  const places = o.plan.geography.places.filter((p) => p.kind === "agency") as { kind: "agency"; ori: string; label: string }[];
+  if (!places.length || places.length !== o.plan.geography.places.length) return o;
+  const evidence = o.delivered.evidence;
+  if (!evidence.length) return o;
+  const rows = o.delivered.table.rows;
+  let bad: typeof places;
+  if (places.length === 1) bad = evidence.every((e) => e.status === "UNKNOWN") ? places : [];
+  else {
+    // Several agencies: the table's first column names each (by month); the agency's rows all unknown.
+    const gi = o.delivered.table.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("geo."));
+    if (gi < 0) return o;
+    bad = places.filter((p) => {
+      const mine = rows.map((r, i) => (r[gi] === agencyName(deps.places, p.ori) ? i : -1)).filter((i) => i >= 0);
+      return mine.length > 0 && mine.every((i) => evidence.find((e) => e.row === i)?.status === "UNKNOWN");
+    });
+  }
+  if (!bad.length) return o;
+  const named = places.length === 1 ? `the ${agencyName(deps.places, bad[0].ori)}` : (() => { const n = bad.map((p) => p.label.split(",")[0]); return n.length > 2 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n.join(" and "); })();
+  const question = ledger0.question.replace(/[?.!\s]+$/, "");
+  return decline("not_recorded_in_nibrs", `NIBRS has no reports from ${named} in this period.`,
+    { alternative: { label: `Ask instead: "${question}"`, question, role: "other_source", targetSource: "historical" } });
 }
 
 /** The groupings an answer has, as dimensions (Historical's and the historical file's: by year or not). */
@@ -1548,7 +1578,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // for now. An agency Current Trends doesn't have goes on to NIBRS (P01's fallback).
   if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !(ledger0 as { skipCurrent?: boolean }).skipCurrent && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
     && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite && (d.spec.statistic === "count" || d.spec.statistic === "rate") && d.spec.measures.length === 1
-    && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length === 1
+    && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length >= 1
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec, cur = deps.current, pl = sp.places[0];
     // The form asked: the rolling 12 months through the latest month; this year as one total is its year to date; a
@@ -1565,18 +1595,43 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     else if (sp.grain === "total" && sp.period.form === "year" && sp.period.year === ctYear) { form = "ytd"; span = [`${ctYear}-01`, cur.lastMonth]; }
     else if ((span = monthSpan(sp, cur))) form = sp.grain === "month" || span[0] === span[1] ? "months" : "total";
+    // Several named agencies by month (Jeff 2026-11-15: Crime Index by default, one source for the whole table): one table from
+    // Current Trends, an agency with no figure blank, never another source for part of it. No years named: every month it holds.
+    if (sp.places.length > 1) {
+      const ok = sp.places.every((p) => p.kind === "agency") && sp.grain === "month" && sp.statistic === "count" && !flags(ledger0).combined && !flags(ledger0).comparison
+        && !flags(ledger0).region && !flags(ledger0).column && !clause0("combine").length;
+      const every = sp.period.form === "none";
+      if (ok && (span || every)) {
+        const list = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : undefined));
+        if (list.every((a) => a?.kind === "agency")) {
+          const r = answerCurrentSeveral({ measure: sp.measures[0], from: every ? cur.finalFirstMonth : span![0], to: every ? cur.lastMonth : span![1],
+            places: list.map((a, i) => { const pp = sp.places[i] as Extract<typeof sp.places[number], { kind: "agency" }>; const ag = a as Extract<NonNullable<typeof a>, { kind: "agency" }>;
+              return { kind: "agency" as const, ori: ag.ori, label: ag.label, name: pp.name, state: pp.state }; }),
+            agencyLine: reportedBy(list.map((a) => agencyName(deps.places, (a as { ori: string }).ori))).replace(/^Reported by /, "Figures for ") }, cur, deps.execute);
+          if (r.kind === "current") {
+            if (every) r.delivered.text.splice(1, 0, `No years were given, so every month in the data is shown: ${monthName(r.period.from)} through ${monthName(r.period.to)}.`);
+            return r;
+          }
+          return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+        }
+      }
+      span = null;
+    }
     let place: CurrentPlace | null = null;
     const region = flags(ledger0).region;
     if (pl.kind === "national") place = region ? { kind: "group", states: REGIONS[region].states, label: REGIONS[region].name.replace(/^the/, "The") } : { kind: "group", states: null, label: "The United States" };
     else if (pl.kind === "state") place = { kind: "group", states: [pl.code], label: stateName(pl.code) };
     else if (pl.kind === "agency") {
       const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
-      const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
-      if (a?.kind === "agency" && has) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
+      // An agency Current Trends has no rows for is answered from Current Trends with its months blank, never from another
+      // source without saying so (Jeff 2026-11-15: Crime Index by default; NIBRS only when asked by name).
+      if (a?.kind === "agency") place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
     }
     // Availability last (design note section 4): a span that starts after Current Trends' latest month goes on to NIBRS
     // (Codex review 01.3: "September 2026"); one that crosses it keeps the months Current Trends has, the rest named.
-    if (span && span[0] > cur.lastMonth && form !== "rolling" && form !== "ytd") span = null;
+    // A span that starts after Current Trends' latest month is declined with the months it holds, and NIBRS offered by name
+    // (it may hold the latest month); it no longer falls to NIBRS by itself (Jeff 2026-11-15).
+    const afterCurrent = !!span && span[0] > cur.lastMonth && form !== "rolling" && form !== "ytd";
     // Two spans compared (Codex review 01.4): both inside Current Trends' months, else it goes on.
     const cmp = flags(ledger0).comparison;
     // Whole completed years compared stay Historical's (Codex confirmation 01: "2025 compared with 2024"); part years and
@@ -1619,7 +1674,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         ...(form === "rolling" && sp.window?.months ? { window: { months: sp.window.months, average: sp.window.average } } : {}),
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
-      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation,
+        afterCurrent && !flags(ledger0).nibrsAsked ? { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs, role: "other_source", targetSource: "nibrs" } } : undefined);
     }
   }
   // A Census region from Crime Index (bad-declines plan item 8): its cities ranked (Jeff's ranking rules: complete data,
