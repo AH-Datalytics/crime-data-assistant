@@ -62,6 +62,9 @@ const partial = as(ask("hate crimes in Texas in 2026"), "hate");
 assert.ok(partial.delivered.text.some((t) => /run through October 13, 2026, so the answer ends with September 2026, the last complete month/.test(t)), partial.delivered.text.join(" / "));
 assert.equal(partial.period.to, "2026-09");
 
+// NIBRS's data start does not limit hate crimes (1991 on): "since 2015" is a series, not a NIBRS coverage decline.
+const since = as(ask("hate crimes in Texas by year since 2015"), "hate");
+assert.equal(since.period.from, "2015-01");
 // Without a build, or for a shape this source does not answer, a plain decline: never a NIBRS answer, never the weapon sentence.
 const noBuild = as(ask("anti-Hispanic hate crimes in Texas in 2024", { ...deps, hate: undefined }), "decline");
 assert.ok(!/weapon or relationship/.test(noBuild.explanation));
