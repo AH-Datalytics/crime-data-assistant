@@ -1625,7 +1625,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
       // An agency Current Trends has no rows for is answered from Current Trends with its months blank, never from another
       // source without saying so (Jeff 2026-11-15: Crime Index by default; NIBRS only when asked by name).
-      if (a?.kind === "agency") place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
+      // Murder and homicide are the exception: for an agency Current Trends lacks, a plain murder count by month is Homicide
+      // Reports' from 1985 (D37, Jeff 2026-11-14), which the path below gives.
+      const murderOnly = ["murder", "homicide"].includes(sp.measures[0]);
+      const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
+      if (a?.kind === "agency" && (has || !murderOnly)) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
     }
     // Availability last (design note section 4): a span that starts after Current Trends' latest month goes on to NIBRS
     // (Codex review 01.3: "September 2026"); one that crosses it keeps the months Current Trends has, the rest named.
