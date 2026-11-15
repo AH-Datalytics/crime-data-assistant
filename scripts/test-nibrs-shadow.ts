@@ -1928,6 +1928,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.equal(two.delivered.text.filter((t) => /^Source: /.test(t)).length, 1);
   }
 }
+// Jeff 2026-11-15: a Homicide Reports rate is per 100,000 people of the agencies that reported, one year or by year.
+{
+  const rstub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [[2023, 3, ["ori9:A", "ori9:B"]]] : /nation_crime|state_crime/.test(sql) ? []
+    : /sum\(population\)/.test(sql) ? [[2_000_000]] : /shr_victim/.test(sql) ? [[100]] : []);
+  const rdeps3 = { ...deps, execute: rstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const pa = shadowAnswer("What is the firearm murder rate in Pennsylvania in 2023?", rdeps3);
+  assert.equal(pa.kind, "shr", JSON.stringify(pa).slice(0, 300));
+  if (pa.kind === "shr") {
+    assert.deepEqual(pa.delivered.table.rows, [[5]]);
+    assert.ok(pa.delivered.text.includes("Rate per 100,000 people in the agencies that reported."));
+    assert.ok(/per 100,000 people, 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
+  }
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.
