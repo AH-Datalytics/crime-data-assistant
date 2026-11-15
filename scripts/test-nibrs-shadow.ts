@@ -1780,6 +1780,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const juv = shadowAnswer("Big cities with the highest share of juvenile homicide victims in 2024", rdeps);
   assert.ok(juv.kind !== "shr", JSON.stringify(juv).slice(0, 200));
 }
+// Group 5: several agencies by month (a row per agency and month; a month not reported is blank, never 0).
+{
+  const m = as(ask("Dallas vs Austin murders by month in 2024"), "answer");
+  assert.deepEqual(m.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murder victims"]);
+  assert.equal(m.delivered.table.rows.length, 24);
+  assert.deepEqual(m.delivered.table.rows.find((r) => r[0] === "Austin Police Department" && r[1] === "2024-06"), ["Austin Police Department", "2024-06", null], "a month not known is blank");
+  assert.equal(m.delivered.table.rows.find((r) => r[0] === "Dallas Police Department" && r[1] === "2024-06")![2], 7);
+  assert.ok(m.delivered.text.some((t) => /^No report is known for June 2024 for Austin/.test(t)), JSON.stringify(m.delivered.text));
+  assert.equal(m.delivered.contractProblems.length, 0);
+  // No period named: every month in the data, said, not an ask.
+  const all = as(ask("Dallas vs Houston murders per month"), "answer");
+  assert.ok(all.delivered.text.some((t) => /^No years were given, so every year in the data is shown: January 2017 through September 2026\.$/.test(t)), JSON.stringify(all.delivered.text));
+  // "LAPD" is the Los Angeles Police Department, never an ask beside the County Sheriff.
+  assert.equal(ask("LAPD vs NYPD murders per month in 2024").kind, "answer");
+  // A rate, or both agencies combined by month, is still not this table.
+  assert.notEqual(ask("Dallas vs Houston murder rates per month in 2024").kind, "answer");
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.

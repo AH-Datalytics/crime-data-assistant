@@ -179,7 +179,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
-  if (/ city$|\bpolice\b/.test(key(text))) {
+  // "LAPD" is the Los Angeles Police Department: the department's own initials name the city agency (2026-10-23 fix).
+  if (/ city$|\bpolice\b/.test(key(text)) || key(text) === "lapd") {
     const cities = pool.filter((a) => a.kind === "city");
     // A large county police department of the name in another state is another "<name> police" ("Arlington Police
     // Department": Arlington, Texas or Arlington County, Virginia's): which (query-log scorecard, 2026-11-05). In the

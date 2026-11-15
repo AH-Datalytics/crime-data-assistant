@@ -621,3 +621,25 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
   for (const s of sup) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });
   return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
 }
+
+/**
+ * Several agencies by month (group 5): a row for each month and agency, the months in order within each agency's block,
+ * each cell keeping its own status (a month not reported is blank, never 0). The columns are the plan's two groupings and
+ * its statistic, in the plan's order.
+ */
+export function deliverMonthly(plan: NibrsPlan, geo: { dimension: string; header: string }, stat: { as: string; header: string },
+  blocks: { key: string; cells: { ym: string; value: number | null; status: string }[] }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
+  const labels: Record<string, string> = { [`statistic:${stat.as}`]: stat.header, [`grouping:${geo.dimension}`]: geo.header, "grouping:time.month": "Month" };
+  const geoFirst = plan.groupings.findIndex((g) => g.dimension === geo.dimension) < plan.groupings.findIndex((g) => g.dimension === "time.month");
+  const geoCol: ResultColumn = { binding: { kind: "grouping", dimension: geo.dimension }, header: geo.header };
+  const monthCol: ResultColumn = { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true as const };
+  const tableCols: ResultColumn[] = [...(geoFirst ? [geoCol, monthCol] : [monthCol, geoCol]), { binding: { kind: "statistic", as: stat.as }, header: stat.header }];
+  const flat = blocks.flatMap((b) => b.cells.map((c) => ({ key: b.key, ...c })));
+  const ordered = geoFirst ? flat : [...flat].sort((a, z) => a.ym.localeCompare(z.ym) || blocks.findIndex((b) => b.key === a.key) - blocks.findIndex((b) => b.key === z.key));
+  const table: ResultTable = { columns: tableCols, rows: ordered.map((r) => [...(geoFirst ? [r.key, r.ym] : [r.ym, r.key]), r.value]) };
+  const evidence: CellEvidence[] = ordered.map((r, i) => ({ row: i, statistic: stat.as, status: r.status as CellStatus }));
+  const text = [...lines, ...readings, ...shownStatements(statements), SOURCE_STATEMENT(release)];
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  ordered.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
+  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
+}
