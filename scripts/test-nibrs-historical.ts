@@ -349,7 +349,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.equal(pop("which agencies are in Tennessee in 2023").delivered.table.rows.length, 2);
   // No year: asked with buttons that run (02.3).
   const noYear = shadowAnswer("List of Tennessee agencies", base);
-  assert.ok(noYear.kind === "clarify" && noYear.about === "which year" && noYear.options[0].label === "The latest year (2025)" && /agencies for Tennessee in 2025/.test(JSON.stringify(noYear.options[0].continuation)) && !noYear.options.some((o) => /Every year/.test(o.label)), JSON.stringify(noYear).slice(0, 300));
+  // Never a button that leads to a decline (Jeff 2026-11-14, no note): this stub holds no Tennessee agency for 2025, so the
+  // latest-year button is not shown; with 2025 rows it is shown and runs.
+  assert.ok(noYear.kind === "clarify" && noYear.about === "which year" && noYear.options.length === 1 && noYear.options[0].entry === "which year", JSON.stringify(noYear).slice(0, 300));
+  const with25 = shadowAnswer("List of Tennessee agencies", { ...base, execute: (sql: string) => (/state = 'TN' AND year = 2025/.test(sql) ? [["TNMPD0000", "Memphis", 610000]] : stub(sql)) });
+  assert.ok(with25.kind === "clarify" && with25.options[0].label === "The latest year (2025)" && with25.options[0].continuation?.kind === "historical" && !with25.options.some((o) => /Every year/.test(o.label)), JSON.stringify(with25).slice(0, 300));
   assert.deepEqual(pop("List of Nebraska agencies in 2023").delivered.table.rows, [["Example Village, Nebraska", 900]]);
   assert.deepEqual(pop("List of Illinois agencies in 2023").delivered.table.rows, [["Mansfield, Illinois", 950]]);
   for (const q of ["which agencies are in Cook County, Illinois in 2023", "agencies in Tennessee that report to NIBRS in 2023", "List all agencies in Texas with type County in 2023", "murders by agency in Tennessee in 2023"]) {

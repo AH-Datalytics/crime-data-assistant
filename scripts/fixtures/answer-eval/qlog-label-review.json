@@ -4614,7 +4614,12 @@
 },
 "QL-ct-fec885d429": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-14-dead-buttons",
+"why": "Jeff 2026-11-14: never a button that leads to a decline. Both choices of 'which LA' decline (the reader does not read \"how bad is\" or \"right now\"), so the question is declined with that reason",
+"expected": {
+"outcome": "decline",
+"reason": "I didn't understand \"how bad is\" or \"right now\"."
+}
 },
 "QL-ct-feec09957e": {
 "status": "reviewed",

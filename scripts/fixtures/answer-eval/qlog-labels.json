@@ -20539,20 +20539,16 @@
    "question": "how bad is crime in LA right now?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ]
+    "reason": "I didn't understand \"how bad is\" or \"right now\"."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-14-dead-buttons",
+    "reviewed_by": "jeff-2026-11-14-dead-buttons",
+    "notes": "Jeff 2026-11-14: never a button that leads to a decline. Both choices of 'which LA' decline (the reader does not read \"how bad is\" or \"right now\"), so the question is declined with that reason"
    }
   },
   {

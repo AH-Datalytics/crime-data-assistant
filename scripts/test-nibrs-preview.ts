@@ -87,9 +87,10 @@ assert.ok(other.kind === "decline" && other.buttons.every((b) => b.kind !== "oth
 const range = toPreview(shadowAnswer("Shoplifting in Memphis and Nashville by month", deps));
 assert.ok(range.kind === "clarify");
 if (range.kind === "clarify") {
-  assert.deepEqual(range.buttons.map((b) => [b.label, b.kind]), [["The last 10 complete years", "not-built"], ["Every year available", "continuation"], ["Another range", "entry"]]);
-  assert.match(range.buttons[0].note ?? "", /^Not in the data this preview uses: NIBRS figures here cover January 2017 through September 2026, so they don.t include 2016 to 2025.$/);
-  assert.match(range.buttons[2].note ?? "", /ask the whole question again/);
+  // Jeff 2026-11-14 ("no note when hidden"): a button whose answer is a decline is not shown at all; here neither year
+  // choice runs, so only the entry is left.
+  assert.deepEqual(range.buttons.map((b) => [b.label, b.kind]), [["Another range", "entry"]]);
+  assert.match(range.buttons[0].note ?? "", /ask the whole question again/);
 }
 const forecast = toPreview(shadowAnswer("Will shoplifting rise in Denver next year?", deps));
 assert.ok(forecast.kind === "decline" && forecast.buttons.length === 1 && forecast.buttons[0].kind === "not-built");

@@ -162,7 +162,8 @@ assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: st
 // "LA" asks Los Angeles or Louisiana; after a place it qualifies, it stays the state (coordinator 2026-11-03).
 {
   const la = as(ask("LA murder trend"), "clarify");
-  assert.deepEqual(la.options.map((o) => o.label), ["Los Angeles", "Louisiana"]);
+  // Never a button that leads to a decline (Jeff 2026-11-14, no note): in this fixture Los Angeles declines, so only Louisiana is offered.
+  assert.deepEqual(la.options.map((o) => o.label), ["Louisiana"]);
   assert.notEqual(ask("Shoplifting in Baton Rouge, LA in 2024").kind, "clarify");
   assert.notEqual((ask("Shoplifting in La Crosse in 2024") as { about?: string }).about, "which LA");
   assert.notEqual((ask("Shoplifting in LA CROSSE in 2024") as { about?: string }).about, "which LA", "Codex review 01.6: a name in capitals");
@@ -1739,6 +1740,35 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const q of ["murder offenders in Oakland in 1996", "murders at residences in Oakland in 1996", "murders cleared by arrest in Oakland in 1996"]) {
     const x = ask(q);
     assert.ok(!(x.kind === "route" && x.source === "shr"), `${q}: ${JSON.stringify(x).slice(0, 200)}`);
+  }
+}
+// Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
+// options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
+// choices that run on the real build decline here; they are the ones that must not be shown.
+{
+  type Opt = { label: string; continuation?: ShadowOutcome; entry?: string };
+  const deadPaths = (o: ShadowOutcome, path: string[] = []): string[] =>
+    o.kind !== "clarify" ? [] : (o.options as Opt[]).flatMap((x) => !x.continuation ? []
+      : x.continuation.kind === "decline" || x.continuation.kind === "route" ? [[...path, x.label].join(" > ")] : deadPaths(x.continuation, [...path, x.label]));
+  let asks = 0;
+  for (const q of ["LA murder trend", "Assault in North Carolina", "assaults", "Compare total crime in Miami and Fort Worth", "Naperville, IL crime per month", "Give me total shootings per year",
+    "Shoplifting in Memphis and Nashville by month", "robbery in Clinton", "Shoplifting in Houston", "violent crime trend in Dallas", "how bad is crime in LA right now?", "murders in New York"]) {
+    const o = ask(q);
+    if (o.kind === "clarify") asks++;
+    assert.deepEqual(deadPaths(o), [], `${q}: a button leads to a decline`);
+  }
+  assert.ok(asks >= 5, "the questions above are mostly asks");
+  // The ask behind a decline's alternative is held to the same rule (a forecast's "which New York").
+  const fc = ask("Will robberies rise in New York next year?");
+  assert.ok(fc.kind === "decline", fc.kind);
+  if (fc.kind === "decline" && fc.alternative?.continuation) assert.deepEqual(deadPaths(fc.alternative.continuation), [], "the forecast's alternative");
+  // An ask whose buttons all decline is the decline they ended in, with its reason; one with a single live button keeps it.
+  const none = ask("how bad is crime in LA right now?");
+  assert.ok(none.kind === "decline" && /how bad is|right now/.test(none.explanation), JSON.stringify(none).slice(0, 300));
+  // Follow-up asks are held to the same rule.
+  for (const [prev, next] of [["Shoplifting in Houston in 2024", "what about the change"], ["murders in Memphis in 2024", "and the rate"]] as const) {
+    const f = shadowFollowUp(prev, next, deps);
+    assert.deepEqual(deadPaths(f as ShadowOutcome), [], `${prev} / ${next}`);
   }
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

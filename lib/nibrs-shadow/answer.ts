@@ -625,7 +625,52 @@ function otherStates(question: string, deps: ShadowDeps): ShadowOutcome | null {
   return { ...beside, delivered: { ...beside.delivered, text: [...beside.delivered.text.slice(0, -1), note, ...beside.delivered.text.slice(-1)] } } as ShadowOutcome;
 }
 
+/**
+ * Never a button that leads to a decline (the engine's standing rule; Jeff 2026-11-14: "no note when hidden"). Every
+ * button whose continuation cannot run is dropped, at any depth, with no note; an ask left with no button that runs
+ * becomes the decline its buttons ended in, with its real reason. A button that asks for typed words (an entry) or is
+ * answered by another source has no continuation to check and stays. The continuations are built through
+ * shadowAnswer, so a nested ask is already pruned when its parent sees it; this walks them again so an ask built
+ * elsewhere is held to the same rule.
+ */
+export function withoutDeadButtons(o: ShadowOutcome): ShadowOutcome {
+  if (o.kind === "decline") {
+    // The buttons beside a decline, and the choices an answer offers, hold asks of their own (a forecast's "which New
+    // York"): a button whose ask is left with no choice that runs is not shown.
+    const alternative = o.alternative ? pruneAsk(o.alternative) : null, more = o.more?.flatMap((x) => pruneAsk(x) ?? []);
+    return alternative === o.alternative && (!o.more || more!.length === o.more.length && more!.every((x, i) => x === o.more![i]))
+      ? o : { ...o, alternative, ...(o.more ? { more } : {}) };
+  }
+  if (o.kind === "answer" && o.buttons?.length) {
+    const buttons = o.buttons.flatMap((x) => pruneAsk(x) ?? []);
+    return buttons.length === o.buttons.length && buttons.every((x, i) => x === o.buttons![i]) ? o : { ...o, buttons };
+  }
+  if (o.kind !== "clarify") return o;
+  const options: ShadowOption[] = [], dead: ShadowOutcome[] = [];
+  let changed = false;
+  for (const x of o.options) {
+    if (!x.continuation) { options.push(x); continue; }
+    const c = withoutDeadButtons(x.continuation);
+    if (!runsNow(c)) { dead.push(c); changed = true; continue; }
+    if (c !== x.continuation) changed = true;
+    options.push(c === x.continuation ? x : { ...x, continuation: c });
+  }
+  if (!options.length) return dead[0] ?? o;
+  return changed ? { ...o, options } : o;
+}
+
+/** A button that holds an ask: the ask pruned, or the button gone when no choice in it runs. Any other button is as it was. */
+function pruneAsk(x: ShadowOption): ShadowOption | null {
+  if (x.continuation?.kind !== "clarify") return x;
+  const c = withoutDeadButtons(x.continuation);
+  return !runsNow(c) ? null : c === x.continuation ? x : { ...x, continuation: c };
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+  return withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
+}
+/** The answer before dead buttons are dropped: for a caller that repairs a button's continuation first (the kind of assault). */
+function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): ShadowOutcome {
   const os = deps.rewritten ? null : otherStates(question, deps);
   if (os) return os;
   const o = answerAsked(question, deps);
@@ -727,7 +772,7 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     // of the user's words, never the rewritten question's (scorecard 2026-11-06: "the count of and aggravated
     // assaults"). A button that names a period or the nation is the user's question with it, so the kind of assault is
     // still settled by the rule above once the rest is known.
-    const asked = shadowAnswer(question, { ...deps, assaultAsked: true });
+    const asked = shadowAnswerWithDeadButtons(question, { ...deps, assaultAsked: true });
     // Declined as asked, but asked something else once the kind is named ("which New York"): that question, whose
     // answers name aggravated assaults plainly, rather than a decline.
     if (asked.kind === "decline" && aggravated.kind === "clarify" && aggravated.options.some((o) => o.continuation && runsNow(o.continuation)))
@@ -845,7 +890,8 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     const offered = r.options.filter((o) => readsWhole(o.question, Number(deps.release.lastMonth.slice(0, 4))));
     const options: ShadowOption[] = offered.length ? offered.map((o) => ({ label: o.label, continuation: shadowAnswer(o.question, deps) }))
       : [{ label: "Ask the full question", entry: "the full question" }, { label: "Start over", entry: "a new question" }];
-    return { kind: "clarify", about: r.why, question: followUp, options, rewrite: null, rewriteKind: "ask" };
+    const asked = withoutDeadButtons({ kind: "clarify", about: r.why, question: followUp, options });
+    return { ...asked, rewrite: null, rewriteKind: "ask" };
   }
   return { ...shadowAnswer(r.question, deps), rewrite: r.question, rewriteKind: r.kind, ...(r.kind === "presentation" ? { presentation: true as const } : {}) };
 }
