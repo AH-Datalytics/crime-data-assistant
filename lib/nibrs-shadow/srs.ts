@@ -156,7 +156,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     const text = [`${where}: ${m.words}${q.statistic === "rate" ? " per 100,000" : ""} by year, ${periodWords(period.from, period.to)}.`, ...missingLine, SRS_SOURCE];
     return {
       kind: "srs", question: q, period,
-      meaning: { ...meaningBase, period, groupings: ["year"], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
+      meaning: { ...meaningBase, period, groupings: ["year"], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's population, per 100,000" } : {}) },
       delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }], rows: rows.map((r) => [String(r.y), value(r.row)]) }, text },
       read,
     };
@@ -166,7 +166,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   const text = [q.statistic === "rate" ? `${where}: ${v} ${m.words} per 100,000 in ${covered[0]}.` : `${where}: ${fmt(v)} ${m.words} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
   return {
     kind: "srs", question: q, period,
-    meaning: { ...meaningBase, period, groupings: [], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
+    meaning: { ...meaningBase, period, groupings: [], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's population, per 100,000" } : {}) },
     delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header }], rows: [[v]] }, text },
     read,
   };
@@ -199,7 +199,7 @@ export function answerSrsSeveral(q: Omit<SrsQuestion, "place">, places: SrsPlace
   return {
     kind: "srs", question: { ...q, place: places[0], places }, period,
     meaning: { source: "historical", places: places.map(placeOf), measures: [{ name: m.name, unit: m.unit }], filters: [], period, groupings: ["year"],
-      statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
+      statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's population, per 100,000" } : {}) },
     delivered: { table: { columns, rows }, text },
     read: { file: "historical_crime_states_nation_1960-2025.csv", column: col, uids: places.flatMap((p) => covered.flatMap((y) => { const r = rowFor(crime(), p, y); return r ? [r.uid] : []; })) },
   };

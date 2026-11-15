@@ -309,7 +309,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
       const k = /^\d+$/.test(n) ? Number(n) : NUM[n.toLowerCase()];
       if (!k || k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !STATE_WORD.test(qual.trim()))) return m;
       largestSet = k;
-      readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+      readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the largest populations)` });
       // A state's name before "cities" stays to be read as the place ("the 5 biggest Texas cities").
       return qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) ? ` in ${qual.trim()} ` : " ";
     });
@@ -317,7 +317,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     const k = Number(n);
     if (k < 2 || k > 300) return m;
     largestSet = k;
-    readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+    readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the largest populations)` });
     return " ";
   });
   // Jeff 2026-11-10: a bare "top N cities" (no "by ...", no "highest", "most"...) is the N largest cities by population.
@@ -337,7 +337,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
         if (k < 2 || k > 300 || (qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) && !STATE_WORD.test(qual.trim()))) return m;
         largestSet = k;
         topAsLargest = m.trim();
-        readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the most residents)` });
+        readings.push({ kind: "phrase", from: m.trim(), to: `(the ${k} city agencies with the largest populations)` });
         return qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) ? ` in ${qual.trim()} ` : " ";
       });
   }

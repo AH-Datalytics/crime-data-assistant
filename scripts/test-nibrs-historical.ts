@@ -735,7 +735,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     ex(() => [[2024, "CA0150000", "Kern County", 300_000, 40], [2024, "CA0150100", "Bakersfield", 400_000, 28], [2024, "CA0150200", "Arvin", 20_000, null]]));
   assert.ok(cw.kind === "historical" && JSON.stringify(cw.delivered.table.rows) === "[[68]]", JSON.stringify(cw));
   if (cw.kind === "historical") {
-    assert.ok(cw.delivered.text.some((t) => /^2 of 3 agencies in the county reported, covering 97\.2% of the residents.*: Kern County, Bakersfield\.$/.test(t)), JSON.stringify(cw.delivered.text));
+    assert.ok(cw.delivered.text.some((t) => /^2 of 3 agencies in the county reported, covering 97\.2% of the people in the agencies' areas with a population.*: Kern County, Bakersfield\.$/.test(t)), JSON.stringify(cw.delivered.text));
     assert.ok(cw.delivered.text.some((t) => /2017 on/.test(t)) && cw.delivered.text.some((t) => /not estimated/.test(t)));
     // A member with no figure is named (coordinator 2026-11-11).
     assert.ok(cw.delivered.text.includes("No figure: Arvin."), JSON.stringify(cw.delivered.text));
