@@ -330,6 +330,20 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas: robbery offenses with an offender under 18 by month, 2024.");
   assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas: robbery offenses by month, 2024.", "no age: property victims stay counted by offense (P11)");
 }
+// P120 on every side (Jeff 2026-11-16, Coordinator): teen and teenage are 13 to 19 for victims, offenders and arrestees, the range said;
+// juvenile, minor, child and kid stay under 18 (P107).
+{
+  const title = (q: string) => (as(ask(q), "answer") as { delivered: { text: string[] } }).delivered.text[0];
+  assert.equal(title("teen robbery offenders in Houston in 2024 by month"), "Houston, Texas: robbery offenders aged 13 to 19 by month, 2024.");
+  assert.equal(title("robberies by teens in Houston in 2024 by month"), "Houston, Texas: robbery offenses with an offender aged 13 to 19 by month, 2024.");
+  assert.equal(title("teen arrests for robbery in Houston in 2024 by month"), "Houston, Texas: robbery arrests of arrestees aged 13 to 19 by month, 2024.");
+  assert.equal(title("juvenile arrests for robbery in Houston in 2024 by month"), "Houston, Texas: robbery arrests of arrestees under 18 by month, 2024.");
+  assert.equal(title("juvenile robbery offenders in Houston in 2024 by month"), "Houston, Texas: robbery offenders under 18 by month, 2024.");
+  assert.ok(/^Ohio: [\d,]+ robbery offenders aged 13 to 19 in 2024, summed over the agencies that reported\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
+  assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas: murder victims aged 13 to 19 by month, 2024.");
+  assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas: murder victims under 18 by month, 2024.");
+  assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
+}
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.
 assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);

@@ -535,6 +535,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
 const JUV = String.raw`(?:juveniles?|minors?|teens?|teenagers?|youths?|kids|children)`;
 const UNDER18: [number, number] = [1, 17];
 const TEEN: [number, number] = [13, 19];
+/** P120: teen and teenage are 13 to 19 on every side (victims, offenders, arrestees); juvenile, minor, child, kid and youth are under 18. */
+const ageOf = (word: string): [number, number] => (/^teen/i.test(word) ? TEEN : UNDER18);
 const ATTR = (w: string): PersonAttr => (/^(?:sex|gender)$/i.test(w) ? "sex" : /^race$/i.test(w) ? "race" : /^ethnicity$/i.test(w) ? "ethnicity" : "age");
 /**
  * Increment 7: the question's people wording, removed from the text the reader reads:
@@ -598,14 +600,14 @@ function readPeople(text0: string): { text: string; people: People | null } {
   if (/^\s*(?:[a-z]+\s+){0,2}?offenders\b/i.test(text))
     cut(/,?\s*\bwhere\s+the\s+victim\s+was\s+a\s+stranger\b/i, () => { p.where.push({ who: "offender", attr: "relationship", values: ["ST"], paired: true }); });
   cut(/\bof\s+offenders?\s+who\s+(?:was|were)\s+(?:under|younger\s+than)\s+18\b/i, () => { p.where.push({ who: "offender", attr: "age", range: UNDER18, paired: true }); });
-  cut(new RegExp(String.raw`,?\s*\b(?:committed\s+)?by\s+${JUV}\b`, "i"), () => { p.where.push({ who: "offender", attr: "age", range: UNDER18, paired: false }); });
-  cut(new RegExp(String.raw`,?\s*\bagainst\s+${JUV}\b`, "i"), () => { p.where.push({ who: "victim", attr: "age", range: UNDER18, paired: false }); });
+  cut(new RegExp(String.raw`,?\s*\b(?:committed\s+)?by\s+(${JUV})\b`, "i"), (m) => { p.where.push({ who: "offender", attr: "age", range: ageOf(m[1]), paired: false }); });
+  cut(new RegExp(String.raw`,?\s*\bagainst\s+(${JUV})\b`, "i"), (m) => { p.where.push({ who: "victim", attr: "age", range: ageOf(m[1]), paired: false }); });
   cut(/\b(?:juvenile|youth|teen(?:age)?|minor|child|kid)\s+(?=(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b)/i, (m) => {
     const noun = /^\s*\S+\s+(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b/i.exec(text.slice(m.index))?.[1].toLowerCase();
     if (/^teen/i.test(m[0])) p.teen = true;
-    // P120 (Jeff 2026-11-16): teen victims are aged 13 to 19; juvenile, minor, child and kid victims are under 18.
+    // P120 (Jeff 2026-11-16, then every side): teen is aged 13 to 19; juvenile, minor, child and kid are under 18.
     const who = noun === "arrests" ? "arrestee" : noun === "offenders" ? "offender" : "victim";
-    p.where.push({ who, attr: "age", range: who === "victim" && /^teen/i.test(m[0]) ? TEEN : UNDER18, paired: false });
+    p.where.push({ who, attr: "age", range: ageOf(m[0]), paired: false });
   });
   // Arrests (2026-11-11): "arrests of people ..." are arrests; an age range ("aged 18 to 21", "ages 18-24", "between the
   // ages of 18 and 24") is the counted person's own, the arrestee's for arrests, the victim's or offender's otherwise.
