@@ -756,6 +756,8 @@ ROWS = [
      "Hate crime questions are answered only from the hate crime data, never from NIBRS: incidents counted once (an incident with several offenses once), for an agency, a state or the nation, as a total, by year, by month or as a rolling window of months, optionally for one named bias. Hate crime data start in 1991; the last complete month ends an answer when the data's latest date falls inside a month. A rate, a breakdown, several places and a compare are not answered yet.",
      "Total: \"Anti-Hispanic or Latino hate crimes: N in Texas in 2024.\" Caveat: \"Hate crime reporting is voluntary. Many agencies report zero hate crimes, which reflects non-reporting, not an absence of hate crimes.\" Start: \"Hate crime data here start in 1991, so 1960 through 1990 aren't included.\" Latest date: \"Hate crime data here run through October 13, 2026, so the answer ends with September 2026, the last complete month.\" Before the data: \"Hate crime data here start in 1991, so 1980 isn't included.\" (several years: \"... so 1960 through 1990 aren't included.\") After the data: \"<period> is not in the hate crime data; the latest complete month available is September 2026.\" Source: \"Source: FBI Hate Crime Statistics.\"",
      "Jeff 2026-11-15: \"hate crimes should only come from hate crimes data\"; \"The obvious solution is to just build hate crimes\"; the wording approved the same day.",
+     "Decided (Jeff 2026-11-15)",
+     ""),
     ("P118",
      "\"victim age breakdown in Texas in 2023\" (a victim-age question with no crime named)",
      "The ask offered only Violent crime.",
