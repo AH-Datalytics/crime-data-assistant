@@ -672,6 +672,10 @@ for (const q of ["violent crimes by offender race in Detroit in 2023", "violent 
   assert.equal(done.plan.groupings.some((g) => g.dimension === "victim.age"), true);
   assert.equal(done.period.from, "2023-01");
 }
+{
+  const d = as(ask("nationwide property crimes by victim age by year for 2017 to 2025"), "decline");
+  assert.match(d.explanation, /property crime in the United States broken down by victim age over several years takes too long to count here/);
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 

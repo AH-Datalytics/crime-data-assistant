@@ -2609,11 +2609,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return decline("unsupported_capability", `This isn't available yet: every arrest in the United States broken down by ${checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension.split(".")[1]).join(" and ")} over several years takes too long to count here. Ask for one year, for example "nationwide arrests by age in ${release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1}", or for one crime or one state.`);
   // The same for violent crime by a person's age, nationally over several years (BD3: 2017-2025 by victim age ran DuckDB out of
   // memory): the arrest sentence's pattern, one year offered in words, never run in advance.
-  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.person_crimes$/.test(m.id))
+  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.(?:person_crimes|against_property)$/.test(m.id))
     && checked.groupings.some((g) => !g.dimension.startsWith("time.")) && period.from.slice(0, 4) !== period.to.slice(0, 4)) {
     const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
     const who = checked.measures[0].unit === "offender" ? "offender" : "victim";
-    return decline("unsupported_capability", `This isn't available yet: violent crime in the United States broken down by ${who} age over several years takes too long to count here. Ask for one year, for example "nationwide violent crimes by ${who} age in ${lastYear}", or for one state.`);
+    const property = /\.against_property$/.test(checked.measures[0].id);
+    return decline("unsupported_capability", `This isn't available yet: ${property ? "property" : "violent"} crime in the United States broken down by ${who} age over several years takes too long to count here. Ask for one year, for example "nationwide ${property ? "property" : "violent"} crimes by ${who} age in ${lastYear}", or for one state.`);
   }
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
