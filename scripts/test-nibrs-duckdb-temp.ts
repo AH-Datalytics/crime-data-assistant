@@ -12,11 +12,13 @@ import path from "node:path";
 import { duckdbExecutor, removeShadowTemp, sweepShadowTemp } from "../lib/nibrs-shadow/duckdb";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "shadow-temp-test-"));
+// A fixed "now" (the sweep takes it as an option): no clock is read, so the test cannot be timing-dependent.
+const NOW = Date.UTC(2026, 10, 16, 12, 0, 0);
 const mk = (name: string, files: Record<string, string>, ageHours = 0): string => {
   const d = path.join(root, name);
   fs.mkdirSync(d, { recursive: true });
   for (const [f, body] of Object.entries(files)) fs.writeFileSync(path.join(d, f), body);
-  const t = new Date(Date.now() - ageHours * 3600_000);
+  const t = new Date(NOW - ageHours * 3600_000);
   for (const f of Object.keys(files)) fs.utimesSync(path.join(d, f), t, t);
   fs.utimesSync(d, t, t);
   return d;
@@ -50,7 +52,7 @@ try {
   const recent = mk("nibrs-shadow-new555", spill, 1);
   const otherOld = mk("some-other-folder", { "q.sql": "x" }, 50);
   const oldForeign = mk("nibrs-shadow-old666", { "q.sql": "x", "notes.txt": "keep" }, 20);
-  const removed = sweepShadowTemp({ tmpRoot: root });
+  const removed = sweepShadowTemp({ tmpRoot: root, now: NOW });
   assert.deepEqual(removed.sort(), ["nibrs-shadow-old111", "nibrs-shadow-old222", "nibrs-shadow-old333"], "old, no live owner, only its own files");
   assert.equal(fs.existsSync(oldLiveOwner), true, "a live process owns it: kept however old");
   assert.equal(fs.existsSync(recent), true, "under 6 hours: kept");
@@ -59,11 +61,12 @@ try {
   assert.equal(fs.existsSync(oldUnowned) || fs.existsSync(oldNoOwnerFile) || fs.existsSync(oldDeadOwner), false);
   // The age is the newest file's: a spill file written a minute ago keeps an old folder.
   const active = mk("nibrs-shadow-act777", spill, 12);
-  fs.utimesSync(path.join(active, "duckdb_temp_storage_DEFAULT-0.tmp"), new Date(), new Date());
-  assert.deepEqual(sweepShadowTemp({ tmpRoot: root }), [], "a folder with a file written just now is not old");
+  const justNow = new Date(NOW);
+  fs.utimesSync(path.join(active, "duckdb_temp_storage_DEFAULT-0.tmp"), justNow, justNow);
+  assert.deepEqual(sweepShadowTemp({ tmpRoot: root, now: NOW }), [], "a folder with a file written just now is not old");
   assert.equal(fs.existsSync(active), true);
   // A temp root that does not exist is nothing to sweep.
-  assert.deepEqual(sweepShadowTemp({ tmpRoot: path.join(root, "no-such-dir") }), []);
+  assert.deepEqual(sweepShadowTemp({ tmpRoot: path.join(root, "no-such-dir"), now: NOW }), []);
 } finally {
   fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
