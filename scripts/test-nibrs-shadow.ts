@@ -297,6 +297,24 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+// P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
+// is the murder count with no disclaimer.
+assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
+{
+  const sqlOf = (q: string) => { sqls.length = 0; const o = ask(q); return { o, codes: (sqls[0]?.match(/'(09[ABC])'/g) ?? []).join(",") }; };
+  const plain = sqlOf("homicides in Houston in 2024 by month"), every = sqlOf("all homicides in Houston in 2024 by month"), murder = sqlOf("murders in Houston in 2024 by month");
+  assert.equal(plain.codes, "'09A','09B'");
+  assert.equal(every.codes, "'09A','09B','09C'");
+  assert.equal(murder.codes, "'09A'");
+  const everyText = (as(every.o, "answer") as { delivered: { text: string[] } }).delivered.text;
+  assert.ok(everyText.includes("All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide."), everyText.join(" | "));
+  assert.ok(!(as(plain.o, "answer") as { delivered: { text: string[] } }).delivered.text.some((t) => /justifiable/.test(t)));
+  for (const q of ["all homicides in Texas in 2024", "all homicides in the United States in 2024"]) {
+    const o = as(ask(q), "srs") as { delivered: { text: string[] } };
+    assert.ok(/ murders in 2024\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
+    assert.equal(o.delivered.text.length, 2, `${q}: no disclaimer, only the count and the source`);
+  }
+}
 // Bad-decline audit root causes (coordinator 2026-11-06).
 {
   // 1. A place and no crime asks which crime (D31), never "I couldn't tell what this asks"; staffing keeps its decline.

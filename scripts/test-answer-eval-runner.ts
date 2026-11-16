@@ -110,4 +110,27 @@ assert.equal(category(res(5, "clarify", "clarify", "unverified"), "clarification
 // Codex probe: zero wrong answers is not established while answers are unverified.
 assert.equal(category(res(1, "answer", "answer", "unverified"), "wrong answers"), "not measured");
 
+// P10 (Jeff 2026-11-16): murder, homicide and all homicides are three counts on NIBRS and Homicide Reports; on Crime Index
+// the homicide words are the murder count.
+{
+  const m = (name: string, source: Meaning["source"]): Meaning => ({ ...label, source, measures: [{ name, unit: "victim" }] });
+  const on = (name: string, source: Meaning["source"]) => ({ ...h2, meaning: { ...h2.meaning, source, measures: [{ name, unit: "victim" }] }, measures: [{ name, unit: "victim", role: "value" as const }] });
+  const gap = (e: string, a: string, source: Meaning["source"]) => compareMeaning(m(e, source), on(a, source) as typeof h2, r).filter((d) => d.field === "measures").map((d) => d.kind);
+  for (const source of ["nibrs", "shr"] as const) {
+    assert.deepEqual(gap("homicide", "homicide", source), [], `${source}: homicide meets homicide`);
+    assert.deepEqual(gap("homicide", "murder", source), ["material"], `${source}: a murder count does not meet a homicide label`);
+    assert.deepEqual(gap("murder", "homicide", source), ["material"], `${source}: a homicide count does not meet a murder label`);
+    assert.deepEqual(gap("murder", "murder", source), [], `${source}: murder meets murder`);
+    assert.deepEqual(gap("all homicides", "homicide_all", source), [], `${source}: all homicides meets all homicides`);
+    assert.deepEqual(gap("all homicides", "homicide", source), ["material"], `${source}: homicide does not meet all homicides`);
+    assert.deepEqual(gap("homicide", "homicide_all", source), ["material"], `${source}: all homicides does not meet homicide`);
+  }
+  for (const source of ["historical", "rtci"] as const) {
+    assert.deepEqual(gap("homicide", "murder", source), [], `${source}: a homicide label is met by the murder count`);
+    assert.deepEqual(gap("all homicides", "murder", source), [], `${source}: an all homicides label is met by the murder count`);
+    assert.deepEqual(gap("murder", "murder", source), [], `${source}: murder meets murder`);
+    assert.deepEqual(gap("robbery", "murder", source), ["material"], `${source}: another crime still differs`);
+  }
+}
+
 console.log("answer-eval runner: comparison, outcomes and gates as specified");

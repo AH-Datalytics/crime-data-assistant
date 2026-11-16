@@ -128,6 +128,8 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
 }
 /** "Violent crime" by a victim's or offender's age: NIBRS crimes against persons (no robbery named: Jeff 2026-11-15). */
 export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.";
+/** "All homicides" (Jeff 2026-11-16): what NIBRS counted. */
+export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide.";
 /** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
 /** A victim's age for the NIBRS crimes against property (Jeff 2026-11-15, the short line). */

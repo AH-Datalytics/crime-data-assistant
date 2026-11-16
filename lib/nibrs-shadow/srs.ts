@@ -34,6 +34,7 @@ export const SRS_YEARS = { first: 1960, last: 2025 };
 export const SRS_MEASURE: Record<string, { col: string; words: string; name: string; unit: string }> = {
   murder: { col: "murder", words: "murders", name: "murder", unit: "victim" },
   homicide: { col: "murder", words: "murders", name: "murder", unit: "victim" },
+  homicide_all: { col: "murder", words: "murders", name: "murder", unit: "victim" },
   rape: { col: "rape", words: "rapes", name: "rape", unit: "victim" },
   robbery: { col: "robbery", words: "robberies", name: "robbery", unit: "offense" },
   aggravated_assault: { col: "assault", words: "aggravated assaults", name: "aggravated assault", unit: "victim" },

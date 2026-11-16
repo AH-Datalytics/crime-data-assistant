@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -1034,7 +1034,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   const READ = new Set(["period", "share", "filter", "rank", "measure", "entity", "filler", "opener", "which", "unrecognized", "punctuation", "unit", "statistic"]);
   if (c0.some((p) => !READ.has(p.concept) || (p.concept === "statistic" && p.value !== "count") || (p.concept === "punctuation" && p.text.trim() !== "%" && p.state !== "context"))) return null;
   const crimes = [...new Set(c0.filter((p) => p.concept === "measure").map((p) => String(p.value)))];
-  if (crimes.length !== 1 || !["murder", "homicide"].includes(crimes[0])) return null;
+  if (crimes.length !== 1 || !["murder", "homicide", "homicide_all"].includes(crimes[0])) return null;
   const rank = c0.find((p) => p.concept === "rank");
   const rankVal = /^(top|bottom):(\d*)$/.exec(String(rank?.value ?? ""));
   if (!rankVal || !c0.some((p) => p.concept === "entity" && p.value === "city")) return null;
@@ -1073,7 +1073,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   if (fromY > Number(latest.slice(0, 4)))
     return decline("outside_release_coverage", `Homicide Reports in the data run through ${latest.slice(0, 4)}, so ${fromY} is outside them.`);
   const to = toY >= Number(latest.slice(0, 4)) ? latest : `${toY}-12`;
-  const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
+  const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide" | "homicide_all", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
     limit: rankVal[2] ? Number(rankVal[2]) : 20, minPopulation: 250000 }, deps.shr, deps.historical, deps.execute);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
@@ -1115,7 +1115,7 @@ const shortAgency = (label: string) => label.split(",")[0];
 const FORECAST_SENTENCE = "The data records past crime and cannot predict the future.";
 
 /** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
-const PART_ONE = new Set(["murder", "homicide", "rape", "robbery", "aggravated_assault", "burglary", "theft", "motor_vehicle_theft", "arson", "violent_crime", "property_crime"]);
+const PART_ONE = new Set(["murder", "homicide", "homicide_all", "rape", "robbery", "aggravated_assault", "burglary", "theft", "motor_vehicle_theft", "arson", "violent_crime", "property_crime"]);
 
 /**
  * Crime Index totals with no NIBRS measure: a month, quarter or part-year question about them has no source yet (the
@@ -1429,7 +1429,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       if (nation.kind === "decline" && capability) return nation;
       // Big cities ranked by a Homicide Reports detail (a weapon, a share, a victim's age, race or sex, a relationship or
       // circumstance): Homicide Reports' question, routed until they answer here (coordinator 2026-11-11).
-      const murderish = measures0.length > 0 && measures0.every((p) => ["murder", "homicide"].includes(String(p.value)));
+      const murderish = measures0.length > 0 && measures0.every((p) => ["murder", "homicide", "homicide_all"].includes(String(p.value)));
       const detail = ledger0.parts.some((p) => p.clause === 0 && ((p.concept === "filter" && /^weapon:/.test(String(p.value))) || p.concept === "share"))
         || /\b(?:teen\w*|juvenile|age|race|sex|gender|relationship|circumstance)\b/i.test(ledger0.question)
         // The reader sets people ("teenage victims") and circumstances aside from its words.
@@ -1697,7 +1697,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // source without saying so (Jeff 2026-11-15: Crime Index by default; NIBRS only when asked by name).
       // Murder and homicide are the exception: for an agency Current Trends lacks, a plain murder count by month is Homicide
       // Reports' from 1985 (D37, Jeff 2026-11-14), which the path below gives.
-      const murderOnly = ["murder", "homicide"].includes(sp.measures[0]);
+      const murderOnly = ["murder", "homicide", "homicide_all"].includes(sp.measures[0]);
       const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
       if (a?.kind === "agency" && (has || !murderOnly)) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
     }
@@ -1728,7 +1728,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Murder and homicide by month for one agency, the span starting before Current Trends' first month: Homicide Reports'
     // answer, no ask (Jeff 2026-11-14: "just give the SHR data since that's the only source that covers that"; only when
     // the monthly span reaches outside Current Trends). It shows its own span; nothing is joined to Current Trends' months.
-    const murderish = ["murder", "homicide"].includes(sp.measures[0]);
+    const murderish = ["murder", "homicide", "homicide_all"].includes(sp.measures[0]);
     if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && murderish && deps.shr) {
       const hrFirst = span[0] > `${SHR_FIRST_YEAR}-01` ? span[0] : `${SHR_FIRST_YEAR}-01`;
       const hrEnd = span[1] >= cur.lastMonth || span[1] > deps.shr.latestMonth ? deps.shr.latestMonth : span[1];
@@ -2099,7 +2099,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // aggravated assault, the only crimes it is recorded for here.
   const circ = flags(ledger0).circumstance;
   if (circ) {
-    if (plan.measures.length !== 1 || plan.measures[0].unit !== "victim" || !/\.(?:murder|homicide|aggravated_assault)$/.test(plan.measures[0].id))
+    if (plan.measures.length !== 1 || plan.measures[0].unit !== "victim" || !/\.(?:murder|homicide_all|homicide|aggravated_assault)$/.test(plan.measures[0].id))
       return decline("unsupported_capability", "Circumstances (such as an argument or another felony) are recorded for murder and aggravated assault victims; ask for those.");
     plan.filters.push({ kind: "exists", scope: "victim", entity: "victim_circumstance", where: [{ kind: "attribute", dimension: "victim_circumstance.circumstance", op: "in", values: circ }] });
   }
@@ -2375,14 +2375,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // path), and only for victims, the unit Homicide Reports count (01.2: murder offenders stay NIBRS's).
   const filterDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
   const detailSelected = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim))
-    && plan.measures.every((m) => /^victims\.(?:murder|homicide)/.test(m.id));
+    && plan.measures.every((m) => /^victims\.(?:murder|homicide_all|homicide)/.test(m.id));
   // Jeff S1 (2026-11-11, "NIBRS years included"): a murder detail for one agency is Homicide Reports' when a release is
   // loaded, whatever the years; NIBRS when it is named, or for a clearance, a location, property or arrests (which SHR
   // doesn't record: shrQuestionOf leaves those, and any code SHR records differently, on this path).
   // Any person's detail selected, offenders' included (Codex SHR-A review 01.6).
   const detailSelectedAny = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim));
   const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny)
-    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
+    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
   if (!stateMode && murderDetail) {
     const s = plan.geography.places.length > 1 ? shrSeveral(plan, deps, ledger0) : shrOutcome(plan, deps, ledger0);
@@ -2397,7 +2397,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // (job SA1); a NIBRS-only detail beside it (a location), no period named, or NIBRS's own views go on to NIBRS's path.
     if (catG.every((g) => shrDetailDim(g.dimension)) && filterDims.every((ds) => ds.every(shrDetailDim)) && !plan.defaults.some((d) => d.path === "period") && !flags(ledger0).consistent && !flags(ledger0).quarter)
       return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports; this form of the question isn't available here." };
-  } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
+  } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide_all|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports, which count the homicides agencies reported to the FBI. Homicide Reports aren't available here. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
@@ -2450,7 +2450,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // Homicide Reports' span first (from 1985) for a murder DETAIL (a weapon, a victim's or offender's trait, a relationship:
       // a filter or a category), and for a plain murder count BY MONTH (Jeff 2026-11-14: "SHR by month would be preferred,
       // NIBRS gives far fewer years"). A plain yearly count stays with NIBRS and Crime Index (D3, reported counts).
-      const murderMeasure = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id));
+      const murderMeasure = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id));
       const murderOnly = murderMeasure && (plan.filters.length > 0 || plan.groupings.some((g) => !g.dimension.startsWith("time.")) || monthly);
       const starts = murderOnly ? [String(SHR_FIRST_YEAR), firstY] : [firstY];
       for (const start of starts) {
@@ -2501,7 +2501,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // details (the victims, offenders, relationship, weapon, circumstance): a location or a clearance stays NIBRS's
     // (Codex coverage review 1).
     const shrDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
-    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
+    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
       && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
       && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
     if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
@@ -2521,7 +2521,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Monthly for one agency back before NIBRS starts: the choices that exist for it (Jeff 2026-11-14).
     const onePlace = plan.geography.places.length === 1 ? plan.geography.places[0] : null;
     if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month") && plan.statistics.every((st) => st.kind === "count")
-      && !plan.measures.some((m) => /^(?:victims|offenses|incidents)\.(?:murder|homicide)(?![a-z_])/.test(m.id))) {
+      && !plan.measures.some((m) => /^(?:victims|offenses|incidents)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))) {
       const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), startMonth: period.from, endMonth: period.to });
       if (ch) return ch;
     }
@@ -2597,6 +2597,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
     ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
+    // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
+    ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
     // Time of day (Jeff 2026-11-15): the buckets, one line under the table.
     ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE, NIGHT_LINE] : [])];
   // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here
