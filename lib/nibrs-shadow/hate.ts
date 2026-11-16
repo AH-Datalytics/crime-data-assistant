@@ -19,6 +19,8 @@ import { CONSOLIDATED_AGENCIES } from "../agency-consolidations";
 import { firstNeeded, monthRange, rollingSums } from "./rolling";
 
 export const HATE_FIRST_YEAR = 1991;
+/** "1980 isn't included" for one year, "1960 through 1990 aren't included" for several (Jeff 2026-11-15). */
+export const notIncluded = (fromYear: number, toYear: number) => (fromYear === toYear ? `${fromYear} isn't included` : `${fromYear} through ${toYear} aren't included`);
 export const HATE_SOURCE = "Source: FBI Hate Crime Statistics.";
 /** The caveat on reporting, in the shorter words Jeff approved (2026-11-15); the database's own caveat text is longer and is not used. */
 export const HATE_REPORTING_CAVEAT = "Hate crime reporting is voluntary. Many agencies report zero hate crimes, which reflects non-reporting, not an absence of hate crimes.";
@@ -176,7 +178,7 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
   }
   text.push(HATE_REPORTING_CAVEAT);
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${fromY} through ${toY}.`);
-  if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${hq.askedFrom} through ${HATE_FIRST_YEAR - 1} aren't included.`);
+  if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(hq.askedFrom), HATE_FIRST_YEAR - 1)}.`);
   // The data's last complete month ends the answer when it is not a December: the year (or span) asked may reach past it.
   if (hq.to === build.latestMonth && build.latestDate.slice(0, 7) > hq.to) {
     const [y, m, d] = build.latestDate.split("-").map(Number);
