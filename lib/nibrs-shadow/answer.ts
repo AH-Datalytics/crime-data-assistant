@@ -58,6 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
@@ -72,6 +73,8 @@ export type ShadowDeps = {
   current?: CurrentBuild;
   /** The SHR release (shr.ts): with it, murder details are Homicide Reports' answers (Jeff S1, 2026-11-11); without it, routed. */
   shr?: ShrBuild;
+  /** The hate crime export (hate.ts): with it, hate crime questions are answered from it; without it they are declined. Never NIBRS. */
+  hate?: HateBuild;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
   /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
@@ -183,7 +186,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     if (![...asks].every((x) => got.has(x))) return false;
     if (kept(q) !== kept(asked)) return false;
     const r = shadowAnswer(q, { ...deps, checkingOffer: true });
-    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr";
+    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate";
   };
   const question = ledger.question;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
@@ -257,7 +260,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
   if (/\bfor example\b/i.test(o.explanation)) return o;
   const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
-  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr"; };
+  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate"; };
   const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
     .map(tidy).find((q) => readsWhole(q, year) && answers(q));
   return { ...o, explanation: `${o.explanation} ${related ? `For example: "${related}".` : EXAMPLE}` };
@@ -275,6 +278,8 @@ export type ShadowOutcome =
   | CurrentAnswer
   /** Murder by a detail (weapon, relationship, circumstance, a person's sex, race, ethnicity or age) from Homicide Reports (shr.ts). */
   | ShrAnswer
+  /** Hate crime incidents from the hate crime data (hate.ts), never from NIBRS. */
+  | HateAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[]; /** Said with the ask (what the choices leave out). */ note?: string }
@@ -589,7 +594,7 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
   const fr = fillerRewrite(question, ledger);
   const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true }) : null;
   // Only pure filler left unread: the rest was read in full, so its answer is the question's (Jeff 2026-11-11).
-  if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr"].includes(again.kind)) return again;
+  if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate"].includes(again.kind)) return again;
   if (!fr || again?.kind !== "clarify") return null;
   // Words with a meaning of their own left out ("up in", "average"): said, so a button's answer is never taken for
   // the change or the average asked (Codex review 01.2).
@@ -961,6 +966,35 @@ const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:female
  * asks for something SHR doesn't record the same way (the caller keeps its own path). Periods resolve against the SHR
  * release's latest month; a span starting before 1985 is answered from 1985 and says so (J1, option A).
  */
+/** A hate crime question from the hate crime data (hate.ts), or null when there is no build or it is asked in a way this source does not answer. */
+function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
+  if (!deps.hate || flags(ledger0).consistent || flags(ledger0).quarter) return null;
+  // What this count is not: a supporting column, a person's detail, a clearance, a property or composite count, or a unit other than incidents
+  // ("hate crime victims"): declined, never answered as the plain count (Codex review 04, 05).
+  const f = flags(ledger0);
+  if (f.column || f.people || f.clearance || f.property || f.composite || f.combined || f.arrestsThrough || ledger0.parts.some((p) => p.clause === 0 && p.concept === "unit")) return null;
+  let period: { from: string; to: string };
+  // No range named for a series: every year the hate crime data have, said (Jeff 2026-11-11, "All years by default").
+  const allYears = plan.defaults.some((x) => x.path === "period");
+  try {
+    const r = resolvePeriod(plan.period, { ...deps.release, lastMonth: deps.hate.latestMonth });
+    if (allYears) period = { from: `${HATE_FIRST_YEAR}-01`, to: deps.hate.latestMonth };
+    else if (r.kind === "years") {
+      const ys = [...r.years].sort((a, b) => a - b);
+      if (ys.some((y, i) => i > 0 && y !== ys[i - 1] + 1)) return null;
+      period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
+    } else period = { from: r.from, to: r.to };
+  } catch { return null; }
+  const hq = hateQuestionOf(plan, period, deps.hate);
+  if ("why" in hq) {
+    // A span wholly outside the data says where the data are (coverage), as every source does.
+    if (hq.why === "before the data start") return decline("outside_release_coverage", `Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(period.from.slice(0, 4)), Number(period.to.slice(0, 4)))}.`);
+    if (hq.why === "after the latest month") return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the hate crime data; the latest complete month available is ${monthName(deps.hate.latestMonth)}.`);
+    return null;
+  }
+  const a = answerHate(allYears ? { ...hq, allYears: true } : hq, deps.hate, deps.execute);
+  return a.kind === "hate" ? a : decline("outside_release_coverage", a.explanation);
+}
 function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
   // Only agencies that reported every month, or quarters: NIBRS's own paths keep them (Codex SHR-A review 01.4, 01.5).
   if (!deps.shr || flags(ledger0).consistent || flags(ledger0).quarter) return null;
@@ -2300,6 +2334,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return decline("unsupported_capability", "This isn't available yet: rankings.");
   // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime; by category too (coordinator
   // 2026-11-02), each category's quarter compiled as the sum of its months with its share of the quarter.
+  // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): before
+  // NIBRS's own checks (its data start, its state and national limits do not apply to them), a plan for a hate crime or a bias is answered there or declined plainly,
+  // never run on NIBRS and never shown the weapon-or-relationship sentence.
+  // A hate crime count with no period named and no series asked is asked about first, as every count is (D31/P06: the "which period"
+  // ask below); a series (by year, by month, rolling) with no range is every year the data have (Jeff 2026-11-11, "All years by default").
+  const hateSpec = d.spec as { period?: { form: string }; grain?: string };
+  const hateAsksPeriod = hateSpec.period?.form === "none" && (!hateSpec.grain || hateSpec.grain === "total");
+  if (!hateAsksPeriod && (plan.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias")))
+    return hateOutcome(plan, deps, ledger0) ?? notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   const quarterly = !!flags(ledger0).quarter;
   const quarterCats = quarterly && plan.groupings.length === 2 && plan.groupings[0].dimension === "time.month" && !plan.groupings[1].dimension.startsWith("time.");
   if (quarterly && (plan.measures.length !== 1 || plan.transforms.length || plan.geography.places.length !== 1 || plan.geography.places[0].kind !== "agency"
@@ -2518,7 +2561,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Hate crimes come only from the hate crime data (Jeff 2026-11-15: "hate crimes should only come from hate crimes data"): a
   // NIBRS plan for a hate crime or a bias is never run, and never shows the weapon-or-relationship sentence.
   if (checked.measures.some((m) => /\.hate_crime$/.test(m.id)) || [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_bias"))
-    return notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
+    return hateOutcome(checked, deps, ledger0) ?? notYet("hate crimes are answered from the hate crime data only, never from NIBRS offense records");
   // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
   // A state's city agencies (a ranking) are the release's agencies with a population for that year, as answered.
   const cityMembers = new Map<string, string[]>();
