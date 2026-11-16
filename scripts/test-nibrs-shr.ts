@@ -248,6 +248,30 @@ assert.equal(answerShr(rollQ, build, rollStub([])).kind, "shr-decline");
 const early85 = answerShr({ ...rollQ, from: "1985-01", to: "1985-12" }, build, rollStub([1985]));
 assert.ok(early85.kind === "shr" && early85.delivered.table.rows.slice(0, 11).every((r) => r[1] === null) && early85.delivered.table.rows[11][1] === 36, JSON.stringify(early85));
 
+// A rate per 100,000 people of the agencies that reported (Jeff 2026-11-15): one year or by year; never over several years
+// at once; each year over that year's reporting agencies' Crime Index population.
+const rateStat = { kind: "rate", as: "murder_rate", measure: "murder", per: 100000 };
+const penn = { geography: { places: [{ kind: "state", code: "PA" }], combine: "separate" }, filters: [firearm], statistics: [rateStat] };
+const rq = shrQuestionOf(plan(penn), { from: "2023-01", to: "2023-12" }, build) as ShrQuestion;
+assert.ok(!("why" in rq) && rq.rate === true && rq.grain === "total", JSON.stringify(rq));
+assert.ok("why" in shrQuestionOf(plan(penn), { from: "2015-01", to: "2024-12" }, build), "several years in one rate");
+assert.ok(!("why" in shrQuestionOf(plan({ ...penn, groupings: [{ dimension: "time.year" }] }), { from: "2015-01", to: "2024-12" }, build)), "by year is fine");
+assert.ok("why" in shrQuestionOf(plan({ ...penn, groupings: [{ dimension: "time.month" }] }), { from: "2023-01", to: "2023-12" }, build), "not by month");
+const rateStub = (s2: string) => (/shr_agency_year/.test(s2) ? [[2023, 3, ["ori9:A", "ori9:B"]], [2022, 2, ["ori9:A"]]] : /state_crime|sum\(population\)/.test(s2) && !/agency_crime/.test(s2) ? [] : /sum\(population\)/.test(s2) ? [[/year = 2022/.test(s2) ? 500_000 : 2_000_000]] : /AS k0/.test(s2) ? [[2022, 100], [2023, 100]] : [[100]]);
+const ra = answerShr(rq, build, rateStub, hist);
+assert.ok(ra.kind === "shr", JSON.stringify(ra));
+if (ra.kind === "shr") {
+  assert.deepEqual(ra.delivered.table.rows, [[5]], "100 victims over 2,000,000 people, per 100,000");
+  assert.equal(ra.delivered.table.columns[0].header, "Murder victims with a firearm per 100,000");
+  assert.equal(ra.delivered.text[0], "Pennsylvania: murder victims with a firearm per 100,000 people, 2023.");
+  assert.equal(ra.delivered.text[1], "Rate per 100,000 people in the agencies that reported.");
+}
+const rby = answerShr({ ...rq, grain: "year", from: "2022-01", to: "2023-12" }, build, rateStub, hist);
+assert.ok(rby.kind === "shr" && JSON.stringify(rby.delivered.table.rows) === '[["2022",20],["2023",5]]', JSON.stringify(rby));
+// Without Crime Index's population there is no rate, never a count in its place.
+const noPop = answerShr(rq, build, rateStub);
+assert.ok(noPop.kind === "shr" && noPop.delivered.table.rows[0][0] === null, JSON.stringify(noPop));
+
 // Filters in words.
 assert.equal(filterWords({ dim: "weapon", codes: ["11", "12", "13", "14", "15"] }), "with a firearm");
 assert.equal(filterWords({ dim: "victim.sex", codes: ["F"] }), "where the victim's sex was female");

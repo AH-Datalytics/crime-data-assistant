@@ -26,6 +26,7 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 import { fmt, periodWords } from "./deliver";
 import { stateName } from "./places";
 import { citySql, cityNameSql, type HistoricalBuild } from "./historical";
+import { carriesTo } from "./population-carry";
 import { rankAgencies } from "../nibrs-plan/transforms";
 import { firstNeeded, rollingSums, unknownRuns } from "./rolling";
 
@@ -97,6 +98,8 @@ export type ShrQuestion = {
   askedFrom?: string;
   /** Several agencies (shrSeveral in answer.ts): `place` is the first, these the others. */
   places?: ShrPlace[];
+  /** A rate per 100,000 people of the agencies that reported (Jeff 2026-11-15), for one year or by year. */
+  rate?: boolean;
   /** A ranking of the nation's cities by this question's count or share (answerShrRanking): the direction, the cut and the population floor. */
   ranking?: { direction: "top" | "bottom"; limit: number; minPopulation: number | null };
   /** Sentences the answer adds (what the source does not record of what was asked), after the counting rules. */
@@ -172,7 +175,8 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   const roll = plan.transforms.length === 1 && plan.transforms[0].kind === "rolling" ? plan.transforms[0] : null;
   if (plan.transforms.length && !roll) return { why: "a change, a ranking or a rolling window" };
   const stats = plan.statistics.map((s) => s.kind);
-  if (!(stats.length === 1 && stats[0] === "count") && !(stats.length === 2 && stats[0] === "count" && stats[1] === "share")) return { why: "a rate or another statistic" };
+  const rate = stats.length === 1 && stats[0] === "rate" && plan.statistics[0].kind === "rate" && (plan.statistics[0] as { per?: number }).per === 100000;
+  if (!rate && !(stats.length === 1 && stats[0] === "count") && !(stats.length === 2 && stats[0] === "count" && stats[1] === "share")) return { why: "a rate or another statistic" };
   if (plan.geography.places.length !== 1) return { why: "several places" };
   const p = plan.geography.places[0];
   const place: ShrPlace | null = p.kind === "national" ? { kind: "national" } : p.kind === "state" ? { kind: "state", code: p.code }
@@ -237,7 +241,9 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   const grain = time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   // A rolling window is by month, one count, no breakdown (the Engine and group 7 build the rest on rolling.ts).
   if (roll && (grain !== "month" || breakdown || stats.length !== 1)) return { why: "a rolling window of this form" };
-  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(notes.length ? { notes } : {}), ...(roll ? { rolling: { months: roll.months } } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
+  // A rate is for one year or by year: each year has its own population, so a total over several years is not one rate.
+  if (rate && (roll || breakdown || grain === "month" || (grain === "total" && from.slice(0, 4) !== to.slice(0, 4)))) return { why: "a rate over several years without by year, by month or with a breakdown" };
+  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(rate ? { rate: true } : {}), ...(notes.length ? { notes } : {}), ...(roll ? { rolling: { months: roll.months } } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
 }
 
 /* ------------------------------------------------------------------ the answer */
@@ -345,6 +351,9 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     }
     return cell.get([...p.key, cat].join("|")) ?? 0;
   };
+  // A rate: per 100,000 of the Crime Index population of the agencies that filed that year (Jeff 2026-11-15).
+  const ratePop = sq.rate && hist ? coveredPopulation(sq, filed, properZero, Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i), hist, execute) : new Map<number, number>();
+  const rateOf = (c: number | null, y: number) => { const pop = ratePop.get(y); return c === null || !pop ? null : Math.round((c * 1000000) / pop) / 10; };
   const unitWords = shrUnitWords(sq);
   const timeCols = sq.grain === "year" ? [{ binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }]
     : sq.grain === "month" ? [{ binding: { kind: "grouping" as const, dimension: "time.month" }, header: "Month" }] : [];
@@ -362,12 +371,13 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
       }
     }
   } else {
-    columns.push({ binding: { kind: "statistic", as: "count" }, header: ucFirst(unitWords) });
-    for (const p of periods) rows.push([...(p.label ? [p.label] : []), valueOf(p, null)]);
+    columns.push({ binding: { kind: "statistic", as: sq.rate ? "rate" : "count" }, header: sq.rate ? `${ucFirst(shrWhat(sq))} per 100,000` : ucFirst(unitWords) });
+    for (const p of periods) rows.push([...(p.label ? [p.label] : []), sq.rate ? rateOf(valueOf(p, null), p.year) : valueOf(p, null)]);
   }
   const span = periodWords(sq.from, sq.to);
   const what = shrWhat(sq);
-  const text = [`${where}: ${what}${sq.breakdown ? ` by ${DIM_WORDS[sq.breakdown.dim]}` : ""}${sq.grain === "year" ? " by year" : sq.grain === "month" ? " by month" : ""}, ${span}.`,
+  const text = [`${where}: ${what}${sq.rate ? " per 100,000 people" : ""}${sq.breakdown ? ` by ${DIM_WORDS[sq.breakdown.dim]}` : ""}${sq.grain === "year" ? " by year" : sq.grain === "month" ? " by month" : ""}, ${span}.`,
+    ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
     "From the FBI's Supplementary Homicide Reports: the homicides agencies reported to the FBI, each victim counted."];
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
@@ -398,7 +408,8 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   return {
     kind: "shr", question: sq, period,
     meaning: { source: "shr", places: [sq.place], filters: sq.filters.map(filterWords), measures: [{ name: sq.measure, unit: sq.unit === "victims" ? "victim" : "offender" }],
-      period, groupings: [...(sq.grain !== "total" ? [sq.grain] : []), ...(sq.breakdown ? [sq.breakdown.dim] : [])], statistic: "count" },
+      period, groupings: [...(sq.grain !== "total" ? [sq.grain] : []), ...(sq.breakdown ? [sq.breakdown.dim] : [])], statistic: "count",
+      ...(sq.rate ? { denominator: "the Crime Index population of the agencies that reported, per 100,000" } : {}) },
     delivered: { table: { columns, rows }, text },
     read: { table: `${sq.unit === "victims" ? "shr_victim" : "shr_offender"} + shr_record`, release: build.release },
   };
@@ -618,3 +629,22 @@ function answerShrRolling(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
 }
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const monthLabel = (ym: string) => `${MONTH_NAMES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+
+/**
+ * The Crime Index population of the agencies that filed Homicide Reports each year (an agency's own, for a proper zero):
+ * the denominator of a rate (Jeff 2026-11-15). The latest completed year's population stands in for the year after it
+ * (population-carry.ts); a year with no filing, or no population, has none.
+ */
+function coveredPopulation(sq: ShrQuestion, filed: Map<number, { keys: string[] }>, properZero: Set<number>, years: number[], hist: HistoricalBuild,
+  execute: (sql: string) => unknown[][]): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const y of years) {
+    const oris = filed.has(y) ? filed.get(y)!.keys.filter((k) => k.startsWith("ori9:")).map((k) => k.slice(5)) : properZero.has(y) && sq.place.kind === "agency" ? [sq.place.ori] : [];
+    const popYear = y <= hist.lastYear ? y : carriesTo(y, hist.lastYear) ? hist.lastYear : null;
+    if (!oris.length || popYear === null) continue;
+    const got = execute(`SELECT sum(population) FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE year = ${popYear} AND ori IN (${oris.map(q).join(", ")})`);
+    const pop = num(got[0]?.[0]);
+    if (pop) out.set(y, pop);
+  }
+  return out;
+}

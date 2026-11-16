@@ -744,6 +744,12 @@ ROWS = [
      "\"Compare Chicago and Houston firearm murders by month\" is a Homicide Reports table.",
      "Jeff 2026-11-15 via coordinator: murder details are Homicide Reports', same table shape, blanks where a city did not file.",
      "Decided 2026-11-15 (Jeff)", NEW),
+    ("P115", "\"What is the firearm murder rate in Pennsylvania in 2023?\", \"what is the homicide rate by firearm in Pennsylvania from 2015-2024\"",
+     "Routed to the Homicide Reports tab: \"this form of the question isn't available here yet\".",
+     "A Homicide Reports rate is murder victims (with the detail asked) counted for the agencies that filed Homicide Reports that year, per 100,000 of the Crime Index population of those same agencies that year, one decimal. One year, or by year (each year over its own agencies); a rate over several years without \"by year\", by month or with a breakdown is not built. Two lines: \"<Place>: murder victims with a firearm per 100,000 people, 2023.\" and \"Rate per 100,000 people in the agencies that reported.\"",
+     "\"What is the firearm murder rate in Pennsylvania in 2023?\" shows one rate for 2023.",
+     "Jeff 2026-11-15 via coordinator: rate per 100,000 people of the reporting agencies' population; both lines approved as written.",
+     "Decided 2026-11-15 (Jeff)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
