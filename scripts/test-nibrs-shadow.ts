@@ -114,7 +114,7 @@ function gridRows(sql: string): unknown[][] {
   for (const o of oris) for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) {
     const ym = `${y}-${String(m).padStart(2, "0")}`;
     const unknown = (o === "NC0410200" && ym >= "2025-11" && ym <= "2025-12") || (o === "TX2270100" && ym === "2024-06");
-    rows.push(ZERO && ZERO.ori === o && ZERO.ym === ym ? [o, ym, 0, "REPORTED_ZERO"]
+    rows.push(ZERO && (ZERO.ori === "*" || ZERO.ori === o) && ZERO.ym === ym ? [o, ym, 0, "REPORTED_ZERO"]
       : CONFLICT && CONFLICT.ori === o && CONFLICT.ym === ym ? [o, ym, null, "EVIDENCE_CONFLICT"]
       : unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5, "VALUE"]);
   }
@@ -1874,6 +1874,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const avoids = as(ask(Q("in 2024")), "answer");
   ZERO = null;
   const clean = as(ask(Q("in 2024")), "answer");
+  // No agency reported every month: no button for an empty set (never "counting only the 0 Consistent Reporting Agencies").
+  ZERO = { ori: "*", ym: "2024-03" };
+  const nobody = as(ask(Q("in 2024")), "answer");
+  ZERO = null;
+  assert.equal(nobody.stateSum!.everyAgencies, 0);
+  assert.ok(!nobody.buttons || nobody.buttons.length === 0, "no button for an empty set");
   assert.equal(withZero.stateSum!.everyAgencies, base.stateSum!.everyAgencies - 1, "the agency with a zero month leaves the set");
   assert.equal(avoids.stateSum!.everyAgencies, clean.stateSum!.everyAgencies, "and stays in for a span that avoids the month");
   assert.deepEqual(withZero.stateSum!.years.map((y) => y.agencies), base.stateSum!.years.map((y) => y.agencies), "the ordinary view still counts it as reporting");

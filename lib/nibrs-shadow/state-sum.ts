@@ -241,7 +241,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const delivered = deliver(plan, false);
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
   const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };
-  return { kind: "answer", plan, period, sql: c.query.sql, delivered, buttons: [button], stateSum: meta };
+  // No button for an empty set: "counting only the 0 Consistent Reporting Agencies" is no view (no agency reported every month of the span).
+  return { kind: "answer", plan, period, sql: c.query.sql, delivered, ...(everySet.length ? { buttons: [button] } : {}), stateSum: meta };
 
   /**
    * A state or national sum by one category (coordinator 2026-11-04): each category summed over the agencies counted
@@ -284,6 +285,6 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const delivered = deliverView(false, plan);
     if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
     const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };
-    return { kind: "answer", plan, period, sql: gridSql, delivered, buttons: [button], stateSum: meta };
+    return { kind: "answer", plan, period, sql: gridSql, delivered, ...(everySet.length ? { buttons: [button] } : {}), stateSum: meta };
   }
 }
