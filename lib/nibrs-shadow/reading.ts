@@ -602,28 +602,37 @@ function readPeople(text0: string): { text: string; people: People | null } {
   cut(/\bof\s+offenders?\s+who\s+(?:was|were)\s+(?:under|younger\s+than)\s+18\b/i, () => { p.where.push({ who: "offender", attr: "age", range: UNDER18, paired: true }); });
   cut(new RegExp(String.raw`,?\s*\b(?:committed\s+)?by\s+(${JUV})\b`, "i"), (m) => { p.where.push({ who: "offender", attr: "age", range: ageOf(m[1]), paired: false }); });
   cut(new RegExp(String.raw`,?\s*\bagainst\s+(${JUV})\b`, "i"), (m) => { p.where.push({ who: "victim", attr: "age", range: ageOf(m[1]), paired: false }); });
-  // The age word singular or plural ("juveniles", "teenagers", "children", "kids"), before a person word, one or two crime words
-  // away: "teen robbery victims", "kids arrested for robbery", "a teen victim".
-  const PERSON = String.raw`(victims?|arrests?|arrestees?|offenders?|arrested)`;
-  const AGE_WORD = String.raw`(?:juveniles?|youths?|teen(?:age)?(?:rs?)?s?|minors?|child(?:ren)?|kids?)`;
+  // The age word before a person word, one to three words away. "juvenile", "minor" and "youth" keep their old reading only (the
+  // singular word before victims, arrests or offenders): their other forms ("juveniles arrested", "a juvenile offender", "juvenile
+  // arrest rates") are read elsewhere and must keep the user's word in what is restated. "teen", "kid" and "child" in every form
+  // are read here: "teenagers arrested for robbery", "kids arrested", "a teen victim", "children victims".
+  const OLD_PERSON = String.raw`(victims|arrests|offenders)`;
+  const NEW_PERSON = String.raw`(victims?|arrests|arrestees?|offenders?|arrested)`;
+  const OLD_AGE = String.raw`(?:juvenile|youth|teen(?:age)?|minor|child|kid)`;
+  const NEW_AGE = String.raw`(?:teen(?:age)?(?:rs?)?s?|child(?:ren)?|kids?)`;
   // "murders of teenagers", "children murdered": the victims (Coordinator 2026-11-16).
-  if (/\bmurders?\s+of\s+(?:the\s+)?teen\w*|\bteen\w*\s+murdered\b|\b(?:children|kids|juveniles|minors|youths)\s+murdered\b|\bmurders?\s+of\s+(?:the\s+)?(?:children|kids|juveniles|minors|youths)\b/i.test(text)) {
-    const w = /\b(?:murders?\s+of\s+(?:the\s+)?|)(teen\w*|children|kids|juveniles|minors|youths)(?:\s+murdered)?\b/i.exec(text.replace(/\bmurders?\s+of\s+(?:the\s+)?/i, ""));
-    if (w) {
-      text = text.replace(/\bmurders?\s+of\s+(?:the\s+)?(?:teen\w*|children|kids|juveniles|minors|youths)\b/i, "murder victims").replace(/\b(?:teen\w*|children|kids|juveniles|minors|youths)\s+murdered\b/i, "murder victims");
-      p.where.push({ who: "victim", attr: "age", range: ageOf(w[1]), paired: false });
-      if (/^teen/i.test(w[1])) p.teen = true;
-    }
+  const MURDER_AGE = String.raw`(teen\w*|children|kids)`;
+  const murderOf = new RegExp(String.raw`\bmurders?\s+of\s+(?:the\s+)?${MURDER_AGE}\b`, "i"), murdered = new RegExp(String.raw`\b${MURDER_AGE}\s+murdered\b`, "i");
+  const mo = murderOf.exec(text) ?? murdered.exec(text);
+  if (mo) {
+    text = text.replace(murderOf, "murder victims").replace(murdered, "murder victims");
+    p.where.push({ who: "victim", attr: "age", range: ageOf(mo[1]), paired: false });
+    if (/^teen/i.test(mo[1])) p.teen = true;
   }
-  cut(new RegExp(String.raw`\b${AGE_WORD}\s+(?=(?:[a-z]+\s+){0,3}?${PERSON}\b)`, "i"), (m) => {
-    const noun = new RegExp(String.raw`^\s*\S+\s+(?:[a-z]+\s+){0,3}?${PERSON}\b`, "i").exec(text.slice(m.index))?.[1].toLowerCase();
-    // "kids arrested for robbery" is arrests for robbery.
-    if (noun === "arrested") text = text.replace(/\barrested\b/i, "arrests");
-    if (/^teen/i.test(m[0])) p.teen = true;
-    // P120 (Jeff 2026-11-16, then every side): teen is aged 13 to 19; juvenile, minor, child and kid are under 18.
-    const who = /^arrest/.test(noun ?? "") ? "arrestee" : /^offender/.test(noun ?? "") ? "offender" : "victim";
-    p.where.push({ who, attr: "age", range: ageOf(m[0]), paired: false });
-  });
+  let singular = false;
+  for (const [age, person] of [[OLD_AGE, OLD_PERSON], [NEW_AGE, NEW_PERSON]]) {
+    if (cut(new RegExp(String.raw`\b${age}\s+(?=(?:[a-z]+\s+){0,3}?${person}\b)`, "i"), (m) => {
+      const noun = new RegExp(String.raw`^\s*\S+\s+(?:[a-z]+\s+){0,3}?${person}\b`, "i").exec(text.slice(m.index))?.[1].toLowerCase();
+      // "kids arrested for robbery" is arrests for robbery.
+      if (noun === "arrested") text = text.replace(/\barrested\b/i, "arrests");
+      if (/^teen/i.test(m[0])) p.teen = true;
+      // P120 (Jeff 2026-11-16, then every side): teen is aged 13 to 19; juvenile, minor, child and kid are under 18.
+      const who = /^arrest/.test(noun ?? "") ? "arrestee" : /^offender/.test(noun ?? "") ? "offender" : "victim";
+      p.where.push({ who, attr: "age", range: ageOf(m[0]), paired: false });
+      // "with a teen victim" leaves "a victim": the article goes, the person stays ("with victim" never reads "a offender").
+      singular = /^(?:victim|offender|arrestee)\b/i.test(noun ?? "");
+    })) { if (singular) text = text.replace(/\b(?:a|an)\s+(?=(?:victim|offender|arrestee)\b)/i, ""); break; }
+  }
   // Arrests (2026-11-11): "arrests of people ..." are arrests; an age range ("aged 18 to 21", "ages 18-24", "between the
   // ages of 18 and 24") is the counted person's own, the arrestee's for arrests, the victim's or offender's otherwise.
   text = text.replace(/\b(arrests?|arrestees|victims|offenders)\s+of\s+(?:people|persons|individuals)\b/gi, "$1");
