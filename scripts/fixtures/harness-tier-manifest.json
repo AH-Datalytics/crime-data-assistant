@@ -2743,6 +2743,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "no \"yet\" in what the new engine says to a reader (Jeff 2026-11-15): reads lib/nibrs-shadow, lib/nibrs-plan and lib/answer-contract source files only, no database, no model, no network"
+    },
+    {
+      "id": "test-geo-fuzzy-golden",
+      "tier": "F",
+      "script": "scripts/test-geo-fuzzy-golden.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "the fuzzy place search (lib/geo-fuzzy.ts) gives exactly the answers it gave before it was made fast, for 610 fixed inputs (scripts/fixtures/geo-fuzzy-golden.json); reads the place catalog only, no database, no model, no network"
     }
   ]
 }
