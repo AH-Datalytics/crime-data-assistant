@@ -237,7 +237,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
   const everyDelivered = deliver(everyPlan, true);
   const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: c.query.sql, delivered: everyDelivered, stateSum: meta };
-  if (consistent) return everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
+  if (consistent) return !everySet.length ? decline(`No agency reported crimes in every month ${span}, so there are no ${CRA} for ${Where}.`)
+    : everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
   const delivered = deliver(plan, false);
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
   const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };
@@ -281,7 +282,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
     const everyDelivered = deliverView(true, everyPlan);
     const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: gridSql, delivered: everyDelivered, stateSum: meta };
-    if (consistent) return everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
+    if (consistent) return !everySet.length ? decline(`No agency reported crimes in every month ${span}, so there are no ${CRA} for ${Where}.`)
+    : everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
     const delivered = deliverView(false, plan);
     if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
     const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };

@@ -1880,6 +1880,11 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   ZERO = null;
   assert.equal(nobody.stateSum!.everyAgencies, 0);
   assert.ok(!nobody.buttons || nobody.buttons.length === 0, "no button for an empty set");
+  // Asked for the Consistent Reporting Agencies when no agency reported every month: a plain decline, never "counting only the 0".
+  ZERO = { ori: "*", ym: "2024-03" };
+  const noneAsked = as(ask("Carjackings in Texas in 2024 for consistent reporters"), "decline");
+  ZERO = null;
+  assert.equal(noneAsked.explanation, "No agency reported crimes in every month from January 2024 through December 2024, so there are no Consistent Reporting Agencies for Texas.");
   assert.equal(withZero.stateSum!.everyAgencies, base.stateSum!.everyAgencies - 1, "the agency with a zero month leaves the set");
   assert.equal(avoids.stateSum!.everyAgencies, clean.stateSum!.everyAgencies, "and stays in for a span that avoids the month");
   assert.deepEqual(withZero.stateSum!.years.map((y) => y.agencies), base.stateSum!.years.map((y) => y.agencies), "the ordinary view still counts it as reporting");
