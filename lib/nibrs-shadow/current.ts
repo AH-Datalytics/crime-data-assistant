@@ -42,7 +42,7 @@ export function currentBuildAt(root: string | undefined, execute: (sql: string) 
 
 /** The reader's Part I measures -> the build's column stem (the Final panel has no violent or property sums). */
 export const CURRENT_MEASURE: Record<string, string> = {
-  murder: "murder", homicide: "murder", rape: "rape", robbery: "robbery", aggravated_assault: "assault", burglary: "burglary",
+  murder: "murder", homicide: "murder", homicide_all: "murder", rape: "rape", robbery: "robbery", aggravated_assault: "assault", burglary: "burglary",
   theft: "theft", motor_vehicle_theft: "motor", violent_crime: "violent", property_crime: "property",
 };
 const PARTS: Record<string, string[]> = { violent: ["murder", "rape", "robbery", "assault"], property: ["burglary", "theft", "motor"] };

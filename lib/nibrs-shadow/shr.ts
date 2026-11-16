@@ -90,7 +90,7 @@ export type ShrPlace = { kind: "agency"; ori: string; label: string; state: stri
 /** `group`: conditions of one NIBRS "exists" group, which one person must meet together (Codex SHR-A review 01.3). */
 export type ShrFilter = { dim: ShrDim; codes?: string[]; ages?: [number, number]; group?: number };
 export type ShrQuestion = {
-  measure: "murder" | "homicide" | "justifiable"; unit: "victims" | "offenders"; place: ShrPlace;
+  measure: "murder" | "homicide" | "homicide_all" | "justifiable"; unit: "victims" | "offenders"; place: ShrPlace;
   /** Months inclusive ("1985-01".."2024-12"), already cut to 1985 and the release's latest month. */
   from: string; to: string; grain: "total" | "year" | "month";
   filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
@@ -168,7 +168,7 @@ export const stateOfOri = (ori: string) => ORI_STATE[ori.slice(0, 2)] ?? ori.sli
  */
 export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: ShrBuild, opts: { compare?: boolean } = {}): ShrQuestion | { why: string } {
   if (plan.measures.length !== 1) return { why: "several crimes" };
-  const m = /^(victims|offenders|offenses)\.(murder|homicide|justifiable_homicide)$/.exec(plan.measures[0].id);
+  const m = /^(victims|offenders|offenses)\.(murder|homicide_all|homicide|justifiable_homicide)$/.exec(plan.measures[0].id);
   if (!m) return { why: "not a homicide count" };
   // Murders are counted by victim (CLAUDE.md: person crimes per victim); SHR has no separate offense count.
   const unit = m[1] === "offenders" ? "offenders" : "victims";
@@ -194,7 +194,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     breakdown = { dim, ...(cats[0].bins ? { bins: cats[0].bins.map((b) => [b.from ?? 0, b.to ?? 120] as [number, number]) } : {}) };
   }
   const filters: ShrFilter[] = [];
-  let measure: ShrQuestion["measure"] = m[2] === "justifiable_homicide" ? "justifiable" : (m[2] as "murder" | "homicide");
+  let measure: ShrQuestion["measure"] = m[2] === "justifiable_homicide" ? "justifiable" : (m[2] as "murder" | "homicide" | "homicide_all");
   const conditions = plan.filters.flatMap((f, gi) => (f.kind === "attribute" ? [{ f, group: undefined as number | undefined }] : f.negate ? [null] : f.where.map((w) => ({ f: w, group: gi }))));
   // Two separate conditions on a record's one weapon, relationship or circumstance ("handguns versus rifles") would
   // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
@@ -256,6 +256,8 @@ const ym = (s: string) => Number(s.slice(0, 4)) * 100 + Number(s.slice(5, 7));
 /** The type and circumstance condition of a measure (S4), on shr_record r. */
 function measureWhere(sq: ShrQuestion): string {
   if (sq.measure === "justifiable") return "r.homicide_type = 'A' AND r.circumstance IN ('80', '81')";
+  // P10 (Jeff 2026-11-16): "all homicides" adds the justifiable ones (circumstance 80 and 81) to murder and negligent manslaughter.
+  if (sq.measure === "homicide_all") return "r.homicide_type IN ('A', 'B')";
   return `r.homicide_type IN (${sq.measure === "homicide" ? "'A', 'B'" : "'A'"}) AND r.circumstance NOT IN ('80', '81')`;
 }
 function placeWhere(p: ShrPlace): string {
@@ -382,6 +384,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
+    : sq.measure === "homicide_all" ? "All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides (a felon killed by police or by a private citizen)."
     : "Justifiable homicides are felons killed by police or by a private citizen, as the agencies reported them.");
   if (sq.filters.some((f) => RECORD_DIMS.has(f.dim)) || (sq.breakdown && RECORD_DIMS.has(sq.breakdown.dim)))
     text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
@@ -480,7 +483,7 @@ export function shrCategoryCodes(sq: ShrQuestion): Record<string, string[] | str
 }
 /** "murder victims", "homicide offenders", "justifiable homicide victims". */
 export function shrUnitWords(sq: ShrQuestion): string {
-  const crime = sq.measure === "homicide" ? "homicide" : sq.measure === "justifiable" ? "justifiable homicide" : "murder";
+  const crime = sq.measure === "homicide" ? "homicide" : sq.measure === "homicide_all" ? "all homicide" : sq.measure === "justifiable" ? "justifiable homicide" : "murder";
   return `${crime} ${sq.unit === "offenders" ? "offenders" : "victims"}`;
 }
 /** What is counted, with its filters: "murder victims with a firearm" (Codex SHR-A review 01.9). */
@@ -505,7 +508,7 @@ export function filterWords(f: ShrFilter): string {
  * population asked (the same set as every other city ranking, citySql); only agencies that filed Homicide Reports in
  * every year of the period are ranked, so no city is compared on a partial period (S3: a filing gap is blank, never 0).
  */
-export type ShrRanking = { measure: "murder" | "homicide"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+export type ShrRanking = { measure: "murder" | "homicide" | "homicide_all"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
 
 export function shrRankingSql(rk: ShrRanking, build: ShrBuild, hist: HistoricalBuild): string {
   const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: [], breakdown: null, share: false };
@@ -554,6 +557,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   // Jeff 2026-11-15: no left-out city is named; one plain note.
   text.push("Not every city reports Homicide Reports data. Cities that did not report in this period are not ranked.");
   text.push(rk.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
+    : rk.measure === "homicide_all" ? "All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides (a felon killed by police or by a private citizen)."
     : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.");
   if (rk.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
   if (rk.share) text.push("Share = the city's victims with this detail out of all its murder victims in the period.");
@@ -611,6 +615,7 @@ function answerShrRolling(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   if (blank.length) text.push(`No total for ${blank.map((r) => (r.length > 1 ? `${monthLabel(r[0])} to ${monthLabel(r[r.length - 1])}` : monthLabel(r[0]))).join(", ")}: a month in its window has no Homicide Reports.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
+    : sq.measure === "homicide_all" ? "All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides (a felon killed by police or by a private citizen)."
     : "Justifiable homicides are felons killed by police or by a private citizen, as the agencies reported them.");
   if (sq.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
   if (sq.place.kind !== "agency") text.push(`A ${sq.place.kind === "state" ? "state" : "national"} total here is the sum of what the agencies that filed Homicide Reports reported; nothing is estimated for agencies that didn't.`);

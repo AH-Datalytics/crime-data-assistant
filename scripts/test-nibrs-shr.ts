@@ -89,6 +89,19 @@ assert.equal((both.match(/EXISTS/g) ?? []).length, 1, both);
 assert.match(both, /o\.sex IN \('F'\) AND o\.age BETWEEN 0 AND 17\)/);
 assert.match(shrSql({ ...sq, measure: "homicide" }, build), /homicide_type IN \('A', 'B'\)/, "homicides add negligent manslaughter (S4)");
 assert.match(shrSql(police, build), /r\.homicide_type = 'A' AND r\.circumstance IN \('80', '81'\)/);
+// P10 (Jeff 2026-11-16): "all homicides" adds the justifiable ones: types A and B with no circumstance left out, and the answer says so.
+const everyHomicide = shrQuestionOf(plan({ measures: [{ id: "victims.homicide_all", as: "homicide_all" }] }), { from: "2024-01", to: "2024-12" }, build) as ShrQuestion;
+assert.equal(everyHomicide.measure, "homicide_all");
+const everySql = shrSql(everyHomicide, build);
+assert.match(everySql, /homicide_type IN \('A', 'B'\)/);
+assert.ok(!/circumstance NOT IN/.test(everySql), "justifiable homicides are counted");
+assert.match(shrSql({ ...sq, measure: "homicide" }, build), /circumstance NOT IN \('80', '81'\)/, "plain homicides still leave them out");
+const everyAnswer = answerShr({ ...everyHomicide, grain: "year" }, build, () => [[2024, 7]], { root: "/ci", release: "crimeindex-test", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } as HistoricalBuild);
+assert.ok(everyAnswer.kind === "shr");
+if (everyAnswer.kind === "shr") {
+  assert.ok(everyAnswer.delivered.text.some((t) => /^All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides/.test(t)), JSON.stringify(everyAnswer.delivered.text));
+  assert.ok(!everyAnswer.delivered.text.some((t) => /are left out/.test(t)));
+}
 
 // S3: an agency by year. Filed 2016 and 2018; Crime Index has 0 murders in 2017 (a proper 0); 2019 no filing (blank).
 const hist = { root: "/ci", release: "crimeindex-test", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } as HistoricalBuild;

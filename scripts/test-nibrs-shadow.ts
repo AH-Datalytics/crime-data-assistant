@@ -297,6 +297,24 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+// P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
+// is the murder count with no disclaimer.
+assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
+{
+  const sqlOf = (q: string) => { sqls.length = 0; const o = ask(q); return { o, codes: (sqls[0]?.match(/'(09[ABC])'/g) ?? []).join(",") }; };
+  const plain = sqlOf("homicides in Houston in 2024 by month"), every = sqlOf("all homicides in Houston in 2024 by month"), murder = sqlOf("murders in Houston in 2024 by month");
+  assert.equal(plain.codes, "'09A','09B'");
+  assert.equal(every.codes, "'09A','09B','09C'");
+  assert.equal(murder.codes, "'09A'");
+  const everyText = (as(every.o, "answer") as { delivered: { text: string[] } }).delivered.text;
+  assert.ok(everyText.includes("All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide."), everyText.join(" | "));
+  assert.ok(!(as(plain.o, "answer") as { delivered: { text: string[] } }).delivered.text.some((t) => /justifiable/.test(t)));
+  for (const q of ["all homicides in Texas in 2024", "all homicides in the United States in 2024"]) {
+    const o = as(ask(q), "srs") as { delivered: { text: string[] } };
+    assert.ok(/ murders in 2024\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
+    assert.equal(o.delivered.text.length, 2, `${q}: no disclaimer, only the count and the source`);
+  }
+}
 // Bad-decline audit root causes (coordinator 2026-11-06).
 {
   // 1. A place and no crime asks which crime (D31), never "I couldn't tell what this asks"; staffing keeps its decline.
@@ -1974,6 +1992,28 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(pa.delivered.text.includes("Rate per 100,000 people in the agencies that reported."));
     assert.ok(/per 100,000 people, 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
   }
+}
+// P10 (Jeff 2026-11-16): "all homicides" as a plain count is Crime Index (murders by year, nothing else); with a breakdown of anything
+// it is Homicide Reports, and justifiable homicides are counted and said so.
+{
+  const seen: string[] = [];
+  const hs = (sql: string): unknown[][] => { seen.push(sql); return /count\(DISTINCT agency_key\)/.test(sql) ? [[2020, 1, ["ori9:X"]], [2021, 1, ["ori9:X"]]] : /AS k1/.test(sql) ? [[2020, "Firearm", 5], [2021, "Knife", 2]] : []; };
+  const d2 = { ...deps, execute: hs, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const plainCount = shadowAnswer("Show me data about all homicides reported in South Carolina since 2020", d2);
+  assert.equal(plainCount.kind, "srs", JSON.stringify(plainCount).slice(0, 300));
+  if (plainCount.kind === "srs") {
+    assert.ok(/^South Carolina: murders by year, 2020 to /.test(plainCount.delivered.text[0]), plainCount.delivered.text[0]);
+    assert.deepEqual(plainCount.delivered.table.columns.length, 2, "a year and a count, no breakdown");
+    assert.ok(!plainCount.delivered.text.some((t) => /homicide|justifiable|disclaim/i.test(t)), "no disclaimer on Crime Index");
+  }
+  seen.length = 0;
+  const byWeapon = shadowAnswer("all homicides in South Carolina by weapon since 2020", d2);
+  assert.equal(byWeapon.kind, "shr", JSON.stringify(byWeapon).slice(0, 300));
+  if (byWeapon.kind === "shr") {
+    assert.ok(byWeapon.delivered.text.some((t) => /^All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides/.test(t)), JSON.stringify(byWeapon.delivered.text));
+  }
+  assert.ok(seen.some((q) => /homicide_type IN \('A', 'B'\)/.test(q)) && !seen.some((q) => /circumstance NOT IN \('80', '81'\)/.test(q)), "justifiable homicides are counted");
 }
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many

@@ -30,7 +30,9 @@ const singular = (s: string) => s.replace(/(?<=[a-z]{3})s\b/g, "");
 
 /** Label words and plan ids (draft layer, without the unit prefix) that name the same measure. Anything else is unknown. */
 const MEASURES: Record<string, string> = {
-  murder: "murder", homicide: "murder", "murder and non negligent manslaughter": "murder", "murder and nonnegligent manslaughter": "murder",
+  // P10 (Jeff 2026-11-16): murder, homicide and all homicide are three counts on NIBRS and Homicide Reports; on Crime Index the
+  // homicide words are the murder count (see homicideAsMurder).
+  murder: "murder", homicide: "homicide", "homicide all": "all homicide", "all homicide": "all homicide", "murder and non negligent manslaughter": "murder", "murder and nonnegligent manslaughter": "murder",
   rape: "rape", robbery: "robbery", "aggravated assault": "aggravated assault", "simple assault": "simple assault", assault: "assault",
   burglary: "burglary", theft: "theft", "larceny theft": "theft", larceny: "theft", "motor vehicle theft": "motor vehicle theft", "auto theft": "motor vehicle theft", "car theft": "motor vehicle theft",
   "theft from motor vehicle": "theft from motor vehicle", "vehicle burglary": "theft from motor vehicle", shoplifting: "shoplifting", arson: "arson",
@@ -45,6 +47,8 @@ export function measureName(s: string): string | null {
   const n = singular(norm(s.replace(/^[a-z_]+\./, "").replace(/_cleared$/, "").replace(/_/g, " ")));
   return MEASURES[n] ?? MEASURES[norm(s)] ?? null;
 }
+/** P10: on Crime Index the words homicide and all homicides are the murder count. */
+export const homicideAsMurder = (n: string | null): string | null => (n === "homicide" || n === "all homicide" ? "murder" : n);
 const UNITS: Record<string, string> = {
   victim: "victim", offense: "offense", incident: "incident", offender: "offender", arrest: "arrest", arrestee: "arrest", "group b arrest": "arrest", group_b_arrest: "arrest",
   "fbi composite": "fbi standard", "fbi standard": "fbi standard", fbi_standard: "fbi standard", "victim robbery by offense": "fbi standard", dollar: "dollars", dollars: "dollars",
@@ -377,7 +381,9 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
   // Measures with their units, kept together. A share's numerator and denominator roles cannot be read from the label.
   const ratio = actual.measures.some((m) => m.role !== "value");
   const aPairs = ratio ? [...new Set(actual.measures.map((m) => `${measureName(m.name) ?? "?"}|${unitName(m.unit) ?? "?"}`))] : actual.measures.map((m) => `${measureName(m.name) ?? "?"}|${unitName(m.unit) ?? "?"}`);
-  const ePairs = expected.measures.map((m) => `${measureName(m.name) ?? "?"}|${unitName(m.unit) ?? "?"}`);
+  // Crime Index (Current Trends and Historical) holds murder only: a label that asks homicide or all homicides is met by the murder count.
+  const crimeIndex = actual.meaning.source === "historical" || actual.meaning.source === "rtci";
+  const ePairs = expected.measures.map((m) => { const n = measureName(m.name); return `${(crimeIndex ? homicideAsMurder(n) : n) ?? "?"}|${unitName(m.unit) ?? "?"}`; });
   decide("measures", ePairs.map((x) => (x.includes("?") ? null : x)), aPairs.map((x) => (x.includes("?") ? null : x)));
   // A share of a measure in its own units (the share cleared) reads its roles from the plan, against a label whose
   // denominator is all of that measure.
