@@ -99,7 +99,19 @@ export type People = {
   unsupported?: string;
   /** "teen" or "teenage" was the word (ages 13 to 19 for a Homicide Reports ranking), not "juvenile" or "minor". */
   teen?: boolean;
+  /** The age words the reader took out, with the text that followed each: put back where a question is restated to the user. */
+  restore?: { word: string; anchor: string; article?: string }[];
 };
+/** The question with the age words the reader took out put back ("show me crimes with a teen offender"), never a sentence without them. */
+export function restoreAgeWords(q: string, people: People | null | undefined): string {
+  let out = q;
+  for (const r of people?.restore ?? []) {
+    const i = out.toLowerCase().indexOf(r.anchor.toLowerCase());
+    if (i < 0) continue;
+    out = `${out.slice(0, i)}${r.article ? `${r.article} ` : ""}${r.word} ${out.slice(i)}`;
+  }
+  return out;
+}
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
@@ -619,7 +631,7 @@ function readPeople(text0: string): { text: string; people: People | null } {
     p.where.push({ who: "victim", attr: "age", range: ageOf(mo[1]), paired: false });
     if (/^teen/i.test(mo[1])) p.teen = true;
   }
-  let singular = false;
+  let singular = false, ageAt = 0, ageWord = "";
   for (const [age, person] of [[OLD_AGE, OLD_PERSON], [NEW_AGE, NEW_PERSON]]) {
     if (cut(new RegExp(String.raw`\b${age}\s+(?=(?:[a-z]+\s+){0,3}?${person}\b)`, "i"), (m) => {
       const noun = new RegExp(String.raw`^\s*\S+\s+(?:[a-z]+\s+){0,3}?${person}\b`, "i").exec(text.slice(m.index))?.[1].toLowerCase();
@@ -631,7 +643,15 @@ function readPeople(text0: string): { text: string; people: People | null } {
       p.where.push({ who, attr: "age", range: ageOf(m[0]), paired: false });
       // "with a teen victim" leaves "a victim": the article goes, the person stays ("with victim" never reads "a offender").
       singular = /^(?:victim|offender|arrestee)\b/i.test(noun ?? "");
-    })) { if (singular) text = text.replace(/\b(?:a|an)\s+(?=(?:victim|offender|arrestee)\b)/i, ""); break; }
+      ageAt = m.index; ageWord = m[0].trim();
+    })) {
+      // The text after the word is the anchor a restatement puts the word back in front of.
+      const anchor = text.slice(ageAt, ageAt + 24).replace(/\s+$/, "");
+      const article = singular ? /\b(a|an)\s+$/i.exec(text.slice(0, ageAt))?.[1] : undefined;
+      if (singular) text = text.replace(/\b(?:a|an)\s+(?=(?:victim|offender|arrestee)\b)/i, "");
+      (p.restore ??= []).push({ word: ageWord, anchor, ...(article ? { article } : {}) });
+      break;
+    }
   }
   // Arrests (2026-11-11): "arrests of people ..." are arrests; an age range ("aged 18 to 21", "ages 18-24", "between the
   // ages of 18 and 24") is the counted person's own, the arrestee's for arrests, the victim's or offender's otherwise.
