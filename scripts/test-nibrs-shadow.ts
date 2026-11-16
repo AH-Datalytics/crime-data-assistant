@@ -673,8 +673,11 @@ for (const q of ["violent crimes by offender race in Detroit in 2023", "violent 
   assert.equal(done.period.from, "2023-01");
 }
 {
-  const d = as(ask("nationwide property crimes by victim age by year for 2017 to 2025"), "decline");
-  assert.match(d.explanation, /property crime in the United States broken down by victim age over several years takes too long to count here/);
+  for (const q of ["nationwide property crimes by victim age by year for 2017 to 2025", "nationwide property crimes by victim age in 2024"]) {
+    const d = as(ask(q), "decline");
+    assert.equal(d.explanation, `This isn't available: property crime in the United States broken down by victim age takes too long to count here. Ask for one state, for example "property crimes by victim age in Texas in 2024", or for one agency.`, q);
+    assert.ok(!/\byet\b/.test(d.explanation));
+  }
 }
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
