@@ -1901,6 +1901,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(dec.kind === "decline" && dec.explanation === "NIBRS has no reports from the Dallas Police Department in this period.", JSON.stringify(dec).slice(0, 300));
   if (dec.kind === "decline") assert.equal(dec.alternative?.label, 'Ask instead: "Dallas murders per month in 2024"');
 }
+// Rolling 12 months from Homicide Reports (shared helper rolling.ts): a state's firearm murders, with no step left for a
+// year or a window the source can't give.
+{
+  const rstub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [2017, 2018, 2019, 2020].map((y) => [y, 10, ["ori9:A"]])
+    : /state_crime|sum\(population\)/.test(sql) ? [] : /GROUP BY/.test(sql) ? [2017, 2018, 2019, 2020].flatMap((y) => Array.from({ length: 12 }, (_, m) => [y, m + 1, 2])) : []);
+  const rdeps2 = { ...deps, execute: rstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2020-12", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const nc = shadowAnswer("North Carolina firearm homicides rolling over 12 months since 2018", rdeps2);
+  assert.equal(nc.kind, "shr", JSON.stringify(nc).slice(0, 300));
+  if (nc.kind === "shr") { assert.equal(nc.delivered.table.rows.length, 36); assert.deepEqual(nc.delivered.table.rows[0], ["2018-01", 24]); }
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.

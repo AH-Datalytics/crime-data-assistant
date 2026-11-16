@@ -27,6 +27,7 @@ import { fmt, periodWords } from "./deliver";
 import { stateName } from "./places";
 import { citySql, cityNameSql, type HistoricalBuild } from "./historical";
 import { rankAgencies } from "../nibrs-plan/transforms";
+import { firstNeeded, rollingSums, unknownRuns } from "./rolling";
 
 export const SHR_FIRST_YEAR = 1985;
 export const SHR_SOURCE = "Source: FBI Supplementary Homicide Reports.";
@@ -98,6 +99,8 @@ export type ShrQuestion = {
   ranking?: { direction: "top" | "bottom"; limit: number; minPopulation: number | null };
   /** Sentences the answer adds (what the source does not record of what was asked), after the counting rules. */
   notes?: string[];
+  /** A rolling window: each month shows the total of that month and the months before it (shared helper rolling.ts). */
+  rolling?: { months: number };
 };
 export type ShrAnswer = {
   kind: "shr"; question: ShrQuestion; period: { from: string; to: string };
@@ -164,7 +167,8 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   if (!m) return { why: "not a homicide count" };
   // Murders are counted by victim (CLAUDE.md: person crimes per victim); SHR has no separate offense count.
   const unit = m[1] === "offenders" ? "offenders" : "victims";
-  if (plan.transforms.length) return { why: "a change, a ranking or a rolling window" };
+  const roll = plan.transforms.length === 1 && plan.transforms[0].kind === "rolling" ? plan.transforms[0] : null;
+  if (plan.transforms.length && !roll) return { why: "a change, a ranking or a rolling window" };
   const stats = plan.statistics.map((s) => s.kind);
   if (!(stats.length === 1 && stats[0] === "count") && !(stats.length === 2 && stats[0] === "count" && stats[1] === "share")) return { why: "a rate or another statistic" };
   if (plan.geography.places.length !== 1) return { why: "several places" };
@@ -229,7 +233,9 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   if (period.from > build.latestMonth) return { why: "after the latest month" };
   const from = period.from < first ? first : period.from;
   const grain = time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
-  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(notes.length ? { notes } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
+  // A rolling window is by month, one count, no breakdown (the Engine and group 7 build the rest on rolling.ts).
+  if (roll && (grain !== "month" || breakdown || stats.length !== 1)) return { why: "a rolling window of this form" };
+  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(notes.length ? { notes } : {}), ...(roll ? { rolling: { months: roll.months } } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
 }
 
 /* ------------------------------------------------------------------ the answer */
@@ -289,6 +295,7 @@ function filingSql(sq: ShrQuestion, build: ShrBuild): string {
 }
 
 export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: string) => unknown[][], hist?: HistoricalBuild): ShrAnswer | ShrDecline {
+  if (sq.rolling) return answerShrRolling(sq, build, execute, hist);
   const fromY = Number(sq.from.slice(0, 4)), toY = Number(sq.to.slice(0, 4));
   const filed = new Map<number, { agencies: number; keys: string[] }>();
   for (const r of execute(filingSql(sq, build))) filed.set(Number(r[0]), { agencies: Number(r[1]), keys: (r[2] as string[] | null) ?? [] });
@@ -550,3 +557,62 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
     read: { table: "shr_victim + shr_record + shr_agency_year", release: build.release },
   };
 }
+
+/**
+ * A rolling window of a place's murder victims by month (shared helper rolling.ts): each month shows the total of that
+ * month and the months before it. A month with no Homicide Reports filing for the place (S3: a year with no filing is
+ * blank) makes every window that reaches it blank; months before 1985 are blank too, never counted as 0.
+ */
+function answerShrRolling(sq: ShrQuestion, build: ShrBuild, execute: (sql: string) => unknown[][], hist?: HistoricalBuild): ShrAnswer | ShrDecline {
+  const n = sq.rolling!.months;
+  const need = firstNeeded(sq.from, n);
+  const readFrom = need < `${SHR_FIRST_YEAR}-01` ? `${SHR_FIRST_YEAR}-01` : need;
+  const base: ShrQuestion = { ...sq, rolling: undefined, from: readFrom, grain: "month" };
+  const fromY = Number(readFrom.slice(0, 4)), toY = Number(sq.to.slice(0, 4));
+  const filed = new Set<number>();
+  for (const r of execute(filingSql(base, build))) filed.add(Number(r[0]));
+  const properZero = new Set<number>();
+  if (sq.place.kind === "agency" && hist) {
+    const missing = Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).filter((y) => !filed.has(y) && y <= hist.lastYear);
+    if (missing.length) for (const r of execute(`SELECT year FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE ori = ${q(sq.place.ori)} AND murder_total = 0 AND year IN (${missing.join(", ")})`))
+      properZero.add(Number(r[0]));
+  }
+  const counted = (y: number) => filed.has(y) || properZero.has(y);
+  const where = sq.place.kind === "agency" ? sq.place.label : sq.place.kind === "state" ? stateName(sq.place.code) : "The United States";
+  const shownYears = Array.from({ length: Number(sq.to.slice(0, 4)) - Number(sq.from.slice(0, 4)) + 1 }, (_, i) => Number(sq.from.slice(0, 4)) + i);
+  if (!shownYears.some(counted) && !Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some(counted))
+    return { kind: "shr-decline", explanation: `${where === "The United States" ? "No agency" : where} filed no Homicide Reports for ${periodWords(sq.from, sq.to)}${sq.place.kind === "agency" ? "" : " in this place"}.` };
+  const got = new Map<string, number>();
+  for (const r of execute(shrSql(base, build))) got.set(`${r[0]}-${String(r[1]).padStart(2, "0")}`, Number(r[2]));
+  const cells: { ym: string; value: number | null }[] = [];
+  for (let k = Number(readFrom.slice(0, 4)) * 12 + Number(readFrom.slice(5, 7)) - 1; k <= Number(sq.to.slice(0, 4)) * 12 + Number(sq.to.slice(5, 7)) - 1; k++) {
+    const ym = `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+    cells.push({ ym, value: counted(Number(ym.slice(0, 4))) ? got.get(ym) ?? 0 : null });
+  }
+  const rows = rollingSums(cells, n, sq.from, sq.to);
+  const what = shrWhat(sq);
+  const text = [`${where}: rolling ${n}-month ${what}, ${periodWords(sq.from, sq.to)}.`,
+    `Each month shows the total of that month and the ${n - 1} months before it.`,
+    "From the FBI's Supplementary Homicide Reports: the homicides agencies reported to the FBI, each victim counted."];
+  const blank = unknownRuns(rows);
+  if (blank.length) text.push(`No total for ${blank.map((r) => (r.length > 1 ? `${monthLabel(r[0])} to ${monthLabel(r[r.length - 1])}` : monthLabel(r[0]))).join(", ")}: a month in its window has no Homicide Reports.`);
+  text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
+    : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
+    : "Justifiable homicides are felons killed by police or by a private citizen, as the agencies reported them.");
+  if (sq.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
+  if (sq.place.kind !== "agency") text.push(`A ${sq.place.kind === "state" ? "state" : "national"} total here is the sum of what the agencies that filed Homicide Reports reported; nothing is estimated for agencies that didn't.`);
+  for (const nt of (sq as { notes?: string[] }).notes ?? []) text.push(nt);
+  text.push(SHR_SOURCE);
+  const period = { from: sq.from, to: sq.to };
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true as const },
+    { binding: { kind: "statistic", as: "count" }, header: `Rolling ${n}-month ${what}` }];
+  return {
+    kind: "shr", question: sq, period,
+    meaning: { source: "shr", places: [sq.place], filters: sq.filters.map(filterWords), measures: [{ name: sq.measure, unit: sq.unit === "victims" ? "victim" : "offender" }],
+      period, groupings: ["month"], statistic: "count" },
+    delivered: { table: { columns, rows: rows.map((r) => [r.ym, r.value]) }, text },
+    read: { table: `${sq.unit === "victims" ? "shr_victim" : "shr_offender"} + shr_record`, release: build.release },
+  };
+}
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const monthLabel = (ym: string) => `${MONTH_NAMES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;

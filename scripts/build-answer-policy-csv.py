@@ -684,6 +684,12 @@ ROWS = [
      "\"Dallas vs Houston murders per month\" is a Crime Index table from January 2017; \"... according to NIBRS\" for an agency with no reports is declined with Crime Index offered.",
      "Jeff 2026-11-15 via coordinator: \"Again, why would this run in NIBRS? This should be filled by Crime Index, if they ask for NIBRS specifically then it should decline and offer Crime Index as the only option.\" The decline wording approved as written.",
      "Decided 2026-11-15 (Jeff)", NEW),
+    ("P114", "\"North Carolina firearm homicides rolling over 12 months since 2018\", \"what is the homicide rate by firearm in Pennsylvania ...\" (not this)",
+     "Routed to the Homicide Reports tab: \"this form of the question isn't available here yet\".",
+     "A rolling window of a place's murder victims by month comes from Homicide Reports: each month shows the total of that month and the 11 months before it (the window length asked). A month with no Homicide Reports filing for the place, or before 1985, makes every window that reaches it blank, never 0, and one line names the months with no total. Counts only (no rate, breakdown or several crimes yet).",
+     "\"North Carolina firearm homicides rolling over 12 months since 2018\" shows Month and the rolling 12-month total.",
+     "Coordinator 2026-11-15: GO on the rolling window helper and its first use; the wording lines are Engine 2.0's, for Jeff to confirm.",
+     "Built 2026-11-15; wording to confirm", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
