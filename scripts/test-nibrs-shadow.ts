@@ -120,6 +120,14 @@ assert.deepEqual(asked(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city
 const named = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates, places)) : r.kind);
 assert.deepEqual(named(at("city:Los Angeles:", "Los Angeles")), ["Los Angeles Police Department", "Los Angeles County Sheriff's Department"]);
 assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+// P16 and P28 (Jeff 2026-11-16): "the city of X" names the city's principal police agency, so a county of the name is not asked about;
+// the plain name still asks (P28). A city of the name in several states still asks which.
+assert.equal(ori(at("ambiguous:San Diego", "City of San Diego, California")), "CA0371100");
+assert.equal(ori(at("ambiguous:Los Angeles", "the city of Los Angeles")), "CA0194200");
+assert.equal(ori(at("ambiguous:St. Louis", "City of St. Louis")), "MOSPD0000");
+assert.deepEqual(named(at("ambiguous:San Diego", "San Diego, California")), ["San Diego Police Department", "San Diego County Sheriff's Office"]);
+assert.equal(at("ambiguous:Kansas City", "city of Kansas City").kind, "ask", "two states have a Kansas City");
+assert.equal(ori(at("county:St. Louis County:MO", "St. Louis County")), "MO0950000", "a county named stays the county");
 assert.equal(agencyName(places, "CA0190000"), "Los Angeles County Sheriff's Department");
 assert.deepEqual(asked(at("ambiguous:St Louis", "St Louis")), ["St. Louis city, Missouri", "St. Louis County, Missouri"], "St. Louis County, Minnesota is under 100,000");
 assert.deepEqual(asked(at("ambiguous:Washington", "Washington")), ["Washington, D.C.", "Washington state", "Washington County, Oregon", "Washington County, Maryland"]);
