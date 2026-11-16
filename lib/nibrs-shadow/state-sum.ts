@@ -74,11 +74,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // One category (coordinator 2026-11-04), by year or not; a month or two categories are not built yet.
   const catDims = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
   if (plan.groupings.some((g) => g.dimension.startsWith("time.") && g.dimension !== "time.year") || catDims.length > 1)
-    return decline("This isn't available yet: a state or national sum by month or by two categories.");
+    return decline("This isn't available: a state or national sum by month or by two categories.");
   if (catDims.length && isRate) return decline("Rates by category aren't given for a state or the nation: there is no population for each group.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
-  if (years.length > 1 && !yearG) return decline("This isn't available yet: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
-  if (isRate && yearG) return decline("This isn't available yet: a state or national rate by year.");
+  if (years.length > 1 && !yearG) return decline("This isn't available: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
+  if (isRate && yearG) return decline("This isn't available: a state or national rate by year.");
   const where = place.kind === "national" ? "the United States" : stateName((place as { code: string }).code);
   const Where = place.kind === "national" ? "United States" : where;
   // A share always with its one decimal ("89.0%").

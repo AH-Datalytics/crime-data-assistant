@@ -87,7 +87,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   if (q.statistic === "clearance_rate") {
     if (q.place.kind !== "national") return { kind: "srs-decline", explanation: "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate." };
     // A change in a clearance rate is not computed here (Codex clearance review 01.1).
-    if (q.comparison) return { kind: "srs-decline", explanation: "This isn't available yet: a change in a clearance rate. Ask for the clearance rate by year." };
+    if (q.comparison) return { kind: "srs-decline", explanation: "This isn't available: a change in a clearance rate. Ask for the clearance rate by year." };
     // By year (item 7: "National murder clearance rate since 1960"): the file's published percentage for each year; a
     // year with none is blank and named; years outside the file are named.
     if (covered.length !== 1 || q.byYear || wanted.length !== 1) {
@@ -180,7 +180,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
 export function answerSrsSeveral(q: Omit<SrsQuestion, "place">, places: SrsPlace[]): SrsAnswer | SrsDecline {
   const m = SRS_MEASURE[q.measure];
   if (q.comparison || q.statistic === "clearance_rate")
-    return { kind: "srs-decline", explanation: `This isn't available yet: ${q.comparison ? "a change" : "a clearance rate"} for more than one state or the nation. Ask for one place.` };
+    return { kind: "srs-decline", explanation: `This isn't available: ${q.comparison ? "a change" : "a clearance rate"} for more than one state or the nation. Ask for one place.` };
   const wanted = range(q.from, q.to);
   const covered = wanted.filter((y) => y >= SRS_YEARS.first && y <= SRS_YEARS.last);
   const outside = wanted.filter((y) => !covered.includes(y));

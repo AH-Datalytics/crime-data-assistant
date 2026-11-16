@@ -1052,7 +1052,7 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   const c = got.continuation!;
   if (c.kind === "decline" && c.notBuilt) return one(d("", wantLeads, "refused: this build does not hold the months (not built)", "unverified"));
   // Not available yet (a capability the shadow doesn't have): the plain prefix, or the plain sentence for an internal reason (P74).
-  if (c.kind === "decline" && (/^This isn't available yet/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
+  if (c.kind === "decline" && (/^This isn't available/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
   // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
   if (c.kind === "srs" || c.kind === "historical" || c.kind === "current" || c.kind === "shr" || c.kind === "hate" || c.kind === "route")
     return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : c.kind === "shr" ? "a Homicide Reports answer" : c.kind === "hate" ? "a hate crime answer" : "a historical-file answer", "unverified"));

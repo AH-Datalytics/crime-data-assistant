@@ -40,7 +40,7 @@ export const BANNED: { re: RegExp; what: string }[] = [
  * What a user reads when a part of the engine can't answer this combination: a compiler, validation or contract reason
  * is kept in the decline's `detail` for logs, never shown.
  */
-export const NOT_YET = "I can't answer this combination yet. Try a simpler version, for example one crime in one place for one year.";
+export const NOT_YET = "I can't answer this combination. Try a simpler version, for example one crime in one place for one year.";
 
 /** The text a check sees: the user's own words, quoted back, are left out. */
 const unquoted = (text: string) => text.replace(/"[^"]*"/g, '""');
@@ -56,25 +56,25 @@ const q = (x: string) => `"${x.trim()}"`;
 /** The reader's reasons ("I can't apply "X": <reason> I haven't answered ..."), each as a plain sentence naming X. */
 export const REASONS: Record<string, (x: string) => string> = {
   "I report what NIBRS records; I can't explain causes.": () => "The data shows how many crimes were reported; it can't say why they rose or fell.",
-  "that is answered only by its own fixed path, which couldn't answer this request.": (x) => `I can't pick ${q(x)} agencies for you yet. Name the agencies to compare instead, for example "robberies in Denver and Portland in 2024".`,
+  "that is answered only by its own fixed path, which couldn't answer this request.": (x) => `I can't pick ${q(x)} agencies for you. Name the agencies to compare instead, for example "robberies in Denver and Portland in 2024".`,
   "one counting unit per question; ask for victims, offenders, arrests or offenses separately.": () => "I can count victims, offenders, arrests or offenses, one at a time; this question asks for more than one.",
   "I couldn't resolve that place to one NIBRS agency, a state or the nation.": (x) => `I couldn't find ${q(x)} as a police agency, a state or the nation.`,
   "I couldn't read that as a period.": (x) => `I couldn't tell which period ${q(x)} means.`,
   // Jeff 2026-11-05: "a better answer to that is that we don't have LEOKA data in yet"; plain, no extra notes.
   "the data has no election results or party control, so places can't be grouped by them.": (x) => `The data has no election results or party control, so places can't be grouped by ${q(x)}.`,
-  "we don't have LEOKA data in yet.": () => "We don't have LEOKA data (officers killed and assaulted) in yet.",
+  "we don't have LEOKA data.": () => "We don't have LEOKA data (officers killed and assaulted).",
   "the data covers U.S. law enforcement agencies only.": (x) => `The data covers U.S. law enforcement agencies only, so there are no figures for ${q(x)}.`,
   "I give one breakdown per answer; ask for one breakdown at a time.": (x) => `I can break the numbers down one way at a time; ${q(x)} would be a second breakdown.`,
   "rates are given per 100,000 people.": () => "Rates are given per 100,000.",
-  "I rank places by a level, not by a change, in this version.": () => "Places can be ranked by their numbers for one year, not yet by how much they changed. For example: \"Which Texas cities had the most robberies in 2024?\"",
+  "I rank places by a level, not by a change, in this version.": () => "Places can be ranked by their numbers for one year, not by how much they changed. For example: \"Which Texas cities had the most robberies in 2024?\"",
   "I can apply one minimum population (\"at least\" or \"over\"), not a maximum.": () => "A ranking can take one minimum population (\"at least\" or \"over\"), not a maximum.",
   "a ranking covers the nation or one state.": () => "A ranking covers the cities of one state or of the nation.",
   "a ranking covers a full year.": () => "A ranking covers one full year.",
   "states are ranked without a population minimum.": () => "States are ranked without a population minimum.",
   "a state ranking covers every state; it can't be limited to one place.": () => "A ranking of states covers every state; it can't be limited to one place.",
-  "a combined category counts victims and offenses together, and states aren't ranked on a mixed count in this version.": () => "This group of crimes counts victims for some crimes and offenses for others, so states can't be ranked on it yet.",
-  "rankings count each offense in its standard unit (victims for crimes against persons, offenses otherwise); a ranking in another unit isn't built.": () => "Rankings count victims for crimes against people and offenses for other crimes; other counts aren't available for rankings yet.",
-  "a ranking of only part of an offense isn't built.": () => "Rankings of part of a crime (for example only robberies with a firearm) aren't available yet.",
+  "a combined category counts victims and offenses together, and states aren't ranked on a mixed count in this version.": () => "This group of crimes counts victims for some crimes and offenses for others, so states can't be ranked on it.",
+  "rankings count each offense in its standard unit (victims for crimes against persons, offenses otherwise); a ranking in another unit isn't built.": () => "Rankings count victims for crimes against people and offenses for other crimes; other counts aren't available for rankings.",
+  "a ranking of only part of an offense isn't built.": () => "Rankings of part of a crime (for example only robberies with a firearm) aren't available.",
   "I compare one measure for one place between two named years (for example \"from 2023 to 2025\").": () => "I can compare one crime in one place between two years, for example \"from 2023 to 2025\".",
   "a share covers one period as a whole; ask for each year on its own.": () => "A share covers one period as a whole; ask for each year on its own.",
   "one period per answer.": (x) => `I can answer for one period at a time; ${q(x)} would be a second one. Ask for each period on its own.`,

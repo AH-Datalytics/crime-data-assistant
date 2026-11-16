@@ -464,7 +464,7 @@ for (const q of ["murders of sheriffs in King County, Washington in 2024", "murd
   "murders with sheriffs killed with firearms in King County, Washington in 2024", "officers killed by gunfire in 2024",
   "assaults on police officers in Chicago by zip code in 2024"]) {
   const d = as(ask(q), "decline");
-  assert.equal(d.explanation, "We don't have LEOKA data (officers killed and assaulted) in yet.", q);
+  assert.equal(d.explanation, "We don't have LEOKA data (officers killed and assaulted).", q);
   assert.equal(d.alternative, null, q);
   assert.equal(jargon(d.explanation).length, 0, q);
 }
@@ -570,7 +570,7 @@ assert.ok(ytd.delivered.text.includes("The data runs through September 2026: thi
 // All years by default (Jeff 2026-11-11): a trend with no range is answered for every month in the data, not asked.
 assert.deepEqual(as(ask("Carjackings in Memphis by month"), "answer").period, { from: "2017-01", to: "2026-09" });
 // No Historical build here: no crime-kind button could run, so a plain decline, never dead buttons (coordinator 2026-11-02).
-assert.match(as(ask("How many crimes were there in Detroit in 2024?"), "decline").explanation, /^This isn.t available here yet./, "no source that is not loaded is named");
+assert.match(as(ask("How many crimes were there in Detroit in 2024?"), "decline").explanation, /^This isn.t available here\./, "no source that is not loaded is named");
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
 assert.deepEqual(kc.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [
@@ -892,7 +892,7 @@ assert.deepEqual([ct.reason, ct.alternative!.label], ["court_outcome", "Arrests 
 const typo = as(ask("Shoplfting in Memphis in 2023"), "answer");
 assert.equal(typo.delivered.text.at(-2), 'Read "Shoplfting" as shoplifting.');
 const burg = as(ask("Burglaries in Memphis in 2023"), "decline");
-assert.match(burg.explanation, /^This isn.t available here yet./);
+assert.match(burg.explanation, /^This isn.t available here\./);
 // P74: the nearest answerable question, shown whole on the button, run only when chosen.
 assert.deepEqual(burg.alternative, { label: 'Ask instead: "Burglaries in Memphis in 2023 according to NIBRS"', question: "Burglaries in Memphis in 2023 according to NIBRS", role: "other_source", targetSource: "nibrs" });
 
@@ -1009,7 +1009,7 @@ const fcCmp = as(ask("Will shoplifting increase in Detroit in 2027 compared with
 assert.equal(fcCmp.reason, "forecast");
 const fcAltCmp = as(fcCmp.alternative!.continuation!, "decline");
 assert.deepEqual([fcAltCmp.notBuilt, /2016 to 2025/.test(fcAltCmp.explanation)], [true, true], "the trend alternative is the last 10 complete years (before this build), not the forecast's comparison");
-assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /^This isn.t available here yet./);
+assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /^This isn.t available here\./);
 // Scoring: the comparison's periods are checked against the label; prose must be the templates with the table's numbers;
 // a rolling answer must show every displayed month.
 const lab309 = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2022-01", to: "2023-06" },
@@ -1213,7 +1213,7 @@ assert.deepEqual(span.delivered.table.rows.map((x) => x[0]), ["1960", "1961", "1
 assert.ok(span.delivered.text.includes("State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them."));
 assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_release_coverage");
 assert.equal(as(ask("Aggravated assault clearance rate in Ohio in 2023"), "decline").reason, "not_recorded_in_nibrs", "P18");
-assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /no state clearance rate.*not yet decided/);
+assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /no state clearance rate.*not decided/);
 // Routes (P53): the current year to Current Trends, murders by relationship to Homicide Reports; named, not run.
 assert.deepEqual([ask("Robberies in Texas this year").kind, (ask("Robberies in Texas this year") as { source: string }).source], ["route", "rtci"]);
 assert.equal((ask("Murders in the US by victim-offender relationship in 2023") as { source?: string }).source, "shr");
@@ -1747,7 +1747,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
 {
   const jeff = ask("chicago vs memphis carjackings per year since 2022");
   assert.ok(jeff.kind !== "decline" || !jeff.alternative || /chicago/i.test(jeff.alternative.question ?? "") && /memphis/i.test(jeff.alternative.question ?? ""), JSON.stringify(jeff).slice(0, 300));
-  assert.ok(jeff.kind !== "decline" || !/^This isn't available yet: to compare/i.test(jeff.explanation), "vs is read as places side by side");
+  assert.ok(jeff.kind !== "decline" || !/^This isn't available: to compare/i.test(jeff.explanation), "vs is read as places side by side");
   const cmp = ask("Chicago compared to Memphis carjackings in 2024");
   assert.ok(cmp.kind === "answer" && cmp.plan.geography.places.length === 2, JSON.stringify(cmp).slice(0, 200));
 }

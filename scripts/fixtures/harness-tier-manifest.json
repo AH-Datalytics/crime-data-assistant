@@ -2734,6 +2734,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "Hate crimes in the new engine (Jeff 2026-11-15): answered from the hate crime export only, never NIBRS; the release manifest check, the bias code and distinct-incident SQL, the latest-date rule, the reporting caveat; a stub executor stands in for DuckDB"
+    },
+    {
+      "id": "test-no-yet",
+      "tier": "F",
+      "script": "scripts/test-no-yet.js",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "no \"yet\" in what the new engine says to a reader (Jeff 2026-11-15): reads lib/nibrs-shadow, lib/nibrs-plan and lib/answer-contract source files only, no database, no model, no network"
     }
   ]
 }

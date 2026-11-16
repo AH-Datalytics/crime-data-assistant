@@ -527,7 +527,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   const fromY = Number(rk.from.slice(0, 4)), toY = Number(rk.to.slice(0, 4));
   // Offenders' details aren't a city ranking's here.
   if (rk.filters.some((f) => f.dim.startsWith("offender.")))
-    return { kind: "shr-decline", explanation: "This isn't available yet: cities ranked by the offenders' details." };
+    return { kind: "shr-decline", explanation: "This isn't available: cities ranked by the offenders' details." };
   const got = execute(shrRankingSql(rk, build, hist));
   const entries = got.map((r) => {
     const total = Number(r[5]), matched = Number(r[6]), filedAll = r[4] === true || r[4] === 1;
