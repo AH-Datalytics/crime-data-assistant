@@ -63,9 +63,19 @@ export function soundex(value: string): string {
   return (result + "000").slice(0, 4);
 }
 
+/** The normalized form of each text seen (the catalog's ~80,000 aliases are normalized once, not on every search). */
+const NORM_CACHE = new Map<string, string>();
 function norm(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  let out = NORM_CACHE.get(value);
+  if (out === undefined) {
+    out = value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    if (NORM_CACHE.size < 400_000) NORM_CACHE.set(value, out);
+  }
+  return out;
 }
+
+/** The answers already given for the built-in catalog, by normalized text: a question is read many times and asks the same thing each time. */
+const RESULT_CACHE = new Map<string, FuzzyPlaceResult>();
 
 /** Distance budget scales with length — 1 typo in short names, more in long ones. */
 function distanceBudget(len: number): number {
@@ -83,6 +93,17 @@ export function fuzzyResolvePlace(
   text: string,
   catalog: GeoPlaceCatalogEntry[] = GEO_PLACE_CATALOG,
 ): FuzzyPlaceResult {
+  // The built-in catalog never changes while the process runs, so its answers are kept (a caller passing its own catalog is not).
+  if (catalog !== GEO_PLACE_CATALOG) return searchCatalog(text, catalog);
+  const key = norm(text);
+  const known = RESULT_CACHE.get(key);
+  if (known) return known;
+  const result = searchCatalog(text, catalog);
+  if (RESULT_CACHE.size < 20_000) RESULT_CACHE.set(key, result);
+  return result;
+}
+
+function searchCatalog(text: string, catalog: GeoPlaceCatalogEntry[]): FuzzyPlaceResult {
   const query = norm(text);
   const empty: FuzzyPlaceResult = { candidates: [], best: null, confident: false, needsConfirmation: false };
   if (query.length < 3) return empty;
