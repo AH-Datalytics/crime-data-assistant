@@ -119,7 +119,7 @@ for (const u of ["offense", "incident", "offender", "arrest"] as CountingUnit[])
 // Drug crimes together (35A and 35B), the total column of drug crimes by year: counted by offense.
 MEASURES.push(measure("offenses.drug_crimes", "offense"));
 // Property crimes also record victims (lesson 6): victims are a unit for every crime against property here.
-for (const name of ["theft", "theft_from_motor_vehicle", "motor_vehicle_theft", "burglary", "shoplifting", "arson", "property_crime", "against_property"]) MEASURES.push(measure(`victims.${name}`, "victim"));
+for (const name of ["theft", "theft_from_motor_vehicle", "motor_vehicle_theft", "burglary", "shoplifting", "arson", "robbery", "property_crime", "against_property"]) MEASURES.push(measure(`victims.${name}`, "victim"));
 for (const [name, units] of Object.entries({
   carjacking: ["incident", "victim", "offender", "arrest", "offense"], domestic_violence: ["victim", "incident", "arrest", "offense"],
   hate_crime: ["offense", "incident", "victim"],

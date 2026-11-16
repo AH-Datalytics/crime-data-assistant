@@ -205,7 +205,7 @@ type Units = { sql: string; entity: Entity };
  * alias: o; v with its connecting victim_offense vo; f; a) and its incident.
  */
 function unitsSql(measureId: string, unit: string, read: Read, groupCols: string[], joins: string, incidentFilter: (alias: string) => string,
-  parts: { rest: (alias: string) => string; own: (alias: string) => string } = { rest: incidentFilter, own: () => "" }): Units | { error: string } {
+  parts: { rest: (alias: string) => string; own: (alias: string) => string } = { rest: incidentFilter, own: () => "" }, propertyVictimsByAge = false): Units | { error: string } {
   const extra = groupCols.map((c, i) => `, ${c} AS g${i}`).join("");
   if (measureId === "offenses.carjacking") {
     // D18: robbery-based, so counted by offense: the 120 segments of carjacking incidents (on 20261028-test5 the same
@@ -274,8 +274,8 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
   }
   if (kind === "victims" && unit === "victim") {
-    // Victims of crimes against property are counted only as the property crime by a victim's age (Jeff 2026-11-15); every other property victim count stays by offense (P11).
-    if (!codes.every((c) => PERSON_CODES.has(c)) && m[2] !== "against_property") return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
+    // Victims of crimes against property are counted only as the property crime by a victim's age (Jeff 2026-11-15; P120 for a named crime with a victim age); every other property victim count stays by offense (P11).
+    if (!codes.every((c) => PERSON_CODES.has(c)) && m[2] !== "against_property" && !propertyVictimsByAge) return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
     return { entity: "victim", sql: `SELECT DISTINCT v.data_year, v.ori, v.incident_num, v.victim_seq || ':' || v.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym${extra}
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
         ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num
@@ -489,7 +489,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     ...unitConds.map((c) => c(read)), ...clearanceConds.map((c) => clearanceCond(read, a, c.dimension, c.values))]);
   const ownFilter = (a: string) => and(ownConds.map((c) => c(a)));
   const incidentFilter = (a: string) => restFilter(a) + ownFilter(a);
-  const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter });
+  const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter },
+    // P120 (Jeff 2026-11-16): victims of a property crime with a victim age (juvenile robbery victims) are counted by victim.
+    plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
   if ("error" in units) return no(units.error);
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).

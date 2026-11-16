@@ -297,6 +297,21 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+// P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
+// for every crime, and the answer's title says the range; with no victim word, juvenile is an offender under 18 (P107).
+{
+  const title = (q: string) => (as(ask(q), "answer") as { delivered: { text: string[] } }).delivered.text[0];
+  for (const w of ["juvenile", "minor", "kid", "child"]) {
+    assert.equal(title(`${w} robbery victims in Houston in 2024 by month`), "Houston, Texas: robbery victims under 18 by month, 2024.", w);
+    assert.equal(title(`${w} homicide victims in Houston in 2024 by month`), "Houston, Texas: homicide victims under 18 by month, 2024.", w);
+  }
+  assert.equal(title("teen robbery victims in Houston in 2024 by month"), "Houston, Texas: robbery victims aged 13 to 19 by month, 2024.");
+  assert.equal(title("teenage homicide victims in Houston in 2024 by month"), "Houston, Texas: homicide victims aged 13 to 19 by month, 2024.");
+  assert.equal(title("child victims of burglary in Houston in 2024 by month"), "Houston, Texas: burglary victims under 18 by month, 2024.");
+  assert.ok(/^Ohio: 120 robbery victims under 18 in 2024/.test(title("How many juvenile robbery victims in Ohio in 2024?")));
+  assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas: robbery offenses with an offender under 18 by month, 2024.");
+  assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas: robbery offenses by month, 2024.", "no age: property victims stay counted by offense (P11)");
+}
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.
 assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
