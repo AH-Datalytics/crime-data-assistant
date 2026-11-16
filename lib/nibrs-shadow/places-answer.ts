@@ -30,7 +30,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   // P72: the population a rate divides by may stand beside it, a supporting column.
   const popStat = plan.statistics.find((s) => s.kind === "population");
   const st = plan.statistics.filter((s) => s !== popStat)[0];
-  if (plan.statistics.length !== (popStat ? 2 : 1) || (st.kind !== "count" && st.kind !== "rate")) return decline("This isn't available yet: this statistic for several agencies.");
+  if (plan.statistics.length !== (popStat ? 2 : 1) || (st.kind !== "count" && st.kind !== "rate")) return decline("This isn't available: this statistic for several agencies.");
   const isRate = st.kind === "rate";
   const yearG = plan.groupings.some((g) => g.dimension === "time.year");
   const geoG = plan.groupings.find((g) => g.dimension.startsWith("geo."));
@@ -41,14 +41,14 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const monthMode = !isRate && !popStat && !!geoG && !yearG && plan.groupings.length === 2 && plan.groupings.some((g) => g.dimension === "time.month")
     && plan.geography.places.length > 1 && plan.geography.combine !== "combined" && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length;
   if (!monthRate && !monthMode && (plan.groupings.some((g) => !g.dimension.startsWith("geo.") && g.dimension !== "time.year") || (geoG && yearG)))
-    return decline("This isn't available yet: several agencies by month, by year or by category.");
+    return decline("This isn't available: several agencies by month, by year or by category.");
   // A set of years ("2019 and 2023") is those years only, each its own row; never the years between (Codex 02.1).
   const yearSet = plan.period.kind === "years" ? [...plan.period.years].sort((a, b) => a - b) : null;
-  if (yearSet && !yearG) return decline("This isn't available yet: separate years for several agencies or a ranking; ask for each year, or by year.");
+  if (yearSet && !yearG) return decline("This isn't available: separate years for several agencies or a ranking; ask for each year, or by year.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
-  if (isRate && years.length > 1 && !yearG && !monthRate) return decline("This isn't available yet: a rate over several years without \"by year\" (each year has its own population).");
+  if (isRate && years.length > 1 && !yearG && !monthRate) return decline("This isn't available: a rate over several years without \"by year\" (each year has its own population).");
   const rankT = plan.transforms.find((t) => t.kind === "rank");
-  if (popStat && rankT) return decline("This isn't available yet: a population column beside a ranking.");
+  if (popStat && rankT) return decline("This isn't available: a population column beside a ranking.");
   const set = plan.geography.places[0].kind === "agency_set" ? plan.geography.places[0] : null;
   const root = deps.target.root;
 
@@ -56,7 +56,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   // each by its FBI name (a ranking lists agencies).
   let agencies: { ori: string; label: string; name: string; population: number | null }[];
   if (set) {
-    if (set.within.kind !== "state") return decline("This isn't available yet: this set of agencies.");
+    if (set.within.kind !== "state") return decline("This isn't available: this set of agencies.");
     const floor = set.where.find((w) => w.field === "agency.population" && w.op === ">=");
     const lastYear = years[years.length - 1];
     const rows = deps.execute(agencyPopulationSql(root, { state: set.within.code, city: true }, [lastYear]));
@@ -145,7 +145,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
       ranked.map((a) => ({ key: a.label, value: a.value, status: "VALUE" })), lines, statements, deps.release.id, readings);
     return done(plan, period, c.query.sql, delivered, decline);
   }
-  if (set) return decline("This isn't available yet: a set of agencies without a ranking.");
+  if (set) return decline("This isn't available: a set of agencies without a ranking.");
 
   // P96: one agency's rate for each month, over the FBI's population for that month's year; never annualized.
   if (monthRate) {
@@ -170,7 +170,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     return done(plan, period, c.query.sql, delivered, decline);
   }
   // One agency's values by year. Several agencies by year (combined or not) come later (Codex 02 re-check A).
-  if (yearG && agencies.length > 1) return decline("This isn't available yet: several agencies by year; ask for each year, or each agency.");
+  if (yearG && agencies.length > 1) return decline("This isn't available: several agencies by year; ask for each year, or each agency.");
   if (yearG) {
     const a = agencies[0], cells = byOri.get(a.ori) ?? [];
     const rows = years.map((y) => {

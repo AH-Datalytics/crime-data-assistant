@@ -157,7 +157,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   if (clearance) {
     // A change in a clearance rate is not computed here: said, never answered as the rates by year (Codex clearance
     // review 01.1).
-    if (hq.comparison) return { kind: "historical-decline", explanation: "This isn't available yet: a change in a clearance rate. Ask for the clearance rate by year." };
+    if (hq.comparison) return { kind: "historical-decline", explanation: "This isn't available: a change in a clearance rate. Ask for the clearance rate by year." };
     // The published clearance percentage, with its counts where the file has them; never averaged or recomputed.
     // Several agencies or several years (item 7, coordinator 2026-11-07: "murder clearance rate in Chicago since 2010",
     // "Compare murder clearance rates in Houston and Dallas since 2000"): each agency's published percentage for each
@@ -257,7 +257,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
 
   // A change (P54): two years' counts, the change and the percent change (P55: none from a zero base).
   if (hq.comparison && hq.statistic === "count") {
-    if (several) return { kind: "historical-decline", explanation: "This isn't available yet: a change for more than one agency. Ask for one agency." };
+    if (several) return { kind: "historical-decline", explanation: "This isn't available: a change for more than one agency. Ask for one agency." };
     const [E, L] = [hq.comparison.earlier, hq.comparison.later];
     const ori = hq.agencies[0].ori;
     const two = execute(`SELECT year, ${m.col}_total FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE ori = ${q(ori)} AND year IN (${E}, ${L})`);
@@ -341,7 +341,7 @@ export function answerBeside(hq: HistoricalQuestion, places: BesidePlace[], buil
   const m = HISTORICAL_MEASURE[hq.measure];
   if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
   if (hq.comparison || hq.statistic === "clearance_rate")
-    return { kind: "historical-decline", explanation: `This isn't available yet: ${hq.comparison ? "a change" : "a clearance rate"} for an agency beside a state or the nation. Ask for one place.` };
+    return { kind: "historical-decline", explanation: `This isn't available: ${hq.comparison ? "a change" : "a clearance rate"} for an agency beside a state or the nation. Ask for one place.` };
   const agencies = places.flatMap((p) => ("agency" in p ? [p.agency] : []));
   const geos = places.flatMap((p) => ("geo" in p ? [p.geo] : []));
   // Each side by year, then joined: the series starts at the first year any place has a figure.
@@ -434,7 +434,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const first = states ? Math.max(1960, build.firstYear) : build.firstYear;
   if (rq.year < first || rq.year > build.lastYear)
     return { kind: "historical-decline", explanation: `Historical ${states ? "state" : "city"} figures in the data cover ${first} through ${build.lastYear}, so ${rq.year} is outside them.` };
-  if (!national && !/^[A-Z]{2}$/.test(rq.state)) return { kind: "historical-decline", explanation: "This isn't available yet: a ranking outside one state or the nation." };
+  if (!national && !/^[A-Z]{2}$/.test(rq.state)) return { kind: "historical-decline", explanation: "This isn't available: a ranking outside one state or the nation." };
   const rate = rq.statistic === "rate";
   const floorSql = rq.minPopulation && !states ? ` AND population >= ${Math.floor(rq.minPopulation)}` : "";
   const got = states

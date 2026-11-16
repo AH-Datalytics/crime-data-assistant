@@ -241,7 +241,7 @@ export const deterministicRewriter: FollowUpRewriter = {
     const agCol = /^(?:how many agencies (?:reported|report(?:ing|ed)?)|(?:add|show|include)\s+(?:the\s+)?(?:number of\s+)?agencies reporting|(?:with\s+)?(?:the\s+)?number of agencies reporting)$/.test(fl);
     // The reader's own column flag, whatever the punctuation (Codex 7b-04 re-check 4).
     if ((popCol || agCol) && (readQuestion(prev, 2026).ledger as { column?: string | null }).column)
-      return ask("The previous answer already has a supporting column; both together are not built yet (P72).");
+      return ask("The previous answer already has a supporting column; both together are not built (P72).");
     if (popCol)
       return /\brate\b/i.test(prev) ? ok(`${prev.replace(/[?.]\s*$/, "")}, with a column showing the population used to calculate the rate`, "P72: the population used for the rate")
         : ask("A population column goes with a rate (P72); the previous answer has no rate.");

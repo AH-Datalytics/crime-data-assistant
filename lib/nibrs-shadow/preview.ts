@@ -62,7 +62,7 @@ const button = (o: ShadowOption, path: string[]): PreviewButton => o.continuatio
   : o.question ? { label: o.label, path: [...path, o.label], kind: "question", question: o.question }
   : o.continuation
   ? { label: o.label, path: [...path, o.label], kind: "continuation" }
-  : o.otherSource ? { label: o.label, path: [...path, o.label], kind: "other-source", note: `Answered from ${o.otherSource}, which isn't available here yet.` }
+  : o.otherSource ? { label: o.label, path: [...path, o.label], kind: "other-source", note: `Answered from ${o.otherSource}, which isn't available here.` }
   : { label: o.label, path: [...path, o.label], kind: "entry", note: o.entry ? `Asks for ${o.entry}: ask the whole question again with it.` : undefined };
 
 /** The outcome reached by following a path of button labels from the first outcome; null when a label is not offered. */
