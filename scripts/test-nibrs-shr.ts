@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { NibrsPlan } from "../lib/nibrs-plan/plan";
-import { answerShr, answerShrRanking, shrRankingSql, filterWords, shrBuildAt, shrQuestionOf, shrSql, stateOfOri, type ShrQuestion } from "../lib/nibrs-shadow/shr";
+import { answerShr, answerShrRanking, shrRankingSql, filterWords, shrBuildAt, shrQuestionOf, shrSql, stateOfOri, shrWhat, type ShrQuestion } from "../lib/nibrs-shadow/shr";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
 
 // The manifest's "shr" key, checked strictly; no manifest, no build.
@@ -288,6 +288,11 @@ assert.ok(noPop.kind === "shr" && noPop.delivered.table.rows[0][0] === null, JSO
 // Filters in words.
 assert.equal(filterWords({ dim: "weapon", codes: ["11", "12", "13", "14", "15"] }), "with a firearm");
 assert.equal(filterWords({ dim: "victim.sex", codes: ["F"] }), "where the victim's sex was female");
+// An age of the counted people reads once ("victims aged 13 to 19", "victims under 18"), never "victims victims aged 1 to 17" (P120).
+const whatQ = (unit: "victims" | "offenders", f: ShrQuestion["filters"]) => shrWhat({ measure: "homicide", unit, filters: f } as unknown as ShrQuestion);
+assert.equal(whatQ("victims", [{ dim: "victim.age", ages: [13, 19] }]), "homicide victims aged 13 to 19");
+assert.equal(whatQ("victims", [{ dim: "victim.age", ages: [1, 17] }]), "homicide victims under 18");
+assert.equal(whatQ("offenders", [{ dim: "offender.age", ages: [18, 24] }]), "homicide offenders aged 18 to 24");
 
 fs.rmSync(dir, { recursive: true, force: true });
 console.log("nibrs shr: Homicide Reports from the canonical release; S1-S5 and J1; blanks only where no agency filed");
