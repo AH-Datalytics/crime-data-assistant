@@ -72,8 +72,8 @@ function stateSum(sql: string): unknown[][] | null {
     const by = new Map<string, number[] & unknown[]>();
     for (const [o, ym, n, st] of grid(sql)) {
       const k = `${o}|${ym.slice(0, 4)}`;
-      const a = by.get(k) ?? (by.set(k, [o, Number(ym.slice(0, 4)), 0, 0, 0, 0] as never), by.get(k)!);
-      (a as number[])[2]++; if (st === "VALUE") { (a as number[])[3]++; (a as number[])[4] += n ?? 0; }
+      const a = by.get(k) ?? (by.set(k, [o, Number(ym.slice(0, 4)), 0, 0, 0, 0, 0] as never), by.get(k)!);
+      (a as number[])[2]++; if (st === "VALUE") { (a as number[])[3]++; (a as number[])[4] += n ?? 0; (a as number[])[6]++; }
     }
     return [...by.values()];
   }

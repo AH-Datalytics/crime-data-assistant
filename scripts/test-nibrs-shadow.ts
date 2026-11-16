@@ -48,8 +48,8 @@ function stub0(sql: string): unknown[][] {
     const by = new Map<string, unknown[]>();
     for (const [ori, ym, n, st] of gridRows(sql) as [string, string, number | null, string][]) {
       const k = `${ori}|${ym.slice(0, 4)}`, rep = st === "VALUE" || st === "REPORTED_ZERO";
-      const a = (by.get(k) ?? by.set(k, [ori, Number(ym.slice(0, 4)), 0, 0, 0, 0]).get(k)!) as number[];
-      a[2]++; if (rep) { a[3]++; a[4] += n ?? 0; } if (st === "EVIDENCE_CONFLICT") a[5]++;
+      const a = (by.get(k) ?? by.set(k, [ori, Number(ym.slice(0, 4)), 0, 0, 0, 0, 0]).get(k)!) as number[];
+      a[2]++; if (rep) { a[3]++; a[4] += n ?? 0; } if (st === "EVIDENCE_CONFLICT") a[5]++; if (st === "VALUE") a[6]++;
     }
     return [...by.values()];
   }
@@ -105,6 +105,7 @@ function popRows(sql: string): unknown[][] {
 }
 /** An agency-month whose records conflict with its reporting status, when a test sets one. */
 let CONFLICT: { ori: string; ym: string } | null = null;
+let ZERO: { ori: string; ym: string } | null = null;
 /** Monthly grid: Houston 9 a month, Dallas 7, the rest 5; Greensboro unknown November-December 2025, Austin June 2024. */
 function gridRows(sql: string): unknown[][] {
   const oris = /unnest\(\[(.*?)\]\) AS ori/.exec(sql)![1].split(", ").map((x) => x.slice(1, -1));
@@ -113,7 +114,8 @@ function gridRows(sql: string): unknown[][] {
   for (const o of oris) for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) {
     const ym = `${y}-${String(m).padStart(2, "0")}`;
     const unknown = (o === "NC0410200" && ym >= "2025-11" && ym <= "2025-12") || (o === "TX2270100" && ym === "2024-06");
-    rows.push(CONFLICT && CONFLICT.ori === o && CONFLICT.ym === ym ? [o, ym, null, "EVIDENCE_CONFLICT"]
+    rows.push(ZERO && ZERO.ori === o && ZERO.ym === ym ? [o, ym, 0, "REPORTED_ZERO"]
+      : CONFLICT && CONFLICT.ori === o && CONFLICT.ym === ym ? [o, ym, null, "EVIDENCE_CONFLICT"]
       : unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5, "VALUE"]);
   }
   return rows;
@@ -1861,6 +1863,21 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.notEqual(crime.kind, "answer", "a bare 'crime' is asked about, never answered");
   assert.equal(fu("Shoplifting in Memphis in 2024", "now for 2023").rewriteKind, "rewrite", "a real edit still rewrites");
   assert.equal(fu("Shoplifting in Memphis in 2024", "just females").rewriteKind === "new", false, "an edit is not run as a new question");
+}
+// Jeff (2026-11-16): a month reported as zero crimes is NOT reported. Dallas has a REPORTED_ZERO month in March 2023: it is out of the
+// Consistent Reporting Agencies for a span holding that month, in the set for a span that avoids it, and the ordinary view keeps its sums.
+{
+  const Q = (span: string) => `Carjackings in Texas ${span}, with the number of agencies reporting`;
+  const base = as(ask(Q("by year from 2023 to 2024")), "answer");
+  ZERO = { ori: "TXDPD0000", ym: "2023-03" };
+  const withZero = as(ask(Q("by year from 2023 to 2024")), "answer");
+  const avoids = as(ask(Q("in 2024")), "answer");
+  ZERO = null;
+  const clean = as(ask(Q("in 2024")), "answer");
+  assert.equal(withZero.stateSum!.everyAgencies, base.stateSum!.everyAgencies - 1, "the agency with a zero month leaves the set");
+  assert.equal(avoids.stateSum!.everyAgencies, clean.stateSum!.everyAgencies, "and stays in for a span that avoids the month");
+  assert.deepEqual(withZero.stateSum!.years.map((y) => y.agencies), base.stateSum!.years.map((y) => y.agencies), "the ordinary view still counts it as reporting");
+  assert.equal(withZero.stateSum!.years[0].sum, base.stateSum!.years[0].sum - 7, "the ordinary view sums the zero month as 0 (Dallas had 7 that month)");
 }
 // P83, P84 (Jeff 2026-11-01): gun violence offers gun crime; car break-ins say how they are counted.
 {

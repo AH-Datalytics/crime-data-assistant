@@ -115,7 +115,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // month by month (the nation's grid is 1.4 million rows; its sums are 90,000). The same figures: per agency and year,
   // the months in the period, the months reported (VALUE or REPORTED_ZERO; a conflict or unknown month is not), the sum
   // of the reported months, and the conflict months.
-  const agg = new Map<string, { months: number; rep: number; sum: number; conflicts: number }>();
+  const agg = new Map<string, { months: number; rep: number; sum: number; conflicts: number; val: number }>();
   const monthsIn = new Map<number, number>();
   // By category (coordinator 2026-11-04), a month is one row per category: its status and its own total (den) are the
   // agency-month's, read once per month, so the year's total is the sum of the months' totals, never of the categories
@@ -126,19 +126,22 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const covRows = deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
       count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
       coalesce(sum(n) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')), 0) AS repsum,
-      count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts
+      count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts,
+      count(*) FILTER (WHERE n_status = 'VALUE') AS val
     FROM (${monthly}) GROUP BY ALL`);
   for (const r of covRows) {
     const y = Number(r[1]);
     if (yearSet && !yearSet.includes(y)) continue;
-    agg.set(`${r[0]}|${y}`, { months: Number(r[2]), rep: Number(r[3]), sum: Number(r[4]), conflicts: Number(r[5]) });
+    agg.set(`${r[0]}|${y}`, { months: Number(r[2]), rep: Number(r[3]), sum: Number(r[4]), conflicts: Number(r[5]), val: Number(r[6]) });
     monthsIn.set(y, Math.max(monthsIn.get(y) ?? 0, Number(r[2])));
   }
   const keptYears = years.filter((y) => monthsIn.has(y));
   const of = (o: string, y: number) => agg.get(`${o}|${y}`);
-  // The button's set: reported every month of the whole period, with a header in every year (one fixed set).
+  // The button's set: reported crimes (VALUE) in every month of the whole period, with a header in every year (one fixed set).
+  // Jeff (2026-11-16): a month reported as zero crimes is NOT reported (it is not a month with crimes), so an agency with one is out
+  // of the set for a span holding it; zero of one crime while other crimes were reported is a VALUE month, not missing.
   const everySet = oris.filter((o) => years.every((y) => inYear.get(y)!.has(o)) && keptYears.some((y) => of(o, y))
-    && keptYears.every((y) => { const a = of(o, y); return !a || a.rep === a.months; }));
+    && keptYears.every((y) => { const a = of(o, y); return !a || a.val === a.months; }));
   const byYear: StateSumYear[] = years.map((y) => {
     let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0;
     for (const o of inYear.get(y)!) {
