@@ -487,7 +487,12 @@ export function shrUnitWords(sq: ShrQuestion): string {
   return `${crime} ${sq.unit === "offenders" ? "offenders" : "victims"}`;
 }
 /** What is counted, with its filters: "murder victims with a firearm" (Codex SHR-A review 01.9). */
-export const shrWhat = (sq: ShrQuestion) => [shrUnitWords(sq), ...sq.filters.map(filterWords)].join(" ");
+// An age of the counted people reads once and in plain words: "homicide victims aged 13 to 19", "murder victims under 18" (not
+// "homicide victims victims aged 1 to 17"). Another side's age keeps its own words.
+export const shrWhat = (sq: ShrQuestion) => [shrUnitWords(sq), ...sq.filters.map((f) => {
+  const own = f.dim === (sq.unit === "offenders" ? "offender.age" : "victim.age");
+  return f.ages && own ? (f.ages[0] <= 1 ? `under ${f.ages[1] + 1}` : `aged ${f.ages[0]} to ${f.ages[1]}`) : filterWords(f);
+})].join(" ");
 /** A filter in words: "with a firearm", "whose victims were female", "killed by a spouse". */
 export function filterWords(f: ShrFilter): string {
   if (f.ages) return `${f.dim.startsWith("victim") ? "victims" : "offenders"} aged ${f.ages[0]} to ${f.ages[1]}`;

@@ -2150,7 +2150,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         if (unit !== "offender") return decline("unsupported_capability", "This isn't available: a relationship to the victim, for anything but offenders.");
         plan.filters.push({ kind: "exists", scope: "offender", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: w.values }] });
       } else if (w.who === "victim") {
-        if (unit !== "victim") return decline("unsupported_capability", "This isn't available: a victim's age for crimes counted by offense.");
+        // P120 (Jeff 2026-11-16): a question that says victims and gives their age counts the crime's victims (robbery victims
+        // under 18), the unit a victim's age belongs to; a crime counted by offense with no victim word stays declined.
+        if (unit === "offense" && /^offenses\.[a-z_]+$/.test(plan.measures[0].id) && /\bvictims?\b/i.test(ledger0.question)) plan.measures[0] = { ...plan.measures[0], id: plan.measures[0].id.replace(/^offenses\./, "victims."), unit: "victim" };
+        if (plan.measures[0].unit !== "victim") return decline("unsupported_capability", "This isn't available: a victim's age for crimes counted by offense.");
         plan.filters.push(between("victim.age", w.range));
       } else if (w.who === "arrestee") {
         if (unit !== "arrest" && unit !== "group_b_arrest") return decline("unsupported_capability", "This isn't available: an arrestee's age for anything but arrests.");
@@ -2258,7 +2261,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // decided policy and disclosed by that sentence, so it is not held to the victim unit.
     const codes = MEASURE_CODES[name];
     const property = name !== "against_property" && (name === "carjacking" || (!!codes && codes.every((c) => CRIMES_AGAINST_PROPERTY.has(c))));
-    if (m.id.startsWith("victims.") && property) {
+    // P120 (Jeff 2026-11-16): victims of a property crime with an age ("juvenile robbery victims") are counted by victim.
+    const victimAge = plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age");
+    if (m.id.startsWith("victims.") && property && !victimAge) {
       plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense" };
       plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
       unbind((p) => p.concept === "unit");
