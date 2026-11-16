@@ -343,6 +343,18 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas: murder victims aged 13 to 19 by month, 2024.");
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas: murder victims under 18 by month, 2024.");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
+  // The age word plural, and after the crime (Coordinator 2026-11-16): the same meaning as the singular.
+  for (const [q, want] of [
+    ["teenagers arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/], ["teens arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/],
+    ["kids arrested for robbery in Ohio in 2024", /robbery arrests of arrestees under 18 in 2024/], ["minors arrested for robbery in Ohio in 2024", /robbery arrests of arrestees under 18 in 2024/],
+    ["juveniles arrested for robbery in Ohio in 2024", /robbery arrests of arrestees under 18 in 2024/],
+    ["kids robbery offenders in Ohio in 2024", /robbery offenders under 18 in 2024/], ["children robbery offenders in Ohio in 2024", /robbery offenders under 18 in 2024/],
+  ] as [string, RegExp][]) assert.match(title(q), want, q);
+  assert.match(title("murders in Chicago in 2024 with a teen victim"), /^Chicago, Illinois: .*murder victims aged 13 to 19 in 2024/);
+  assert.match(title("murders of teenagers in Chicago in 2024"), /^Chicago, Illinois: .*murder victims aged 13 to 19 in 2024/);
+  assert.match(title("children murdered in Chicago in 2024"), /^Chicago, Illinois: .*murder victims under 18 in 2024/);
+  // A rate for an age group has no population base and is declined (existing rule); the plural word is read.
+  assert.match(as(ask("Murder rate for teenagers in Chicago since 2019"), "decline").explanation, /^A rate for a group of people needs population figures/);
 }
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.

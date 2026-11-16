@@ -194,6 +194,67 @@ export function canonicalFollowUp(f: string): string {
   return t;
 }
 
+// An age word as a whole follow-up (P120): "just the juveniles", "what about teen victims", "teens only", "how many of the victims were children".
+const AGE_WORDS = String.raw`(juveniles?|minors?|youths?|children|child|kids?|teens?|teenagers?|teenage)`;
+const PERSON_WORDS = String.raw`(victims?|offenders?|arrestees?|arrests?)`;
+const AGE_LEAD = new RegExp(String.raw`^(?:(?:just|only|now|and|add|what about|how about|show me|show|give me)\s+)*(?:the\s+)?${AGE_WORDS}(?:\s+${PERSON_WORDS})?(?:\s+only)?$`, "i");
+const AGE_HOW_MANY = new RegExp(String.raw`^how many(?:\s+of\s+(?:them|those|the\s+${PERSON_WORDS}))?\s+(?:were|are|was)\s+(?:the\s+)?${AGE_WORDS}$`, "i");
+/** An age already in a question: one age word, or a range or bound written in numbers. */
+const AGE_IN_QUESTION = new RegExp(String.raw`\b${AGE_WORDS}\b`, "gi");
+const NUMBER_AGE = /\b(?:aged?|ages|under|over|older than|younger than|between)\s+\d|\b\d{1,2}\s*(?:to|-|–)\s*\d{1,2}\s+years?\b|\byoung adults?\b|\bseniors?\b|\belderly\b/i;
+const AGE_STOP = new Set(["the", "of", "many", "how", "are", "were", "was", "is", "in", "for", "number", "total", "all", "show", "me", "what", "did", "there", "by", "with", "a", "an", "and", "to", "from", "count", "give"]);
+const personOf = (w: string) => (/^arrest/i.test(w) ? "arrestee" : /^offender/i.test(w) ? "offender" : "victim");
+const personPlural = (p: string) => (p === "arrestee" ? "arrestees" : `${p}s`);
+/** The age word's own sentence form: "teen" for 13 to 19, "juvenile" for under 18. */
+const canonAge = (w: string) => (/^teen/i.test(w) ? "teen" : "juvenile");
+
+/**
+ * P120 follow-up: the age word goes in front of the previous question's crime and person word ("robbery victims in Houston" +
+ * "just the juveniles" -> "juvenile robbery victims in Houston"). The person is the follow-up's, else the previous question's;
+ * a previous question naming none is asked about, or takes "with a teen victim" when the follow-up names one. Another age
+ * already in the question is replaced only when it is one plain age word; any other is asked about.
+ */
+function ageFollowUp(prev: string, ageWord: string, personWord: string | null): Rewrite {
+  const canon = canonAge(ageWord);
+  const base = prev.trim().replace(/[?.!]+$/, "");
+  const prevAges = [...base.matchAll(AGE_IN_QUESTION)];
+  if (NUMBER_AGE.test(base) || prevAges.length > 1) return ask(`Whether "${ageWord}" replaces the age already in the question.`);
+  const persons = [...base.matchAll(new RegExp(String.raw`\b${PERSON_WORDS}\b`, "gi"))];
+  const prevPerson = new Set(persons.map((m) => personOf(m[1])));
+  const asked = personWord ? personOf(personWord) : null;
+  if (prevPerson.size > 1) return ask(`Which of the people counted "${ageWord}" applies to.`);
+  const withAge = (b: string) => {
+    // Another plain age word in the question is replaced, keeping its plural.
+    const old = [...b.matchAll(AGE_IN_QUESTION)][0];
+    if (old) return b.replace(old[0], /s$/i.test(old[0]) && !/^(?:child)$/i.test(old[0]) ? `${canon}s` : canon);
+    const m = new RegExp(String.raw`\b${PERSON_WORDS}\b`, "i").exec(b)!;
+    // The crime words just before the person word start the phrase the age word leads.
+    const before = b.slice(0, m.index).split(/(\s+)/);
+    let at = before.length;
+    for (let n = 0, i = before.length - 1; i >= 0 && n < 3; i--) {
+      if (/^\s*$/.test(before[i])) continue;
+      if (AGE_STOP.has(before[i].toLowerCase())) break;
+      at = i; n++;
+    }
+    const head = before.slice(0, at).join("");
+    return `${head}${canon} ${before.slice(at).join("")}${b.slice(m.index)}`;
+  };
+  if (!prevPerson.size) {
+    if (asked) return ok(`${base} with a ${canon} ${asked}`, "the age added as a person of the question");
+    const label: Record<string, string> = { victim: `Count ${canon} victims`, offender: `Count ${canon} offenders`, arrestee: `Count arrests of ${canon}s` };
+    return ask(`Do you mean ${canon} victims, offenders or arrestees?`,
+      (["victim", "offender", "arrestee"] as const).map((who) => ({ label: label[who], question: `${base} with a ${canon} ${who}` })));
+  }
+  const [prevP] = [...prevPerson];
+  if (asked && asked !== prevP) {
+    const swapped = base.replace(new RegExp(String.raw`\b${PERSON_WORDS}\b`, "i"), (m) => (/s$/i.test(m) ? personPlural(asked) : asked));
+    return ask(`Do you mean ${canon} ${personPlural(asked)} instead of the ${personPlural(prevP)} counted?`, [
+      { label: `Count ${canon} ${personPlural(prevP)}`, question: withAge(base) },
+      { label: `Count ${canon} ${personPlural(asked)}`, question: withAge(swapped) }]);
+  }
+  return ok(withAge(base), "the age added");
+}
+
 export const deterministicRewriter: FollowUpRewriter = {
   rewrite(previous: string, followUp: string, thisYear = new Date().getFullYear()): Rewrite {
     const prev = previous.trim();
@@ -353,6 +414,13 @@ export const deterministicRewriter: FollowUpRewriter = {
       const word = has[1][0] === has[1][0].toUpperCase() ? ucFirst(want) : want;
       return ok(prev.replace(has[0], word), "the sex replaced");
     }
+
+    // An age word (P120): "just the juveniles", "what about teen victims", "how many of the victims were children". The age word goes
+    // in front of the previous question's crime and person word; the person is the follow-up's, else the previous question's, else asked
+    // (the same shape as the sex follow-up above).
+    const ag = AGE_LEAD.exec(fl);
+    const agHow = AGE_HOW_MANY.exec(fl);
+    if (ag || agHow) return ageFollowUp(prev, ag ? ag[1] : agHow![2], (ag ? ag[2] : agHow![1]) ?? null);
 
     // "combined": the same places as one total.
     if (/^(?:combined|combine (?:them|those|these)|(?:all )?together|as one total)$/i.test(f)) {
