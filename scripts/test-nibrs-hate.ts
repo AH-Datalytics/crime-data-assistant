@@ -46,7 +46,7 @@ assert.equal(hispanic.delivered.text[0], "Anti-Hispanic or Latino hate crimes: 8
 assert.ok(hispanic.delivered.text.includes(HATE_REPORTING_CAVEAT) && hispanic.delivered.text.includes(HATE_SOURCE));
 assert.equal(hispanic.meaning.source, "hate_crime");
 const sql = sqls[sqls.length - 1];
-assert.ok(/hate_crime_incident\/data\.parquet/.test(sql) && /bias_code = '32'/.test(sql) && /state = 'TX'/.test(sql) && /count\(DISTINCT ori \|\| '\|' \|\| incident_number\)/.test(sql), sql);
+assert.ok(/hate_crime_incident\/data\.parquet/.test(sql) && /bias_code = '32'/.test(sql) && /state = 'TX'/.test(sql) && /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/.test(sql), sql);
 assert.ok(!/read_parquet\([^)]*(?:offense|victim)\//.test(sql), "never a NIBRS table");
 
 // A plain count by year and by month, and a rolling window; nothing is NIBRS's.
@@ -76,6 +76,16 @@ assert.equal(noPeriod.about, "which period");
 const everyYear = as(ask("hate crimes by year in Texas"), "hate");
 assert.equal(everyYear.period.from, "1991-01");
 assert.ok(everyYear.delivered.text.includes("No years were given, so every year in the data is shown: 1991 through 2026."), everyYear.delivered.text.join(" / "));
+// Codex review of the branch: a total across years counts an incident once per ORI and year; a rolling window checks the bias meaning over its
+// whole span; spans wholly outside the data say where the data are; other units and supporting columns are declined; the latest-date line
+// shows whenever a later partial month exists.
+const total = ask("hate crimes in Texas from 2020 to 2024");
+as(total, "hate");
+assert.match(sqls[sqls.length - 1], /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/);
+assert.notEqual(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013").kind, "hate", "the window reaches 2012, when code 14 meant another group");
+assert.equal(as(ask("hate crimes in Texas in 1980"), "decline").explanation, "Hate crime data here start in 1991, so 1980 aren't included.");
+assert.notEqual(ask("hate crime victims in Texas in 2024").kind, "hate", "victims are not incidents");
+assert.notEqual(ask("hate crimes in Texas in 2024 with the number of agencies reporting").kind, "hate", "a supporting column is not dropped");
 // Without a build, or for a shape this source does not answer, a plain decline: never a NIBRS answer, never the weapon sentence.
 const noBuild = as(ask("anti-Hispanic hate crimes in Texas in 2024", { ...deps, hate: undefined }), "decline");
 assert.ok(!/weapon or relationship/.test(noBuild.explanation));

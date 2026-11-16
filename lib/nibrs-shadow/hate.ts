@@ -15,6 +15,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { fmt, monthName, periodWords } from "./deliver";
 import { stateName } from "./places";
+import { CONSOLIDATED_AGENCIES } from "../agency-consolidations";
 import { firstNeeded, monthRange, rollingSums } from "./rolling";
 
 export const HATE_FIRST_YEAR = 1991;
@@ -92,6 +93,7 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   const place: HatePlace | null = p.kind === "national" ? { kind: "national" } : p.kind === "state" ? { kind: "state", code: p.code }
     : p.kind === "agency" ? { kind: "agency", ori: p.ori, label: p.label } : null;
   if (!place) return { why: "a county or a set of agencies" };
+  if (place.kind === "agency" && CONSOLIDATED_AGENCIES.some((c) => c.predecessor && (c.historicalOri === place.ori || c.nibrsOri === place.ori))) return { why: "an agency whose ORI changed" };
   const time = plan.groupings.filter((g) => g.dimension.startsWith("time."));
   const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
   if (cats.length || time.length > 1 || time.some((g) => g.dimension !== "time.year" && g.dimension !== "time.month")) return { why: "this breakdown" };
@@ -110,9 +112,10 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   if (to < first) return { why: "before the data start" };
   if (period.from > build.latestMonth) return { why: "after the latest month" };
   const from = period.from < first ? first : period.from;
-  if (bias && MODERN_FROM[bias.code] && Number(from.slice(0, 4)) < MODERN_FROM[bias.code]) return { why: "a bias whose meaning changed in the years asked" };
   const grain = roll.length ? "rolling" : time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   const window = roll.length ? (roll[0] as { months: number }).months : undefined;
+  const readFrom = window ? firstNeeded(from, window) : from;
+  if (bias && MODERN_FROM[bias.code] && Number(readFrom.slice(0, 4)) < MODERN_FROM[bias.code]) return { why: "a bias whose meaning changed in the years asked" };
   return { place, from, to, grain, ...(window ? { window } : {}), bias,
     ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}), ...(period.to > to ? { cutAt: to } : {}) };
 }
@@ -127,7 +130,7 @@ export function hateSql(hq: HateQuestion, build: HateBuild, from = hq.from): str
   const ymExpr = "year(incident_date) * 100 + month(incident_date)";
   const lo = Number(from.slice(0, 4)) * 100 + Number(from.slice(5, 7)), hi = Number(hq.to.slice(0, 4)) * 100 + Number(hq.to.slice(5, 7));
   const key = hq.grain === "year" ? "year(incident_date)" : hq.grain === "month" || hq.grain === "rolling" ? ymExpr : null;
-  return `SELECT ${key ? `${key} AS k, ` : ""}count(DISTINCT ori || '|' || incident_number) AS n FROM ${table(build)} WHERE ${place}${bias} AND ${ymExpr} BETWEEN ${lo} AND ${hi}`
+  return `SELECT ${key ? `${key} AS k, ` : ""}count(DISTINCT year || '|' || ori || '|' || incident_number) AS n FROM ${table(build)} WHERE ${place}${bias} AND ${ymExpr} BETWEEN ${lo} AND ${hi}`
     + `${key ? " GROUP BY k ORDER BY k" : ""}`;
 }
 
@@ -175,7 +178,7 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${fromY} through ${toY}.`);
   if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${hq.askedFrom} through ${HATE_FIRST_YEAR - 1} aren't included.`);
   // The data's last complete month ends the answer when it is not a December: the year (or span) asked may reach past it.
-  if (hq.to === build.latestMonth && !hq.to.endsWith("-12")) {
+  if (hq.to === build.latestMonth && build.latestDate.slice(0, 7) > hq.to) {
     const [y, m, d] = build.latestDate.split("-").map(Number);
     const day = `${monthName(`${y}-${String(m).padStart(2, "0")}`).split(" ")[0]} ${d}, ${y}`;
     text.push(`Hate crime data here run through ${day}, so the answer ends with ${monthName(hq.to)}, the last complete month.`);

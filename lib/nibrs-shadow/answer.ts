@@ -969,6 +969,10 @@ const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:female
 /** A hate crime question from the hate crime data (hate.ts), or null when there is no build or it is asked in a way this source does not answer. */
 function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
   if (!deps.hate || flags(ledger0).consistent || flags(ledger0).quarter) return null;
+  // What this count is not: a supporting column, a person's detail, a clearance, a property or composite count, or a unit other than incidents
+  // ("hate crime victims"): declined, never answered as the plain count (Codex review 04, 05).
+  const f = flags(ledger0);
+  if (f.column || f.people || f.clearance || f.property || f.composite || f.combined || f.arrestsThrough || ledger0.parts.some((p) => p.clause === 0 && p.concept === "unit")) return null;
   let period: { from: string; to: string };
   // No range named for a series: every year the hate crime data have, said (Jeff 2026-11-11, "All years by default").
   const allYears = plan.defaults.some((x) => x.path === "period");
@@ -982,7 +986,12 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
     } else period = { from: r.from, to: r.to };
   } catch { return null; }
   const hq = hateQuestionOf(plan, period, deps.hate);
-  if ("why" in hq) return null;
+  if ("why" in hq) {
+    // A span wholly outside the data says where the data are (coverage), as every source does.
+    if (hq.why === "before the data start") return decline("outside_release_coverage", `Hate crime data here start in ${HATE_FIRST_YEAR}, so ${periodWords(period.from, period.to)} aren't included.`);
+    if (hq.why === "after the latest month") return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the hate crime data; the latest complete month available is ${monthName(deps.hate.latestMonth)}.`);
+    return null;
+  }
   const a = answerHate(allYears ? { ...hq, allYears: true } : hq, deps.hate, deps.execute);
   return a.kind === "hate" ? a : decline("outside_release_coverage", a.explanation);
 }
