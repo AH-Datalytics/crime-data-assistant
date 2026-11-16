@@ -33,7 +33,7 @@
 import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
-import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, type Flags } from "./reading";
+import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
@@ -672,7 +672,13 @@ function pruneAsk(x: ShadowOption): ShadowOption | null {
 }
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  return withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
+  const o = withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
+  // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
+  if (o.kind === "clarify" && typeof o.question === "string") {
+    const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);
+    if (restored !== o.question) return { ...o, question: restored };
+  }
+  return o;
 }
 /** The answer before dead buttons are dropped: for a caller that repairs a button's continuation first (the kind of assault). */
 function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): ShadowOutcome {

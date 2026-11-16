@@ -343,6 +343,37 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas: murder victims aged 13 to 19 by month, 2024.");
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas: murder victims under 18 by month, 2024.");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
+  // The age word plural, and after the crime (Coordinator 2026-11-16): the same meaning as the singular.
+  for (const [q, want] of [
+    ["teenagers arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/], ["teens arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/],
+    ["kids arrested for robbery in Ohio in 2024", /robbery arrests of arrestees under 18 in 2024/], ["minors arrested for robbery in Ohio in 2024", /robbery arrests of arrestees under 18 in 2024/],
+    ["juveniles arrested for robbery in Ohio in 2024", /robbery arrests of arrestees under 18 in 2024/],
+    ["kids robbery offenders in Ohio in 2024", /robbery offenders under 18 in 2024/], ["children robbery offenders in Ohio in 2024", /robbery offenders under 18 in 2024/],
+  ] as [string, RegExp][]) assert.match(title(q), want, q);
+  assert.match(title("murders in Chicago in 2024 with a teen victim"), /^Chicago, Illinois: .*murder victims aged 13 to 19 in 2024/);
+  assert.match(title("murders of teenagers in Chicago in 2024"), /^Chicago, Illinois: .*murder victims aged 13 to 19 in 2024/);
+  assert.match(title("children murdered in Chicago in 2024"), /^Chicago, Illinois: .*murder victims under 18 in 2024/);
+  // PR 190 run: the words "juvenile", "juveniles" and "minor" keep their old reading, so a restated question or a decline still
+  // carries the user's own word (never "with a offender", never "arrests" without "juvenile").
+  for (const [q, said] of [
+    ["share of juveniles arrested for murder by year", "share of juveniles arrested for murder by year"],
+    ["share of juveniles arrested for homicide over time", "share of juveniles arrested for homicide over time"],
+    ["show me crimes with a juvenile offender 2017 to 2025", "show me crimes with a juvenile offender 2017 to 2025"],
+    ["show me incidents with a juvenile offender for weapons possession offenses", "show me incidents with a juvenile offender for weapons possession offenses"],
+    ["show me offenses with a juvenile offender involving firearms by offense category in 2025", "show me offenses with a juvenile offender involving firearms by offense category in 2025"],
+    ["What is the most juvenile arrest data available?", "What is the most juvenile arrest data available?"],
+  ] as [string, string][]) {
+    const o = ask(q) as ShadowOutcome & { question?: string };
+    assert.equal(o.kind, "clarify", q);
+    assert.equal(o.question, said, q);
+  }
+  assert.ok(/juvenile/.test((as(ask("How do juvenile arrest rates compare to adult rates"), "decline") as { detail: string }).detail), "the decline keeps the user's word");
+  // A question asked back keeps the user's age word, whatever form (Coordinator 2026-11-16): never "with a offender", never without "teen".
+  for (const q of ["show me crimes with a teen offender 2017 to 2025", "teen offenders in Ohio in 2024", "kid offenders in Ohio in 2024", "teenager offenders in Ohio in 2024",
+    "children victims in Ohio in 2024", "juvenile victims in Ohio in 2024", "show me crimes with a kid offender"])
+    assert.equal((as(ask(q), "clarify") as { question: string }).question, q, q);
+  // A rate for an age group has no population base and is declined (existing rule); the plural word is read.
+  assert.match(as(ask("Murder rate for teenagers in Chicago since 2019"), "decline").explanation, /^A rate for a group of people needs population figures/);
 }
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.

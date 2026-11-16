@@ -153,6 +153,32 @@ assert.equal(b.kind, "clarify");
 assert.equal(b.rewrite, null);
 assert.equal(ran, before, "an ask with no options runs nothing");
 
+// An age word (P120, coordinator 2026-11-16): it goes in front of the previous question's crime and person word; the person is the
+// follow-up's, else the previous question's; asked when neither names one or they differ; another age is replaced only when plain.
+{
+  assert.equal(q(rw("robbery victims in Houston in 2024 by month", "just the juveniles")), "juvenile robbery victims in Houston in 2024 by month");
+  assert.equal(q(rw("robbery victims in Houston in 2024 by month", "what about teen victims")), "teen robbery victims in Houston in 2024 by month");
+  assert.equal(q(rw("robbery offenders in Ohio in 2024", "teen offenders")), "teen robbery offenders in Ohio in 2024");
+  assert.equal(q(rw("robbery arrests in Ohio in 2024", "what about teens?")), "teen robbery arrests in Ohio in 2024");
+  assert.equal(q(rw("How many robbery arrests in Ohio in 2024?", "just the kids")), "How many juvenile robbery arrests in Ohio in 2024");
+  assert.equal(q(rw("murders in Chicago in 2024", "how many of the victims were children")), "murders in Chicago in 2024 with a juvenile victim");
+  assert.equal(q(rw("murders in Chicago in 2024", "teen victims only")), "murders in Chicago in 2024 with a teen victim");
+  assert.equal(q(rw("juvenile robbery victims in Houston in 2024", "what about teens")), "teen robbery victims in Houston in 2024");
+  const none = asked(rw("murders in Chicago in 2024", "just teens"));
+  assert.equal(none.why, "Do you mean teen victims, offenders or arrestees?");
+  assert.deepEqual(none.options, [
+    { label: "Count teen victims", question: "murders in Chicago in 2024 with a teen victim" },
+    { label: "Count teen offenders", question: "murders in Chicago in 2024 with a teen offender" },
+    { label: "Count arrests of teens", question: "murders in Chicago in 2024 with a teen arrestee" }]);
+  assert.equal(asked(rw("murders in Chicago in 2024", "only the minors")).options[2].label, "Count arrests of juveniles");
+  const other = asked(rw("robbery victims in Ohio in 2024", "teen offenders"));
+  assert.equal(other.why, "Do you mean teen offenders instead of the victims counted?");
+  assert.deepEqual(other.options.map((o) => o.question), ["teen robbery victims in Ohio in 2024", "teen robbery offenders in Ohio in 2024"]);
+  assert.equal(asked(rw("robbery victims aged 18 to 24 in Houston in 2024", "teens only")).why, 'Whether "teens" replaces the age already in the question.');
+  // Not an age follow-up: a place or a sentence of its own keeps its own reading.
+  assert.equal(rw("robbery victims in Houston in 2024", "what about Dallas").kind, "rewrite");
+}
+
 // The other sex (coordinator, 2026-11-01): a button for each reading, each a complete question; the plain ask otherwise.
 {
   const who = asked(rw("Aggravated assaults in Memphis in 2024", "female"));
