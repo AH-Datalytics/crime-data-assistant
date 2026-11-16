@@ -71,6 +71,85 @@ parentPort.on("message", (m) => {
 `;
 
 /**
+ * The executor's temp directory (os.tmpdir()/nibrs-shadow-XXXXXX): where DuckDB spills a big query to disk (8-12 GB for a national
+ * question) and the reference path writes its q.sql. DuckDB removes its spill files itself when its process ends in order, but a
+ * process that is killed (a query past the time limit, an executor closed) leaves them behind: 188 such folders held 147 GB on the
+ * runner (2026-11-16). So the executor removes its directory when it ends, the program's exit and signals do too, and the first
+ * executor of a process sweeps old folders that no live process owns (NIBRS_SHADOW_NO_SWEEP=1 turns the sweep off).
+ *
+ * Safe by construction: only a direct child of the temp root named exactly nibrs-shadow-<6 letters or digits>, not a link, and only
+ * the files this code or DuckDB writes there (q.sql, .owner, duckdb_temp_*): anything else found is left, and the folder with it.
+ */
+const TEMP_PREFIX = "nibrs-shadow-";
+const TEMP_NAME = /^nibrs-shadow-[A-Za-z0-9]{6}$/;
+const TEMP_FILE = /^(?:q\.sql|\.owner|duckdb_temp_[\w.-]+)$/;
+const OWNER_FILE = ".owner";
+
+/** Removes one executor temp directory; true when it is gone. Never throws. */
+export function removeShadowTemp(dir: string, tmpRoot: string = os.tmpdir()): boolean {
+  try {
+    const abs = path.resolve(dir);
+    if (path.dirname(abs) !== path.resolve(tmpRoot) || !TEMP_NAME.test(path.basename(abs))) return false;
+    if (!fs.lstatSync(abs).isDirectory()) return false;
+    let left = 0;
+    for (const name of fs.readdirSync(abs)) {
+      if (!TEMP_FILE.test(name)) { left++; continue; }
+      try { fs.rmSync(path.join(abs, name), { force: true, maxRetries: 5, retryDelay: 200 }); } catch { left++; }
+    }
+    if (left) return false;
+    fs.rmdirSync(abs);
+    return true;
+  } catch {
+    return !fs.existsSync(dir);
+  }
+}
+
+const alive = (pid: number): boolean => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code === "EPERM"; } };
+
+/**
+ * Removes the executor temp directories older than `olderThanMs` (default 6 hours: by the newest file in them) that no live process
+ * owns (the `.owner` file names the program that made it; one without a file, made before this was added, counts as unowned).
+ * Returns the folders removed.
+ */
+export function sweepShadowTemp(opts: { tmpRoot?: string; olderThanMs?: number; now?: number } = {}): string[] {
+  const root = opts.tmpRoot ?? os.tmpdir(), olderThan = opts.olderThanMs ?? 6 * 3600_000, now = opts.now ?? Date.now();
+  const removed: string[] = [];
+  let names: string[];
+  try { names = fs.readdirSync(root).filter((n) => TEMP_NAME.test(n)); } catch { return removed; }
+  for (const n of names) {
+    const dir = path.join(root, n);
+    try {
+      if (!fs.lstatSync(dir).isDirectory()) continue;
+      const files = fs.readdirSync(dir);
+      const newest = Math.max(fs.statSync(dir).mtimeMs, ...files.map((f) => { try { return fs.statSync(path.join(dir, f)).mtimeMs; } catch { return 0; } }));
+      if (now - newest < olderThan) continue;
+      if (files.includes(OWNER_FILE)) {
+        try { const pid = Number((JSON.parse(fs.readFileSync(path.join(dir, OWNER_FILE), "utf8")) as { pid?: number }).pid); if (pid > 0 && alive(pid)) continue; } catch { /* unreadable: unowned */ }
+      }
+      if (removeShadowTemp(dir, root)) removed.push(n);
+    } catch { /* one folder never stops the rest */ }
+  }
+  return removed;
+}
+
+// Every executor's directory and process, for the program's exit: the Python process is ended first (it holds its spill files open
+// on Windows), then the directory removed.
+const liveTemps = new Map<string, { pid: () => number }>();
+let hooked = false, swept = false;
+function endProcess(pid: number): void {
+  if (!(pid > 0)) return;
+  try { if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" }); else process.kill(pid, "SIGKILL"); } catch { /* gone */ }
+}
+function cleanAll(): void { for (const [dir, p] of liveTemps) { endProcess(p.pid()); removeShadowTemp(dir); } liveTemps.clear(); }
+function hookExit(): void {
+  if (hooked) return;
+  hooked = true;
+  process.on("exit", cleanAll);
+  // A signal ends the program as it did (the usual codes), after the cleanup.
+  for (const [sig, code] of [["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129]] as const) process.on(sig, () => { cleanAll(); process.exit(code); });
+}
+
+/**
  * `timeoutMs`: the longest one query may take on the persistent path (default 300 s). `memoryLimit` ("4GB") and
  * `threads`: DuckDB's own limits, set once when the process starts (persistent path only); unset, DuckDB's defaults
  * (80% of the machine's memory, every core) apply, as the app's routes use it. Spilling goes to the executor's temp
@@ -79,10 +158,14 @@ parentPort.on("message", (m) => {
 export type DuckdbOptions = { persistent?: boolean; cacheSize?: number; timeoutMs?: number; memoryLimit?: string; threads?: number };
 
 /** An executor; `close()` ends its Python process (the worker's end closes the process's input, and it exits). */
-export type DuckdbExecutor = ((sql: string) => unknown[][]) & { close(): void };
+export type DuckdbExecutor = ((sql: string) => unknown[][]) & { close(): void; /** Its temp directory (spill files), removed when it ends. */ readonly tempDir: string };
 export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): DuckdbExecutor {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-shadow-")).replace(/\\/g, "/");
+  if (!swept) { swept = true; if (process.env.NIBRS_SHADOW_NO_SWEEP !== "1") try { sweepShadowTemp(); } catch { /* a sweep never stops an executor */ } }
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), TEMP_PREFIX)).replace(/\\/g, "/");
+  try { fs.writeFileSync(path.join(tmp, OWNER_FILE), JSON.stringify({ pid: process.pid, started: new Date().toISOString() })); } catch { /* the sweep then counts it unowned after 6 hours */ }
+  hookExit();
   const run = opts.persistent === false ? spawnPerQuery(python, tmp) : persistent(python, tmp, opts.timeoutMs ?? 300_000);
+  liveTemps.set(tmp, { pid: () => (run as { pid?: () => number }).pid?.() ?? -1 });
   // The limits are set on the process before any query (the runner laptop, 16 GB, was killed twice for low memory by
   // DuckDB's default limit). Checked here, never passed into SQL as written.
   if (opts.memoryLimit !== undefined || opts.threads !== undefined) {
@@ -109,7 +192,7 @@ export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): Duckdb
     cache.set(sql, rows);
     if (cache.size > size) cache.delete(cache.keys().next().value!);
     return rows;
-  }, { close: () => (run as { close?: () => void }).close?.() });
+  }, { close: () => { (run as { close?: () => void }).close?.(); removeShadowTemp(tmp); liveTemps.delete(tmp); }, tempDir: tmp });
 }
 
 /** One Python process per query (the reference path). */
@@ -153,6 +236,9 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
       } else try { process.kill(pid, "SIGKILL"); } catch { /* already gone */ }
     }
     void worker.terminate();
+    // The process was killed, so DuckDB could not remove its spill files: they go with the directory (a killed national query left 8-12 GB).
+    removeShadowTemp(tmp);
+    liveTemps.delete(tmp);
   };
   return Object.assign((sql: string) => {
     if (dead) throw new Error(dead);
@@ -172,7 +258,7 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
       throw new Error(`duckdb failed: ${out.error}`);
     }
     return out.rows!;
-  }, { close: () => { dead ??= "duckdb executor closed"; end(); } });
+  }, { close: () => { dead ??= "duckdb executor closed"; end(); }, pid: () => Atomics.load(signal, 1) });
 }
 
 /** The built monthly totals at `root` (scripts/build-nibrs-month-totals.ts): a measure's file, or null where not built. */
