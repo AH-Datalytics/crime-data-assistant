@@ -274,7 +274,8 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
   }
   if (kind === "victims" && unit === "victim") {
-    if (!codes.every((c) => PERSON_CODES.has(c))) return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
+    // Victims of crimes against property are counted only as the property crime by a victim's age (Jeff 2026-11-15); every other property victim count stays by offense (P11).
+    if (!codes.every((c) => PERSON_CODES.has(c)) && m[2] !== "against_property") return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
     return { entity: "victim", sql: `SELECT DISTINCT v.data_year, v.ori, v.incident_num, v.victim_seq || ':' || v.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym${extra}
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
         ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num

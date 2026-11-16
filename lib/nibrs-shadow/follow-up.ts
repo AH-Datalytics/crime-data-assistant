@@ -522,6 +522,12 @@ export const deterministicRewriter: FollowUpRewriter = {
       && cr.all.every((p) => ["measure", "place", "period", "filler"].includes(p.concept));
     if (onlyCrime && (/\binstead\b/i.test(raw) || f.split(/\s+/).length <= 3)) {
       const m = prevParts.measures[0];
+      // The question named no crime ("victim age breakdown in Detroit in 2023", then the "Another crime" entry): the crime named fills it in.
+      if (!prevParts.measures.length) {
+        const at = prev.search(/\sin\s/i);
+        const base = prev.replace(/[?.]\s*$/, "");
+        return ok(at > 0 ? `${base.slice(0, at)} for ${f}${base.slice(at)}` : `${base} for ${f}`, "the crime named");
+      }
       if (!m || prevParts.measures.length !== 1 || prev.indexOf(m.text) < 0) return ask("Which crime to replace.");
       const word = /^[A-Z]/.test(prev.slice(prev.indexOf(m.text))) ? ucFirst(f) : f;
       return ok(prev.replace(m.text, word), "the crime replaced");
