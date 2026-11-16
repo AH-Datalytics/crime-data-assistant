@@ -3,7 +3,7 @@
  *
  * Reads lib/nibrs-shadow, lib/nibrs-plan and lib/answer-contract and fails on the word "yet" in any string literal that is shown
  * to a reader. Not checked: comments, regular expressions, and an object key (an internal reason that a lookup matches, such as
- * "we don't have LEOKA data in yet." in wording.ts: its value is what the reader sees). Reads files only: no database, no model,
+ * a reason string in wording.ts: its value is what the reader sees). Reads files only: no database, no model,
  * no network.
  */
 "use strict";
