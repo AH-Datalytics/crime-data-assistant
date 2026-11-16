@@ -21,6 +21,15 @@ export function previewEnabled(env: Record<string, string | undefined> = process
 }
 
 /**
+ * DuckDB's limits for the preview (as the scorecard's): NIBRS_SHADOW_DUCKDB_MEMORY ("4GB") and NIBRS_SHADOW_DUCKDB_THREADS (4) when
+ * unset or not valid, so one heavy question cannot take the whole machine (DuckDB's own default is 80% of RAM).
+ */
+export function duckdbLimits(env: Record<string, string | undefined> = process.env): { memoryLimit: string; threads: number } {
+  const m = (env.NIBRS_SHADOW_DUCKDB_MEMORY ?? "").trim(), t = Number(env.NIBRS_SHADOW_DUCKDB_THREADS);
+  return { memoryLimit: /^\d+(?:\.\d+)?\s*(?:KB|MB|GB|TB|KiB|MiB|GiB|TiB)$/i.test(m) ? m : "4GB", threads: Number.isInteger(t) && t > 0 ? t : 4 };
+}
+
+/**
  * A request's question and button path, or why it is refused. A question is never shortened: one over the limit is
  * refused, so an answer is always to the question shown (Codex preview review).
  */

@@ -6,10 +6,14 @@
 import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
-import { follow, parseRequest, previewEnabled, toPreview } from "../lib/nibrs-shadow/preview";
+import { duckdbLimits, follow, parseRequest, previewEnabled, toPreview } from "../lib/nibrs-shadow/preview";
 
 // The gate: off in production whatever else is set; off without a build; on only for local development with a build.
 assert.equal(previewEnabled({ NODE_ENV: "production", NIBRS_SHADOW_ROOT: "/build" }), false);
+// DuckDB's limits: the scorecard's 4GB and 4 threads unless the environment names valid ones.
+assert.deepEqual(duckdbLimits({}), { memoryLimit: "4GB", threads: 4 });
+assert.deepEqual(duckdbLimits({ NIBRS_SHADOW_DUCKDB_MEMORY: "8GB", NIBRS_SHADOW_DUCKDB_THREADS: "2" }), { memoryLimit: "8GB", threads: 2 });
+assert.deepEqual(duckdbLimits({ NIBRS_SHADOW_DUCKDB_MEMORY: "4GB'; DROP TABLE x; --", NIBRS_SHADOW_DUCKDB_THREADS: "0" }), { memoryLimit: "4GB", threads: 4 }, "a bad value falls back, never reaches SQL");
 assert.equal(previewEnabled({ NODE_ENV: "development" }), false);
 assert.equal(previewEnabled({ NODE_ENV: "development", NIBRS_SHADOW_ROOT: "" }), false);
 assert.equal(previewEnabled({ NODE_ENV: "development", NIBRS_SHADOW_ROOT: "/build" }), true);

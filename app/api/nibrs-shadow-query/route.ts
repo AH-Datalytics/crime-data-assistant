@@ -12,7 +12,8 @@ import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
 import { loadNibrsRelease } from "@/lib/nibrs-shadow/release";
 import { currentBuildAt } from "@/lib/nibrs-shadow/current";
 import { shrBuildAt } from "@/lib/nibrs-shadow/shr";
-import { follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
+import { hateBuildAt } from "@/lib/nibrs-shadow/hate";
+import { duckdbLimits, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 
 export const dynamic = "force-dynamic";
 const notFound = () => new NextResponse("Not Found", { status: 404 });
@@ -22,7 +23,7 @@ function shadowDeps(): ShadowDeps {
   // The pinned build (agreed with nibrs-model): its id is in every answer's source statement. Its months run through the
   // month before its CDE release's month (Jeff 2026-11-03), from the release recorded with it (release.json).
   const rel = loadNibrsRelease(undefined, process.env.NIBRS_SHADOW_ROOT);
-  const execute = duckdbExecutor(process.env.NIBRS_SHADOW_PYTHON ?? "python");
+  const execute = duckdbExecutor(process.env.NIBRS_SHADOW_PYTHON ?? "python", duckdbLimits());
   deps ??= {
     // The bundled route has no source __dirname: the index is read from the project root.
     places: loadPlaceIndex(path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")),
@@ -34,6 +35,8 @@ function shadowDeps(): ShadowDeps {
     current: currentBuildAt(process.env.NIBRS_HISTORICAL_ROOT, execute),
     // Homicide Reports (Jeff S1, 2026-11-11): the SHR release, when NIBRS_SHR_ROOT names one.
     shr: shrBuildAt(process.env.NIBRS_SHR_ROOT),
+    // Hate Crime, when NIBRS_HATE_ROOT names its export.
+    hate: hateBuildAt(process.env.NIBRS_HATE_ROOT || undefined),
   };
   return deps;
 }
