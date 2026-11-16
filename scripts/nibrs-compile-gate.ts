@@ -171,7 +171,7 @@ const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3,
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
 // February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
+  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
@@ -179,7 +179,31 @@ const by = (dimension: string) => ({ dimension, unknown: "visible" as const, abs
 check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offense"), geography: { places: [{ kind: "agency", ori: "YY0000000", label: "Synthetic, YY" }], combine: "separate" },
   groupings: [by("time.year"), by("offense.location_type")], statistics: [{ kind: "count", as: "count", measure: "n" }, { kind: "share", as: "share", measure: "n", within: ["time.year"] }] },
   { kind: "absolute", from: "2024-01", to: "2025-12" }, SYN, [2024, 2025, 2026], new Map<string, Cell[]>([
-    ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(0, "REPORTED_ZERO"), C(null, "UNAVAILABLE")]]]));
+    ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(null, "NOT_REPORTED"), C(null, "NOT_REPORTED")]]]));
+
+// One agency, zero-report months (Jeff 2026-11-16): YY has a theft in January 2024 and a zero report for February to December. Those months
+// are left out: the year and the total are the January count, naming the months left out; a year with no month with crimes is blank (NOT_REPORTED).
+{
+  const yy = { ...syn("offenses.motor_vehicle_theft", "offense"), geography: { places: [{ kind: "agency" as const, ori: "YY0000000", label: "Synthetic, YY" }], combine: "separate" as const } };
+  const run = (plan: NibrsPlan, from: string, to: string) => {
+    const c = compilePlan(plan, { kind: "absolute", from, to }, { root: SYN, builtYears: [2024, 2025, 2026] });
+    if (c.kind !== "query") throw new Error(`unsupported: ${c.reason}`);
+    return { cols: c.query.columns, rows: runSql(c.query.sql) };
+  };
+  const year = run({ ...yy, groupings: [by("time.year")] }, "2024-01", "2025-12");
+  const total = run({ ...yy, groupings: [] }, "2024-01", "2024-12");
+  const idx = (r: { cols: string[] }, n: string) => r.cols.indexOf(n);
+  const y24 = year.rows.find((r) => String(r[0]) === "2024")!, y25 = year.rows.find((r) => String(r[0]) === "2025")!;
+  const bad: string[] = [];
+  if (y24[idx(year, "count")] !== 1 || y24[idx(year, "count_status")] !== "VALUE") bad.push(`2024 year ${JSON.stringify(y24)}`);
+  if (String(y24[idx(year, "left_out")]) !== "202402,202403,202404,202405,202406,202407,202408,202409,202410,202411,202412") bad.push(`2024 left_out ${y24[idx(year, "left_out")]}`);
+  if (y25[idx(year, "count")] !== null || y25[idx(year, "count_status")] !== "NOT_REPORTED") bad.push(`2025 year ${JSON.stringify(y25)}`);
+  const t = total.rows[0];
+  if (t[idx(total, "count")] !== 1 || t[idx(total, "count_status")] !== "VALUE" || !String(t[idx(total, "left_out")]).startsWith("202402,")) bad.push(`total ${JSON.stringify(t)}`);
+  console.log(`synthetic one agency, zero-report months left out: ${bad.length ? `${bad.length} PROBLEM(S)` : "all equal"}`);
+  for (const b of bad) console.log(`  ${b}`);
+  if (bad.length) failed++;
+}
 
 const zz = (measures: NibrsPlan["measures"], groupings: NibrsPlan["groupings"] = [], filters: NibrsPlan["filters"] = []): NibrsPlan =>
   ({ ...syn("offenses.robbery", "offense"), geography: { places: [{ kind: "agency", ori: "ZZ0000000", label: "Synthetic, ZZ" }], combine: "separate" }, measures, groupings, filters });
@@ -192,13 +216,13 @@ check("synthetic victim with a handgun on its connecting offense", zz([{ id: "vi
 
 check("synthetic arrests in zero and unreported months", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
   measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
-    ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
+    ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(null, "NOT_REPORTED")]]]),
   ["arrests_counted_once"]);
 // Job AR3: robbery arrests at XX: none anywhere, but January (REPORTED_ZERO) and April (UNKNOWN) have a theft arrest, so
 // both are a known 0 (VALUE, Codex 04.1), not a reported zero or a blank; May (REPORTED_ZERO, no arrest) stays a reported zero.
 check("synthetic arrests of another kind in an unreported month", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
   measures: [{ id: "arrests.robbery", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
-    ["2025-01", [C(0, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
+    ["2025-01", [C(0, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(null, "NOT_REPORTED")]]]),
   ["arrests_counted_once"]);
 // Job AR6: DUI arrests (a Group B offense) at WW, from the standalone Group B arrests: January has one (a month with an
 // arrest is reported for arrests whatever its status), February-May have neither an arrest nor a status (blank).

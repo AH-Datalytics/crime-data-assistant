@@ -22,7 +22,7 @@ assert.deepEqual(h1.refuseOn, ["EVIDENCE_CONFLICT"]);
 assert.deepEqual(h1.statements, []);
 
 // H2 (a total) and H3 (by year): a year is known only when every month is.
-assert.deepEqual(ok(compilePlan(X.H2, year(2025), t)).columns, [X.H2.statistics[0].as, `${X.H2.statistics[0].as}_status`]);
+assert.deepEqual(ok(compilePlan(X.H2, year(2025), t)).columns, [X.H2.statistics[0].as, `${X.H2.statistics[0].as}_status`, "left_out"]);
 assert.ok(ok(compilePlan(X.H3, { kind: "absolute", from: "2020-01", to: "2025-12" }, t)).sql.includes("bool_and"));
 
 // N3: offense segments keep their occurrence key.
@@ -45,7 +45,7 @@ assert.deepEqual(n2.statements, ["property_not_attributed"]);
 const n2as = X.N2.statistics[0].as, n2m = X.N2.measures[0].as;
 const byType = ok(compilePlan({ ...X.N2, groupings: [{ dimension: "offense.clearance_type", unknown: "visible", absent: "show" }],
   statistics: [X.N2.statistics[0], { kind: "incidents", as: "inc", measure: n2m }] }, year(2024), t));
-assert.deepEqual(byType.columns, ["offense.clearance_type", n2as, `${n2as}_status`, "inc", "inc_status"]);
+assert.deepEqual(byType.columns, ["offense.clearance_type", n2as, `${n2as}_status`, "inc", "inc_status", "left_out"]);
 for (const s of ["cleared_exceptionally", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num)) AS ni", 'sum(ni) END AS "inc"']) assert.ok(byType.sql.includes(s), s);
 assert.deepEqual(byType.statements, ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
 // A selection by status says P64 only; by arrest, P67 too.

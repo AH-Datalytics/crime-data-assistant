@@ -140,7 +140,7 @@ const isShrSql = (sql: string) => /\/shr\/canonical|state_crime|nation_crime|sum
 // 20: the months run through the month before the build's CDE release's month (Jeff 2026-11-03), from release.json.
 const nibrsRelease = loadNibrsRelease();
 const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: nibrsRelease.lastMonth, asOf: "2026-10-29" },
-  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (isShrSql(sql) ? shrStub(sql) : /current_crime|current_final/.test(sql) ? currentStub(sql) : /crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build, current, shr: shrBuild } as ShadowDeps;
+  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (isShrSql(sql) ? shrStub(sql) : /current_crime|current_final/.test(sql) ? currentStub(sql) : /crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : ((rows) => (/AS left_out/.test(sql) ? rows.map((r) => [...r, ""]) : rows))(nibrs(sql))), historical: build, current, shr: shrBuild } as ShadowDeps;
 
 /** Fixtures for each live source: the questions its answers are checked on. */
 const FIXTURES: Record<string, string[]> = {

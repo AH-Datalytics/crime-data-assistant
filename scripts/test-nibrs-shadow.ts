@@ -28,7 +28,16 @@ import type { Case } from "../lib/answer-eval/case";
 const places = loadPlaceIndex();
 const sqls: string[] = [];
 /** Rows for the compiled query: every month (or year) of the period, 7 each, March 2024 unknown. */
+/** One agency's month reported as zero crimes (AZERO, "2024-07"): the stub marks it NOT_REPORTED, as the compiler does for one agency. */
+let AZERO: string[] = [];
+let withLeftOut = false;
+/** A year or total's rows end with `left_out` (the zero-report months, "202407"); a stub branch that built it says so. */
 function stub(sql: string): unknown[][] {
+  withLeftOut = false;
+  const rows = stub0(sql);
+  return /AS left_out/.test(sql) && !withLeftOut ? rows.map((r) => [...r, ""]) : rows;
+}
+function stub0(sql: string): unknown[][] {
   sqls.push(sql);
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
@@ -57,15 +66,24 @@ function stub(sql: string): unknown[][] {
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
   for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
-  const cell = (k: string): [number | null, string] => (k === "2024-03" ? [null, "UNKNOWN"] : [7, "VALUE"]);
+  const cell = (k: string): [number | null, string] => (k === "2024-03" ? [null, "UNKNOWN"] : AZERO.includes(k) ? [null, "NOT_REPORTED"] : [7, "VALUE"]);
+  // A year or total: the months with crimes are summed, the zero-report ones named (`left_out`), a blank only for an unknown month or no month with crimes.
+  const rolled = (ms: string[]): unknown[] => {
+    if (ms.some((m) => cell(m)[1] === "UNKNOWN")) return [null, "UNKNOWN"];
+    const zero = ms.filter((m) => cell(m)[1] === "NOT_REPORTED");
+    return zero.length === ms.length ? [null, "NOT_REPORTED"] : [7 * (ms.length - zero.length), "VALUE"];
+  };
+  const leftOut = (ms: string[]) => ms.filter((m) => cell(m)[1] === "NOT_REPORTED").map((m) => m.replace("-", "")).join(",");
   if (/AS period/.test(sql) && /substr\(ym, 1, 4\) AS period/.test(sql)) {
     const years = [...new Set(months.map((m) => m.slice(0, 4)))];
-    return years.map((y) => (months.some((m) => m.startsWith(y) && cell(m)[0] === null) ? [y, null, "UNKNOWN"] : [y, 7 * months.filter((m) => m.startsWith(y)).length, "VALUE"]));
+    withLeftOut = true;
+    return years.map((y) => [y, ...rolled(months.filter((m) => m.startsWith(y))), leftOut(months.filter((m) => m.startsWith(y)))]);
   }
   if (/AS period/.test(sql)) return months.map((m) => [m, ...cell(m)]);
   // A total with its incidents beside it (P66): the count, then the incidents (5 a month), each with its status.
   if (/_incidents"/.test(sql)) return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN", null, "UNKNOWN"]] : [[7 * months.length, "VALUE", 5 * months.length, "VALUE"]];
-  return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN"]] : [[7 * months.length, "VALUE"]];
+  withLeftOut = true;
+  return [[...rolled(months), leftOut(months)]];
 }
 /** Populations by ORI (null: the FBI gives none), and Texas's city agencies. */
 const POP: Record<string, number | null> = { OK0720500: 400_000, OK0550600: 700_000, KS0870300: 400_000, NC0410200: 300_000, NC0920100: null,
@@ -1741,6 +1759,34 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(ev.delivered.table.rows.map((r) => r[2]), [3, 3], "the same set each year");
   assert.match(ev.delivered.text[0], /only the 3 Consistent Reporting Agencies that reported every month from January 2023 through December 2024\.$/);
   assert.ok(span.stateSum!.years.find((y) => y.year === 2023)!.agencies > 3, "Austin reported 2023 in full, yet is not in the set");
+}
+// Jeff (2026-11-16): for ONE agency a month reported as zero crimes is NOT reported: left out of a total, blank in a chart, no rolling window
+// over it. The 2025 total of the other 11 months is shown and says July is left out; never a 0 for July.
+{
+  const total = () => as(ask("Shoplifting in Memphis in 2025"), "answer");
+  const clean = total();
+  assert.ok(!clean.delivered.text.some((t) => /left out|is blank/.test(t)), "no month left out, no sentence");
+  AZERO = ["2025-07"];
+  const one = total();
+  assert.equal(one.delivered.table.rows[0][0], 77, "11 months of 7");
+  assert.ok(one.delivered.text.includes("July 2025 is left out: the agency reported no crimes that month."), one.delivered.text.join(" | "));
+  const monthly = as(ask("Shoplifting in Memphis by month in 2025"), "answer");
+  assert.equal(monthly.delivered.table.rows.length, 12);
+  assert.equal(monthly.delivered.table.rows.find((r) => r[0] === "2025-07")![1], null, "a gap, never 0");
+  assert.ok(monthly.delivered.text.includes("July 2025 is blank: the agency reported no crimes that month."), monthly.delivered.text.join(" | "));
+  const rollz = as(ask("Rolling 12-month shoplifting in Detroit since 2025"), "answer");
+  assert.equal(rollz.delivered.table.rows.find((r) => r[0] === "2025-12")![1], null, "a window holding July 2025 is blank");
+  assert.ok(rollz.delivered.text.includes("No crimes were reported in July 2025, so no rolling total is given for any window containing it."), rollz.delivered.text.join(" | "));
+  AZERO = ["2025-03", "2025-07"];
+  assert.ok(total().delivered.text.includes("March and July 2025 are left out: the agency reported no crimes in those months."));
+  assert.equal(total().delivered.table.rows[0][0], 70);
+  AZERO = Array.from({ length: 12 }, (_, i) => `2025-${String(i + 1).padStart(2, "0")}`);
+  const none = total();
+  assert.equal(none.delivered.table.rows[0][0], null);
+  assert.ok(none.delivered.text.includes("The agency has no reported crimes or data for any month of 2025, so no total is given."), none.delivered.text.join(" | "));
+  AZERO = [];
+  const sameAgain = total();
+  assert.equal(sameAgain.delivered.table.rows[0][0], 84, "the ordinary figure is back");
 }
 // P83, P84 (Jeff 2026-11-01): gun violence offers gun crime; car break-ins say how they are counted.
 {
