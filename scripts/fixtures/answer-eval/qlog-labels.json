@@ -70531,7 +70531,7 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "shr",
+    "source": "historical",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -70539,11 +70539,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "All homicides includes types beyond standard murder totals."
+    "drafted_by": "jeff-2026-11-16",
+    "reviewed_by": "jeff-2026-11-16",
+    "notes": "All homicides as a plain count is Crime Index (Historical); a breakdown of anything goes to Homicide Reports (P10, Jeff 2026-11-16)."
    }
   },
   {

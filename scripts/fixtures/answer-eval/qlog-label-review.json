@@ -15081,12 +15081,12 @@
 "by": "codex-second-1"
 },
 "QL-shr-372901ecb1": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "All homicides includes types beyond standard murder totals.",
+"status": "reviewed",
+"by": "jeff-2026-11-16",
+"why": "All homicides as a plain count is Crime Index (Historical); a breakdown of anything goes to Homicide Reports (P10, Jeff 2026-11-16).",
 "expected": {
 "outcome": "answer",
-"source": "shr"
+"source": "historical"
 }
 },
 "QL-shr-373a222798": {

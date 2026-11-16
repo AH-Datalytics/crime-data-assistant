@@ -1993,6 +1993,28 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/per 100,000 people, 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
   }
 }
+// P10 (Jeff 2026-11-16): "all homicides" as a plain count is Crime Index (murders by year, nothing else); with a breakdown of anything
+// it is Homicide Reports, and justifiable homicides are counted and said so.
+{
+  const seen: string[] = [];
+  const hs = (sql: string): unknown[][] => { seen.push(sql); return /count\(DISTINCT agency_key\)/.test(sql) ? [[2020, 1, ["ori9:X"]], [2021, 1, ["ori9:X"]]] : /AS k1/.test(sql) ? [[2020, "Firearm", 5], [2021, "Knife", 2]] : []; };
+  const d2 = { ...deps, execute: hs, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const plainCount = shadowAnswer("Show me data about all homicides reported in South Carolina since 2020", d2);
+  assert.equal(plainCount.kind, "srs", JSON.stringify(plainCount).slice(0, 300));
+  if (plainCount.kind === "srs") {
+    assert.ok(/^South Carolina: murders by year, 2020 to /.test(plainCount.delivered.text[0]), plainCount.delivered.text[0]);
+    assert.deepEqual(plainCount.delivered.table.columns.length, 2, "a year and a count, no breakdown");
+    assert.ok(!plainCount.delivered.text.some((t) => /homicide|justifiable|disclaim/i.test(t)), "no disclaimer on Crime Index");
+  }
+  seen.length = 0;
+  const byWeapon = shadowAnswer("all homicides in South Carolina by weapon since 2020", d2);
+  assert.equal(byWeapon.kind, "shr", JSON.stringify(byWeapon).slice(0, 300));
+  if (byWeapon.kind === "shr") {
+    assert.ok(byWeapon.delivered.text.some((t) => /^All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides/.test(t)), JSON.stringify(byWeapon.delivered.text));
+  }
+  assert.ok(seen.some((q) => /homicide_type IN \('A', 'B'\)/.test(q)) && !seen.some((q) => /circumstance NOT IN \('80', '81'\)/.test(q)), "justifiable homicides are counted");
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.
