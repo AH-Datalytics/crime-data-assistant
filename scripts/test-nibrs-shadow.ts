@@ -705,6 +705,14 @@ for (const q of ["violent crimes by offender race in Detroit in 2023", "violent 
     assert.ok(!/\byet\b/.test(d.explanation));
   }
 }
+// The agencies of a state or the nation are read once for every year the period asks, not once per year.
+{
+  const before = sqls.length;
+  ask("murders in Texas from 2017 to 2025 by year");
+  const headers = sqls.slice(before).filter((x) => /u\.state_abbr IN/.test(x));
+  assert.ok(headers.length <= 1, `one agency-header statement for the nine years, not ${headers.length}`);
+  if (headers.length) assert.match(headers[0], /data_year IN \(2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025\)/);
+}
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
