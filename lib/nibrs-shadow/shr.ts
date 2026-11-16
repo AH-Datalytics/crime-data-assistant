@@ -95,6 +95,8 @@ export type ShrQuestion = {
   filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
+  /** Several agencies (shrSeveral in answer.ts): `place` is the first, these the others. */
+  places?: ShrPlace[];
   /** A ranking of the nation's cities by this question's count or share (answerShrRanking): the direction, the cut and the population floor. */
   ranking?: { direction: "top" | "bottom"; limit: number; minPopulation: number | null };
   /** Sentences the answer adds (what the source does not record of what was asked), after the counting rules. */

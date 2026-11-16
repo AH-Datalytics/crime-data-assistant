@@ -97,7 +97,7 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     : o.kind === "srs" ? (q.places ?? (q.place ? [q.place] : [])).map(geo)
     // A Current Trends ranking or set lists its agencies with their ORIs, so a checker can find each one (job S4).
     : o.kind === "current" ? [...(q.place ? [q.place] : []), ...(q.agencies ?? []).map((a) => ({ kind: "agency", ori: a.ori, state: a.state ?? null, label: a.label }))]
-    : shr ? (q.place ? [q.place] : [])
+    : shr ? [...(q.place ? [q.place] : []), ...((q as { places?: { kind: string; ori?: string; label?: string; state?: string }[] }).places ?? [])]
     : ((o.plan?.geography as { places?: unknown[] } | undefined)?.places ?? []));
   const source = o.kind === "historical" ? (q.beside?.length ? (q.agencies?.length ? "crimeindex_agency+state_national" : "crimeindex_state_national") : "crimeindex_agency") : SOURCE[o.kind];
   const grain = groups.some(([g]) => g.binding.dimension === "time.year") ? "time.year" : groups.some(([g]) => g.binding.dimension === "time.month") ? "time.month" : groups.length ? null : "total";
