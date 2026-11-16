@@ -2715,7 +2715,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const average = ledger0.parts.some((p) => p.concept === "rolling" && String(p.value).startsWith("rolling-avg"));
     const shown = windows.map((w) => [w.ym, average && w.value !== null ? Math.round((10 * w.value) / months) / 10 : w.value, w.status]);
     const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], shown, statements, release.id, notes0, null,
-      { rolling: { months, average, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
+      { rolling: { months, average, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO" && x.status !== "NOT_REPORTED").map((x) => x.ym),
+        leftOut: cells.filter((x) => x.status === "NOT_REPORTED" && x.ym >= windowMonths(period.from, months)[0] && x.ym <= period.to).map((x) => x.ym) } });
     if (delivered.contractProblems.length) return notYet(`answer contract: ${delivered.contractProblems.join("; ")}`);
     return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered: reported(delivered) };
   }
@@ -2740,7 +2741,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const kGot = keyCols(c.query.columns), kRows = keyCols(columns);
     const byKey = new Map(got.map((r) => [keyOf(r, kGot), r]));
     if (got.length !== rows.length || byKey.size !== got.length || rows.some((r) => !byKey.has(keyOf(r, kRows)))) return decline("unsupported_capability", "This isn't available: measures whose periods or categories do not line up.");
-    const stat = c.query.columns.map((_, i) => (kGot.includes(i) ? -1 : i)).filter((i) => i >= 0);
+    const stat = c.query.columns.map((col, i) => (kGot.includes(i) || col === "left_out" ? -1 : i)).filter((i) => i >= 0);
     columns = [...columns, ...stat.map((i) => c.query.columns[i])];
     rows = rows.map((r) => [...r, ...stat.map((i) => byKey.get(keyOf(r, kRows))![i])]);
   }

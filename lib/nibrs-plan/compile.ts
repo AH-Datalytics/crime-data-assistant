@@ -535,7 +535,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         // and counted, not a conflict. Crimes keep the conflict rule.
         isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}${anyArrest ? `
            WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
-           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
+           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN ${
+        // One agency (Jeff 2026-11-16): a month reported as zero crimes is NOT reported: left out, blank, never 0. A state or
+        // group sum (grid) keeps the zero report: it adds nothing, and the month is present when any agency has rows.
+        grid ? "'REPORTED_ZERO'" : "'NOT_REPORTED'"}
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
       FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${anyArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,
@@ -565,6 +568,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
 
   const grain = timeDims[0]?.dimension === "time.month" ? "month" : timeDims[0]?.dimension === "time.year" ? "year" : timeDims[0]?.dimension === "time.quarter" ? "quarter" : "total";
   const known = (c: string) => `${c} IN ('VALUE', 'REPORTED_ZERO')`;
+  // One agency: a year or total sums the months with crimes reported and leaves out the zero-report ones (NOT_REPORTED), which it names
+  // (`left_out`); it is blank only when a month is unknown or no month has crimes. A state or group sum keeps "every month known".
+  const kn = (c: string) => (grid ? known(c) : `${c} IN ('VALUE', 'REPORTED_ZERO', 'NOT_REPORTED')`);
+  const allLeftOut = (c: string) => (grid ? "FALSE" : `bool_and(${c} = 'NOT_REPORTED')`);
   const countName = ident(count.as), shareName = share ? ident(share.as) : "";
   let body: string;
   if (grain === "month") {
@@ -580,18 +587,19 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // own units, which (one unit, one category) is the sum of its months' totals.
     // A quarter (P71, coordinator 2026-11-02: by category too) is a sum of its three months, under the same rule.
     const pk = grain === "year" ? `substr(ym, 1, 4) AS period, ` : grain === "quarter" ? `substr(ym, 1, 4) || '-Q' || CAST((CAST(substr(ym, 5, 2) AS INTEGER) + 2) // 3 AS VARCHAR) AS period, ` : "";
-    const rolled = (c: string) => `CASE WHEN bool_or(${c} = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN bool_and(${known(c)}) THEN CASE WHEN bool_and(${c} = 'REPORTED_ZERO') THEN 'REPORTED_ZERO' ELSE 'VALUE' END ELSE 'UNKNOWN' END`;
+    const rolled = (c: string) => `CASE WHEN bool_or(${c} = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN bool_and(${kn(c)}) THEN CASE WHEN bool_and(${c} = 'REPORTED_ZERO') THEN 'REPORTED_ZERO' WHEN ${allLeftOut(c)} THEN 'NOT_REPORTED' ELSE 'VALUE' END ELSE 'UNKNOWN' END`;
+    const leftOut = grid ? "" : `, coalesce(string_agg(CASE WHEN cell = 'NOT_REPORTED' THEN ym END, ',' ORDER BY ym), '') AS left_out`;
     const shareCols = share ? `,
-      CASE WHEN bool_and(${known("cell")}) AND sum(den) > 0 THEN sum(n)::DOUBLE / sum(den) END AS ${shareName},
-      CASE WHEN bool_or(cell = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN NOT bool_and(${known("cell")}) THEN 'UNKNOWN'
+      CASE WHEN bool_and(${kn("cell")}) AND NOT ${allLeftOut("cell")} AND sum(den) > 0 THEN sum(n)::DOUBLE / sum(den) END AS ${shareName},
+      CASE WHEN bool_or(cell = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN NOT bool_and(${kn("cell")}) THEN 'UNKNOWN' WHEN ${allLeftOut("cell")} THEN 'NOT_REPORTED'
            WHEN sum(den) = 0 THEN 'UNAVAILABLE' ELSE 'VALUE' END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT ${pk}${g.join(", ")}${g.length ? ", " : ""}
-      CASE WHEN bool_and(${known("cell")}) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${inc ? `,
-      CASE WHEN bool_and(${known("cell")}) THEN sum(ni) END AS ${ident(inc.as)}, ${rolled("cell")} AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}
+      CASE WHEN bool_and(${kn("cell")}) AND NOT ${allLeftOut("cell")} THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${inc ? `,
+      CASE WHEN bool_and(${kn("cell")}) AND NOT ${allLeftOut("cell")} THEN sum(ni) END AS ${ident(inc.as)}, ${rolled("cell")} AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}${leftOut}
       FROM cells${grain === "year" || grain === "quarter" || g.length ? ` GROUP BY ${[...(grain === "year" || grain === "quarter" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" || grain === "quarter" ? ["1"] : []), ...g].join(", ")}` : ""}`;
   }
   // `den` (grid mode by category only): the agency-month's own total of the measure, for a state sum's year total and shares.
-  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(grid && g.length && grain === "month" ? ["den"] : []), ...(inc ? [inc.as, `${inc.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
+  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(grid && g.length && grain === "month" ? ["den"] : []), ...(inc ? [inc.as, `${inc.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : []), ...(grain !== "month" && !grid ? ["left_out"] : [])];
   const sql = `WITH ${parts.join(",\n")}\n${body}`;
   return { kind: "query", query: { sql, columns, scanYears: years, refuseOn: ["EVIDENCE_CONFLICT"], statements } };
 }

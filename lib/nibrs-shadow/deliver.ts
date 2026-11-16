@@ -261,7 +261,22 @@ export function categoryName(dimension: string, code: unknown): string {
  * category's part of all units of its own period).
  */
 /** Time forms (increment 3): a set of years, or rolling windows (each row a window ending that month). */
-export type TimeOptions = { years?: number[]; rolling?: { months: number; average?: boolean; missing: string[] }; quarters?: { incomplete: string[] } };
+export type TimeOptions = { years?: number[]; rolling?: { months: number; average?: boolean; missing: string[]; leftOut?: string[] }; quarters?: { incomplete: string[] } };
+/**
+ * One agency's zero-report months (Jeff 2026-11-16: a month reported as zero crimes is NOT reported). In words, grouped by year:
+ * "July 2024", "March and July 2024", "March 2023 and July 2024".
+ */
+export function leftOutWords(months: string[]): string {
+  const byYear = new Map<string, string[]>();
+  for (const m of months) byYear.set(m.slice(0, 4), [...(byYear.get(m.slice(0, 4)) ?? []), MONTHS[Number(m.slice(5, 7)) - 1]]);
+  const parts = [...byYear].map(([y, ms]) => `${ms.length > 2 ? `${ms.slice(0, -1).join(", ")} and ${ms[ms.length - 1]}` : ms.join(" and ")} ${y}`);
+  return parts.length > 2 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts.join(" and ");
+}
+/** "July 2024 is left out: the agency reported no crimes that month." (`word`: left out / blank). */
+export const leftOutSentence = (months: string[], word: "left out" | "blank") =>
+  `${leftOutWords(months)} ${months.length === 1 ? "is" : "are"} ${word}: the agency reported no crimes ${months.length === 1 ? "that month" : "in those months"}.`;
+/** A compiled row's zero-report months ("202407,202409" in `left_out`), as "2024-07". */
+export const leftOutOf = (v: unknown): string[] => String(v ?? "").split(",").filter(Boolean).map((m) => `${m.slice(0, 4)}-${m.slice(4, 6)}`);
 /** P66: the incidents beside a count (answer.ts): their statistic, or null. */
 export function incidentsBeside(plan: NibrsPlan): string | null {
   return plan.statistics.find((s) => s.kind === "incidents")?.as ?? null;
@@ -360,7 +375,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   // 02.2), so years keep their blank rows and the "not every month is known" note. Rolling windows and quarters too.
   let leadingGap: string[] = [];
   if (time === "time.month" && !cats.length && !opts.rolling && !opts.quarters && ip >= 0) {
-    const noReport = (r: unknown[]) => ["UNKNOWN", "NOT_REPORTED"].includes(String(r[at(`${count}_status`)]));
+    const noReport = (r: unknown[]) => String(r[at(`${count}_status`)]) === "UNKNOWN";
     const first = rows.findIndex((r) => !noReport(r));
     if (first > 0) { leadingGap = rows.slice(0, first).map((r) => String(r[ip])); rows = rows.slice(first); }
   }
@@ -393,15 +408,20 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const statusOf = (r: unknown[]) => String(r[at(`${count}_status`)]);
   if (!time && !cats.length) {
     const v = tableRows[0]?.[0] as number | null | undefined;
+    const lo = at("left_out") >= 0 ? leftOutOf(rows[0]?.[at("left_out")]) : [];
     text.push(v === null || v === undefined
-      ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
+      ? (statusOf(rows[0] ?? []) === "NOT_REPORTED" ? `The agency has no reported crimes or data for any month of ${when}, so no total is given.`
+        : `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`)
       : `${agency}: ${fmt(v)} ${one(v, what)} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} ${one(tableRows[0][1] as number, "incidents")}` : ""}.`);
+    if (lo.length && v !== null && v !== undefined) text.push(leftOutSentence(lo, "left out"));
   } else if (!cats.length && opts.rolling) {
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;
     // An average (Jeff 2026-11-05): each window's total over its ${n} months, said as an average, never as the total.
     text.push(opts.rolling.average ? `${agency}: ${what}, rolling ${n}-month averages per month (each window's total divided by ${n}), by month, ${when}.`
       : `${agency}: ${what}, rolling ${n}-month totals by month, ${when}.`);
+    const leftOutRoll = opts.rolling.leftOut ?? [];
+    if (leftOutRoll.length) text.push(`No crimes were reported in ${leftOutWords(leftOutRoll)}, so no rolling ${opts.rolling.average ? "average" : "total"} is given for any window containing ${leftOutRoll.length === 1 ? "it" : "them"}.`);
     if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
       text.push(`No report is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter ${opts.rolling.average ? "average" : "total"}.`);
   } else if (!cats.length && opts.quarters) {
@@ -415,10 +435,17 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
       const start = String(rows[0][ip]);
       text.push(`No report is known for ${runs(leadingGap)}, so the chart and table start at ${start.length === 7 ? monthName(start) : start}.`);
     }
-    const missing = rows.filter((r) => statusOf(r) === "UNKNOWN" || statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
+    const missing = rows.filter((r) => statusOf(r) === "UNKNOWN").map((r) => String(r[ip]));
     // Only what the status establishes: an unknown month has no known report; a year is known only when all its months are.
     // (A month with crimes reported and none of these is a known 0, P51.)
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
+    // One agency's zero-report months (Jeff 2026-11-16): not reported: blank in a chart, left out of a year's total, a year with none blank.
+    const zero = rows.filter((r) => statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
+    if (time === "time.year") {
+      const left = rows.flatMap((r) => (statusOf(r) === "VALUE" && at("left_out") >= 0 ? leftOutOf(r[at("left_out")]) : []));
+      if (left.length) text.push(leftOutSentence(left, "left out"));
+      if (zero.length) text.push(`The agency has no reported crimes or data for any month of ${andList(zero)}, so no total is given.`);
+    } else if (zero.length) text.push(leftOutSentence(zero, "blank"));
   } else {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
     // P86: the share's meaning is its column header ("Share of all ... (%)"), not a sentence.
@@ -535,12 +562,23 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
       text.push(known ? `Together: ${fmt((v as number[]).reduce((a, b) => a + b, 0))} ${combined.label} in ${when}.`
         : `No combined total of ${combined.label} is given: the available evidence does not establish every part.`);
     }
-    if (v.some((x) => x === null || x === undefined)) text.push("A number not established is shown blank, not zero: reporting evidence is incomplete.");
+    const lo = at("left_out") >= 0 ? leftOutOf(rows[0]?.[at("left_out")]) : [];
+    if (lo.length && v.some((x) => x !== null && x !== undefined)) text.push(leftOutSentence(lo, "left out"));
+    else if (stats.length && String(rows[0]?.[at(`${stats[0].as}_status`)]) === "NOT_REPORTED") text.push(`The agency has no reported crimes or data for any month of ${when}, so no total is given.`);
+    if (v.some((x) => x === null || x === undefined) && !(stats.length && String(rows[0]?.[at(`${stats[0].as}_status`)]) === "NOT_REPORTED")) text.push("A number not established is shown blank, not zero: reporting evidence is incomplete.");
   } else {
     text.push(`${agency}: ${list} by ${time === "time.month" ? "month" : "year"}, ${when}.`);
     // As for one measure (the same sentence): the periods without reporting evidence.
-    const missing = rows.filter((r) => stats.some((s) => ["UNKNOWN", "NOT_REPORTED"].includes(String(r[at(`${s.as}_status`)])))).map((r) => String(r[ip]));
+    const missing = rows.filter((r) => stats.some((s) => String(r[at(`${s.as}_status`)]) === "UNKNOWN")).map((r) => String(r[ip]));
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
+    // One agency's zero-report months (Jeff 2026-11-16), as for one measure.
+    const first = stats[0] ? `${stats[0].as}_status` : "";
+    const zero = rows.filter((r) => String(r[at(first)]) === "NOT_REPORTED").map((r) => String(r[ip]));
+    if (time === "time.year") {
+      const left = rows.flatMap((r) => (String(r[at(first)]) === "VALUE" && at("left_out") >= 0 ? leftOutOf(r[at("left_out")]) : []));
+      if (left.length) text.push(leftOutSentence(left, "left out"));
+      if (zero.length) text.push(`The agency has no reported crimes or data for any month of ${andList(zero)}, so no total is given.`);
+    } else if (zero.length) text.push(leftOutSentence(zero, "blank"));
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
