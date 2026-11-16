@@ -180,7 +180,10 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
   // "LAPD" is the Los Angeles Police Department: the department's own initials name the city agency (2026-10-23 fix).
-  if (/ city$|\bpolice\b/.test(key(text)) || key(text) === "lapd") {
+  // "The city of San Diego" names the city, not the county's sheriff: P16 (a city name means the city's principal police agency) settles
+  // the city-or-county ask of P28, which asks only when the wording leaves the readings open.
+  const cityOf = /^(?:the )?city of /.test(key(text)) && !countyNamed;
+  if (/ city$|\bpolice\b/.test(key(text)) || key(text) === "lapd" || cityOf) {
     const cities = pool.filter((a) => a.kind === "city");
     // A large county police department of the name in another state is another "<name> police" ("Arlington Police
     // Department": Arlington, Texas or Arlington County, Virginia's): which (query-log scorecard, 2026-11-05). In the
