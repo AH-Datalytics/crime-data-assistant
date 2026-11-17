@@ -5,7 +5,10 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { ageMapping, cubeUnits, CUBE_GROUPS, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
+import { createHash } from "node:crypto";
+import os from "node:os";
+import path from "node:path";
+import { ageMapping, cubeFromEnv, cubeUnits, CUBE_GROUPS, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
 
@@ -56,6 +59,44 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeUnits({ ...base, kind: "offenders", codes: null, allCrimeArrests: true }), null, "offenders have no all-arrests reading");
 }
 
+// --- The manifest check: a cube is used only when it was built from this release, with the engine's group lists, and its file is there.
+{
+  assert.equal(listSha256(CUBE_GROUPS.person_crimes), "e0da932813fb580e2fa05215a6ce59d977c7915830f3f0cdfb3cc12db4bb87ee", "the Model's recorded hash of the person_crimes list");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-cube-test-"));
+  try {
+    const release = path.join(dir, "release"), canonical = path.join(release, "canonical"), cubeRoot = path.join(dir, "cube");
+    fs.mkdirSync(canonical, { recursive: true });
+    fs.writeFileSync(path.join(release, "manifest.json"), '{"id":"r1"}');
+    const sha = createHash("sha256").update(fs.readFileSync(path.join(release, "manifest.json"))).digest("hex");
+    fs.mkdirSync(path.join(cubeRoot, "canonical/cube/data_year=2024"), { recursive: true });
+    fs.writeFileSync(path.join(cubeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
+    const groups = Object.fromEntries(Object.entries(CUBE_GROUPS).map(([g, c]) => [g, { codes: c, list_sha256: listSha256(c) }]));
+    const write = (m: object) => fs.writeFileSync(path.join(cubeRoot, "manifest.json"), JSON.stringify(m));
+    const good = { schema_version: "cube-0.1", source_manifest_sha256: sha, groups, years: { "2024": {}, "2025": {} },
+      files: { "canonical/cube/data_year=2024/data.parquet": {}, "canonical/cube/data_year=2025/data.parquet": {} } };
+    const env = { NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: cubeRoot };
+    const quiet = console.error; console.error = () => {};
+    try {
+      assert.equal(cubeFromEnv(env, canonical), null, "no manifest: an unfinished build");
+      write(good);
+      const ok = cubeFromEnv(env, canonical)!;
+      assert.deepEqual(ok.years, [2024], "only the years whose file is there (2025 is listed but absent)");
+      assert.equal(ok.mode, "on");
+      assert.equal(cubeFromEnv({ ...env, NIBRS_CUBE: "shadow" }, canonical)!.mode, "shadow");
+      assert.equal(cubeFromEnv({ ...env, NIBRS_CUBE: "off" }, canonical), null, "the flag off: no cube");
+      assert.equal(cubeFromEnv({ NIBRS_CUBE: "on" }, canonical), null, "no cube root: no cube");
+      write({ ...good, source_manifest_sha256: "0".repeat(64) });
+      assert.equal(cubeFromEnv(env, canonical), null, "built from another release");
+      write({ ...good, schema_version: "cube-9" });
+      assert.equal(cubeFromEnv(env, canonical), null, "another schema version");
+      write({ ...good, groups: { ...groups, property_crime: { codes: [], list_sha256: "x" } } });
+      assert.equal(cubeFromEnv(env, canonical), null, "a group list that is not the engine's");
+      write(good);
+      assert.equal(cubeFromEnv(env, path.join(dir, "elsewhere", "canonical")), null, "no release manifest to compare with");
+    } finally { console.error = quiet; }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
 // --- Shadow mode: the raw statement answers; the cube statement rides in a comment, is run beside it, and a difference or failure is only logged.
 {
   const wrapped = shadowSql("SELECT 1 /* x */", "SELECT 2");
@@ -74,7 +115,7 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
 
 // --- Cell by cell against the raw statements, where a release and a cube exist.
 const CUBE = process.env.NIBRS_CUBE_TEST_CUBE, ROOT = process.env.NIBRS_CUBE_TEST_ROOT;
-if (CUBE && ROOT && fs.existsSync(`${CUBE}/cube`)) {
+if (CUBE && ROOT && fs.existsSync(`${CUBE}/manifest.json`)) {
   const run = async () => {
     const { shadowAnswer } = await import("../lib/nibrs-shadow/answer");
     const { loadPlaceIndex } = await import("../lib/nibrs-shadow/places");
@@ -86,7 +127,7 @@ if (CUBE && ROOT && fs.existsSync(`${CUBE}/cube`)) {
     const executed: string[] = [];
     const exec = duckdbExecutor(process.env.NIBRS_CUBE_TEST_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
     const execute = (sql: string) => { executed.push(sql); return exec(sql); };
-    const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE });
+    const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE }, ROOT);
     assert.ok(cubeCfg, "the cube folder is readable");
     const mk = (cube: CubeConfig | null) => ({ places: loadPlaceIndex(), release: r, target: { root: ROOT, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute });
     const questions = (process.env.NIBRS_CUBE_TEST_QUESTIONS ?? "").split("|").filter(Boolean);

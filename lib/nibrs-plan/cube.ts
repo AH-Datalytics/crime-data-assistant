@@ -2,7 +2,7 @@
  * The cube read side (2026-11-17): a plan whose unit set is exactly one cube cell family is counted from the precomputed summary cube instead
  * of from the raw segment tables. Behind a flag (NIBRS_CUBE=on and NIBRS_CUBE_ROOT); off by default, and then nothing here runs.
  *
- * The cube (built by the Model, one parquet per data_year: <root>/cube/data_year=YYYY/data.parquet) has one row per
+ * The cube (built by the Model, one parquet per file year: <root>/canonical/cube/data_year=YYYY/data.parquet, with <root>/manifest.json) has one row per
  * (ori, month_key, unit, source, crime_group, attribute, value) with n_distinct_units and n_distinct_incidents. The counting contract:
  * units add across agencies, months, attribute values and data_year partitions (never across overlapping groups); incidents add across
  * agencies, months and partitions of one cell family but NOT across attribute values, so a plan that merges cube values and also asks for
@@ -11,7 +11,10 @@
  * `cubeUnits` returns null whenever the plan is not exactly a cube cell (another condition, another attribute, a group the cube does not
  * hold, a year without a cube partition): the caller then keeps the raw statements, so every answer is the one the raw path gives.
  */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
+
+const SCHEMA_VERSION = "cube-0.1";
 
 export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow" };
 
@@ -36,21 +39,53 @@ const CUBE_AGE_BINS: { value: string; from: number; to: number }[] = [
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
 let cached: { key: string; cfg: CubeConfig | null } | null = null;
-/** The cube this process may read: NIBRS_CUBE=on, NIBRS_CUBE_ROOT naming the folder that holds cube/data_year=YYYY. Null otherwise. */
-export function cubeFromEnv(env: Record<string, string | undefined> = process.env): CubeConfig | null {
+const warned = new Set<string>();
+const warnOnce = (key: string, why: string) => { if (!warned.has(key)) { warned.add(key); console.error(`[nibrs-cube] cube not used (raw statements instead): ${why}`); } };
+
+/** The sha256 the Model records for a group: the JSON (Python's default separators) of the sorted code list. */
+export const listSha256 = (codes: string[]): string => createHash("sha256").update(`[${[...codes].sort().map((c) => JSON.stringify(c)).join(", ")}]`).digest("hex");
+
+/**
+ * The cube this process may read: NIBRS_CUBE=on|shadow and NIBRS_CUBE_ROOT naming the cube folder (manifest.json and canonical/cube/data_year=YYYY).
+ * `releaseRoot` is the canonical folder of the release being read: the cube must have been built from exactly that release. Null (raw statements
+ * everywhere) when the flag is off, the manifest is missing or unfinished, or any check fails; a failed check is said once on stderr.
+ */
+export function cubeFromEnv(env: Record<string, string | undefined> = process.env, releaseRoot?: string): CubeConfig | null {
   const mode = env.NIBRS_CUBE === "on" || env.NIBRS_CUBE === "shadow" ? env.NIBRS_CUBE : null;
   if (!mode || !env.NIBRS_CUBE_ROOT) return null;
   const root = env.NIBRS_CUBE_ROOT.replace(/\\/g, "/").replace(/\/+$/, "");
-  const key = `${mode}:${root}`;
+  // The manifest's own stamp is part of the key: a rebuilt cube is noticed, and nothing else is read twice.
+  let stamp = "none";
+  try { const st = fs.statSync(`${root}/manifest.json`); stamp = `${st.mtimeMs}:${st.size}`; } catch { /* no manifest: the check below says so */ }
+  const key = `${mode}:${root}:${releaseRoot ?? ""}:${stamp}`;
   if (cached && cached.key === key) return cached.cfg;
   let cfg: CubeConfig | null = null;
   try {
-    const years = fs.readdirSync(`${root}/cube`).map((d) => /^data_year=(\d{4})$/.exec(d)?.[1]).filter((y): y is string => !!y)
-      .map(Number).filter((y) => fs.existsSync(`${root}/cube/data_year=${y}/data.parquet`)).sort((a, b) => a - b);
-    cfg = years.length ? { root, years, mode } : null;
-  } catch { cfg = null; }
+    const bad = (why: string) => { warnOnce(key, why); return null; };
+    cfg = readCube(root, mode, releaseRoot, bad);
+  } catch (e) { warnOnce(key, e instanceof Error ? e.message : String(e)); }
   cached = { key, cfg };
   return cfg;
+}
+
+function readCube(root: string, mode: "on" | "shadow", releaseRoot: string | undefined, bad: (why: string) => null): CubeConfig | null {
+  // The manifest is written last: a folder without it is an unfinished build.
+  const mf = `${root}/manifest.json`;
+  if (!fs.existsSync(mf)) return bad("no manifest.json (an unfinished build)");
+  const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups?: Record<string, { list_sha256?: string | null }>;
+    years?: Record<string, unknown>; files?: Record<string, unknown> };
+  if (m.schema_version !== SCHEMA_VERSION) return bad(`schema_version ${m.schema_version} is not ${SCHEMA_VERSION}`);
+  // Built from this very release: the cube records the sha256 of the release's own manifest.json.
+  if (!releaseRoot) return bad("the release being read is not known");
+  const rm = `${releaseRoot.replace(/\\/g, "/").replace(/\/+$/, "")}/../manifest.json`;
+  if (!fs.existsSync(rm)) return bad(`the release's manifest.json is not at ${rm}`);
+  const releaseSha = createHash("sha256").update(fs.readFileSync(rm)).digest("hex");
+  if (m.source_manifest_sha256 !== releaseSha) return bad("the cube was built from another release (source_manifest_sha256 differs)");
+  // The group code lists in the cube are the ones this engine counts with.
+  for (const [g, codes] of Object.entries(CUBE_GROUPS)) if (m.groups?.[g]?.list_sha256 !== listSha256(codes)) return bad(`the code list of ${g} differs from the engine's`);
+  const years = Object.keys(m.years ?? {}).map(Number).filter((y) => Number.isInteger(y) && m.files?.[`canonical/cube/data_year=${y}/data.parquet`] !== undefined
+    && fs.existsSync(`${root}/canonical/cube/data_year=${y}/data.parquet`)).sort((a, b) => a - b);
+  return years.length ? { root, years, mode } : bad("no data year of the manifest has its file");
 }
 
 /** The plan's age bins as a map from each cube age value to the plan's label; null when the plan's bins cut across a cube bin. */
@@ -122,7 +157,7 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
     }
   }
   if (merges && a.wantsIncidents) return null;
-  const files = a.years.map((y) => q(`${a.cfg.root}/cube/data_year=${y}/data.parquet`)).join(", ");
+  const files = a.years.map((y) => q(`${a.cfg.root}/canonical/cube/data_year=${y}/data.parquet`)).join(", ");
   const sources = unit === "arrestee" && a.allCrimeArrests ? "source IN ('A', 'B')" : "source = 'A'";
   const sql = `SELECT ori, month_key AS ym${a.attribute ? `, ${value} AS g0` : ""}, CAST(SUM(n_distinct_units) AS BIGINT) AS w, CAST(SUM(n_distinct_incidents) AS BIGINT) AS wi
       FROM read_parquet([${files}], hive_partitioning = true)

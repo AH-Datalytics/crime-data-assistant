@@ -339,7 +339,7 @@ export const NO_CATEGORY = "__none__";
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
   // Shadow mode: the raw statement is the answer; the cube's statement rides in a comment for the executor to run beside it and compare.
-  const cubeWanted = t.cube === undefined ? cubeFromEnv() : t.cube;
+  const cubeWanted = t.cube === undefined ? cubeFromEnv(process.env, t.root) : t.cube;
   if (cubeWanted?.mode === "shadow") {
     const raw = compilePlan(plan, period, { ...t, cube: null });
     const viaCube = compilePlan(plan, period, { ...t, cube: { ...cubeWanted, mode: "on" } });
