@@ -1316,10 +1316,15 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   const first = results.find((r) => value(r.o) !== undefined);
   if (!first) return results[0].o.kind === "decline" ? results[0].o : NO();
   const firstOut = first.o as Delivering;
+  // Homicide Reports (Jeff 2026-11-17: "Start the table in 1985"): the years before the source starts are not shown as blanks; the table
+  // starts in the first year the source has, and the source's own sentence says where it starts.
+  const dropped = firstOut.kind === "shr" ? results.findIndex((r) => r.o.kind !== "decline") : 0;
+  const before = dropped > 0 ? results.splice(0, dropped) : [];
+  const y0 = results[0].y;
   const lastCol = firstOut.delivered.table.columns[firstOut.delivered.table.columns.length - 1];
   const blank = results.filter((r) => !(typeof value(r.o) === "number")).map((r) => r.y);
   const prefix = /^([^:]{2,60}): /.exec(firstOut.delivered.text[0])?.[1];
-  const title = `${prefix ? `${prefix}: ` : ""}${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}, ${years[0] === years[1] ? years[0] : `${years[0]} to ${years[1]}`}.`;
+  const title = `${prefix ? `${prefix}: ` : ""}${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}, ${y0 === years[1] ? y0 : `${y0} to ${years[1]}`}.`;
   // Lines every year says alike (the source, who reported) stay; a line that differs by year is that year's own.
   const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
   // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
@@ -1331,7 +1336,8 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
     return out.length > 2 ? `${out.slice(0, -1).join(", ")} and ${out[out.length - 1]}` : out.join(" and ");
   };
   const noFigure = blank.length ? `No figure is known for ${runsOf(blank)}: shown blank, not zero.` : null;
-  const text = [title, `Each year counts the same months: January through ${month}.`, ...(!pv ? [`No years were given, so every year in the data is shown: ${years[0]} through ${years[1]}.`] : []),
+  const text = [title, `Each year counts the same months: January through ${month}.`, ...(!pv ? [`No years were given, so every year in the data is shown: ${y0} through ${years[1]}.`] : []),
+    ...(before.length ? [`Homicide Reports here start in ${y0}, so ${before[0].y} through ${y0 - 1} aren't included.`] : []),
     ...(noFigure ? [noFigure] : []), ...why.filter((t) => !common.includes(t)), ...common];
   const asName = (lastCol.binding as { as?: string }).as ?? "count";
   const table = { columns: [{ binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }, { ...lastCol }], rows: results.map((r) => [String(r.y), typeof value(r.o) === "number" ? value(r.o) as number : null]) };
@@ -1339,7 +1345,7 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   const chart = results.length > 1 ? { kind: "bar" as const, x: "Year", y: [lastCol.header] } : null;
   // Every period field says what the table shows, the whole span (the first year's own window is not the answer's), and the answer is
   // grouped by year: the first year's sub-answer is by month, but this answer's rows are years.
-  const span = { from: `${years[0]}-01`, to: `${years[1]}-${String(n).padStart(2, "0")}` };
+  const span = { from: `${y0}-01`, to: `${years[1]}-${String(n).padStart(2, "0")}` };
   const fo = firstOut as unknown as { meaning?: Record<string, unknown>; plan?: Record<string, unknown>; question?: Record<string, unknown> };
   return { ...firstOut, sameMonths: true, ...("period" in firstOut ? { period: span } : {}),
     ...(fo.meaning && "period" in fo.meaning ? { meaning: { ...fo.meaning, period: span, groupings: ["year"] } } : {}),

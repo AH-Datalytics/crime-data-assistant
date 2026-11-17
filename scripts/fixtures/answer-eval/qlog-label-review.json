@@ -6267,7 +6267,15 @@
 },
 "QL-hist-581efd7811": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-17",
+"why": "The same months of each year going back to 1935: the table Year | figure from Homicide Reports, starting in 1985 with the source's own sentence (Jeff 2026-11-17, through the coordinator; P126, P130)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr"
+]
+}
 },
 "QL-hist-5858fd466f": {
 "status": "draft",
@@ -14506,7 +14514,15 @@
 },
 "QL-shr-035f230d4f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-17",
+"why": "The same months of each year from 2000 to 2022: the table Year | figure from Homicide Reports (Jeff 2026-11-17, through the coordinator; P126)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr"
+]
+}
 },
 "QL-shr-0390363c30": {
 "status": "reviewed",
