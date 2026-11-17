@@ -294,8 +294,35 @@ export function nearestWord(word: string): string | null {
 }
 
 /** A comparison asked in one of the forms above: its periods, and the question as a count over the whole span. */
-function readComparison(text: string, currentYear: number): { comparison: Comparison; text: string; from: string } | null {
+function readComparison(text: string, currentYear: number, lastMonth?: string): { comparison: Comparison; text: string; from: string } | null {
   let m: RegExpExecArray | null;
+  // The year to date against another year (Jeff 2026-11-16): "YTD 2026 compared to 2025", "year to date 2026 vs 2025", "2026 YTD versus
+  // 2025 YTD", "so far this year compared to the same period last year", "this year to date compared with 2024". Both years count the
+  // same months: January through the release's latest month. A to-date word is required: "this year compared with last year" has its own form below.
+  if (lastMonth) {
+    const YW = String.raw`(?:year[-\s]to[-\s]date|ytd)`;
+    const TYD = String.raw`(?:this\s+year(?:'s)?\s+(?:so\s+far|to\s+date|${YW})|so\s+far\s+this\s+year|(?:the\s+)?${YW}(?:\s+(?:for\s+)?this\s+year)?)`;
+    const SAME = String.raw`(?:the\s+)?same\s+(?:period|months?)\s+(?:in\s+|of\s+)?`;
+    const upto = Number(lastMonth.slice(5, 7)), ytdSpan = (y: number): Span => ({ from: `${y}-01`, to: `${y}-${two(upto)}` });
+    const asYtd = (a: number, b: number, from: string) => {
+      const [e, l] = a < b ? [a, b] : [b, a];
+      return { comparison: { earlier: ytdSpan(e), later: ytdSpan(l), matched: true }, from, text: "" };
+    };
+    // Two years named, a to-date word beside either: "YTD 2026 compared to 2025", "2026 YTD versus 2025 YTD".
+    if ((m = new RegExp(String.raw`\b(?:(?:the\s+)?${YW}\s+(?:for\s+|in\s+)?)?(\d{4})(?:\s+${YW})?\s+${VS}\s+(?:${SAME})?(?:(?:the\s+)?${YW}\s+(?:for\s+|in\s+)?)?(\d{4})(?:\s+${YW})?`, "i").exec(text))
+      && new RegExp(YW, "i").test(m[0]) && Number(m[1]) !== Number(m[2]) && Math.max(Number(m[1]), Number(m[2])) <= currentYear) {
+      const r = asYtd(Number(m[1]), Number(m[2]), m[0]);
+      return { ...r, text: text.replace(m[0], `from ${r.comparison.earlier.from.slice(0, 4)} to ${r.comparison.later.from.slice(0, 4)}`) };
+    }
+    // This year to date against last year or a named year: "so far this year compared to the same period last year".
+    if ((m = new RegExp(String.raw`\b${TYD}\s+${VS}\s+(?:${SAME})?(?:(last\s+year)|(\d{4}))(?:\s+${YW})?`, "i").exec(text))) {
+      const other = m[1] ? currentYear - 1 : Number(m[2]);
+      if (other < currentYear) {
+        const r = asYtd(other, currentYear, m[0]);
+        return { ...r, text: text.replace(m[0], `from ${other} to ${currentYear}`) };
+      }
+    }
+  }
   // "(percent) change in X from 2022 to 2024"
   if ((m = new RegExp(String.raw`\b(?:percent(?:age)?\s+)?change\s+in\s+(.+?)\s+from\s+(\d{4})\s+(?:to|through)\s+(\d{4})\b`, "i").exec(text)) && Number(m[2]) < Number(m[3]))
     return { comparison: { earlier: yearSpan(Number(m[2])), later: yearSpan(Number(m[3])), matched: false }, from: m[0], text: text.replace(m[0], lead(`${m[1]} from ${m[2]} to ${m[3]}`)) };
@@ -342,7 +369,7 @@ export const CONSISTENT_WORDS = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?age
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
   const readings: Reading[] = [];
   let text = question;
-  const cmp = readComparison(text, currentYear);
+  const cmp = readComparison(text, currentYear, lastMonth);
   if (cmp) { readings.push({ kind: "period", from: cmp.from, to: cmp.text }); text = cmp.text; }
   // "Memphis vs Nashville": places compared are places side by side, as with "and" (coordinator, 2026-11-01). A period
   // comparison ("2024 vs 2023") was read just above; a "vs" next to a year is left to it.

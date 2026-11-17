@@ -1337,6 +1337,24 @@ const ytdCmp = as(ask("Is shoplifting in Detroit up this year compared with last
 assert.deepEqual(ytdCmp.period, { from: "2025-01", to: "2026-09" });
 assert.ok(ytdCmp.delivered.text.includes("Compares the same months of each year: January through September."));
 assert.deepEqual(ytdCmp.delivered.table.rows, [[63, 63, 0, 0]]);
+// The year to date against another year (Jeff 2026-11-16, P127): both years count January through the latest month, as "this year compared with last year" does.
+for (const q of ["YTD 2026 compared to 2025 shoplifting in Detroit", "Shoplifting in Detroit year to date 2026 vs 2025", "Shoplifting in Detroit so far this year compared to the same period last year",
+  "Shoplifting in Detroit 2026 YTD versus 2025 YTD", "Shoplifting in Detroit this year to date compared with 2025", "Shoplifting in Detroit YTD 2025 compared to 2026 YTD"]) {
+  const y = as(ask(q), "answer");
+  assert.deepEqual(y.period, { from: "2025-01", to: "2026-09" }, q);
+  assert.ok(y.delivered.text.includes("Compares the same months of each year: January through September."), q);
+  assert.deepEqual(y.delivered.table.rows, [[63, 63, 0, 0]], q);
+}
+{
+  // A named year with a month unknown: the same months of both, no change from a total that is not established (D17).
+  const o = as(ask("Shoplifting in Detroit this year to date compared with 2024"), "answer");
+  assert.deepEqual(o.period, { from: "2024-01", to: "2026-09" });
+  assert.deepEqual(o.delivered.table.rows, [[null, 63, null, null]]);
+  assert.ok(o.delivered.text.includes("Compares the same months of each year: January through September."));
+  assert.ok(o.delivered.text.includes("No report is known for March 2024, so the January through September 2024 total is not established and no change is given."));
+}
+// Not changed: no to-date word keeps today's reading; one year to date alone is not a comparison.
+assert.equal(as(ask("Is shoplifting in Detroit up this year compared with last year?"), "answer").delivered.text.includes("Compares the same months of each year: January through September."), true);
 // "Compared with" and "percent change" read; a change with a NIBRS filter is a comparison too.
 for (const q of ["Shoplifting in Detroit in 2023 compared with 2022", "Percent change in shoplifting in Detroit from 2022 to 2023", "Change in robberies with a firearm in Detroit from 2022 to 2023"])
   assert.equal(as(ask(q), "answer").plan.transforms[0].kind, "period_comparison", q);
