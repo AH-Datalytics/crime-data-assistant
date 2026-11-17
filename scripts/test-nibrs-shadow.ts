@@ -370,7 +370,10 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.ok(/juvenile/.test((as(ask("How do juvenile arrest rates compare to adult rates"), "decline") as { detail: string }).detail), "the decline keeps the user's word");
   // A question asked back keeps the user's age word, whatever form (Coordinator 2026-11-16): never "with a offender", never without "teen".
   for (const q of ["show me crimes with a teen offender 2017 to 2025", "teen offenders in Ohio in 2024", "kid offenders in Ohio in 2024", "teenager offenders in Ohio in 2024",
-    "children victims in Ohio in 2024", "juvenile victims in Ohio in 2024", "show me crimes with a kid offender"])
+    "children victims in Ohio in 2024", "juvenile victims in Ohio in 2024", "show me crimes with a kid offender",
+    // "by", "committed by" and "against" an age group (QL-ct-cbfbd38920, QL-nibrs-7c3023629c), and the two murder forms.
+    "What percent of car thefts are committed by kids under the age of 18 in the last 7 years?", "Show me crimes by juveniles YOY for the last 10 years",
+    "show me crimes against teens", "show me crimes committed by teens", "crimes in Ohio committed by teens?", "murders of teenagers in Chicago", "children murdered in Chicago"])
     assert.equal((as(ask(q), "clarify") as { question: string }).question, q, q);
   // A rate for an age group has no population base and is declined (existing rule); the plural word is read.
   assert.match(as(ask("Murder rate for teenagers in Chicago since 2019"), "decline").explanation, /^A rate for a group of people needs population figures/);
