@@ -238,7 +238,7 @@ const RULES: Rule[] = [
   { concept: "completeness", value: () => "completeness", pattern: R(String.raw`\b(?:completeness|complete|up\s+to\s+date|finali[sz]ed|final)\b`),
     when: (_m, q) => detectCompletenessQuestion(q) !== null },
   { concept: "cohort", value: () => "consistent-reporters", pattern: R(String.raw`\b(?:for\s+)?(?:consistent(?:ly)?|continuous(?:ly)?)\s+report(?:ers|ing(?:\s+agencies)?)\b|\bagencies\s+that\s+reported\s+every\s+year\b`) },
-  { concept: "explain", value: () => "explain", pattern: R(String.raw`\bwhy\b|\bhow\s+come\b|\bwhat\s+explains?\b|\breasons?\s+(?:for|why|behind)\b|\bcauses?\s+(?:of|for|behind)\b|\bexplain(?:s|ed)?\b`) },
+  { concept: "explain", value: () => "explain", pattern: R(String.raw`\bwhy\b|\bhow\s+come\b|\bwhat\s+explains?\b|\breasons?\s+(?:for|why|behind)\b|\bcauses?\s+(?:of|for|behind)\b|\bexplain(?:s|ed)?\b|\bwhat\s+(?:made|caused|causes|drives?|led\s+to)\b|\bfactors?\s+(?:that\s+)?(?:correlat\w*|drive|affect|influence|explain)\b|\b(?:effects?|impacts?)\s+of\b|\b(?:has|have|had)\s+(?:affected|impacted|influenced)\b|\bevidence\s+(?:for|of)\s+why\b`) },
   // ---- a clearance reason that contains a court word: claimed before the court words ----
   { concept: "clearance-reason", value: () => "clearance:B", pattern: R(String.raw`\b(?:the\s+)?prosecution\s+(?:was\s+|were\s+|being\s+)?declined\b|\bprosecution[-\s]declined\b`) },
   // Option 3 batch 1 (P202): "offense codes", "list of … codes": a question about the codes themselves.
@@ -391,7 +391,7 @@ const RULES: Rule[] = [
   { concept: "combine", value: () => "combine", pattern: R(String.raw`\b(?:combined|altogether|all\s+together|in\s+total|in\s+all|summed|sum\s+of|together)\b`) },
   { concept: "combine", value: () => "combine", pattern: R(String.raw`\btotal\b`) },
   // ---- national and entity words ----
-  { concept: "place", value: () => "national", pattern: R(String.raw`(?<![A-Za-z.])(?:U\.S\.A?\.?|USA|US)(?![A-Za-z])`, "g") },
+  { concept: "place", value: () => "national", pattern: R(String.raw`(?<![A-Za-z.])(?:U\.S(?:\.(?=[\s,])|\.A\.?(?=[\s,]))?|USA|US)(?![A-Za-z])`, "g") },
   { concept: "place", value: () => "national", pattern: R(String.raw`\b(?:(?:in\s+)?the\s+)?(?:national(?:ly)?|nationwide|countrywide|united\s+states|america|(?:the\s+)?(?:nation|country))\b`) },
   { concept: "entity", value: (m) => listKey(m[0]), pattern: R(String.raw`\b(?:county\s+(?:agenc(?:y|ies)|sheriffs?(?:['’]\s*offices)?)|sheriffs?(?:['’]\s*offices)?|police\s+(?:departments?|agencies)|cities|city|towns?|counties|agencies|agency|departments|states|state)\b`) },
   // ---- presentation, connectors and share/filter linking words ----
