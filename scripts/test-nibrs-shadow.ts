@@ -7,7 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { askInsteadChecks, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { askInsteadChecks, heavyNationalSentence, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
@@ -746,6 +746,20 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   const d = as(ask("show me nationwide violent crimes by victim age by year for 2017 to 2025"), "decline");
   assert.match(d.explanation, /violent crime in the United States broken down by victim age over several years takes too long to count here/);
   assert.equal(sqls.slice(before).filter((x) => /person_crimes|victim_offense/.test(x) && /GROUP BY/.test(x) && /victim/.test(x)).length, 0, "nothing heavy is run");
+}
+// Property crime by an offender's age nationally over several years: the same, declined up front (never a pointer elsewhere), never run, also
+// from a question with no place (the runner's QL-shr-349398af53 computed it for 5 minutes before asking which place). One year, a state still answer.
+{
+  const before = sqls.length;
+  const d = as(ask("property crime offenders by age by year 2019 to 2025 for the United States"), "decline");
+  assert.equal(d.explanation, heavyNationalSentence("property crime", "offender age", 2025));
+  assert.equal(d.explanation, `This isn't available: property crime in the United States broken down by offender age over several years takes too long to count here. Ask for one year, for example "nationwide property crime by offender age in 2025", or for one state.`);
+  assert.doesNotMatch(d.explanation, /Savant|in chat|\byet\b/i);
+  const asked = ask("annual counts of offenders by age from 1986 through 2025");
+  assert.equal(asked.kind, "clarify");
+  assert.equal(sqls.slice(before).filter((x) => /'23H'/.test(x) && /offender/.test(x)).length, 0, "no national property-crime statement is run, before or instead of the ask");
+  assert.equal(as(ask("property crime offenders by age in the United States in 2024"), "answer").kind, "answer");
+  assert.equal(as(ask("property crime offenders by age by year 2019 to 2025 in Texas"), "answer").kind, "answer");
 }
 // Codex review of the group-4 branch: the explicit units get the person-crimes definition, race and sex keep theirs, and a
 // carjacking incident by time of day has its join.
