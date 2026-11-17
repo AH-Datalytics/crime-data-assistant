@@ -403,7 +403,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.deepEqual(clr("Murder clearance rate in Houston in 2026").text, ["Houston, Texas: 33.3% of murders reported in January through September 2026 were cleared.", "Source: NIBRS."]);
   // A state or the nation: only the Consistent Reporting Agencies, said, with their number; one set for both figures.
   assert.deepEqual(clr("Murder clearance rate in Texas in 2026").text, ["Texas: 34.6% of murders reported in January through September 2026 were cleared, counting only the 4 Consistent Reporting Agencies that reported every month from January 2026 through September 2026.",
-    "Includes only agencies that reported complete data.", "Source: NIBRS."]);
+    "Source: NIBRS."]);
   assert.match(clr("Murder clearance rate in the US in 2026").text[0], /^United States: 39\.7% of murders reported in January through September 2026 were cleared, counting only the 106 Consistent Reporting Agencies that reported every month from January 2026 through September 2026\.$/);
   // An agency with a month not reported is out of the set (Houston, March 2026): 3 agencies, 54 of 153.
   CONFLICT = { ori: "TXHPD0000", ym: "2026-03" };

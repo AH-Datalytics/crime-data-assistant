@@ -102,8 +102,7 @@ export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; 
   if (!set.length) return decline(`No agency reported crimes in every month ${span}, so there are no Consistent Reporting Agencies for ${Where}.`);
   const den = set.reduce((n, o) => n + gAll.get(o)!.sum, 0), num = set.reduce((n, o) => n + gCleared.get(o)!.sum, 0);
   if (!den) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
-  return deliver(num, den, [`${Where}: ${rateOf(num, den)}% of ${words} reported in ${when} were cleared, counting only the ${fmt(set.length)} Consistent Reporting Agencies that reported every month ${span}.`,
-    "Includes only agencies that reported complete data."]);
+  return deliver(num, den, [`${Where}: ${rateOf(num, den)}% of ${words} reported in ${when} were cleared, counting only the ${fmt(set.length)} Consistent Reporting Agencies that reported every month ${span}.`]);
 
   function rateOf(n: number, d: number): string { return String(Math.round((1000 * n) / d) / 10); }
   function deliver(n: number, d: number, lines: string[]): ShadowOutcome {
