@@ -14506,7 +14506,15 @@
 },
 "QL-shr-035f230d4f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-17",
+"why": "The same months of each year from 2000 to 2022: the table Year | figure from Homicide Reports (Jeff 2026-11-17, through the coordinator; P126)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr"
+]
+}
 },
 "QL-shr-0390363c30": {
 "status": "reviewed",

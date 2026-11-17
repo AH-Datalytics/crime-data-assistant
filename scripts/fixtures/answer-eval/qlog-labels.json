@@ -67965,10 +67965,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "shr"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -67980,8 +67979,8 @@
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "The same months of each year from 2000 to 2022: the table Year | figure from Homicide Reports (Jeff 2026-11-17, through the coordinator; P126)."
    }
   },
   {
