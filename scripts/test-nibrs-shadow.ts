@@ -1353,7 +1353,7 @@ for (const q of ["YTD 2026 compared to 2025 shoplifting in Detroit", "Shopliftin
   assert.deepEqual(o.period, { from: "2024-01", to: "2026-09" });
   assert.deepEqual(o.delivered.table.rows, [[null, 63, null, null]]);
   assert.ok(o.delivered.text.includes("Compares the same months of each year: January through September."));
-  assert.ok(o.delivered.text.includes("No report is known for March 2024, so the January through September 2024 total is not established and no change is given."));
+  assert.ok(o.delivered.text.includes("No data is known for March 2024, so the January through September 2024 total is not established and no change is given."));
 }
 // Not changed: no to-date word keeps today's reading; one year to date alone is not a comparison.
 assert.equal(as(ask("Is shoplifting in Detroit up this year compared with last year?"), "answer").delivered.text.includes("Compares the same months of each year: January through September."), true);
