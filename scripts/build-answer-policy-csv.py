@@ -785,10 +785,10 @@ ROWS = [
     ("P121",
      "\"Burglaries in Brighton in 2024\" (one agency) when the agency reported zero crimes in one month (July) and crimes in the other eleven; a monthly chart; a rolling window or a rate over that month",
      "The zero report counted as a known 0: July was 0 in the chart and in the year's total.",
-     "For ONE agency a month reported as zero crimes is MISSING, not 0 (Jeff 2026-11-16, his 10-21 rule: a month with no crimes of any type is missing, a gap). The year's or period's total is the months with crimes reported, and the answer says which month is left out (\"July 2024 is left out: the agency reported no crimes that month.\"; two or more: \"March and July 2024 are left out: the agency reported no crimes in those months.\"). A monthly chart shows a gap (\"July 2024 is blank: the agency reported no crimes that month.\"). A rolling window over it is blank (\"No crimes were reported in July 2024, so no rolling total is given for any window containing it.\"). A year in which every month is left out has no total (\"The agency has no reported crimes or data for any month of 2024, so no total is given.\"). Zero of one crime while other crimes were reported that month is still a known 0 (P51). State and group sums are unchanged: a month is present when any agency has rows, and a zero-report agency adds nothing. The Consistent Reporting Agencies need crimes reported in every month of the span (P61, P81). A month with no data at all is not changed here.",
+     "For ONE agency a month reported as zero crimes is MISSING, not 0 (Jeff 2026-11-16, his 10-21 rule: a month with no crimes of any type is missing, a gap). The year's or period's total is the months with crimes reported, and the answer says which month is left out (\"July 2024 is left out: the agency reported no crimes that month.\"; two or more: \"March and July 2024 are left out: the agency reported no crimes in those months.\"). A monthly chart shows a gap (\"July 2024 is blank: the agency reported no crimes that month.\"). A rolling window over it is blank (\"No crimes were reported in July 2024, so no rolling total is given for any window containing it.\"). A year in which every month is left out has no total (\"The agency has no reported crimes or data for any month of 2024, so no total is given.\"). Zero of one crime while other crimes were reported that month is still a known 0 (P51). State and group sums are unchanged: a month is present when any agency has rows, and a zero-report agency adds nothing. The Consistent Reporting Agencies need crimes reported in every month of the span (P61, P81). A month with no data at all is not changed here. The Consistent Reporting Agencies for arrest questions count a month as reported when the agency has reported crimes OR has any arrest that month (Group A arrests excluding repeat rows, or Group B arrests); crime questions need reported crimes in every month. A month the agency reported as zero crimes counts as not reported for a crime question.",
      "Check: scripts/test-nibrs-shadow.ts (the 11-month total, two months, a monthly gap, a rolling window, a whole year), scripts/nibrs-compile-gate.ts (real DuckDB).",
      "Jeff 2026-11-16: for one agency a month with a zero report is missing, not 0 (Savant's behavior); the total covers the months with data and the answer says which month is missing.",
-     "Decided (Jeff 2026-11-16)",
+     "Decided (Jeff 2026-11-16); arrest-question rule added 2026-11-16 from Jeff 2026-11-12 (\"count arrests\") and 2026-11-16 (zero-report months are not reported), through the coordinator; checked against the NIBRS Model's set B: it equals the engine's 3,706-agency arrests set exactly (3,669 crime-only)",
      ""),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
@@ -904,6 +904,31 @@ ROWS = [
      "Decided (Jeff 2026-11-14)",
      ""),
 ]
+
+# The test column for rows that had none or only "new cases to write" (2026-11-16 audit, item 6). "cite" = a test file names the row's id;
+# "asks" = a test file asks the row's example question. A row with neither says so plainly; it is not claimed as untested in every wording.
+S, R, H, C_, T_, CP, CG = "test-nibrs-shadow.ts", "test-nibrs-shadow-reading.ts", "test-nibrs-historical.ts", "test-nibrs-compile.ts", "test-nibrs-transforms.ts", "test-nibrs-current.ts", "nibrs-compile-gate.ts"
+PL, FU, CF, SHR_, PW = "test-nibrs-plan-language.ts", "test-nibrs-follow-up.ts", "test-answer-conformance.ts", "test-nibrs-shr.ts", "test-nibrs-plain-wording.ts"
+def cite(*n): return "Tests that cite this row: " + ", ".join("scripts/" + x for x in n) + "."
+def asks(*n): return "Tests that ask its example question: " + ", ".join("scripts/" + x for x in n) + "."
+NO_TEST = "No test found: no test cites this row or asks its example question."
+TESTS = {
+    "P88": cite(CF), "P01": cite(S, "test-answer-eval-cases.ts", H), "P08": cite(H, S), "P10": cite(S, "test-answer-eval-runner.ts", PL),
+    "P11": cite(PL, S), "P12": cite(PL), "P13": cite(PL), "P17": cite(T_), "P20": cite(R, S), "P30": cite(S, C_),
+    "P31": cite("test-p3-1a-smoke-live-path.ts", "test-subcity-geography.ts", "test-request-decision-observer.ts"), "P32": cite(S), "P36": cite(C_, S),
+    "P38": cite("test-gemini-reader.ts", R, S), "P44": cite(S, C_), "P45": cite(R), "P46": cite(C_, R, S), "P48": cite(R, S), "P49": cite(S, C_, R),
+    "P50": cite(C_, S), "P51": cite(T_, CG, C_), "P52": cite(S, CG), "P53": cite(S), "P54": cite(S, H, R), "P55": cite(T_, CP, H), "P56": cite(R, S),
+    "P57": cite(S), "P58": cite(CP, S, T_), "P59": cite(S, CP, T_), "P60": cite(S, T_), "P61": cite(S), "P62": cite(S), "P63": cite(S), "P64": cite(C_),
+    "P65": cite(C_, S), "P66": cite(S, C_, PL), "P67": cite(C_), "P68": cite(C_, CG), "P69": cite(FU, "test-nibrs-model-rewriter.ts"), "P70": cite(H),
+    "P71": cite(S), "P72": cite(S, FU), "P74": cite(S, PW), "P75": cite(H, S), "P76": cite(H), "P77": cite(H), "P79": cite(H), "P83": cite(S), "P84": cite(S),
+    "P86": cite(S, H, C_), "P87": cite(S), "P90": cite(CF, CP, S), "P91": cite(CP), "P94": cite(S), "P96": cite(CP, S), "P97": cite(H), "P100": cite(PW),
+    "P107": cite(S), "P118": cite("test-chart-customization.ts"), "P120": cite(S, FU, SHR_), "D31": cite(S, "test-nibrs-hate.ts"), "D30": cite(S),
+    "P23": asks(FU), "P39": asks(S), "P81": asks(S), "P89": asks(S), "P101": asks(H), "P102": asks(S), "P103": asks(S), "P105": asks(S), "P106": asks(S),
+    "P108": asks("test-nibrs-scope-deterministic.ts", S), "P113": asks(S), "P114": asks(S), "P115": asks(S), "P116": asks(S), "P117": asks("test-nibrs-hate.ts"),
+    "D34": asks("test-nibrs-plan-adapter.ts", R, S), "D40": asks(S),
+    "P121": "scripts/test-nibrs-shadow.ts (the 11-month total, two months, a monthly gap, a rolling window, a whole year), scripts/nibrs-compile-gate.ts (real DuckDB). The arrest-question months have no test of their own here: the NIBRS Model's set B is the independent check.",
+}
+ROWS = [r[:7] + ((TESTS.get(r[0], NO_TEST) if r[7] in (NEW, "") else r[7]),) for r in ROWS]
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
