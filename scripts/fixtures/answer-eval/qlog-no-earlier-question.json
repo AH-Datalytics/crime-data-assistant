@@ -52,5 +52,16 @@
   "QL-shr-c6d44e39ca",
   "QL-shr-d0574e7bfb",
   "QL-shr-f1be611ab3"
+ ],
+ "old_app_reply_ids_about": "Replies to the OLD app's own question or offer ('yes', '1', 'srs', 'broader', 'National', ...) whose earlier turn is labeled answer, so D4/F4 did not leave them out; with no turn to judge them against they are left out as X1 (Jeff 2026-11-17, through the coordinator). Read by scripts/draft-qlog-labels.py.",
+ "old_app_reply_ids": [
+  "QL-ct-08fbe88a89",
+  "QL-ct-126306b86b",
+  "QL-ct-fa9b98a798",
+  "QL-hist-0696e29723",
+  "QL-hist-d159fa4b4d",
+  "QL-nibrs-856a3c7660",
+  "QL-nibrs-cdda340046",
+  "QL-shr-9a90a8a798"
  ]
 }

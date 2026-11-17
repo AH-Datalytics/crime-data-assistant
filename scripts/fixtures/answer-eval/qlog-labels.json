@@ -80050,19 +80050,16 @@
    "question": "broader",
    "previous": "show me robberies per month in the northeast US",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about_any": [
-     "what to broaden"
-    ],
-    "about": "what to broaden"
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
-    "status": "draft",
-    "rule": "F3>2nd",
+    "status": "reviewed",
+    "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Broader does not identify a geographic or time expansion."
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -80379,24 +80376,16 @@
    "question": "1",
    "previous": "Robbery trends in midwest cities",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null,
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
-    "status": "disputed",
-    "rule": "F3",
+    "status": "reviewed",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: No option list is supplied."
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -87207,20 +87196,16 @@
    "question": "yes",
    "previous": "murder trend in boston",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null,
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
-    "status": "disputed",
-    "rule": "F3",
+    "status": "reviewed",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: No preceding proposal is supplied."
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -88434,20 +88419,16 @@
    "question": "Great. For sheriff is good",
    "previous": "Oakland county Michigan juvenile arrests per year",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null,
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -94580,20 +94561,16 @@
    "question": "cool; can you give me data for all cities in the united states and across different types of crime?",
    "previous": "can you make a visualization showing this?",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ]
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R09b",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -100819,20 +100796,16 @@
    "question": "srs",
    "previous": "how many violent crimes in chicago in 2024",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null,
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -103460,16 +103433,16 @@
    "question": "National",
    "previous": "See trends for juvenile offenders for violent crimes per 100,000 population over time",
    "expected": {
-    "outcome": "decline",
+    "outcome": "exclude",
     "source": null,
-    "reason": "Rates are available for places, not age groups."
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
-    "status": "draft",
-    "rule": "F5>2nd",
+    "status": "reviewed",
+    "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "National scope does not resolve the prohibited juvenile-group rate."
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
@@ -107834,20 +107807,16 @@
    "question": "yes",
    "previous": "How many non-fatal shootings has Aurora, Colorado has in 2026?",
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null,
+    "reason": "old-app-reply:owner-2026-11-17"
    },
    "label": {
-    "status": "disputed",
-    "rule": "F3",
+    "status": "reviewed",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The previous question requests unavailable data and no alternative is supplied."
+    "reviewed_by": "jeff-2026-11-17",
+    "notes": "a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)"
    }
   },
   {
