@@ -100,15 +100,33 @@ export type People = {
   /** "teen" or "teenage" was the word (ages 13 to 19 for a Homicide Reports ranking), not "juvenile" or "minor". */
   teen?: boolean;
   /** The age words the reader took out, with the text that followed each: put back where a question is restated to the user. */
-  restore?: { word: string; anchor: string; article?: string }[];
+  restore?: { word?: string; anchor?: string; article?: string; phrase?: string; swap?: { from: string; to: string } }[];
 };
-/** The question with the age words the reader took out put back ("show me crimes with a teen offender"), never a sentence without them. */
+/**
+ * The question with the age words the reader took out put back ("show me crimes with a teen offender", "crimes by juveniles ..."),
+ * never a sentence without them. A word goes in front of the text that followed it; a phrase ("committed by kids") the same, or at
+ * the end when nothing followed; a swap puts back the words a rewrite replaced ("murder victims" for "murders of teenagers").
+ */
 export function restoreAgeWords(q: string, people: People | null | undefined): string {
   let out = q;
   for (const r of people?.restore ?? []) {
-    const i = out.toLowerCase().indexOf(r.anchor.toLowerCase());
+    if (r.swap) {
+      const at = out.toLowerCase().indexOf(r.swap.from.toLowerCase());
+      if (at >= 0) out = `${out.slice(0, at)}${r.swap.to}${out.slice(at + r.swap.from.length)}`;
+      continue;
+    }
+    if (r.phrase !== undefined && !r.anchor) {
+      const end = /[?.!\s]*$/.exec(out)!;
+      out = `${out.slice(0, end.index)} ${r.phrase}${out.slice(end.index)}`;
+      continue;
+    }
+    const i = out.toLowerCase().indexOf((r.anchor ?? "").toLowerCase());
     if (i < 0) continue;
-    out = `${out.slice(0, i)}${r.article ? `${r.article} ` : ""}${r.word} ${out.slice(i)}`;
+    if (r.phrase !== undefined) {
+      // After a word the phrase gets a space before it; before a mark ("?") none after it.
+      const before = out.slice(0, i), punct = /^[?.!,]/.test(out.slice(i));
+      out = `${before}${/\s$/.test(before) || !before ? "" : " "}${r.phrase}${punct ? "" : " "}${out.slice(i)}`;
+    } else out = `${out.slice(0, i)}${r.article ? `${r.article} ` : ""}${r.word} ${out.slice(i)}`;
   }
   return out;
 }
@@ -612,8 +630,14 @@ function readPeople(text0: string): { text: string; people: People | null } {
   if (/^\s*(?:[a-z]+\s+){0,2}?offenders\b/i.test(text))
     cut(/,?\s*\bwhere\s+the\s+victim\s+was\s+a\s+stranger\b/i, () => { p.where.push({ who: "offender", attr: "relationship", values: ["ST"], paired: true }); });
   cut(/\bof\s+offenders?\s+who\s+(?:was|were)\s+(?:under|younger\s+than)\s+18\b/i, () => { p.where.push({ who: "offender", attr: "age", range: UNDER18, paired: true }); });
-  cut(new RegExp(String.raw`,?\s*\b(?:committed\s+)?by\s+(${JUV})\b`, "i"), (m) => { p.where.push({ who: "offender", attr: "age", range: ageOf(m[1]), paired: false }); });
-  cut(new RegExp(String.raw`,?\s*\bagainst\s+(${JUV})\b`, "i"), (m) => { p.where.push({ who: "victim", attr: "age", range: ageOf(m[1]), paired: false }); });
+  // "by juveniles", "committed by kids", "against teens": taken out for reading, put back where a question is restated to the user.
+  const takeOut = (re: RegExp, who: "offender" | "victim") => {
+    let at = 0, phrase = "";
+    if (!cut(re, (m) => { at = m.index; phrase = m[0].replace(/^[,\s]+/, ""); p.where.push({ who, attr: "age", range: ageOf(m[1]), paired: false }); })) return;
+    (p.restore ??= []).push({ phrase, anchor: text.slice(at).trimStart().slice(0, 24).replace(/\s+$/, "") });
+  };
+  takeOut(new RegExp(String.raw`,?\s*\b(?:committed\s+)?by\s+(${JUV})\b`, "i"), "offender");
+  takeOut(new RegExp(String.raw`,?\s*\bagainst\s+(${JUV})\b`, "i"), "victim");
   // The age word before a person word, one to three words away. "juvenile", "minor" and "youth" keep their old reading only (the
   // singular word before victims, arrests or offenders): their other forms ("juveniles arrested", "a juvenile offender", "juvenile
   // arrest rates") are read elsewhere and must keep the user's word in what is restated. "teen", "kid" and "child" in every form
@@ -627,6 +651,7 @@ function readPeople(text0: string): { text: string; people: People | null } {
   const murderOf = new RegExp(String.raw`\bmurders?\s+of\s+(?:the\s+)?${MURDER_AGE}\b`, "i"), murdered = new RegExp(String.raw`\b${MURDER_AGE}\s+murdered\b`, "i");
   const mo = murderOf.exec(text) ?? murdered.exec(text);
   if (mo) {
+    (p.restore ??= []).push({ swap: { from: "murder victims", to: mo[0] } });
     text = text.replace(murderOf, "murder victims").replace(murdered, "murder victims");
     p.where.push({ who: "victim", attr: "age", range: ageOf(mo[1]), paired: false });
     if (/^teen/i.test(mo[1])) p.teen = true;
