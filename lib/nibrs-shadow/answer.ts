@@ -460,7 +460,7 @@ const ASSAULT_QUALIFIED = /\b(?:aggravated|simple|sexual|sex|agg\.?|felony)[\s-]
  *   "Arlington", read as Arlington, Texas; a crime the reader doesn't know) keeps the decline.
  * - A year that can't be read ("since 20210", "to 202", "back to 1`980", "in2p2t"): the years are asked.
  */
-const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell give show see get let us please can could would will " +
+const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell give show see get let us please can could would will wanna gimme lemme " +
   "what what's whats how is are was has have had does do did been being look looks looking like in on of for to at with from by " +
   "overview overviews scorecard scorecards score card cards report reports snapshot summary profile picture situation " +
   "statistics stats data info information numbers figures general overall major prevalent most trend trends trending " +
@@ -473,7 +473,7 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
  * have", "please"). When the reader leaves only these unread, the question without them is answered as asked, not just
  * asked about: the rest of the question was read in full. Never a place, crime, time or comparison word.
  */
-const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will tell give show see get let us plot chart graph draw " +
+const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will wanna gimme lemme tell give show see get let us plot chart graph draw " +
   "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
   "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
 const pureFillerOnly = (text: string) => {

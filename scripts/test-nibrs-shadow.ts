@@ -315,6 +315,9 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+// "wanna" opens a request like "want to" (scorecard 2026-11-16: "I wanna see shootings nationwide." was declined, not asked, P102).
+assert.equal((ask("I wanna see shootings nationwide.") as { about?: string }).about, "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).");
+assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Houston in 2024") as { explanation?: string }).explanation ?? ""));
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
 // for every crime, and the answer's title says the range; with no victim word, juvenile is an offender under 18 (P107).
 {
