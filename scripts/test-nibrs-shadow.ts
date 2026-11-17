@@ -434,6 +434,41 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   // A completed year keeps the FBI annual method from Crime Index (P57).
   assert.equal(as(ask("Murder clearance rate in Detroit in 2025"), "route").source, "historical");
 }
+{
+  // All the cities (Jeff 2026-11-16, P128): "all American cities", "all Texas cities", "major cities" are the cities of 250,000 or more, ranked by the
+  // figure, every one shown, the floor and the number said in the title; one year; a table and a bar chart.
+  const CITIES: unknown[][] = [["TX0000001", "Houston", 2300000, 400, 17.4, "TX"], ["TX0000002", "Dallas", 1300000, 200, 15.3, "TX"], ["TX0000003", "El Paso", 680000, 30, 4.4, "TX"], ["TX0000004", "Lubbock", 260000, 25, 9.6, "TX"], ["NY0000001", "New York City", 8400000, 450, 5.3, "NY"], ["TX0000005", "Smallville", 40000, 3, 7.5, "TX"]];
+  const cx = (sql: string): unknown[][] => {
+    if (!/agency_crime\.parquet/.test(sql)) return [];
+    const floor = /population >= 250000/.test(sql), tx = /state = 'TX'/.test(sql);
+    return CITIES.filter((c) => (!floor || Number(c[2]) >= 250000) && (!tx || c[5] === "TX"));
+  };
+  const cdeps = { ...deps, execute: cx, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
+  const cities = (q: string) => (as(shadowAnswer(q, cdeps), "historical") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } }).delivered;
+  for (const q of ["murders in all American cities in 2024", "murders in all cities in the US in 2024", "murders in all U.S. cities in 2024"]) {
+    const d = cities(q);
+    assert.equal(d.text[0], "United States city agencies with a population of 250,000 or more: the 5 with the most murders, 2024.", q);
+    assert.deepEqual(d.table.rows, [["New York City, NY", 450], ["Houston, TX", 400], ["Dallas, TX", 200], ["El Paso, TX", 30], ["Lubbock, TX", 25]], q);
+    assert.deepEqual(d.table.columns.map((c) => c.header), ["Agency", "Murders"], q);
+    assert.deepEqual(chartOptionsOf(d.table as never).allowed, ["horizontal_bar"], "a bar chart as well as the table");
+  }
+  for (const q of ["murders in all Texas cities in 2024", "murders in every city in Texas in 2024"]) {
+    const d = cities(q);
+    assert.equal(d.text[0], "Texas city agencies with a population of 250,000 or more: the 4 with the most murders, 2024.", q);
+    assert.deepEqual(d.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"], q);
+  }
+  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "United States city agencies with a population of 250,000 or more: the 5 with the highest murder rates per 100,000, 2024.");
+  // "Major cities" with no rank word, and no place, are the nation's, said (the old reading gave the national total).
+  const major = cities("murders in major cities in 2024");
+  assert.equal(major.text[0], "United States city agencies with a population of 250,000 or more: the 5 with the most murders, 2024.");
+  assert.ok(major.text.includes("No place was named, so these are cities across the United States."));
+  // One year: none asks the year; several years are declined with the one-year ask.
+  assert.equal(as(shadowAnswer("murders in all American cities", cdeps), "clarify").about, "which period");
+  assert.equal(as(shadowAnswer("murders in all American cities from 2020 to 2024", cdeps), "decline").explanation, "This isn't available: the cities of 250,000 or more over several years. Ask for one year.");
+  // Not changed: a ranking word, or a number, keeps the old readings.
+  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Texas city agencies with a population of 250,000 or more: the 4 with the most murders, 2024.");
+  assert.match(cities("the 10 largest cities murders 2024").text[0], /^The 6 largest cities in the United States by population/);
+}
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
 // for every crime, and the answer's title says the range; with no victim word, juvenile is an offender under 18 (P107).
 {
@@ -627,7 +662,9 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     assert.equal(ask("Chart domestic violence calls over time in the four largest cities in the country").kind, "decline");
     assert.equal((ask("homicide totals in top 15 cities") as { about?: string }).about, "which place");
     // No place: the whole country's ask (the period), said (Jeff 2026-11-11).
-    assert.equal((ask("Other large cities and violent crime") as { about?: string }).about, "which period");
+    // (With Crime Index's history, as deployed: the cities of 250,000 or more are a set from Crime Index, P128.)
+    const withHistory = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
+    assert.equal((shadowAnswer("Other large cities and violent crime", withHistory) as { about?: string }).about, "which period");
   }
   // 3. A crime named once per place is one crime.
   const sp = (q: string) => (matchNibrsType(readQuestion(q, 2026, "2026-09").ledger, { allowExplanation: false } as never) as { spec?: { measures: string[] } }).spec;
