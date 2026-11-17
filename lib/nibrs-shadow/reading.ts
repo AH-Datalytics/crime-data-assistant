@@ -202,6 +202,15 @@ const PHRASES: [RegExp, string][] = [
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
   [/\bnola\b/gi, "New Orleans"],
+  // San Francisco's initials and short name (scorecard 2026-11-16: "SF aggravated assault per month", "What is SFPD rape clearance rate?").
+  // "The annual number of murders" is "annual murders": a series by year (P06), not a question with no period.
+  [/\b(annual)\s+number\s+of\b/gi, "$1"],
+  [/\bsfpd\b/gi, "San Francisco Police Department"],
+  [/\bsan\s+fran\b/gi, "San Francisco"],
+  [/(?<![A-Za-z.])sf(?![A-Za-z.\d])/gi, "San Francisco"],
+  // The nation, written "the us" or "American": the capitals-only "US" is the accounting's place word, so lower case "us" is read only
+  // after "in/of/across/for the" or leading a crime phrase, never as the pronoun ("show us murders").
+  [/\b(?:in|of|across|throughout|for)\s+the\s+us(?![A-Za-z.\-'])/gi, (m: string) => m.replace(/us$/i, "U.S.")] as unknown as [RegExp, string],
   // "NY" for a place (not after a place it qualifies, "Suffern (NY)", "Rochester NY"): New York, which asks between the
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
@@ -416,6 +425,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
   text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
+  // here, not in PHRASES, whose replacement re-reads only the matched words (its look-ahead would fail).
+  text = text.replace(/^\s*us\s+(?=(?:murder|homicide|crime|violent|property|robber|burglar|theft|assault|rape|arson|clearance)\w*)/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "U.S." }); return "U.S. "; });
+  text = text.replace(/\bamerican(?=\s+(?:cities|city|violent|crime|murder|homicide|property|robber|burglar|theft|assault|police))/gi,
+    (m) => { readings.push({ kind: "phrase", from: m, to: "U.S." }); return "U.S."; });
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });

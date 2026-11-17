@@ -384,6 +384,41 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   // A rate for an age group has no population base and is declined (existing rule); the plural word is read.
   assert.match(as(ask("Murder rate for teenagers in Chicago since 2019"), "decline").explanation, /^A rate for a group of people needs population figures/);
 }
+// Scorecard 2026-11-16, groups 1 and 2: a "why", an effect, "safest" and a state's clearance rate are declined before a place is asked (P13, P18,
+// the explanation rule); the nation as "the us", "us", "U.S" and "American", and San Francisco as "SF", "SFPD" and "San fran", are places.
+{
+  const declined = (q: string) => as(ask(q), "decline");
+  const WHY = "The data shows how many crimes were reported; it can't say why they rose or fell.";
+  for (const q of ["Why is murder falling?", "What's the effect of politics on violent crime?", "What factors correlate with higher violent crime?", "Why do people commit crime?",
+    "Effect of politics on hate crime", "tell me about how marijuana legalization has affected crime?"]) {
+    const d = declined(q);
+    assert.equal(d.reason, "explanation_requested", q);
+    assert.ok(d.explanation.startsWith(WHY), q);
+  }
+  for (const q of ["safest city in the us", "safest city in 2023", "most dangerous city in 2024"])
+    assert.ok(declined(q).explanation.startsWith("There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate."), q);
+  for (const q of ["clearance rates by state", "What is the homicide clearance rate in Kansas?"]) {
+    const d = declined(q);
+    assert.equal(d.reason, "not_recorded_in_nibrs", q);
+    assert.match(d.explanation, /^There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states/, q);
+  }
+  // Not changed: a number asked with a trailing "why" is answered and the why declined; a state's NIBRS-only clearance rate keeps its own sentence.
+  assert.notEqual((ask("murders in Houston in 2024 and why?") as { reason?: string }).reason, "explanation_requested");
+  assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /no state clearance rate.*not decided/);
+  const placed = (q: string) => { const o = ask(q) as { kind: string; about?: string }; assert.ok(!(o.kind === "clarify" && /^which (?:place|LA)/.test(o.about ?? "")), `${q}: the place is read, not asked`); return o; };
+  for (const q of ["us homicide trend from 1950 to 2024", "murders in the us in 2024", "American violent crime since 2018", "show me the annual number of murders in the U.S.", "murders in the U.S in 2024",
+    "SF aggravated assault in 2025", "What is SFPD rape clearance rate in 2024?", "San fran agg assaults since 2018", "Sf murders in 2024"]) placed(q);
+  // The pronoun is not the nation, and American Indian is not "American".
+  assert.equal((ask("show us murders in 2024") as { about?: string }).about, "which place");
+  assert.equal((ask("American Indian murders in 2024") as { about?: string }).about, "which place");
+  // PR 195 run: a national city ranking with no year asks the year (P05), never "a state or the nation together with other places";
+  // "the annual number of murders" is by year (P06); a "why" about the data (no crime named) is not an explanation decline.
+  const hdeps = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"])
+    assert.equal(as(shadowAnswer(q, hdeps), "clarify").about, "which period", q);
+  assert.ok(!/number of/.test(readQuestion("show me the annual number of murders in the us", 2026).text), "read as annual murders, a series by year");
+  assert.equal((ask("why can't you tell me which states are not represented?") as { about?: string }).about, "which place");
+}
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.
 assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);

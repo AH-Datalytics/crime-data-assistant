@@ -1256,6 +1256,10 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
   return `${whose}, not the whole county's: cities in the county with their own police report separately.`;
 }
 
+/** P13's sentence, as Current Trends and Historical say it. */
+const SAFEST_SENTENCE = "There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.";
+/** P18's sentence, as the clearance answer says it for a state. */
+const STATE_CLEARANCE_SENTENCE = "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate.";
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
@@ -1271,6 +1275,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (leoka) return decline(readerReason(leoka.explanation!), plainReaderExplanation(leoka.explanation!), { detail: leoka.explanation! });
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
+  // A "why", an effect or a cause, "safest" or "most dangerous", and a state's clearance rate are declined before a place, period or crime is
+  // asked (policy P13, P18 and the explanation rule, scorecard 2026-11-16): asking first made the user answer a question that had no answer.
+  // Only a question about crime ("why can't you tell me which states are not represented?" is about the data, not a cause).
+  if (ledger0.parts.some((p) => p.clause === 0 && p.concept === "explain") && ledger0.parts.some((p) => p.clause === 0 && p.concept === "measure"))
+    return decline("explanation_requested", "The data shows how many crimes were reported; it can't say why they rose or fell.", { detail: "I report what NIBRS records; I can't explain causes." });
+  if (/\b(?:safest|most\s+dangerous|least\s+safe|most\s+unsafe)\b/i.test(ledger0.question)) return decline("unsupported_capability", SAFEST_SENTENCE);
+  if (clause0("clearance").some((p) => p.value === "rate") && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "entity" && p.state !== "context")
+    // Only where the existing path would ask first: "by state" (no place), or a state with no period, for a Part I crime (a crime NIBRS alone
+    // records has its own, longer sentence, said once a period is given).
+    && (clause0("list").some((p) => p.value === "list:state")
+      || (clause0("place").some((p) => /^state:/.test(p.value ?? "")) && !clause0("period").length && clause0("measure").length > 0 && clause0("measure").every((p) => PART_ONE.has(p.value ?? "")))))
+    return decline("not_recorded_in_nibrs", STATE_CLEARANCE_SENTENCE);
   const term = flags(ledger0).undefinedTerm;
   if (term) {
     // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
@@ -2075,6 +2091,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
       return r;
     };
+    // No period (D31/P05): asked before anything else, also for the nation, whose plan would otherwise be declined as "a state or the
+    // nation together with other places" for want of a year (scorecard 2026-11-16: "what city has the highest murder rate in the us?").
+    if (sp.period.form === "none") {
+      const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
+      const thisYear = Number(release.lastMonth.slice(0, 4));
+      return { kind: "clarify", about: "which period", question: ledger0.question, options: [
+        { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
+        { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps, pins) },
+        { label: "Another year", entry: "which year" }] };
+    }
     const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
     // "So far in 2025" is the year's months to date, from Current Trends (decision 4), never Crime Index's full year
     // (Codex rankings review 01.3).
