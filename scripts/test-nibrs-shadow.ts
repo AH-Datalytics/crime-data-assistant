@@ -18,7 +18,7 @@ import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
 import { presentationOf, sentencesOf, unsaid } from "../lib/nibrs-shadow/presentation";
 import { ANSWER_STATEMENTS } from "../lib/nibrs-plan/result";
-import { NOTE_TEXT } from "../lib/answer-contract/contract";
+import { chartOptionsOf, NOTE_TEXT } from "../lib/answer-contract/contract";
 import { answerSrsSeveral } from "../lib/nibrs-shadow/srs";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
@@ -321,6 +321,36 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
 // "wanna" opens a request like "want to" (scorecard 2026-11-16: "I wanna see shootings nationwide." was declined, not asked, P102).
 assert.equal((ask("I wanna see shootings nationwide.") as { about?: string }).about, "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).");
 assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Houston in 2024") as { explanation?: string }).explanation ?? ""));
+// "By state" (Jeff 2026-11-16, Q2): one year is the plain table State | figure; years named, or a trend, the long table State | Year |
+// figure with no chart; no year asks the year.
+{
+  const ST = "AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split(" ");
+  const sx = (sql: string): unknown[][] => {
+    if (!/state_crime\.parquet/.test(sql)) return [];
+    const one = /year = (\d{4})/.exec(sql), span = /year BETWEEN (\d{4}) AND (\d{4})/.exec(sql);
+    const ys = one ? [Number(one[1])] : span ? Array.from({ length: Number(span[2]) - Number(span[1]) + 1 }, (_, i) => Number(span[1]) + i) : [];
+    return ys.flatMap((y) => ST.map((s, i) => (one ? [s, s, 1_000_000 + i, 100 + i, 5 + i / 10, s] : [s, y, 1_000_000 + i, 100 + i, 5 + i / 10])));
+  };
+  const sdeps = { ...deps, execute: sx, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
+  const tab = (q: string) => (as(shadowAnswer(q, sdeps), "historical") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } }).delivered;
+  for (const q of ["murders by state in 2024", "murders for each state in 2024", "murders in all 50 states in 2024"]) {
+    const d = tab(q);
+    assert.deepEqual(d.table.columns.map((c) => c.header), ["State", "Murders"], q);
+    assert.equal(d.table.rows.length, 50, q);
+  }
+  assert.deepEqual(tab("Murder rates by state in 2024").table.columns.map((c) => c.header), ["State", "Murders per 100,000"]);
+  const long = tab("Murder rates 1960 to 2024, broken down by all 50 states");
+  assert.deepEqual(long.table.columns.map((c) => c.header), ["State", "Year", "Murders per 100,000"]);
+  assert.equal(long.table.rows.length, 50 * 65);
+  assert.equal(long.text[0], "States: murder rates per 100,000 by year, 1960 to 2024.");
+  assert.deepEqual(chartOptionsOf(long.table as never).allowed, [], "a table only");
+  assert.equal(tab("trends in murder by state").table.rows.length, 50 * 66, "a trend with no years is every year, 1960 to 2025");
+  assert.equal(tab("dispaly murder totals by year for each state").table.rows.length, 50 * 66);
+  assert.equal(tab("Can I see murders by state from 2020 to 2024").table.rows.length, 250);
+  assert.equal(as(shadowAnswer("murders by state", sdeps), "clarify").about, "which period");
+  // Not changed: a NIBRS-only detail by state keeps its own handling.
+  assert.equal(as(shadowAnswer("carjacking by state in 2024", sdeps), "clarify").about, "which place");
+}
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
 // for every crime, and the answer's title says the range; with no victim word, juvenile is an offender under 18 (P107).
 {

@@ -211,6 +211,11 @@ const PHRASES: [RegExp, string][] = [
   // The nation, written "the us" or "American": the capitals-only "US" is the accounting's place word, so lower case "us" is read only
   // after "in/of/across/for the" or leading a crime phrase, never as the pronoun ("show us murders").
   [/\b(?:in|of|across|throughout|for)\s+the\s+us(?![A-Za-z.\-'])/gi, (m: string) => m.replace(/us$/i, "U.S.")] as unknown as [RegExp, string],
+  [/\bdispaly\b/gi, (m: string) => (m[0] === "D" ? "Display" : "display")] as unknown as [RegExp, string],
+  // The states as a list, said in other words ("broken down by all 50 states", "in all 50 states", "per state", "state by state"): "by state".
+  [/\b(?:broken\s+down\s+by|broken\s+out\s+by|by|in|for|across)\s+(?:(?:all|every|each)\s+(?:the\s+)?(?:50\s+|fifty\s+)?|(?:all\s+)?(?:the\s+)?(?:50|fifty)\s+)states?\b/gi, "by state"],
+  [/\bstate\s+by\s+state\b/gi, "by state"],
+  [/\bper\s+state\b/gi, "by state"],
   // "NY" for a place (not after a place it qualifies, "Suffern (NY)", "Rochester NY"): New York, which asks between the
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],

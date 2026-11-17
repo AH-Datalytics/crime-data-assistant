@@ -303,6 +303,8 @@ export function chartOptionsOf(table: ResultTable, ordered: readonly string[] = 
   else if (time) allowed = stats.length > 1 ? ["line", "grouped_bar"] : ["line", "bar"];
   else if (cats.length) allowed = ["horizontal_bar", "bar", ...(exclusive ? ["stacked_100"] as ChartKind[] : [])];
   else allowed = stats.length > 1 ? ["grouped_bar"] : [];
+  // Over a thousand rows ("murder rates by state, 1960 to 2024"): a table only, a chart of them says nothing (Jeff 2026-11-16).
+  if (table.rows.length > 1000) allowed = [];
   // An ordinal breakdown (age groups) keeps its order left to right: an upright bar.
   const ordinal = cats.some((c) => ordered.includes(c.header));
   const def: ChartKind | null = !allowed.length ? null : time ? (monthly || stats.length > 1 || cats.length ? "line" : "bar") : ordinal && allowed.includes("bar") ? "bar" : allowed[0];
