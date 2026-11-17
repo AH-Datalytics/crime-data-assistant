@@ -321,6 +321,14 @@ function filledAll(ledger: RequestLedger, concept: string, values: string[][]): 
     return withParts(l, [...l.parts.filter((p) => !(p.clause === 0 && p.concept === concept && (i === 0 || p.rule !== "shadow:button"))), part]);
   }, ledger);
 }
+/**
+ * A national breakdown by a person's attribute over several years that takes minutes to count (runner, 2026-11-16): declined up front.
+ * Jeff 2026-11-16: decline, no pointer elsewhere ("We should decline and try to make it work later"); the question stays a feature
+ * to build (offenders by age group from the first NIBRS year to the latest), kept with the logged ones in
+ * docs/reports/heavy-national-backlog.md. The wording is the older guards' pattern.
+ */
+export const heavyNationalSentence = (crime: string, by: string, lastYear: string | number): string =>
+  `This isn't available: ${crime} in the United States broken down by ${by} over several years takes too long to count here. Ask for one year, for example "nationwide ${crime} by ${by} in ${lastYear}", or for one state.`;
 /** A button's continuation that runs now: not a decline, and not a route to a source not loaded here (Current Trends). */
 const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
@@ -2632,6 +2640,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
     const who = checked.measures[0].unit === "offender" ? "offender" : "victim";
     return decline("unsupported_capability", `This isn't available: violent crime in the United States broken down by ${who} age over several years takes too long to count here. Ask for one year, for example "nationwide violent crimes by ${who} age in ${lastYear}", or for one state.`);
+  }
+  // The same for property crime nationally by a person's attribute (offender, victim, arrestee) over several years: the national statements for
+  // 2017-2025 took about 5 minutes on the runner (2026-11-16, QL-shr-349398af53: computed before the place question was even asked, then timed
+  // out). Declined up front; one year, a state, an agency or one crime still answer.
+  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.property_crime$/.test(m.id) && m.unit !== "offense")
+    && checked.groupings.some((g) => !g.dimension.startsWith("time.")) && period.from.slice(0, 4) !== period.to.slice(0, 4)) {
+    const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
+    const by = checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => { const [who, attr] = g.dimension.split("."); return who === "offender" || who === "victim" || who === "arrestee" ? `${who} ${attr.replace(/_/g, " ")}` : attr.replace(/_/g, " "); }).join(" and ");
+    return decline("unsupported_capability", heavyNationalSentence("property crime", by, lastYear));
   }
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
