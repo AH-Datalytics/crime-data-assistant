@@ -346,6 +346,26 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.ok(half.kind !== "answer" || (half as unknown as Del).delivered.text[0].includes("January through June"), JSON.stringify(half).slice(0, 200));
   const asked = ask("Murders through April");
   assert.ok(asked.kind !== "answer", "no place: asked or declined, never an answer for the whole year");
+  // Homicide Reports (Jeff 2026-11-17, "Start the table in 1985"): the years before the source starts are not blank rows; the table starts in
+  // 1985 and the source's own sentence says so. (The Nashville question: "murders through May going back to 1935".)
+  {
+    const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+    const sstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/AS k1/.test(sql)) { const [, a, b] = /BETWEEN (\d{6}) AND (\d{6})/.exec(sql)!; const out: unknown[][] = []; for (let v = Number(a); v <= Number(b); v = v % 100 === 12 ? v + 89 : v + 1) out.push([Math.floor(v / 100), v % 100, 3]); return out; }
+      return [];
+    };
+    const sdeps = { ...deps, execute: sstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+      historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
+    const early = as(shadowAnswer("Houston murders through May from 1983 to 1987", sdeps), "shr");
+    assert.equal(early.delivered.text[0], "Houston, Texas: murder victims January through May, 1985 to 1987.");
+    assert.equal(early.delivered.text[2], "Homicide Reports here start in 1985, so 1983 through 1984 aren't included.");
+    assert.ok(!early.delivered.text.some((t) => /^No figure is known for/.test(t)), "no blank rows for the years before the source");
+    assert.deepEqual(early.delivered.table.rows, [["1985", 15], ["1986", 15], ["1987", 15]]);
+    assert.deepEqual(early.period, { from: "1985-01", to: "1987-05" });
+    // A span wholly inside the source has no such line.
+    assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+  }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {
     const o = ask(q) as unknown as { kind: string; reason?: string };
