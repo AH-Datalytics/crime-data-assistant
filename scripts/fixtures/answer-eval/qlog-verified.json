@@ -6029,11 +6029,13 @@
    "numbers": 7
   },
   "QL-hist-423179ca6d": {
-   "digest": "9b53875b7fc32cfc",
+   "digest": "6841e2fffcf437c9",
    "by": "model-canonical",
-   "batch": "pr-arrests-2026-11-12",
+   "batch": "pr-arrests-set-2026-11-16",
    "numbers": 144,
-   "date": "2026-11-12"
+   "date": "2026-11-16",
+   "release": "test6-20261031-host",
+   "note": "Arrests for violent crimes by age by year, consistent reporters: the label's 2015 to 2025 is shown as 2017 to 2025 (the engine's span); the set is the 3,706 agencies with a reported month (any arrest) in every month, which the NIBRS Model's set B equals exactly (3,669 for crime questions). Replaces the 2026-11-12 digest (the 4,239-agency set). Limits: age bands cannot show offsetting record-level differences; malformed months (such as 201713) were not checked; NN/NB/BB infants are in Under 18 by rule but contribute 0 here (the data has only numeric codes 00, 01, 04-99), so that rule and the Outside-the-groups row are not exercised."
   },
   "QL-nibrs-25246a6b9b": {
    "digest": "64e1e09c2624f734",
@@ -6050,11 +6052,13 @@
    "date": "2026-11-12"
   },
   "QL-nibrs-423179ca6d": {
-   "digest": "9b53875b7fc32cfc",
+   "digest": "6841e2fffcf437c9",
    "by": "model-canonical",
-   "batch": "pr-arrests-2026-11-12",
+   "batch": "pr-arrests-set-2026-11-16",
    "numbers": 144,
-   "date": "2026-11-12"
+   "date": "2026-11-16",
+   "release": "test6-20261031-host",
+   "note": "Arrests for violent crimes by age by year, consistent reporters: the label's 2015 to 2025 is shown as 2017 to 2025 (the engine's span); the set is the 3,706 agencies with a reported month (any arrest) in every month, which the NIBRS Model's set B equals exactly (3,669 for crime questions). Replaces the 2026-11-12 digest (the 4,239-agency set). Limits: age bands cannot show offsetting record-level differences; malformed months (such as 201713) were not checked; NN/NB/BB infants are in Under 18 by rule but contribute 0 here (the data has only numeric codes 00, 01, 04-99), so that rule and the Outside-the-groups row are not exercised."
   },
   "QL-nibrs-6869b3f836": {
    "digest": "772b9a347b6bfd10",
