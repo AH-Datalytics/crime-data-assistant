@@ -45,6 +45,7 @@
  * Measure definitions are an executable draft for the canonical tables, until the shared semantic layer (nibrs-model
  * D7/D8) lands; they are in `unitsSql` below.
  */
+import { cubeFromEnv, cubeUnits, shadowSql, type CubeConfig } from "./cube";
 import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
 import { clearanceDims, peopleFacts, type AnswerStatement } from "./result";
@@ -69,7 +70,7 @@ export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "u
  * names (several agencies, combined, or a state's agencies). Totals, combined sums, rates and rankings are rolled from
  * the grid (lib/nibrs-plan/transforms.ts), so each agency-month keeps its own status (D6).
  */
-export type CompileTarget = { root: string; builtYears: number[]; agencies?: string[] };
+export type CompileTarget = { root: string; builtYears: number[]; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
 
 const CARJACK_VEHICLES = ["03", "05", "24", "28", "37"];
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -337,6 +338,14 @@ export const NO_CATEGORY = "__none__";
 
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
+  // Shadow mode: the raw statement is the answer; the cube's statement rides in a comment for the executor to run beside it and compare.
+  const cubeWanted = t.cube === undefined ? cubeFromEnv(process.env, t.root) : t.cube;
+  if (cubeWanted?.mode === "shadow") {
+    const raw = compilePlan(plan, period, { ...t, cube: null });
+    const viaCube = compilePlan(plan, period, { ...t, cube: { ...cubeWanted, mode: "on" } });
+    if (raw.kind === "query" && viaCube.kind === "query" && viaCube.query.sql !== raw.query.sql) return { ...raw, query: { ...raw.query, sql: shadowSql(raw.query.sql, viaCube.query.sql) } };
+    return raw;
+  }
   // A set of years ("in 2019 and 2024"): each year's months only, the last clipped to `through`, grouped by year.
   const yearSet = period.kind === "years" ? [...period.years].sort((a, b) => a - b) : null;
   if (yearSet && !plan.groupings.some((g) => g.dimension === "time.year")) return no("v0 compiles a set of years grouped by year");
@@ -493,6 +502,13 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // P120 (Jeff 2026-11-16): victims of a property crime with a victim age (juvenile robbery victims) are counted by victim.
     plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
   if ("error" in units) return no(units.error);
+  // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
+  const cubeCfg = cubeWanted;
+  const cube = cubeCfg && ["offender", "victim", "arrestee"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
+    cfg: cubeCfg, kind: m.id.startsWith("offenders.") ? "offenders" : m.id.startsWith("victims.") ? "victims" : "arrests",
+    codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? null,
+    allCrimeArrests: m.id === "arrests.all_crime", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
+    conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0 }) : null;
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
@@ -515,6 +531,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const gSel = g.map((x) => `, ${x}`).join("");
   const key = `(u.data_year, u.ori, u.incident_num, u.sub)`;
   const ikey = `(u.data_year, u.ori, u.incident_num)`;
+  // From the cube a row is already a count (w units, wi incidents) of its cell; the raw rows are one unit each.
+  const nUnits = cube ? "CAST(SUM(u.w) AS BIGINT)" : `COUNT(DISTINCT ${key})`;
+  const nIncidents = cube ? "CAST(SUM(u.wi) AS BIGINT)" : `COUNT(DISTINCT ${ikey})`;
   const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
   // Speed (job AR6): every arrest with no condition already counts every arrest, so a month with any arrest is a month
   // with a count and the any-arrest scan (a second read of every arrest table) adds nothing.
@@ -522,14 +541,14 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // In grid mode every month and status is per agency (O: the ori column and join key).
   const O = grid ? "ori, " : "";
   const parts = [
-    `units AS (${units.sql})`,
+    `units AS (${cube ? cube.sql : units.sql})`,
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
     // Every month of the period, so a month with no rows still gets a status.
     `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a` : ""} WHERE TRUE${inYears("ym")})`,
     `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
-    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
+    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
     `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den, coalesce(t.ni, 0) AS deni,
       CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN ${
         // Arrests (Jeff 2026-11-12, "Yes, count them"): a month's status describes its crime reports, not its arrests; an
@@ -559,7 +578,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${grid ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
     // In grid mode (a state's or the nation's agencies, state-sum.ts) each agency's categories are its own: the agency is
     // carried through and joined on (coordinator 2026-11-04: a state or national sum by category).
-    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ALL)`);
+    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped u GROUP BY ALL)`);
     parts.push(`cells AS (SELECT ${grid ? "mc.ori, " : ""}mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni,
       mc.month_cell AS cell
       FROM month_cells mc CROSS JOIN cats c

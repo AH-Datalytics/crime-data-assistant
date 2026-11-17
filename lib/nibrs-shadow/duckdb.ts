@@ -10,6 +10,7 @@
  * the same rows (a state sum asks for its agencies' header rows twice). `persistent: false` keeps one process per
  * query, the reference path.
  */
+import { runShadow } from "../nibrs-plan/cube";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -188,7 +189,7 @@ export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): Duckdb
     // Diagnosis only (job AR1, recount mismatch): NIBRS_SQL_LOG names a file each query is appended to, so a checker
     // can diff the engine's own SQL against a recount key by key. Unset, nothing is written.
     if (process.env.NIBRS_SQL_LOG) fs.appendFileSync(process.env.NIBRS_SQL_LOG, `${sql}\n;\n`);
-    const rows = run(sql);
+    const rows = runShadow(sql, run, (line) => { if (process.env.NIBRS_CUBE_LOG) fs.appendFileSync(process.env.NIBRS_CUBE_LOG, `${line}\n`); else console.error(`[nibrs-cube] ${line}`); }) ?? run(sql);
     cache.set(sql, rows);
     if (cache.size > size) cache.delete(cache.keys().next().value!);
     return rows;
