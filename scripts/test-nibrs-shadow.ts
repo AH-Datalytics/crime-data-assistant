@@ -112,12 +112,15 @@ function gridRows(sql: string): unknown[][] {
   const oris = /unnest\(\[(.*?)\]\) AS ori/.exec(sql)![1].split(", ").map((x) => x.slice(1, -1));
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const rows: unknown[][] = [];
+  // The cleared offenses (a clearance-status filter): 40% of each agency's month, rounded down (Houston 9 to 3, Dallas 7 to 2, the rest 5 to 2).
+  const clearedGrid = /WHEN 'none' THEN 'none'/.test(sql);
+  const base = (o: string) => { const n = o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5; return clearedGrid ? Math.floor(n * 0.4) : n; };
   for (const o of oris) for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) {
     const ym = `${y}-${String(m).padStart(2, "0")}`;
     const unknown = (o === "NC0410200" && ym >= "2025-11" && ym <= "2025-12") || (o === "TX2270100" && ym === "2024-06");
     rows.push(ZERO && (ZERO.ori === "*" || ZERO.ori === o) && ZERO.ym === ym ? [o, ym, 0, "REPORTED_ZERO"]
       : CONFLICT && CONFLICT.ori === o && CONFLICT.ym === ym ? [o, ym, null, "EVIDENCE_CONFLICT"]
-      : unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5, "VALUE"]);
+      : unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, base(o), "VALUE"]);
   }
   return rows;
 }
@@ -385,6 +388,31 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(as(shadowAnswer("murders by state", sdeps), "clarify").about, "which period");
   // Not changed: a NIBRS-only detail by state keeps its own handling.
   assert.equal(as(shadowAnswer("carjacking by state in 2024", sdeps), "clarify").about, "which place");
+}
+// The current year's clearance rate (P129; Jeff 2026-11-16): cleared offenses over offenses in the months the data holds, from NIBRS. The stub's
+// cleared grid is 40% of each agency's month rounded down (Houston 9 to 3, Dallas 7 to 2, the rest 5 to 2).
+{
+  const clr = (q: string) => as(ask(q), "answer").delivered;
+  // An agency: Jeff's answer, whole: the sentence and the source; the rate only.
+  for (const q of ["Robbery clearance rate in Detroit in 2026", "Robbery clearance rate in Detroit so far this year", "Robbery clearance rate in Detroit in 2026 according to NIBRS"]) {
+    const d = clr(q);
+    assert.deepEqual(d.text, ["Detroit, Michigan: 40% of robberies reported in January through September 2026 were cleared.", "Source: NIBRS."], q);
+    assert.deepEqual(d.table.rows, [[40]], q);
+    assert.deepEqual(d.table.columns.map((c) => c.header), ["Robberies cleared (%)"], q);
+  }
+  assert.deepEqual(clr("Murder clearance rate in Houston in 2026").text, ["Houston, Texas: 33.3% of murders reported in January through September 2026 were cleared.", "Source: NIBRS."]);
+  // A state or the nation: only the Consistent Reporting Agencies, said, with their number; one set for both figures.
+  assert.deepEqual(clr("Murder clearance rate in Texas in 2026").text, ["Texas: 34.6% of murders reported in January through September 2026 were cleared, counting only the 4 Consistent Reporting Agencies that reported every month from January 2026 through September 2026.",
+    "Source: NIBRS."]);
+  assert.match(clr("Murder clearance rate in the US in 2026").text[0], /^United States: 39\.7% of murders reported in January through September 2026 were cleared, counting only the 106 Consistent Reporting Agencies that reported every month from January 2026 through September 2026\.$/);
+  // An agency with a month not reported is out of the set (Houston, March 2026): 3 agencies, 54 of 153.
+  CONFLICT = { ori: "TXHPD0000", ym: "2026-03" };
+  assert.match(clr("Murder clearance rate in Texas in 2026").text[0], /^Texas: 35\.3% of murders .* counting only the 3 Consistent Reporting Agencies /);
+  // An agency's month with no report is named and no rate is given.
+  assert.match(as(ask("Murder clearance rate in Houston in 2026"), "decline").explanation, /^No clearance rate is given: no report is known for March 2026\./);
+  CONFLICT = null;
+  // A completed year keeps the FBI annual method from Crime Index (P57).
+  assert.equal(as(ask("Murder clearance rate in Detroit in 2025"), "route").source, "historical");
 }
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
 // for every crime, and the answer's title says the range; with no victim word, juvenile is an offender under 18 (P107).
