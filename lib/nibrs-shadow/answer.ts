@@ -33,7 +33,7 @@
 import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
-import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
+import { ALL_CITIES_N, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
@@ -133,7 +133,7 @@ function readsWhole(t: string, year: number): boolean {
 const tidy = (t: string) => t.replace(/\s+([,?.!])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
 /** The conditions the reader sets aside from its text (clearance, people, property...): a button must keep them. */
 const CONDITIONS = ["clearance", "people", "property", "arrestsThrough", "consistent", "offenders", "composite", "quarter", "combined",
-  "largeCities", "largestSet", "countywide", "last12", "nibrsAsked", "shrDetail", "court", "forecast", "undefinedTerm"] as const;
+  "largeCities", "allCities", "largestSet", "countywide", "last12", "nibrsAsked", "shrDetail", "court", "forecast", "undefinedTerm"] as const;
 /**
  * A button's question that reads whole and keeps every condition of the question asked, but the ones the step changes
  * on purpose (Codex decline review 01: a period button that dropped "that were cleared").
@@ -570,7 +570,7 @@ const sameText = (question: string, read: string, ledger?: RequestLedger) =>
   // The comparison wording's own rewrites ("compare X to Y" as "X and Y") keep everything in the text: only a reading
   // kept beside the text (a region, a composite, a comparison of periods...) stops the ask (job CW1: four asks lost).
   || (!!ledger && textOnly(ledger));
-const TEXT_ONLY_FLAGS = ["combined", "comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance",
+const TEXT_ONLY_FLAGS = ["combined", "comparison", "circumstance", "region", "composite", "people", "largeCities", "allCities", "largestSet", "countywide", "consistent", "property", "clearance",
   "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"];
 function textOnly(ledger: RequestLedger): boolean {
   const f = ledger as unknown as Record<string, unknown>;
@@ -682,7 +682,7 @@ function otherStates(question: string, deps: ShadowDeps): ShadowOutcome | null {
   // Only a question the reader's text says in full: a comparison of periods, a circumstance, a region, a composite or
   // another reading kept beside the text would be lost when the text is asked again (Codex comparison confirmation 01).
   const f = l as unknown as Record<string, unknown>;
-  if (["comparison", "circumstance", "region", "composite", "people", "largeCities", "largestSet", "countywide", "consistent", "property", "clearance", "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"]
+  if (["comparison", "circumstance", "region", "composite", "people", "largeCities", "allCities", "largestSet", "countywide", "consistent", "property", "clearance", "arrestsThrough", "quarter", "column", "shrDetail", "nibrsAsked"]
     .some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); })) return null;
   const st = states[0];
   // The reader's spans are in its own text (Codex comparison review 01.2), so the place is added there.
@@ -1696,10 +1696,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // taken out), so the question is matched without it and the set is ordered by the figure.
   const setRank = setN ? ledger.parts.find((p) => p.clause === 0 && p.concept === "rank") : undefined;
   const dSet = setN && setRank && d.kind !== "spec" ? matchNibrsType(withParts(ledger, ledger.parts.filter((p) => p !== setRank)), SHADOW_MATCH) : d;
-  if (setN && dSet.kind !== "spec") return decline("unsupported_capability", `This isn't available: the ${setN} largest cities with this question.`);
+  // All the cities (Jeff 2026-11-16): the cities of 250,000 or more, ranked by the figure, every one shown; said in the title (the floor, how many).
+  const allCities = setN === ALL_CITIES_N && !!flags(ledger0).allCities;
+  const setWords = allCities ? "cities of 250,000 or more" : `${setN} largest cities`;
+  if (setN && dSet.kind !== "spec") return decline("unsupported_capability", `This isn't available: the ${setWords} with this question.`);
   if (setN && dSet.kind === "spec") {
     const sp0 = dSet.spec;
-    const rankDir: "top" | "bottom" | null = setRank ? (/^bottom/.test(String(setRank.value)) ? "bottom" : "top") : null;
+    const rankDir: "top" | "bottom" | null = allCities ? "top" : setRank ? (/^bottom/.test(String(setRank.value)) ? "bottom" : "top") : null;
     // A series of the set, or the set ranked ("the 20 most populous cities ranked by their murder rate"): one crime, a
     // count or a rate, the nation or a state; a ranking orders the set by the figure, highest first.
     const one = sp0.type === "series" ? (sp0.measures.length === 1 && !sp0.filters.length && !sp0.window && sp0.places.length === 1
@@ -1737,24 +1740,27 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         r.delivered.text.splice(1, 0, `Ordered by the ${statistic === "rate" ? "rate" : "count"}, ${one.ordered === "top" ? "highest" : "lowest"} first.`);
         return r;
       };
-      if (one.ordered && yrs && yrs[0] !== yrs[1]) return decline("unsupported_capability", "This isn't available: the largest cities ranked over several years. Ask for one year.");
+      if (one.ordered && yrs && yrs[0] !== yrs[1]) return decline("unsupported_capability", allCities ? "This isn't available: the cities of 250,000 or more over several years. Ask for one year." : "This isn't available: the largest cities ranked over several years. Ask for one year.");
       if (yrs && yrs[1] <= hb.lastYear && !toDate) {
-        const r = answerHistoricalSet({ measure: one.measure, state, from: yrs[0], to: yrs[1], statistic, n: setN }, hb, deps.execute);
-        if (r.kind === "historical") return order(r);
+        const r = allCities
+          ? answerHistoricalRanking({ measure: one.measure, state, year: yrs[0], statistic, direction: "top", limit: ALL_CITIES_N, minPopulation: 250000, entity: "city" }, hb, deps.execute)
+          : answerHistoricalSet({ measure: one.measure, state, from: yrs[0], to: yrs[1], statistic, n: setN }, hb, deps.execute);
+        if (r.kind === "historical") return allCities ? r : order(r);
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
       }
       // Past Crime Index's last year (2026): Current Trends' sample cities, January through its latest month (decision 4).
       const cur = deps.current;
       const ctSpan = yrs && yrs[0] === yrs[1] && cur ? currentYearSpan(yrs[0], cur, toDate) : null;
       if (ctSpan && cur) {
-        const r = answerCurrentRanking({ measure: one.measure, state, from: ctSpan[0], to: ctSpan[1], statistic, pick: { kind: "largest", n: setN },
-          minPopulation: null, entity: "city" }, cur, hb.root, deps.execute, rankAgencies);
-        if (r.kind === "current") return order(r);
+        const r = answerCurrentRanking({ measure: one.measure, state, from: ctSpan[0], to: ctSpan[1], statistic,
+          pick: allCities ? { kind: "rank", direction: "top", limit: ALL_CITIES_N } : { kind: "largest", n: setN },
+          minPopulation: allCities ? 250000 : null, entity: "city" }, cur, hb.root, deps.execute, rankAgencies);
+        if (r.kind === "current") return allCities ? r : order(r);
         return decline("unsupported_capability", r.explanation);
       }
       if (yrs) return decline("outside_release_coverage", `The largest cities' yearly figures in Crime Index run through ${hb.lastYear}; ${yrs[1]} isn't in them.`);
     }
-    return decline("unsupported_capability", `This isn't available: the ${setN} largest cities with this question. They can be asked for one Part I crime, a count or a rate, by year through ${deps.historical?.lastYear ?? 2025}.`);
+    return decline("unsupported_capability", `This isn't available: the ${setWords} with this question. They can be asked for one Part I crime, a count or a rate, by year through ${deps.historical?.lastYear ?? 2025}.`);
   }
   // P70: an explicit county-wide request is the county's agencies summed (2017 on), never the county's own agency alone.
   if (flags(ledger0).countywide) {
