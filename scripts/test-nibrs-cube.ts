@@ -143,8 +143,14 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       assert.ok(only.code!.codes.has("09A") && !only.code!.codes.has("13B"));
       const both = cubeFromEnv({ ...env, ...cenv }, canonical)!;
       assert.deepEqual([both.years, both.code!.years], [[2024], [2024]], "both cubes, each with its own manifest");
+      writeCode({ ...goodCode, never_add_across_codes: "Never add n_distinct_units across offense codes for victims and offenders: a victim linked to two codes is one unit in each code cell." });
+      assert.ok(cubeFromEnv(cenv, canonical), "the Model's manifest carries the rule as a sentence");
       writeCode({ ...goodCode, never_add_across_codes: false });
       assert.equal(cubeFromEnv(cenv, canonical), null, "a code cube that does not say it never adds across codes");
+      writeCode({ ...goodCode, never_add_across_codes: "  " });
+      assert.equal(cubeFromEnv(cenv, canonical), null, "an empty rule");
+      writeCode({ ...goodCode, never_add_across_codes: undefined });
+      assert.equal(cubeFromEnv(cenv, canonical), null, "no rule at all");
       writeCode({ ...goodCode, schema_version: "cube-0.1" });
       assert.equal(cubeFromEnv(cenv, canonical), null, "the group schema is not a code cube");
       writeCode({ ...goodCode, source_manifest_sha256: "0".repeat(64) });

@@ -81,7 +81,7 @@ function readCube(root: string, kind: "group" | "code", releaseRoot: string | un
   const mf = `${root}/manifest.json`;
   if (!fs.existsSync(mf)) return bad(`${label}: no manifest.json (an unfinished build)`);
   const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups?: Record<string, { list_sha256?: string | null }>;
-    never_add_across_codes?: boolean; reference_codes?: unknown; years?: Record<string, unknown>; files?: Record<string, unknown> };
+    never_add_across_codes?: unknown; reference_codes?: unknown; years?: Record<string, unknown>; files?: Record<string, unknown> };
   const want = kind === "code" ? CODE_SCHEMA_VERSION : SCHEMA_VERSION;
   if (m.schema_version !== want) return bad(`${label}: schema_version ${m.schema_version} is not ${want}`);
   // Built from this very release: the cube records the sha256 of the release's own manifest.json.
@@ -96,7 +96,9 @@ function readCube(root: string, kind: "group" | "code", releaseRoot: string | un
     for (const [g, list] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(list)) return bad(`${label}: the code list of ${g} differs from the engine's`);
   } else {
     // Units are never added across codes: the manifest must say the cube is built that way, and it names the codes it holds.
-    if (m.never_add_across_codes !== true) return bad(`${label}: the manifest does not carry never_add_across_codes`);
+    // The Model writes the rule as a sentence under this key (older local manifests: true). The key being there and not empty is the test.
+    const rule = m.never_add_across_codes;
+    if (!(rule === true || (typeof rule === "string" && rule.trim() !== ""))) return bad(`${label}: the manifest does not carry never_add_across_codes`);
     if (!Array.isArray(m.reference_codes) || !m.reference_codes.every((c) => typeof c === "string")) return bad(`${label}: the manifest names no reference_codes`);
     codes = m.reference_codes as string[];
   }
