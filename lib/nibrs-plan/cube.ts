@@ -15,8 +15,12 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 
 const SCHEMA_VERSION = "cube-0.1";
+const CODE_SCHEMA_VERSION = "cube-code-0.1";
 
-export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow" };
+/** The per-offense-code cube (a separate product, schema cube-code-0.1): the codes its manifest lists and the file years it holds. */
+export type CodeCube = { root: string; years: number[]; codes: Set<string> };
+/** `root` and `years` are the crime-group cube (empty when only the code cube is set); `code` is the per-offense-code cube. */
+export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow"; code?: CodeCube };
 
 /** The groups the cube holds, by the offense-code list the plan's measure carries (the same lists the Model pins by hash). */
 export const CUBE_GROUPS: Record<string, string[]> = {
@@ -46,48 +50,61 @@ const warnOnce = (key: string, why: string) => { if (!warned.has(key)) { warned.
 export const listSha256 = (codes: string[]): string => createHash("sha256").update(`[${[...codes].sort().map((c) => JSON.stringify(c)).join(", ")}]`).digest("hex");
 
 /**
- * The cube this process may read: NIBRS_CUBE=on|shadow and NIBRS_CUBE_ROOT naming the cube folder (manifest.json and canonical/cube/data_year=YYYY).
- * `releaseRoot` is the canonical folder of the release being read: the cube must have been built from exactly that release. Null (raw statements
- * everywhere) when the flag is off, the manifest is missing or unfinished, or any check fails; a failed check is said once on stderr.
+ * The cubes this process may read: NIBRS_CUBE=on|shadow with NIBRS_CUBE_ROOT (the crime-group cube) and/or NIBRS_CODE_CUBE_ROOT (the per-offense-code
+ * cube), each a folder with manifest.json and canonical/cube/data_year=YYYY. `releaseRoot` is the canonical folder of the release being read: a cube
+ * must have been built from exactly that release. A cube whose check fails is left out (its questions use the raw statements) and the reason is said
+ * once on stderr; null when no cube is usable or the flag is off.
  */
 export function cubeFromEnv(env: Record<string, string | undefined> = process.env, releaseRoot?: string): CubeConfig | null {
   const mode = env.NIBRS_CUBE === "on" || env.NIBRS_CUBE === "shadow" ? env.NIBRS_CUBE : null;
-  if (!mode || !env.NIBRS_CUBE_ROOT) return null;
-  const root = env.NIBRS_CUBE_ROOT.replace(/\\/g, "/").replace(/\/+$/, "");
-  // The manifest's own stamp is part of the key: a rebuilt cube is noticed, and nothing else is read twice.
-  let stamp = "none";
-  try { const st = fs.statSync(`${root}/manifest.json`); stamp = `${st.mtimeMs}:${st.size}`; } catch { /* no manifest: the check below says so */ }
-  const key = `${mode}:${root}:${releaseRoot ?? ""}:${stamp}`;
+  const clean = (r: string | undefined) => (r ? r.replace(/\\/g, "/").replace(/\/+$/, "") : undefined);
+  const groupRoot = clean(env.NIBRS_CUBE_ROOT), codeRoot = clean(env.NIBRS_CODE_CUBE_ROOT);
+  if (!mode || (!groupRoot && !codeRoot)) return null;
+  // The manifests' own stamps are part of the key: a rebuilt cube is noticed, and nothing else is read twice.
+  const stamp = (r: string | undefined) => { if (!r) return "-"; try { const st = fs.statSync(`${r}/manifest.json`); return `${st.mtimeMs}:${st.size}`; } catch { return "none"; } };
+  const key = `${mode}:${groupRoot}:${stamp(groupRoot)}:${codeRoot}:${stamp(codeRoot)}:${releaseRoot ?? ""}`;
   if (cached && cached.key === key) return cached.cfg;
   let cfg: CubeConfig | null = null;
   try {
-    const bad = (why: string) => { warnOnce(key, why); return null; };
-    cfg = readCube(root, mode, releaseRoot, bad);
+    const bad = (why: string) => { warnOnce(`${key}:${why}`, why); return null; };
+    const group = groupRoot ? readCube(groupRoot, "group", releaseRoot, bad) : null;
+    const code = codeRoot ? readCube(codeRoot, "code", releaseRoot, bad) : null;
+    if (group || code) cfg = { root: group?.root ?? "", years: group?.years ?? [], mode, ...(code ? { code: { root: code.root, years: code.years, codes: new Set(code.codes ?? []) } } : {}) };
   } catch (e) { warnOnce(key, e instanceof Error ? e.message : String(e)); }
   cached = { key, cfg };
   return cfg;
 }
 
-function readCube(root: string, mode: "on" | "shadow", releaseRoot: string | undefined, bad: (why: string) => null): CubeConfig | null {
+function readCube(root: string, kind: "group" | "code", releaseRoot: string | undefined, bad: (why: string) => null): { root: string; years: number[]; codes?: string[] } | null {
+  const label = kind === "code" ? "code cube" : "cube";
   // The manifest is written last: a folder without it is an unfinished build.
   const mf = `${root}/manifest.json`;
-  if (!fs.existsSync(mf)) return bad("no manifest.json (an unfinished build)");
+  if (!fs.existsSync(mf)) return bad(`${label}: no manifest.json (an unfinished build)`);
   const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups?: Record<string, { list_sha256?: string | null }>;
-    years?: Record<string, unknown>; files?: Record<string, unknown> };
-  if (m.schema_version !== SCHEMA_VERSION) return bad(`schema_version ${m.schema_version} is not ${SCHEMA_VERSION}`);
+    never_add_across_codes?: boolean; reference_codes?: unknown; years?: Record<string, unknown>; files?: Record<string, unknown> };
+  const want = kind === "code" ? CODE_SCHEMA_VERSION : SCHEMA_VERSION;
+  if (m.schema_version !== want) return bad(`${label}: schema_version ${m.schema_version} is not ${want}`);
   // Built from this very release: the cube records the sha256 of the release's own manifest.json.
-  if (!releaseRoot) return bad("the release being read is not known");
+  if (!releaseRoot) return bad(`${label}: the release being read is not known`);
   const rm = `${releaseRoot.replace(/\\/g, "/").replace(/\/+$/, "")}/../manifest.json`;
-  if (!fs.existsSync(rm)) return bad(`the release's manifest.json is not at ${rm}`);
+  if (!fs.existsSync(rm)) return bad(`${label}: the release's manifest.json is not at ${rm}`);
   const releaseSha = createHash("sha256").update(fs.readFileSync(rm)).digest("hex");
-  if (String(m.source_manifest_sha256 ?? "").toLowerCase() !== releaseSha) return bad(`the cube was built from another release (source_manifest_sha256 ${String(m.source_manifest_sha256).slice(0, 12)} is not the sha256 ${releaseSha.slice(0, 12)} of ${rm})`);
-  // The group code lists in the cube are the ones this engine counts with.
-  for (const [g, codes] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(codes)) return bad(`the code list of ${g} differs from the engine's`);
+  if (String(m.source_manifest_sha256 ?? "").toLowerCase() !== releaseSha) return bad(`${label}: built from another release (source_manifest_sha256 ${String(m.source_manifest_sha256).slice(0, 12)} is not the sha256 ${releaseSha.slice(0, 12)} of ${rm})`);
+  let codes: string[] | undefined;
+  if (kind === "group") {
+    // The group code lists in the cube are the ones this engine counts with.
+    for (const [g, list] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(list)) return bad(`${label}: the code list of ${g} differs from the engine's`);
+  } else {
+    // Units are never added across codes: the manifest must say the cube is built that way, and it names the codes it holds.
+    if (m.never_add_across_codes !== true) return bad(`${label}: the manifest does not carry never_add_across_codes`);
+    if (!Array.isArray(m.reference_codes) || !m.reference_codes.every((c) => typeof c === "string")) return bad(`${label}: the manifest names no reference_codes`);
+    codes = m.reference_codes as string[];
+  }
   // File keys as the manifest writes them, with either slash.
   const listed = new Set(Object.keys(m.files ?? {}).map((k) => k.replace(/\\/g, "/")));
   const years = Object.keys(m.years ?? {}).map(Number).filter((y) => Number.isInteger(y) && listed.has(`canonical/cube/data_year=${y}/data.parquet`)
     && fs.existsSync(`${root}/canonical/cube/data_year=${y}/data.parquet`)).sort((a, b) => a - b);
-  return years.length ? { root, years, mode } : bad("no data year of the manifest has its file");
+  return years.length ? { root, years, ...(codes ? { codes } : {}) } : bad(`${label}: no data year of the manifest has its file`);
 }
 
 /** The plan's age bins as a map from each cube age value to the plan's label; null when the plan's bins cut across a cube bin. */
@@ -112,6 +129,8 @@ export type CubeAsk = {
   kind: "offenders" | "victims" | "arrests";
   codes: string[] | null;
   allCrimeArrests: boolean;
+  /** Arrests for a Group B offense (the standalone Group B arrest reports: source B in the cube). */
+  groupB?: boolean;
   /** The one grouping attribute (offender.age, victim.sex ...), with the plan's age bins when it is an age; none for a total. */
   attribute: { dimension: string; bins?: { label: string; from: number; to: number }[] } | null;
   /** The plan counts incidents beside the units. */
@@ -122,28 +141,52 @@ export type CubeAsk = {
   conditioned: boolean;
 };
 
-/** The unit CTE for the cube: columns ori, ym, g0 (when grouped), w (units), wi (incidents); or null when the cube cannot serve the plan. */
+/**
+ * The unit CTE for the cube: columns ori, ym, g0 (when grouped), w (units), wi (incidents); or null when the cube cannot serve the plan.
+ * A code list that is one of the crime groups reads the crime-group cube; a single offense code (or, for arrests, any codes: an arrest has
+ * one offense, so arrests add exactly across codes) reads the per-offense-code cube. Victims and offenders with several codes never do:
+ * one unit sits under each of its codes, and the cube never adds across them.
+ */
 export function cubeUnits(a: CubeAsk): { sql: string } | null {
   if (a.conditioned) return null;
-  if (!a.years.length || !a.years.every((y) => a.cfg.years.includes(y))) return null;
   const unit = a.kind === "offenders" ? "offender" : a.kind === "victims" ? "victim" : "arrestee";
-  let group: string;
-  if (a.allCrimeArrests) group = "all_crime";
-  else {
-    const set = new Set(a.codes ?? []);
-    const hit = Object.entries(CUBE_GROUPS).find(([, c]) => c.length === set.size && c.every((x) => set.has(x)));
-    if (!hit) return null;
-    group = hit[0];
-    if (unit === "victim" && !VICTIM_GROUPS.has(group)) return null;
+  // Which cube, which rows.
+  let cube: { root: string; years: number[] };
+  let rows: string; // the crime_group / offense_code condition
+  let source = "source = 'A'";
+  const codes = a.codes ?? [];
+  if (a.allCrimeArrests) {
+    if (unit !== "arrestee" || a.groupB) return null;
+    cube = a.cfg; rows = "crime_group = 'all_crime'"; source = "source IN ('A', 'B')";
+  } else {
+    const set = new Set(codes);
+    const hit = a.groupB ? undefined : Object.entries(CUBE_GROUPS).find(([, c]) => c.length === set.size && c.every((x) => set.has(x)));
+    if (hit && a.cfg.years.length) {
+      if (unit === "victim" && !VICTIM_GROUPS.has(hit[0])) return null;
+      cube = a.cfg; rows = `crime_group = ${q(hit[0])}`;
+    } else {
+      const cc = a.cfg.code;
+      if (!cc || !codes.length || !codes.every((c) => cc.codes.has(c))) return null;
+      if (unit !== "arrestee" && codes.length !== 1) return null; // never add victims or offenders across codes
+      if (codes.length > 1 && a.wantsIncidents) return null;
+      cube = cc; rows = codes.length === 1 ? `offense_code = ${q(codes[0])}` : `offense_code IN (${codes.map(q).join(", ")})`;
+      if (a.groupB) source = "source = 'B'";
+    }
   }
-  if (unit === "offender" && a.allCrimeArrests) return null;
+  if (!a.years.length || !a.years.every((y) => cube.years.includes(y))) return null;
+  const isCodeCube = cube === a.cfg.code;
+  if (!isCodeCube && a.groupB) return null;
   let value = "'none'";
   let attrName = "none";
   let merges = false;
   if (a.attribute) {
     const [owner, name] = a.attribute.dimension.split(".");
-    const owned = owner === (unit === "arrestee" ? "arrestee" : unit);
-    if (!owned || !ATTRIBUTES[unit]?.includes(name)) return null;
+    const owned = owner === (a.groupB ? "group_b_arrest" : unit);
+    // The engine calls an offender with sequence 00 (no offender known) Unknown in every attribute, whatever its sex or race fields hold (17,517 such
+    // rows in 2024, all New York); the code cube's offender sex and race are the raw fields, so only offender age (which maps 00 to Unknown) is read
+    // from it until the Model maps sequence 00 to blank for sex and race too.
+    const allowed = isCodeCube ? (unit === "offender" ? ["age"] : ["age", "sex", "race"]) : ATTRIBUTES[unit];
+    if (!owned || !allowed?.includes(name)) return null;
     if (name === "age") {
       if (!a.attribute.bins) return null;
       const m = ageMapping(a.attribute.bins);
@@ -159,11 +202,10 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
     }
   }
   if (merges && a.wantsIncidents) return null;
-  const files = a.years.map((y) => q(`${a.cfg.root}/canonical/cube/data_year=${y}/data.parquet`)).join(", ");
-  const sources = unit === "arrestee" && a.allCrimeArrests ? "source IN ('A', 'B')" : "source = 'A'";
+  const files = a.years.map((y) => q(`${cube.root}/canonical/cube/data_year=${y}/data.parquet`)).join(", ");
   const sql = `SELECT ori, month_key AS ym${a.attribute ? `, ${value} AS g0` : ""}, CAST(SUM(n_distinct_units) AS BIGINT) AS w, CAST(SUM(n_distinct_incidents) AS BIGINT) AS wi
       FROM read_parquet([${files}], hive_partitioning = true)
-      WHERE unit = ${q(unit)} AND ${sources} AND crime_group = ${q(group)} AND attribute = ${q(attrName)}
+      WHERE unit = ${q(unit)} AND ${source} AND ${rows} AND attribute = ${q(attrName)}
       GROUP BY ALL`;
   return { sql };
 }

@@ -59,6 +59,42 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeUnits({ ...base, kind: "offenders", codes: null, allCrimeArrests: true }), null, "offenders have no all-arrests reading");
 }
 
+// --- The per-offense-code cube: one code for any unit, several codes only for arrests, Group B by its own rows; the group cube still takes the groups.
+{
+  const code = { root: "/code", years: [2024, 2025, 2026], codes: new Set(["09A", "09B", "13A", "13B", "11A", "11B", "11C", "90D", "35A"]) };
+  const cfgBoth: CubeConfig = { ...cfg, code };
+  const bins = base.attribute!.bins;
+  const one: CubeAsk = { ...base, cfg: cfgBoth, kind: "victims", codes: ["09A"], attribute: { dimension: "victim.age", bins } };
+  const murder = cubeUnits(one)!;
+  assert.ok(murder, "victims of one code are a code-cube cell family");
+  assert.match(murder.sql, /\/code\/canonical\/cube\/data_year=2024/);
+  assert.match(murder.sql, /unit = 'victim' AND source = 'A' AND offense_code = '09A' AND attribute = 'age_bin'/);
+  assert.equal(cubeUnits({ ...one, cfg: cfg }), null, "without a code cube a single code stays raw");
+  assert.equal(cubeUnits({ ...one, codes: ["09A", "09B"] }), null, "victims under two codes are never added");
+  assert.equal(cubeUnits({ ...one, kind: "offenders", codes: ["09A", "09B"], attribute: { dimension: "offender.age", bins } }), null, "nor offenders");
+  assert.equal(cubeUnits({ ...one, codes: ["13C"] }), null, "a code the manifest does not name stays raw");
+  assert.equal(cubeUnits({ ...one, years: [2023, 2024] }), null, "a year the code cube lacks stays raw");
+  assert.equal(cubeUnits({ ...one, conditioned: true }), null, "a weapon or any condition stays raw");
+  assert.equal(cubeUnits({ ...one, kind: "offenders", codes: ["13A"], attribute: { dimension: "offender.sex" } }), null,
+    "offender sex stays raw: the engine calls offender sequence 00 Unknown whatever its sex field holds, the cube keeps the field");
+  const victimSex = cubeUnits({ ...one, codes: ["13A"], attribute: { dimension: "victim.sex" } })!;
+  assert.match(victimSex.sql, /unit = 'victim'[\s\S]*attribute = 'sex'/);
+  assert.ok(cubeUnits({ ...one, kind: "offenders", codes: ["13A"], attribute: { dimension: "offender.age", bins } }), "offender age is read from the code cube");
+  assert.equal(cubeUnits({ ...base, kind: "offenders", attribute: { dimension: "offender.sex" } }), null, "the group cube does not");
+  const rape = cubeUnits({ ...one, kind: "arrests", codes: ["11A", "11B", "11C"], attribute: { dimension: "arrestee.age", bins } })!;
+  assert.ok(rape, "arrests add exactly across codes");
+  assert.match(rape.sql, /offense_code IN \('11A', '11B', '11C'\)/);
+  assert.equal(cubeUnits({ ...one, kind: "arrests", codes: ["11A", "11B"], attribute: null, wantsIncidents: true }), null, "incidents are not added across codes");
+  const dui = cubeUnits({ ...one, kind: "arrests", codes: ["90D"], groupB: true, attribute: { dimension: "group_b_arrest.age", bins } })!;
+  assert.ok(dui, "Group B arrests of one code");
+  assert.match(dui.sql, /unit = 'arrestee' AND source = 'B' AND offense_code = '90D'/);
+  assert.equal(cubeUnits({ ...one, kind: "arrests", codes: ["90D"], groupB: true, attribute: { dimension: "arrestee.age", bins } }), null, "a Group B arrest's attribute is its own");
+  // The group cube is still the one for a group, with both cubes set.
+  const grp = cubeUnits({ ...base, cfg: cfgBoth })!;
+  assert.match(grp.sql, /crime_group = 'person_crimes'/);
+  assert.equal(cubeUnits({ ...base, cfg: { ...cfg, years: [], code } , codes: CUBE_GROUPS.person_crimes, kind: "offenders" }), null, "a group of codes with no group cube: offenders are not added across codes");
+}
+
 // --- The manifest check: a cube is used only when it was built from this release, with the engine's group lists, and its file is there.
 {
   assert.equal(listSha256(CUBE_GROUPS.person_crimes), "e0da932813fb580e2fa05215a6ce59d977c7915830f3f0cdfb3cc12db4bb87ee", "the Model's recorded hash of the person_crimes list");
@@ -93,6 +129,30 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       assert.equal(cubeFromEnv(env, canonical), null, "a group list that is not the engine's");
       write(good);
       assert.equal(cubeFromEnv(env, path.join(dir, "elsewhere", "canonical")), null, "no release manifest to compare with");
+      // The code cube: its own manifest.
+      const codeRoot = path.join(dir, "codecube");
+      fs.mkdirSync(path.join(codeRoot, "canonical/cube/data_year=2024"), { recursive: true });
+      fs.writeFileSync(path.join(codeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
+      const writeCode = (m: object) => fs.writeFileSync(path.join(codeRoot, "manifest.json"), JSON.stringify(m));
+      const goodCode = { schema_version: "cube-code-0.1", source_manifest_sha256: sha, never_add_across_codes: true, reference_codes: ["09A", "13A"], years: { "2024": {} }, files: { "canonical/cube/data_year=2024/data.parquet": {} } };
+      const cenv = { NIBRS_CUBE: "on", NIBRS_CODE_CUBE_ROOT: codeRoot };
+      writeCode(goodCode);
+      const only = cubeFromEnv(cenv, canonical)!;
+      assert.deepEqual(only.years, [], "no group cube set");
+      assert.deepEqual(only.code!.years, [2024]);
+      assert.ok(only.code!.codes.has("09A") && !only.code!.codes.has("13B"));
+      const both = cubeFromEnv({ ...env, ...cenv }, canonical)!;
+      assert.deepEqual([both.years, both.code!.years], [[2024], [2024]], "both cubes, each with its own manifest");
+      writeCode({ ...goodCode, never_add_across_codes: false });
+      assert.equal(cubeFromEnv(cenv, canonical), null, "a code cube that does not say it never adds across codes");
+      writeCode({ ...goodCode, schema_version: "cube-0.1" });
+      assert.equal(cubeFromEnv(cenv, canonical), null, "the group schema is not a code cube");
+      writeCode({ ...goodCode, source_manifest_sha256: "0".repeat(64) });
+      assert.equal(cubeFromEnv(cenv, canonical), null, "a code cube built from another release");
+      writeCode({ ...goodCode, source_manifest_sha256: "0".repeat(64) });
+      assert.deepEqual(cubeFromEnv({ ...env, ...cenv }, canonical)!.code, undefined, "a bad code cube leaves the group cube in use");
+      writeCode({ ...goodCode, reference_codes: undefined });
+      assert.equal(cubeFromEnv(cenv, canonical), null, "no reference codes named");
     } finally { console.error = quiet; }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
@@ -114,8 +174,8 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
 }
 
 // --- Cell by cell against the raw statements, where a release and a cube exist.
-const CUBE = process.env.NIBRS_CUBE_TEST_CUBE, ROOT = process.env.NIBRS_CUBE_TEST_ROOT;
-if (CUBE && ROOT && fs.existsSync(`${CUBE}/manifest.json`)) {
+const CUBE = process.env.NIBRS_CUBE_TEST_CUBE, CODE_CUBE = process.env.NIBRS_CUBE_TEST_CODE_CUBE, ROOT = process.env.NIBRS_CUBE_TEST_ROOT;
+if ((CUBE || CODE_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE_CUBE}/manifest.json`)) {
   const run = async () => {
     const { shadowAnswer } = await import("../lib/nibrs-shadow/answer");
     const { loadPlaceIndex } = await import("../lib/nibrs-shadow/places");
@@ -127,7 +187,7 @@ if (CUBE && ROOT && fs.existsSync(`${CUBE}/manifest.json`)) {
     const executed: string[] = [];
     const exec = duckdbExecutor(process.env.NIBRS_CUBE_TEST_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
     const execute = (sql: string) => { executed.push(sql); return exec(sql); };
-    const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE }, ROOT);
+    const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE, NIBRS_CODE_CUBE_ROOT: CODE_CUBE }, ROOT);
     assert.ok(cubeCfg, "the cube folder is readable");
     const mk = (cube: CubeConfig | null) => ({ places: loadPlaceIndex(), release: r, target: { root: ROOT, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute });
     const questions = (process.env.NIBRS_CUBE_TEST_QUESTIONS ?? "").split("|").filter(Boolean);
