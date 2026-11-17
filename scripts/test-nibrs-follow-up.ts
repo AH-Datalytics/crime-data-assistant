@@ -145,6 +145,27 @@ for (const t of ["compare to Dallas", "compare with Houston", "now for 2023", "j
 assert.equal(q(rw("Countywide total", "now compare to violent crime in Oakland since 2008")), "violent crime in Oakland since 2008");
 asked(rw("Countywide total", "now compare to that"));
 asked(rw("Countywide total", "by month"));
+// Edit forms of the query log (follow-up errors, 2026-11-17): a period set, a rate asked for in other words, the time grain, the first year, "just <crime>".
+assert.equal(q(rw("Dallas vehicle burglaries per year", "since 2019")), "Dallas vehicle burglaries per year since 2019");
+assert.equal(q(rw("NYC rape per year", "make it 2010 to 2025")), "NYC rape per year from 2010 to 2025");
+assert.equal(q(rw("Murders in Houston in 2024", "now do it for 2023")), "Murders in Houston in 2023");
+assert.equal(q(rw("Violent crime rate in Minneapolis in 2024", "What's the data on 2026?")), "Violent crime rate in Minneapolis in 2026");
+assert.equal(q(rw("Houston vehicle burglaries by year", "Please change the metric to rates")), "Houston vehicle burglaries rate by year");
+assert.equal(q(rw("how has violent crime changed in Washington state from 2010 to 2020", "use crime rates instead of counts")), "how has violent crime rate changed in Washington state from 2010 to 2020");
+assert.equal(q(rw("Houston vehicle burglaries by year", "give me a rate per 100k")), "Houston vehicle burglaries rate by year");
+assert.equal(q(rw("Murders in Houston by year", "this is annual, show me by month")), "Murders in Houston by month");
+assert.equal(q(rw("Firearm carjackings per month in Houston", "this is annual, show me by year")), "Firearm carjackings by year in Houston");
+assert.equal(q(rw("Violent crime in Minneapolis from 2000 to 2020", "Can you change the start year to 1988?")), "Violent crime in Minneapolis from 1988 to 2020");
+assert.equal(q(rw("Murders in Texas since 2000", "Can you show me the same data, but going back to 1940?")), "Murders in Texas since 1940");
+assert.equal(q(rw("Houston robberies in 2024", "give me just murders!")), "Houston murders in 2024");
+assert.equal(q(rw("Shoplifting trends in San Francisco in 2024", "Show me Oakland")), "Shoplifting trends in Oakland in 2024");
+// The guards: a period that would stack, a start year that does not fit, a rate of an answer that is one, a scale that is not 100,000 are asked, never guessed.
+asked(rw("Murders in Texas since 2000 and in 2010", "since 2019"));
+asked(rw("Violent crime in Minneapolis from 2000 to 2020", "change the start year to 2030"));
+asked(rw("Violent crime rate in Minneapolis in 2024", "use rates"));
+asked(rw("Murders in Houston in 2024", "give me a rate per 1000000"));
+asked(rw("Murders in Houston in 2024", "show me murders"));
+asked(rw("Murders in Houston in 2024", "use the Census"));
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);

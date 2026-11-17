@@ -332,8 +332,11 @@ export const deterministicRewriter: FollowUpRewriter = {
     }
 
     // A rate in place of a count (P58, P59).
+    // Also the wordings of the query log (follow-up errors, 2026-11-17): "use rates", "use crime rates instead of counts" ("instead" is already
+    // taken out of `f`), "please change the metric to rates", "give me a rate per 100k". A scale other than 100,000 is not converted: asked.
     if (/^(?:make (?:it|this|that) (?:a |into a )?rates?|(?:show|give)(?: me)? (?:the )?rates?(?: of| instead of counts| rather than counts)?|rates?|per capita|as a rate|per 100,?000(?: residents)?)$/i.test(f.replace(/\s+instead of counts$/i, ""))
-      || /^show rates instead of counts$/i.test(raw.replace(/[?.!]+$/, ""))) {
+      || /^show rates instead of counts$/i.test(raw.replace(/[?.!]+$/, ""))
+      || /^(?:(?:use|show|give|switch to)(?: me)?(?: the| a)?|(?:change|switch) the (?:metric|measure) to)\s+(?:crime\s+)?rates?(?:\s+per\s+(?:100,?000|100k))?(?:\s+(?:of counts|rather than counts))?$/i.test(fl)) {
       if (/\brate\b|per (?:capita|100)/i.test(prev)) return ask("The previous answer is already a rate.");
       const m = prevParts.measures[0];
       if (!m || prevParts.measures.length !== 1 || prev.indexOf(m.text) < 0) return ask("Which crime's rate is meant.");
@@ -362,10 +365,12 @@ export const deterministicRewriter: FollowUpRewriter = {
       if (/\bby\s+(?:quarter|day|week)\b|\bmonthly\b|\byearly\b|\bannual(?:ly)?\b/i.test(prev)) return ask("How the quarters relate to the previous answer's time grain.");
       return YEAR.test(prev) ? ok(beforePeriod(prev, "by quarter"), "P71: quarters as sums of months") : ask("Which period to show by quarter.");
     }
-    const grain = /^(?:(?:show it |break it down |split it )?by (month|year)|(monthly|annually|yearly|per month|per year|each month|each year))$/i.exec(f);
+    // ("this is annual, show me by month": the log's wording, 2026-11-17.)
+    const grain = /^(?:this is (?:annual|yearly|monthly)[,;]?\s*)?(?:(?:show(?: me)?(?: it)? |give me(?: it)? |break it down |split it )?by (month|year)|(monthly|annually|yearly|per month|per year|each month|each year))$/i.exec(f);
     if (grain) {
       const g = /month/i.test(grain[1] ?? grain[2]) ? "month" : "year";
       if (/\bby (?:month|year|quarter)\b/i.test(prev)) return ok(prev.replace(/\bby (?:month|year|quarter)\b/i, `by ${g}`), "the time grain replaced");
+      if (/\bper (?:month|year)\b/i.test(prev)) return ok(prev.replace(/\bper (?:month|year)\b/i, `by ${g}`), "the time grain replaced");
       return ok(beforePeriod(prev, `by ${g}`), "the time grain added");
     }
 
@@ -393,6 +398,17 @@ export const deterministicRewriter: FollowUpRewriter = {
       if (r && Number(r[3]) === y && Number(r[1]) < y) return ok(prev.replace(r[0], `from ${r[1]} ${r[2]} ${y - 1}`), "the range shortened at its end");
       if (r && Number(r[1]) === y && Number(r[3]) > y) return ok(prev.replace(r[0], `from ${y + 1} ${r[2]} ${r[3]}`), "the range shortened at its start");
       return ask(`Removing ${y} from this period.`);
+    }
+
+    // "change the start year to 1988", "going back to 1940": the first year of a range or "since" replaced (follow-up errors, 2026-11-17).
+    const startYear = /^(?:(?:change|set|make)\s+(?:the\s+)?(?:start|starting|first)\s+year\s+(?:to|be)|(?:the same data,?\s*)?(?:but\s+)?(?:going\s+)?back\s+(?:to|until|as far as))\s+((?:19|20)\d{2})$/i.exec(f.replace(/^show me /i, ""));
+    if (startYear) {
+      const y = startYear[1];
+      const fromTo = /\bfrom\s+((?:19|20)\d{2})\s+(to|through)\s+((?:19|20)\d{2})\b/i.exec(prev);
+      const sinceM = /\bsince\s+((?:19|20)\d{2})\b/i.exec(prev);
+      if (fromTo && Number(y) < Number(fromTo[3])) return ok(prev.replace(fromTo[0], `from ${y} ${fromTo[2]} ${fromTo[3]}`), "the range's first year replaced");
+      if (!fromTo && sinceM && prevParts.periods.length === 1) return ok(prev.replace(sinceM[0], `since ${y}`), "the first year replaced");
+      return ask(`Which period starts in ${y}.`);
     }
 
     // Breakdowns: added, or the attribute replaced (keeping whose it is unless the follow-up says).
@@ -450,14 +466,16 @@ export const deterministicRewriter: FollowUpRewriter = {
     // A period in place of the previous one (coordinator, 2026-11-01: "show me 2023" is the first follow-up most people
     // try): a year, a range of years or a month, after a lead-in or none; relative periods computed from the previous
     // question's period. The previous question must have one period; otherwise it is asked about.
-    const lead = /^(?:(?:show|give)(?: me)?|(?:what|how) about|(?:the )?same(?: thing)? for|do|for|in|during)\s+/i;
+    // ("make it 2010 to 2025", "do it for 2024", "what's the data on 2026", "since 2019": the query log's wordings, 2026-11-17.)
+    const lead = /^(?:(?:show|give)(?: me)?|(?:what|how) about|(?:the )?same(?: thing)? for|do it for|make it|what(?:'s| is) the data (?:on|for)|do|for|in|during)\s+/i;
     const asPeriod = f.replace(lead, "").trim();
     const pr = onePeriod(prev);
     const range = new RegExp(`^(?:from\\s+)?((?:19|20)\\d{2})\\s*(?:to|through|-|–)\\s*((?:19|20)\\d{2})$`, "i").exec(asPeriod);
     const month = new RegExp(`^(?:in\\s+)?(${MONTHS})\\s+((?:19|20)\\d{2})$`, "i").exec(asPeriod);
-    if (range || month) {
+    const since = /^since\s+((?:19|20)\d{2})$/i.exec(asPeriod);
+    if (range || month || since) {
       if (range && Number(range[1]) >= Number(range[2])) return ask(`Which years "${asPeriod}" means.`);
-      const words = range ? `from ${range[1]} to ${range[2]}` : `in ${ucFirst(month![1].toLowerCase())} ${month![2]}`;
+      const words = range ? `from ${range[1]} to ${range[2]}` : month ? `in ${ucFirst(month[1].toLowerCase())} ${month[2]}` : `since ${since![1]}`;
       // A previous question with no period at all takes this one (real turns: "which city had the steepest decline in
       // total violent crime?", then "from 2015 to 2024"), as a bare year does; one with another period is asked about.
       // "Modify so the date range is 1960 through 2024": the words set the period, so the previous one is replaced even
@@ -472,7 +490,7 @@ export const deterministicRewriter: FollowUpRewriter = {
       if (!pr) return prevParts.periods.length || YEAR.test(prev) || /\b(?:since|this year|last year|so far|year to date|past|last \d+)\b/i.test(prev)
         ? ask(`Whether ${asPeriod} replaces the whole period or is added to it.`)
         : ok(`${prev.replace(/[?.!\s]+$/, "")} ${words}`, "the previous question takes the period");
-      return ok(withPeriod(prev, pr, words), range ? "the period replaced by a range of years" : "the period replaced by a month");
+      return ok(withPeriod(prev, pr, words), range ? "the period replaced by a range of years" : month ? "the period replaced by a month" : "the period replaced by a start year");
     }
     const rel = asPeriod.toLowerCase().replace(/^the\s+/, "");
     const shift = /^(?:year before|previous year|prior year|year before that)$/.test(rel) ? -1 : /^(?:year after|following year|next year|year after that)$/.test(rel) ? 1 : 0;
@@ -527,7 +545,7 @@ export const deterministicRewriter: FollowUpRewriter = {
         return ok(`${prev.slice(0, pw.at)}${a} and ${b}${prev.slice(pw.at + pw.text.length)}`, "the place replaced by two places");
       }
     }
-    const pp =/^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
+    const pp =/^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:show|give)(?!\s+(?:me\s+)?(?:just|only)\b)(?: me)?|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
     // A bare place ("washington state", "minneapolis"), or a place and year, is read as "what about ..." (P23): the
     // follow-up's words must be nothing but that place (and year).
     const bare = (() => {
@@ -603,20 +621,23 @@ export const deterministicRewriter: FollowUpRewriter = {
     }
 
     // A crime in place of the previous one ("now murders instead").
-    const cr = partsOf(`${ucFirst(f)} in Memphis in 2024`);
+    // "just vehicle burglaries", "give me just murders": the crime replaced too (follow-up errors, 2026-11-17).
+    const justM = /^(?:(?:show|give)(?: me)?\s+)?(?:just|only)\s+(.+)$/i.exec(f);
+    const fc = justM ? justM[1] : f;
+    const cr = partsOf(`${ucFirst(fc)} in Memphis in 2024`);
     // Nothing else: "murders in Nashville instead" would drop Nashville (Codex 7b-04.1).
-    const onlyCrime = cr.measures.length === 1 && cr.places.length === 1 && cr.periods.length <= 1 && !YEAR.test(f)
+    const onlyCrime = cr.measures.length === 1 && cr.places.length === 1 && cr.periods.length <= 1 && !YEAR.test(fc)
       && cr.all.every((p) => ["measure", "place", "period", "filler"].includes(p.concept));
-    if (onlyCrime && (/\binstead\b/i.test(raw) || f.split(/\s+/).length <= 3)) {
+    if (onlyCrime && (/\binstead\b/i.test(raw) || !!justM || fc.split(/\s+/).length <= 3)) {
       const m = prevParts.measures[0];
       // The question named no crime ("victim age breakdown in Detroit in 2023", then the "Another crime" entry): the crime named fills it in.
       if (!prevParts.measures.length) {
         const at = prev.search(/\sin\s/i);
         const base = prev.replace(/[?.]\s*$/, "");
-        return ok(at > 0 ? `${base.slice(0, at)} for ${f}${base.slice(at)}` : `${base} for ${f}`, "the crime named");
+        return ok(at > 0 ? `${base.slice(0, at)} for ${fc}${base.slice(at)}` : `${base} for ${fc}`, "the crime named");
       }
       if (!m || prevParts.measures.length !== 1 || prev.indexOf(m.text) < 0) return ask("Which crime to replace.");
-      const word = /^[A-Z]/.test(prev.slice(prev.indexOf(m.text))) ? ucFirst(f) : f;
+      const word = /^[A-Z]/.test(prev.slice(prev.indexOf(m.text))) ? ucFirst(fc) : fc;
       return ok(prev.replace(m.text, word), "the crime replaced");
     }
     return ask(PLACE_ASK);
