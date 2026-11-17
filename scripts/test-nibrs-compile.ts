@@ -196,7 +196,9 @@ assert.ok(ok(compilePlan(plan("offenses.drug_equipment", "offense"), year(2023),
 const monthly = plan("offenses.shoplifting", "offense", [by("time.month")]);
 const grid = ok(compilePlan(monthly, year(2024), { ...t, agencies: ["OK0720600", "OK0550900", "OK0720600"] }));
 assert.deepEqual(grid.columns, ["ori", "period", "c", "c_status"]);
-for (const s of ["u.ori IN ('OK0550900', 'OK0720600')", "CROSS JOIN (SELECT unnest(['OK0550900', 'OK0720600']) AS ori) a", "GROUP BY u.ori, u.ym"]) assert.ok(grid.sql.includes(s), s);
+for (const s of ["oris AS (SELECT unnest(['OK0550900', 'OK0720600']) AS ori)", "u.ori IN (SELECT ori FROM oris)", "CROSS JOIN oris a", "GROUP BY u.ori, u.ym"]) assert.ok(grid.sql.includes(s), s);
+// The agencies are written once, not once per use (a national statement was ~1 MB).
+assert.equal(grid.sql.split("'OK0550900'").length - 1, 1, "the agency list appears once in the statement");
 assert.match(ok(compilePlan(plan("offenses.shoplifting", "offense"), year(2024), t)).sql, /u.ori = 'TNMPD0000'|ori = /, "without agencies the plan's own place is read");
 assert.match(String((() => { const r = compilePlan({ ...monthly, groupings: [] } as Plan, year(2024), { ...t, agencies: ["OK0550900"] }); return r.kind === "unsupported" ? r.reason : ""; })()), /monthly grid of one count/);
 // Populations: the canonical agency file, per data year, by ORI or a state's city agencies.
