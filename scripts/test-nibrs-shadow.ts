@@ -318,6 +318,27 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+// The same months of each year (Jeff 2026-11-16, Q1): "through April", "first 6 months": one year is that month range; several years are the table
+// Year | figure, each year counting the same months, titled with them; never the whole year in place of the months.
+{
+  type Del = { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[]; chart: unknown } };
+  const one = as(ask("Murders through April in Houston in 2024"), "answer") as unknown as Del;
+  assert.equal(one.delivered.text[0], "Houston, Texas: murder victims January through April, 2024.");
+  assert.deepEqual(one.delivered.table.columns.map((c) => c.header), ["Year", "Murder victims"]);
+  // The 2024 fixture has no March report: the year's figure is blank, never the three months that are known.
+  assert.deepEqual(one.delivered.table.rows, [["2024", null]]);
+  assert.ok(one.delivered.text.includes("Each year counts the same months: January through April."));
+  const many = as(ask("Murders through April in Houston from 2022 to 2024"), "answer") as unknown as Del;
+  assert.equal(many.delivered.text[0], "Houston, Texas: murder victims January through April, 2022 to 2024.");
+  assert.deepEqual(many.delivered.table.rows, [["2022", 28], ["2023", 28], ["2024", null]]);
+  assert.ok(many.delivered.text.some((t) => /^No figure is known for 2024: shown blank, not zero\.$/.test(t)));
+  assert.deepEqual(many.delivered.chart, { kind: "bar", x: "Year", y: ["Murder victims"] });
+  // "The first 6 months of each year" is January through June; the months are never dropped for the whole year.
+  const half = ask("Houston murders in the first 6 months of 2023");
+  assert.ok(half.kind !== "answer" || (half as unknown as Del).delivered.text[0].includes("January through June"), JSON.stringify(half).slice(0, 200));
+  const asked = ask("Murders through April");
+  assert.ok(asked.kind !== "answer", "no place: asked or declined, never an answer for the whole year");
+}
 // "wanna" opens a request like "want to" (scorecard 2026-11-16: "I wanna see shootings nationwide." was declined, not asked, P102).
 assert.equal((ask("I wanna see shootings nationwide.") as { about?: string }).about, "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).");
 assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Houston in 2024") as { explanation?: string }).explanation ?? ""));
