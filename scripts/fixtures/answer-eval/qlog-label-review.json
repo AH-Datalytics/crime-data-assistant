@@ -513,15 +513,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-1a03092e4d": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "D14 requires distinguishing the requested shootings.",
+"status": "reviewed",
+"by": "jeff-2026-11-16",
+"why": "P102 asks only when at least one choice runs; none does for this question (indexing) (Jeff 2026-11-16, through the coordinator)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-"place"
-]
+"outcome": "decline",
+"reason": "no choice of the shootings ask can run for this question (indexing)"
 }
 },
 "QL-ct-1aa7e583e8": {
@@ -1890,7 +1887,12 @@
 },
 "QL-ct-6718634d00": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-16",
+"why": "P102 asks only when at least one choice runs; none does for this question (a set of cities) (Jeff 2026-11-16, through the coordinator)",
+"expected": {
+"outcome": "decline",
+"reason": "no choice of the shootings ask can run for this question (a set of cities)"
+}
 },
 "QL-ct-6758790c09": {
 "status": "draft",
@@ -2483,7 +2485,12 @@
 },
 "QL-ct-86106b385c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-16",
+"why": "P102 asks only when at least one choice runs; none does for this question (a percent change for every year) (Jeff 2026-11-16, through the coordinator)",
+"expected": {
+"outcome": "decline",
+"reason": "no choice of the shootings ask can run for this question (a percent change for every year)"
+}
 },
 "QL-ct-86cdd0282b": {
 "status": "reviewed",
@@ -2972,7 +2979,12 @@
 },
 "QL-ct-a4c2e6b855": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-16",
+"why": "P102 asks only when at least one choice runs; none does for this question (several cities) (Jeff 2026-11-16, through the coordinator)",
+"expected": {
+"outcome": "decline",
+"reason": "no choice of the shootings ask can run for this question (several cities)"
+}
 },
 "QL-ct-a4e7068e2f": {
 "status": "draft",
@@ -10995,15 +11007,12 @@
 }
 },
 "QL-nibrs-5a9e28d067": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Baltimore also needs city versus county disambiguation.",
+"status": "reviewed",
+"by": "jeff-2026-11-16",
+"why": "P102 asks only when at least one choice runs; none does for this question (benchmarked to a year, several cities) (Jeff 2026-11-16, through the coordinator)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-"which Baltimore"
-]
+"outcome": "decline",
+"reason": "no choice of the shootings ask can run for this question (benchmarked to a year, several cities)"
 }
 },
 "QL-nibrs-5af45f84c6": {

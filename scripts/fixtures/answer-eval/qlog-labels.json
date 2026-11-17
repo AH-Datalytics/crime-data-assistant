@@ -2197,20 +2197,16 @@
    "question": "can you plot shootings and murders since 2018 indexed to 2018?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-     "place"
-    ],
-    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+    "reason": "no choice of the shootings ask can run for this question (indexing)"
    },
    "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
+    "status": "reviewed",
+    "rule": "R09s",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D14 requires distinguishing the requested shootings."
+    "reviewed_by": "jeff-2026-11-16",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
    }
   },
   {
@@ -8458,19 +8454,16 @@
    "question": "trends in shootings in major us cities over the past six years",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-    "about_any": [
-     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
-    ]
+    "reason": "no choice of the shootings ask can run for this question (a set of cities)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09s",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "reviewed_by": "jeff-2026-11-16",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
    }
   },
   {
@@ -11080,19 +11073,16 @@
    "question": "what is the annual percent change in shootings nationally for each year in your data",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-    "about_any": [
-     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
-    ]
+    "reason": "no choice of the shootings ask can run for this question (a percent change for every year)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09s",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "reviewed_by": "jeff-2026-11-16",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
    }
   },
   {
@@ -13337,19 +13327,16 @@
    "question": "Can you compare shootings in the cities of New York, Philadelphia, Boston, Los Angeles, Chicago, and Baltimore for the years 2018-2025?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-    "about_any": [
-     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
-    ]
+    "reason": "no choice of the shootings ask can run for this question (several cities)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09s",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "reviewed_by": "jeff-2026-11-16",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
    }
   },
   {
@@ -51535,21 +51522,16 @@
    "question": "please plot incidents of shootings between 2018 and 2025, benchmarked to 2021 levels (showing % change year over year) in New York City, Los Angeles, Philadelphia, Baltimore, and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
-     "which Baltimore",
-     "which Los Angeles"
-    ],
-    "about": "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+    "reason": "no choice of the shootings ask can run for this question (benchmarked to a year, several cities)"
    },
    "label": {
-    "status": "draft",
-    "rule": "R09s>2nd",
+    "status": "reviewed",
+    "rule": "R09s",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Baltimore also needs city versus county disambiguation.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-16",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
    }
   },
   {
