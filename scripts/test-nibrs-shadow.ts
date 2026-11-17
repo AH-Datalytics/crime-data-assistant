@@ -464,7 +464,19 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.ok(major.text.includes("No place was named, so these are cities across the United States."));
   // One year: none asks the year; several years are declined with the one-year ask.
   assert.equal(as(shadowAnswer("murders in all American cities", cdeps), "clarify").about, "which period");
-  assert.equal(as(shadowAnswer("murders in all American cities from 2020 to 2024", cdeps), "decline").explanation, "This isn't available: the cities of 250,000 or more over several years. Ask for one year.");
+  // Only a plain count or rate of one crime for one year (runner gate 2026-11-17): a time series, a total, or a condition of its own keeps its old
+  // reading (the lost ids: by month over several years; officers with its own size condition; a weapon share; a sum across the cities).
+  const isSet = (q: string) => !!(readQuestion(q, 2026, "2026-09").ledger as unknown as { allCities?: boolean }).allCities;
+  for (const q of ["Murder rate in 2026 for all American cities", "murders in all American cities in 2024", "murders in major cities in 2024"]) assert.ok(isSet(q), q);
+  for (const q of ["murders in all American cities from 2020 to 2024", "Can I see murders in major cities by month from 2022 to 2026", "murders in all Texas cities since 2018",
+    "provide a list of every city that had 500 or more officers in 2019 and the number of officers in 2019, 2022, 2023, 2024 and 2025",
+    "Big cities with the biggest share of homicides by knife or sharp object", "Sum of murders across all Texas cities in 2024", "total murders in all American cities in 2024",
+    // Comparisons, "other cities", year to date, a weapon or detail, a series, another population bound: their old readings (runner gate 2026-11-17).
+    "los angeles homicide rate in 2025 vs. other large cities", "how does memphis compare to other large cities over the same time frame?",
+    "How is Chicago doing on homicide counts and clearances compared to other large cities?", "Compare assault rates in Seattle vs other major cities",
+    "el paso, texas thefts compared to other texas large cities", "murders so far this year across major cities", "gun arrests in major American cities in 2025",
+    "cannabis cultivation arrests in major us cities annually", "Share of vehicle burglaries where a firearm was stolen in big cities in Texas broken down by city",
+    "murder by city in north carolina largest cities only", "locations of crimes in cities over 1M"]) assert.ok(!isSet(q), q);
   // Not changed: a ranking word, or a number, keeps the old readings.
   assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Texas city agencies with a population of 250,000 or more: the 4 with the most murders, 2024.");
   assert.match(cities("the 10 largest cities murders 2024").text[0], /^The 6 largest cities in the United States by population/);

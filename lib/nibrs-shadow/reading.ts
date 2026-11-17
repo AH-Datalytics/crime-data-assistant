@@ -49,6 +49,8 @@ import { isCommonEnglishWord } from "../english-common-words";
 export type Reading = { kind: "spelling" | "phrase" | "period"; from: string; to: string };
 export type Composite = "firearm" | "knife";
 export type Span = { from: string; to: string };
+/** What makes a question about all the cities more than a plain count or rate of one crime for one year (see the reader's all-cities rule). */
+const NOT_PLAIN_SET = new RegExp(String.raw`\b(?:by\s+(?:month|year|quarter|week|day|sex|race|age|weapon|state|type)|per\s+(?:month|year|quarter)|monthly|yearly|annual\w*|quarterly|over\s+time|trend\w*|rolling|since|going\s+back|(?:each|every)\s+year|from\s+(?:19|20)\d{2}|(?:past|last|previous)\s+(?:\w+\s+)?years?|(?:19|20)\d{2}\s*(?:to|through|thru|-|–|and)\s*(?:19|20)\d{2}|sum|totals?|combined|altogether|overall|share|percent\w*|proportion|ratio|knife|sharp|firearm\w*|gun\w*|handgun\w*|weapon\w*|rifle|shotgun|officers?|staffing|staff|employees|sworn|[\d,]+\s+or\s+(?:more|fewer|less)|at\s+least|at\s+most|more\s+than|fewer\s+than|(?:over|under|above|below)\s+[\d,.]+\s*\w*|population|cleared|clearance|arrests?|teen\w*|juvenile|female|male|women|men|victims?\s+(?:aged|under|over)|compar\w*|vs|versus|against|than|others?|similar|peers?|like|beside|by\s+city|broken\s+down|breakdown|locations?|only|year[-\s]to[-\s]date|ytd|so\s+far|same\s+period|time\s+frame|same\s+time)\b`, "i");
 /** The set size of "all cities": larger than any state's or the nation's count of cities of 250,000 or more. */
 export const ALL_CITIES_N = 100000;
 /** A change between two periods (the shadow attaches it as a period_comparison). `matched`: the same months each year. */
@@ -398,8 +400,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // All the cities (Jeff 2026-11-16): "all American cities", "every city in Texas", "all cities in the US", and "major/large/big cities" with no
   // rank word are the cities of 250,000 or more, said. Read as a set of ALL_CITIES_N, so the set's own rules (one crime, a count or a rate, one
   // year, Crime Index) apply; the place is the state named, else the nation.
+  // Only a plain count or rate of one crime for one year (runner gate 2026-11-17): no time series (by month, several years, "since", "going
+  // back"), no total across the cities, and no condition of its own (a weapon or detail, a share, officers or staffing, another size
+  // condition): those keep their old readings.
   let allCities = false;
-  if (largestSet === null && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*|top|bottom|which|slowest|fastest|steepest)\b/i.test(text)) {
+  const plainSet = !NOT_PLAIN_SET.test(text) && new Set(text.match(/\b(?:19|20)\d{2}\b/g) ?? []).size <= 1;
+  if (largestSet === null && plainSet && !/\b(?:highest|lowest|most|fewest|least|safest|dangerous|worst|best|rank\w*|top|bottom|which|slowest|fastest|steepest)\b/i.test(text)) {
     text = text.replace(/\b(?:(?:in|across|among|for|of)\s+)?(?:(?:all|every|each)\s+(?:of\s+)?(?:the\s+)?|(?:the\s+)?(?:large|larger|largest|big|bigger|biggest|major)\s+)((?:u\.?s\.?|american|[a-z]+(?:\s+[a-z]+)?)\s+)?cit(?:y|ies)\b(?:\s+(?:in|of|across|throughout)\s+(?:the\s+)?(country|nation|usa?|u\.s\.?|united\s+states|america)\b)?/i,
       (m, qual: string | undefined, whole: string | undefined) => {
         const q = qual?.trim();
