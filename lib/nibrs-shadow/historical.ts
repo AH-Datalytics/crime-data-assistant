@@ -496,6 +496,43 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
 }
 
 /**
+ * Every state's figure for each year of a span (Jeff 2026-11-16, "by state" with the years named): one long table State |
+ * Year | figure for the 50 states (not the District of Columbia) from 1960 (the archive's 1958-59 state rows are partial),
+ * ordered by state and year. A table only: with this many rows a chart would say nothing (chartOptionsOf).
+ */
+export type HistoricalStatesByYearQuestion = { measure: string; statistic: "count" | "rate"; from: number; to: number };
+export function answerHistoricalStatesByYear(rq: HistoricalStatesByYearQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
+  const m = HISTORICAL_MEASURE[rq.measure];
+  if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
+  const first = Math.max(1960, build.firstYear);
+  const from = Math.max(rq.from, first), to = Math.min(rq.to, build.lastYear);
+  if (from > to) return { kind: "historical-decline", explanation: `Historical state figures in the data cover ${first} through ${build.lastYear}, so ${rq.from === rq.to ? rq.from : `${rq.from} to ${rq.to}`} is outside them.` };
+  const rate = rq.statistic === "rate";
+  const got = execute(`SELECT name, year, population, ${m.col}_total, ${m.col}_capita FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
+    + `WHERE year BETWEEN ${from} AND ${to} AND state <> 'DC' ORDER BY name, year`);
+  const rows = got.map((r) => [String(r[0]), String(r[1]), rate ? historicalRate(num(r[4]), num(r[3]), num(r[2])).rate : num(r[3])] as [string, string, number | null]);
+  if (!rows.length || rows.every((r) => r[2] === null)) return { kind: "historical-decline", explanation: `Crime Index has no ${rate ? `${m.name} rate` : `${m.name} figure`} for any state from ${from} to ${to}: not available in this data.` };
+  const what = rate ? `${m.name} rates per 100,000` : m.words;
+  const text = [`States: ${what} by year, ${from} to ${to}.`,
+    "Every state with a figure in Crime Index for the year (the District of Columbia is not a state), ordered by state and year."];
+  if (rq.from < first) text.push(`State figures in the data start in ${first}.`);
+  if (rate) text.push("Rates are per 100,000 of each state's population as published by Crime Index.");
+  text.push(SRS_SOURCE);
+  const period = { from: `${from}-01`, to: `${to}-12` };
+  const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;
+  return {
+    kind: "historical", period,
+    question: { measure: rq.measure, agencies: [], from, to, byYear: true, statistic: rq.statistic, comparison: null },
+    meaning: { source: "historical", places: [{ kind: "national", name: "United States" }], filters: ["states (not the District of Columbia)"],
+      measures: [{ name: m.name, unit: m.unit }], period, groupings: ["state", "year"], statistic: rate ? "rate" : "count",
+      ...(rate ? { denominator: "the state's population as published by Crime Index, per 100,000" } : {}) },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "geo.state" }, header: "State" }, { binding: { kind: "grouping", dimension: "time.year" }, header: "Year" },
+      { binding: { kind: "statistic", as: "x" }, header }], rows }, text },
+    read: { table: "state_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
+  };
+}
+
+/**
  * "The N largest cities" (Jeff 2026-11-10, ranking decisions 1 and 2): the N city agencies (Crime Index's geography type
  * "city") with the most residents as published for the last year asked, in a state or the nation, and their figure for
  * each year asked. Ties at the cut by population are ordered by name. A city with no figure for a year shows a blank.

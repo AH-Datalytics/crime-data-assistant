@@ -55,7 +55,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
@@ -1264,6 +1264,38 @@ const STATE_CLEARANCE_SENTENCE = "There is no state clearance rate in the data: 
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
   const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
+
+  // "By state" (Jeff 2026-11-16, Q2): the 50 states from Crime Index for one Part I crime. One year is the table State | figure (the
+  // ranking of all 50); years named, or a trend with none, is the long table State | Year | figure, no chart. No year and no trend asks the
+  // year (P06). Anything else in the question (a breakdown, a clearance, a detail only NIBRS has) keeps the old handling.
+  if (deps.historical && clause0("list").some((p) => p.value === "list:state") && !clause0("place").length) {
+    const hb = deps.historical;
+    const measures = clause0("measure"), stats = clause0("statistic").map((p) => p.value ?? "");
+    const quiet = ledger0.parts.every((p) => p.clause !== 0 || p.state === "context" || ["measure", "list", "period", "statistic", "grain"].includes(p.concept)
+      || (p.state === "not-interpreted" && (pureFillerOnly(p.text) || /^(?:a\s+)?(?:spreadsheet|table)\b/i.test(p.text.trim()))))
+      && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
+      && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).combined && !flags(ledger0).column && !flags(ledger0).region && !flags(ledger0).largeCities;
+    const grains = clause0("grain").map((p) => p.value ?? "");
+    if (quiet && measures.length === 1 && isHistoricalMeasure(measures[0].value ?? "") && stats.every((s) => /^(?:count|rate|per100k|percapita)$/.test(s)) && grains.every((g) => g === "year")) {
+      const measure = measures[0].value!;
+      const statistic = stats.some((s) => s !== "count") ? "rate" as const : "count" as const;
+      const per = clause0("period");
+      const pv = per.length === 1 ? /^(?:(year):(\d{4})|(range):(\d{4}):(\d{4})|(since):(\d{4}))$/.exec(per[0].value ?? "") : null;
+      if (per.length === 0 && !grains.length) {
+        const y = hb.lastYear;
+        return { kind: "clarify", about: "which period", question: ledger0.question, options: [
+          { label: `${y}`, continuation: fromLedger(filled(ledger0, "period", `year:${y}`, `in ${y}`), deps, pins) }, { label: "Other years", entry: "which years" }] };
+      }
+      const years: [number, number] | null = per.length === 0 ? [1960, hb.lastYear] : pv ? (pv[1] ? [Number(pv[2]), Number(pv[2])] : pv[3] ? [Number(pv[4]), Number(pv[5])] : [Number(pv[7]), hb.lastYear]) : null;
+      if (years && years[0] <= years[1]) {
+        const r = years[0] === years[1] && !grains.length
+          ? answerHistoricalRanking({ measure, state: "US", year: years[0], statistic, direction: "top", limit: 50, minPopulation: null, entity: "state" }, hb, deps.execute)
+          : answerHistoricalStatesByYear({ measure, statistic, from: years[0], to: years[1] }, hb, deps.execute);
+        if (r.kind === "historical") return r;
+        return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
+    }
+  }
 
   // A question about the future, or about court outcomes, is declined first, with the nearest question the data answers
   // (P20, D01); its leftover words are not reasons. So is any other part the data does not record (a ZIP code): asking
