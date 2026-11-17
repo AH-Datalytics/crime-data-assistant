@@ -539,6 +539,15 @@ for r in repo:
                       reviewed_by="jeff-2026-11-10" if why == "owner-2026-11-09" else None,
                       notes="no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)")
 print("left out, no earlier question", sorted(left_out.items()), sum(left_out.values()))
+# Replies to the OLD app's own question or offer ("yes", "1", "srs", "broader", "National"): their earlier turn is labeled answer, so F4 did not leave them
+# out; with no turn to judge them against they are left out too (Jeff 2026-11-17, through the coordinator).
+old_app_replies = set(json.load(open(NO_EARLIER, encoding="utf-8")).get("old_app_reply_ids", []))
+for r in repo:
+    if r["id"] in old_app_replies:
+        r["expected"] = {"outcome": "exclude", "source": None, "reason": "old-app-reply:owner-2026-11-17"}
+        r["label"].update(status="reviewed", rule="X1", reviewed_by="jeff-2026-11-17",
+                          notes="a reply to the old app's own question or offer, with no turn to judge it against (Jeff 2026-11-17: left out, not scored)")
+print("left out, replies to the old app", sum(1 for r in repo if r["id"] in old_app_replies))
 
 # Ids are unique (a follow-up id joins both hashes; a clash is a bug, never silently merged).
 ids = collections.Counter(r["id"] for r in repo)
