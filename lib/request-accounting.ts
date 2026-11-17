@@ -268,7 +268,7 @@ const OPENERS: { rule: string; pattern: RegExp }[] = [
   { rule: "how-opener", pattern: /^\s*(?:please\s+)?how\s+(?:did|has|have|does|do|is|are|was|were)\s+(?:the\s+)?/i },
   { rule: "question-opener", pattern: /^\s*(?:(?:hi|hello|hey)[,!.]?\s+)?(?:please\s+)?(?:what(?:['’]s(?=\s))?|how\s+many|how\s+much)\s+(?:are\s+|is\s+|were\s+|was\s+)?(?:the\s+)?(?:number\s+of\s+|total\s+(?:number\s+of\s+)?|count\s+of\s+)?/i },
   { rule: "see-opener", pattern: /^\s*(?:please\s+)?(?:can|could|may)\s+i\s+(?:please\s+)?(?:see|get|have|view|look\s+at)\s+(?:the\s+)?/i },
-  { rule: "need-opener", pattern: /^\s*(?:please\s+)?i\s+(?:want|need)\s+(?:to\s+(?:see|know)\s+)?(?:the\s+)?/i },
+  { rule: "need-opener", pattern: /^\s*(?:please\s+)?i\s+(?:(?:want|need)\s+(?:to\s+(?:see|know)\s+)?|wanna\s+(?:(?:see|know)\s+)?)(?:the\s+)?/i },
   // Option 3 batch 1 (OVER-REFUSAL-PLAN-r3.md, table A): "let's look at", "let's see" and "calculate the" open a request and
   // restrict nothing. The calculation itself ("percent change", "rate") is recognized by the source's own rules.
   // Option 3 batch 1 (P041): a leading "yes"/"sure" opens the turn and restricts nothing (an inherited choice comes from the
