@@ -1851,6 +1851,17 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const sameAgain = total();
   assert.equal(sameAgain.delivered.table.rows[0][0], 84, "the ordinary figure is back");
 }
+// Follow-up errors (2026-11-17): a complete question typed as a follow-up runs as a question of its own (never "I couldn't tell how this changes
+// your last question"), and "crime in <place>" asks which kind of crime (D09); a real edit still rewrites.
+{
+  const fu = (prev: string, q: string) => shadowFollowUp(prev, q, deps) as { kind: string; rewriteKind?: string; about?: string };
+  assert.equal(fu("Indianapolis homicide rate trend", "Compare homicide rates in Tampa, New York City, and San Francisco since 1980").rewriteKind, "new");
+  const crime = fu("murders in Houston since 2010", "crime in Portland since 2010");
+  assert.equal(crime.rewriteKind, "new");
+  assert.notEqual(crime.kind, "answer", "a bare 'crime' is asked about, never answered");
+  assert.equal(fu("Shoplifting in Memphis in 2024", "now for 2023").rewriteKind, "rewrite", "a real edit still rewrites");
+  assert.equal(fu("Shoplifting in Memphis in 2024", "just females").rewriteKind === "new", false, "an edit is not run as a new question");
+}
 // P83, P84 (Jeff 2026-11-01): gun violence offers gun crime; car break-ins say how they are counted.
 {
   const gv = as(ask("Gun violence in Memphis in 2024"), "decline");

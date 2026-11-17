@@ -114,7 +114,11 @@ function placeWords(q: string, places: { text: string }[]): { at: number; text: 
  * "too", "as well" or "alongside" anywhere. A turn missing the crime or the place (a bare place, year or category) is a
  * follow-up.
  */
-const BACK_LEAD = /^(?:(?:ok(?:ay)?|so|then|please|but)\b[,\s]*)*(?:same|and|also|plus|instead|what about|how about|compare|vs\.?|versus|add|now|make (?:it|this|that)|show (?:it|this|that|them|the same)|do (?:the same|that|it)|for that|by)\b/i;
+// "compare" / "vs" / "versus" are not here: a comparison that names both sides itself ("Compare homicide rates in Tampa, New York City and San
+// Francisco since 1980") is a question of its own; COMPARE_WORD below decides by the places it names (follow-up errors, 2026-11-17).
+const BACK_LEAD = /^(?:(?:ok(?:ay)?|so|then|please|but)\b[,\s]*)*(?:same|and|also|plus|instead|what about|how about|add|now|make (?:it|this|that)|show (?:it|this|that|them|the same)|do (?:the same|that|it)|for that|by)\b/i;
+// A comparison that only points at the previous answer ("compare to Dallas", "compare with that") still leads back.
+const COMPARE_LEAD = /^(?:(?:ok(?:ay)?|so|then|please|but)\b[,\s]*)*(?:compare|vs\.?|versus)\s+(?:to|with|against|than)\b/i;
 // A comparison anywhere ("How does that compare to shoplifting in Nashville?") relates the turn to the previous answer:
 // answered on its own it would drop the comparison (Codex review of the new-question default, 1).
 const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|again|too|as well|also|alongside|side by side|for comparison)\b/i;
@@ -124,7 +128,10 @@ const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|ag
 const COMPARE_WORD = /\b(?:compar(?:e|ed|es|ing|ison)|vs\.?|versus|against|relative to|than)\b/i;
 export function standsAlone(turn: string): boolean {
   const t = turn.trim();
-  if (BACK_LEAD.test(t) || BACK_WORD.test(t)) return false;
+  // "these cities: Chicago, IL New York City, NY ..." names its places after the colon (not a pointer back), and "for as long as you have
+  // them" is the data's span, not the last answer.
+  const pointing = t.replace(/\b(?:these|those)\s+(?:\d+\s+)?[\w-]+(?:\s+[\w-]+)?\s*:/gi, " ").replace(/\bas long as you have them\b/gi, " ");
+  if (BACK_LEAD.test(t) || COMPARE_LEAD.test(t) || BACK_WORD.test(pointing)) return false;
   const own = partsOf(t);
   const of = (c: string) => own.all.filter((p) => p.concept === c && p.state !== "not-interpreted");
   // A place the reader doesn't know ("murders in Zzyzxville in 2024") is still a place named: the question stands on its
@@ -153,7 +160,11 @@ export function standsAlone(turn: string): boolean {
   const foreignCount = own.all.filter((p) => p.concept === "outside-us").length;
   if (COMPARE_WORD.test(t) && ((places + foreignCount < 2 && !placeSet) || refersBack)) return false;
   // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
-  const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
+  // "crime in Portland" names no crime but is a question of its own with a place: answered as a first one would be, which asks
+  // "violent, property or both" (D09), not what changed in the last question; so is "Chicago police staffing since 1930".
+  const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0
+    || (own.all.some((p) => p.concept === "measure" && p.value === "unspecified" && p.state === "recognized") && places > 0)
+    || (/\b(?:staffing|headcount|sworn officers|police employees|civilian employees)\b/i.test(t) && places > 0);
   // Population on its own, or a state's agencies, with its own place, is a question of its own too (item 11; Codex
   // population review 01.2).
   // Only population asked on its own (not "... and population", which adds to the last answer), or "agencies" (a
@@ -295,7 +306,15 @@ export const deterministicRewriter: FollowUpRewriter = {
     // Only now, for a follow-up that changes the previous question: that question must be one of its own. A follow-up
     // ("Make it per capita") names no crime or place, and only the turn before it would say what it changes (real
     // conversations, hand check #13). A complete new question, above, does not depend on it.
-    if (!prevParts.measures.length && !prevParts.places.length) return ask("The previous question was itself a change to an earlier one; ask the full question.");
+    if (!prevParts.measures.length && !prevParts.places.length) {
+      // The previous turn names nothing to change (a reply such as "Countywide total"), so a follow-up that names its own crime and place
+      // ("now compare to violent crime in Oakland since 2008") is read as the question it names (follow-up errors, 2026-11-17).
+      const bare = unled.replace(/^(?:compare|vs\.?|versus|add|also|and|plus)\s+(?:to|with|against)?\s*/i, "").trim();
+      const bareOwn = partsOf(bare);
+      if (bareOwn.measures.length && bareOwn.places.length && !/\b(?:that|this|those|these|it|them|previous|before|above|same|instead)\b/i.test(bare))
+        return ok(bare, "a complete question of its own: the previous turn names nothing to change", "new");
+      return ask("The previous question was itself a change to an earlier one; ask the full question.");
+    }
 
     // P72: supporting columns, one at a time (both together are not built: Codex 7b-04.4).
     const popCol = /^(?:(?:add|show|include|give)\s+(?:me\s+)?(?:a\s+|the\s+)?(?:column\s+(?:for|with|showing)\s+(?:the\s+)?)?population(?:\s+column)?|(?:with|and)\s+(?:the\s+)?population|what(?:'s| is| was) the population(?: used)?)$/.test(fl);
