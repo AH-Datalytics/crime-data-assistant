@@ -380,6 +380,8 @@ const RULES: Rule[] = [
   { concept: "rank", value: (m) => `${/bottom/i.test(m[1]) ? "bottom" : "top"}:${numberToken(m[2])}`, pattern: R(String.raw`\b(top|bottom)\s+(${NUMBER})\b`) },
   { concept: "rank", value: (m) => `${/lowest|fewest|least|smallest/i.test(m[0]) ? "bottom" : "top"}:`, pattern: R(String.raw`\b(?<!\bat\s)(?:the\s+)?(?:highest|lowest|most|fewest|least|largest|smallest|greatest|biggest)\b`) },
   { concept: "rank", value: () => "rank:", pattern: R(String.raw`\b(?:rank(?:ed|ing|ings)?|top)\b`) },
+  // "Where does Houston stand on murder rate in 2024" is where it ranks (Jeff 2026-11-17, P132): the same rank word, so the same answer or ask.
+  { concept: "rank", value: () => "rank:", pattern: R(String.raw`\bstands?\s+(?:on|in|for)\b`) },
   // ---- change and comparison ----
   { concept: "change", value: (m) => `change:${changeDirection(m[0])}`, pattern: R(String.raw`\b(?:percent(?:age)?\s+change|%\s*change|difference(?=\s+between\b)|change[sd]?|changing|increase[sd]?|increasing|decrease[sd]?|decreasing|rise|rose|risen|rising|fall(?:en)?|fell|falling|drop(?:ped|s)?|declin(?:e|ed|es|ing)|grew|grow(?:n|th)?|went\s+(?:up|down))\b`) },
   { concept: "versus", value: () => "versus", pattern: R(String.raw`\b(?:vs\.?|versus|compared\s+(?:to|with)|against)(?=\s|$)`) },
