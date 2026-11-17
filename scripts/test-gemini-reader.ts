@@ -23,7 +23,7 @@ const murdered: Replacement = { span: "murdered", kind: "measure", measure: "mur
 // The question's own words stay; only the unread span is replaced, and the result reads in full.
 assert.ok(unreadSpans("murdered in Memphis in 2024", Y).some((s) => /murdered/i.test(s)));
 assert.equal(ok(P(murdered), "murdered in Memphis in 2024"), "murders in Memphis in 2024");
-assert.equal(ok(P(murdered, { span: "San fran", kind: "place", place: "San Francisco" }), "murdered in San fran in 2024"), "murders in San Francisco in 2024");
+assert.equal(ok(P(murdered, { span: "Minneap", kind: "place", place: "Minneapolis" }), "murdered in Minneap in 2024"), "murders in Minneapolis in 2024");
 assert.equal(ok(P(murdered, { span: "broken out by race of the killers", kind: "breakdown", breakdown: { value: "race", person: "offender" } }), "murdered in Memphis in 2024 broken out by race of the killers"),
   "murders in Memphis in 2024 by offender race");
 // A condition the reader read is kept by the user's own words ("unsolved" is a clearance setting), and can't be
@@ -73,7 +73,7 @@ for (const [span, spelling] of [["assualts", "assaults"], ["robberys", "robbery"
 // the words count: all refused.
 no(P({ span: "murdered near schools", kind: "measure", measure: "murder" }), "murdered near schools in Memphis in 2024", /measure/);
 no(P({ span: "downtown Memphis", kind: "place", place: "Memphis" }), "murders in downtown Memphis in 2024", /unread words|place/);
-no(P({ span: "downtown San fran", kind: "place", place: "San Francisco" }), "murders in downtown San fran in 2024", /place/);
+no(P({ span: "downtown Minneap", kind: "place", place: "Minneapolis" }), "murders in downtown Minneap in 2024", /place/);
 assert.equal(replacementText({ span: "per household", kind: "statistic", statistic: "rate" }), null);
 assert.equal(replacementText({ span: "per capita", kind: "statistic", statistic: "rate" }), "rate");
 assert.equal(replacementText({ span: "counting families", kind: "unit", unit: "victims" }), null);
