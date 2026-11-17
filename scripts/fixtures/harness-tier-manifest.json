@@ -2520,6 +2520,15 @@
       "note": "The Gemini reader's validator (plan 3): a reading is accepted only when every field is grounded in the question, nothing is unhandled, every content word is covered and it reads back exactly; no model calls."
     },
     {
+      "id": "test-nibrs-cube",
+      "tier": "F",
+      "script": "scripts/test-nibrs-cube.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The cube read side (flag-gated): which plans are exactly a cube cell family and which keep the raw statements, the age-bin mapping, the shadow-mode statement; the cell-by-cell comparison against raw answers runs only where a release and a cube are named (NIBRS_CUBE_TEST_CUBE, NIBRS_CUBE_TEST_ROOT) and is skipped in CI."
+    },
+    {
       "id": "test-nibrs-duckdb-temp",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-temp.ts",
