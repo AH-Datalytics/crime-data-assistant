@@ -282,7 +282,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
     const everyDelivered = deliverView(true, everyPlan);
     const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: gridSql, delivered: everyDelivered, stateSum: meta };
-    if (consistent) return !everySet.length ? decline(`No agency reported crimes in every month ${span}, so there are no ${CRA} for ${Where}.`)
+    // (Its own span: the outer `span` is declared after byCategory() has returned, so it cannot be read here: QL-nibrs-cc6769f8d6.)
+    const emptySpan = yearSet && yearSet.length > 1 ? `in ${yearSet.slice(0, -1).join(", ")} and ${yearSet[yearSet.length - 1]}` : `from ${monthName(period.from)} through ${monthName(period.to)}`;
+    if (consistent) return !everySet.length ? decline(`No agency reported crimes in every month ${emptySpan}, so there are no Consistent Reporting Agencies for ${Where}.`)
     : everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
     const delivered = deliverView(false, plan);
     if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);

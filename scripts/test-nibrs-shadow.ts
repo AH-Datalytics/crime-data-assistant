@@ -1885,6 +1885,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const noneAsked = as(ask("Carjackings in Texas in 2024 for consistent reporters"), "decline");
   ZERO = null;
   assert.equal(noneAsked.explanation, "No agency reported crimes in every month from January 2024 through December 2024, so there are no Consistent Reporting Agencies for Texas.");
+  // The same by a category (QL-nibrs-cc6769f8d6: "violent crimes by offender age by year for california ... for consistent reporters" threw
+  // "Cannot access 'span' before initialization": the category path read a name declared after it returned).
+  ZERO = { ori: "*", ym: "2024-03" };
+  const byCat = ask("Simple assault victims in Kansas by sex in 2024 for consistent reporters");
+  ZERO = null;
+  assert.ok(byCat.kind === "decline" && /^No agency reported crimes in every month from January 2024 through December 2024, so there are no Consistent Reporting Agencies for Kansas\.$/.test(byCat.explanation), JSON.stringify(byCat).slice(0, 300));
   assert.equal(withZero.stateSum!.everyAgencies, base.stateSum!.everyAgencies - 1, "the agency with a zero month leaves the set");
   assert.equal(avoids.stateSum!.everyAgencies, clean.stateSum!.everyAgencies, "and stays in for a span that avoids the month");
   assert.deepEqual(withZero.stateSum!.years.map((y) => y.agencies), base.stateSum!.years.map((y) => y.agencies), "the ordinary view still counts it as reporting");
