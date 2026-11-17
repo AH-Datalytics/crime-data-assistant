@@ -80,10 +80,12 @@ function readCube(root: string, mode: "on" | "shadow", releaseRoot: string | und
   const rm = `${releaseRoot.replace(/\\/g, "/").replace(/\/+$/, "")}/../manifest.json`;
   if (!fs.existsSync(rm)) return bad(`the release's manifest.json is not at ${rm}`);
   const releaseSha = createHash("sha256").update(fs.readFileSync(rm)).digest("hex");
-  if (m.source_manifest_sha256 !== releaseSha) return bad("the cube was built from another release (source_manifest_sha256 differs)");
+  if (String(m.source_manifest_sha256 ?? "").toLowerCase() !== releaseSha) return bad(`the cube was built from another release (source_manifest_sha256 ${String(m.source_manifest_sha256).slice(0, 12)} is not the sha256 ${releaseSha.slice(0, 12)} of ${rm})`);
   // The group code lists in the cube are the ones this engine counts with.
-  for (const [g, codes] of Object.entries(CUBE_GROUPS)) if (m.groups?.[g]?.list_sha256 !== listSha256(codes)) return bad(`the code list of ${g} differs from the engine's`);
-  const years = Object.keys(m.years ?? {}).map(Number).filter((y) => Number.isInteger(y) && m.files?.[`canonical/cube/data_year=${y}/data.parquet`] !== undefined
+  for (const [g, codes] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(codes)) return bad(`the code list of ${g} differs from the engine's`);
+  // File keys as the manifest writes them, with either slash.
+  const listed = new Set(Object.keys(m.files ?? {}).map((k) => k.replace(/\\/g, "/")));
+  const years = Object.keys(m.years ?? {}).map(Number).filter((y) => Number.isInteger(y) && listed.has(`canonical/cube/data_year=${y}/data.parquet`)
     && fs.existsSync(`${root}/canonical/cube/data_year=${y}/data.parquet`)).sort((a, b) => a - b);
   return years.length ? { root, years, mode } : bad("no data year of the manifest has its file");
 }
