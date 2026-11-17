@@ -7,7 +7,8 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { askInsteadChecks, heavyNationalSentence, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { askInsteadChecks, heavyNationalSentence, isDeferred, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
@@ -765,6 +766,34 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.equal(sqls.slice(before).filter((x) => /'23H'/.test(x) && /offender/.test(x)).length, 0, "no national property-crime statement is run, before or instead of the ask");
   assert.equal(as(ask("property crime offenders by age in the United States in 2024"), "answer").kind, "answer");
   assert.equal(as(ask("property crime offenders by age by year 2019 to 2025 in Texas"), "answer").kind, "answer");
+}
+// Heavy national choices are built when chosen (speed plan option C, 2026-11-17): the national statements of a place-less ask are not run before
+// the ask is shown; the choice that is clicked answers exactly as the eager one did; a plan a guard declines is still never offered.
+{
+  const heavy = { ...deps, deferChars: 5000 }; // the stub's plan statements are far longer than its header lookups: only they count as heavy here
+  const q = "Carjackings in 2024";
+  const before = sqls.length;
+  const lazy = as(shadowAnswer(q, heavy), "clarify");
+  const us = lazy.options.find((o) => o.label === "The United States")!;
+  assert.ok(us && isDeferred(us), "the national choice is offered unbuilt");
+  assert.equal(sqls.slice(before).filter((x) => /unnest\(\[|WITH units AS/.test(x)).length, 0, "no statement of the national plan ran to offer it: " + sqls.slice(before).filter((x) => /unnest\(\[|WITH units AS/.test(x)).map((x) => `${x.length} chars: ${x.slice(0, 120)}`).join(" || "));
+  const eagerAsk = as(shadowAnswer(q, deps), "clarify");
+  const usEager = eagerAsk.options.find((o) => o.label === "The United States")!;
+  assert.ok(!isDeferred(usEager), "without a heavy statement it is built as before");
+  const mark0 = sqls.length;
+  const built = us.continuation!, same = usEager.continuation!;
+  assert.equal(built.kind, same.kind, "chosen, it answers as the eager one did");
+  if (built.kind === "answer" && same.kind === "answer") assert.deepEqual(built.delivered.table.rows, same.delivered.table.rows);
+  assert.ok(sqls.length >= mark0, "its statements run when it is chosen");
+  // The preview lists it without building it.
+  const again = as(shadowAnswer(q, heavy), "clarify");
+  const mark = sqls.length;
+  const pv = toPreview(again, [], places, q);
+  assert.equal(sqls.slice(mark).filter((x) => /unnest\(\[|WITH units AS/.test(x)).length, 0, "listing the buttons builds nothing");
+  assert.ok(pv.kind === "clarify" && pv.buttons.some((b) => b.label === "The United States" && b.kind === "continuation"));
+  // A plan a guard declines never reaches a statement: it is not offered at all (the national choice of the P122 question).
+  const guarded = as(shadowAnswer("annual counts of offenders by age from 1986 through 2025", heavy), "clarify");
+  assert.ok(!guarded.options.some((o) => o.label === "The United States"), "a guard-declined plan is dropped as a dead button, not deferred");
 }
 // Codex review of the group-4 branch: the explicit units get the person-crimes definition, race and sex keep theirs, and a
 // carjacking incident by time of day has its join.

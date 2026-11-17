@@ -83,6 +83,8 @@ export type ShadowDeps = {
   assaultAsked?: boolean;
   /** How many buttons in a row were rebuilt from the user's words: past three, a button's own buttons are left as built. */
   rebuilt?: number;
+  /** A statement longer than this many characters is a heavy national statement (default 100,000: an inline list of ~20,000 agencies); see deferHeavy. */
+  deferChars?: number;
 };
 
 export type ShadowOption = {
@@ -331,6 +333,53 @@ export const heavyNationalSentence = (crime: string, by: string, lastYear: strin
   `This isn't available: ${crime} in the United States broken down by ${by} over several years takes too long to count here. Ask for one year, for example "nationwide ${crime} by ${by} in ${lastYear}", or for one state.`;
 /** A button's continuation that runs now: not a decline, and not a route to a source not loaded here (Current Trends). */
 const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
+
+/**
+ * Heavy national continuations are built when chosen, not before (coordinator 2026-11-17, speed plan option C). An ask's options each carry
+ * their answer so that no button is dead (P22), but a national statement takes minutes (QL-shr-349398af53: 300 s of statements before its
+ * "which place" ask was shown). The option is built once against a probe whose executor refuses a heavy statement: reaching one proves the plan
+ * got through reading, validation and every guard (a guard-declined plan never reaches SQL, so it is dropped as a dead button as before); then
+ * the button keeps a lazy `continuation` that builds the real answer on first read and remembers it. Nothing else changes: every answer, ask and
+ * decline is the same; only when the heavy statements run.
+ */
+const HEAVY_STATEMENT = 100_000;
+const DEFERRED = new WeakSet<object>();
+/** A button whose answer is built when first read (the walkers that only decide whether a button runs must not read it). */
+export const isDeferred = (x: ShadowOption): boolean => DEFERRED.has(x);
+class HeavyStatement extends Error {}
+function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
+  let heavy = false;
+  const limit = deps.deferChars ?? HEAVY_STATEMENT;
+  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
+  let first: ShadowOutcome | null = null;
+  try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
+  if (!heavy) return { label, continuation: first!, ...extra };
+  // Something between the executor and here swallowed the refusal and made an outcome of it: not a plan that reached its statement; built for real.
+  if (first) return { label, continuation: build(deps), ...extra };
+  let memo: ShadowOutcome | null = null;
+  const option = { label, targetSource: "nibrs" as const, ...extra } as ShadowOption;
+  // Not enumerable: serializing an outcome (JSON.stringify, a spread) must not build it; the walkers that copy options go through mapOption.
+  Object.defineProperty(option, "continuation", { enumerable: false, configurable: true, get: () => (memo ??= build(deps)) });
+  DEFERRED.add(option);
+  return option;
+}
+/**
+ * An option with its continuation passed through `f`; a deferred one stays deferred (`f` runs when its answer is first read), so a check or
+ * rewrite that every option goes through (everyBreakdown, the bare-assault rebuild) does not build the heavy answer early. Its other fields
+ * are copied by name: spreading it would read the lazy answer.
+ */
+function mapOption(x: ShadowOption, f: (c: ShadowOutcome) => ShadowOutcome): ShadowOption {
+  if (!isDeferred(x)) return x.continuation ? { ...x, continuation: f(x.continuation) } : x;
+  let memo: ShadowOutcome | null = null;
+  const copy: Record<string, unknown> = {};
+  for (const k of Object.keys(x)) if (k !== "continuation") copy[k] = (x as unknown as Record<string, unknown>)[k];
+  const option = copy as unknown as ShadowOption;
+  Object.defineProperty(option, "continuation", { enumerable: false, configurable: true, get: () => (memo ??= f(x.continuation!)) });
+  DEFERRED.add(option);
+  return option;
+}
+/** An option that runs: a deferred one (it reached its heavy statement), or one whose continuation runs. */
+const optionRuns = (o: ShadowOption) => isDeferred(o) || (!!o.continuation && runsNow(o.continuation));
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
 const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 /**
@@ -341,6 +390,8 @@ const onlyHomicideReports = (o: ShadowOutcome, depth = 0): ShadowOutcome | null 
   if (o.kind === "shr") return o;
   if (o.kind !== "clarify" || depth >= 3) return null;
   const options = o.options.flatMap((x) => {
+    // A deferred choice is a heavy NIBRS statement: never Homicide Reports', so it goes, unbuilt.
+    if (isDeferred(x)) return [];
     if (!x.continuation) return [x];
     const kept = onlyHomicideReports(x.continuation, depth + 1);
     return kept ? [{ ...x, continuation: kept }] : [];
@@ -662,7 +713,8 @@ export function withoutDeadButtons(o: ShadowOutcome): ShadowOutcome {
   const options: ShadowOption[] = [], dead: ShadowOutcome[] = [];
   let changed = false;
   for (const x of o.options) {
-    if (!x.continuation) { options.push(x); continue; }
+    // A deferred button reached its heavy statement (deferHeavy): it runs, and reading its answer here would build it.
+    if (isDeferred(x) || !x.continuation) { options.push(x); continue; }
     const c = withoutDeadButtons(x.continuation);
     if (!runsNow(c)) { dead.push(c); changed = true; continue; }
     if (c !== x.continuation) changed = true;
@@ -674,7 +726,7 @@ export function withoutDeadButtons(o: ShadowOutcome): ShadowOutcome {
 
 /** A button that holds an ask: the ask pruned, or the button gone when no choice in it runs. Any other button is as it was. */
 function pruneAsk(x: ShadowOption): ShadowOption | null {
-  if (x.continuation?.kind !== "clarify") return x;
+  if (isDeferred(x) || x.continuation?.kind !== "clarify") return x;
   const c = withoutDeadButtons(x.continuation);
   return !runsNow(c) ? null : c === x.continuation ? x : { ...x, continuation: c };
 }
@@ -794,7 +846,7 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const asked = shadowAnswerWithDeadButtons(question, { ...deps, assaultAsked: true });
     // Declined as asked, but asked something else once the kind is named ("which New York"): that question, whose
     // answers name aggravated assaults plainly, rather than a decline.
-    if (asked.kind === "decline" && aggravated.kind === "clarify" && aggravated.options.some((o) => o.continuation && runsNow(o.continuation)))
+    if (asked.kind === "decline" && aggravated.kind === "clarify" && aggravated.options.some(optionRuns))
       return { ...aggravated, question };
     // Up to three choices in a row ("assaults" -> the United States -> a year: Codex ties review 03), never more.
     if (asked.kind !== "clarify" || (deps.rebuilt ?? 0) >= 3) return asked;
@@ -805,7 +857,13 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
         : label === "The last 10 complete years" ? " over the last 10 years" : label === "The United States" ? " in the United States" : null;
     };
     return { ...asked, options: asked.options.map((o) => {
-      const s = o.continuation ? suffix(o.label) : null;
+      const s = isDeferred(o) || o.continuation ? suffix(o.label) : null;
+      if (s && isDeferred(o)) {
+        // A heavy choice stays unbuilt: its rebuilt question is built when it is chosen (and the old answer stands if that one does not run).
+        const rest: Record<string, unknown> = {};
+        for (const k of Object.keys(o)) if (k !== "continuation" && k !== "label") rest[k] = (o as unknown as Record<string, unknown>)[k];
+        return deferHeavy(o.label, (d) => { const c = shadowAnswer(base + s, { ...d, rebuilt: (deps.rebuilt ?? 0) + 1 }); return runsNow(c) ? c : o.continuation!; }, deps, rest as Partial<ShadowOption>);
+      }
       const c = s ? shadowAnswer(base + s, { ...deps, rebuilt: (deps.rebuilt ?? 0) + 1 }) : null;
       return c && runsNow(c) ? { ...o, continuation: c } : o;
     }) };
@@ -886,7 +944,7 @@ export function answerDimensions(o: ShadowOutcome): string[] | null {
 function everyBreakdown(question: string, o: ShadowOutcome, yearlyStandsIn = false): ShadowOutcome {
   // A yearly choice offered on purpose beside monthly ones (span choices, Jeff 2026-11-14) replaces the months asked, and
   // only the months: any other breakdown the question names is still checked (Codex span review 07).
-  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => (x.continuation ? { ...x, continuation: everyBreakdown(question, x.continuation, x.role === "by_year") } : x)) };
+  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => mapOption(x, (c) => everyBreakdown(question, c, x.role === "by_year"))) };
   const dims = answerDimensions(o);
   if (!dims) return o;
   const stands = yearlyStandsIn || !!(o as { spanChoice?: boolean }).spanChoice;
@@ -1336,10 +1394,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
     const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
       { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
-    const options = kinds.map((k) => ({ label: k.label, continuation: fromLedger(filledAll(ledger, "measure", k.measures), deps, pins) }));
-    const runnable = options.filter((o) => runsNow(o.continuation));
+    const options = kinds.map((k) => deferHeavy(k.label, (d) => fromLedger(filledAll(ledger, "measure", k.measures), d, pins), deps));
+    const runnable = options.filter(optionRuns);
     if (!runnable.length) {
-      const d0 = options[0].continuation;
+      const d0 = options[0].continuation!;
       return partYear({ grain: clause0("grain")[0]?.value ?? "total" }, flags(ledger0).comparison)
         ? decline("unsupported_capability", "Violent and property crime totals are whole years only.", { alternative: byYearInstead(ledger, deps, pins) })
         : d0;
@@ -1370,8 +1428,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const said = others.map((p) => p.text.trim().replace(/\s+rates?$/i, "")).join(" and ");
     const kinds = [{ label: `${said} and violent crime`, add: [["violent_crime", "violent crime"]] }, { label: `${said} and property crime`, add: [["property_crime", "property crime"]] },
       { label: `${said}, violent and property crime`, add: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
-    const options = kinds.map((k) => ({ label: k.label[0].toUpperCase() + k.label.slice(1), continuation: fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), deps, pins) }));
-    const runnable = options.filter((o) => runsNow(o.continuation));
+    const options = kinds.map((k) => deferHeavy(k.label[0].toUpperCase() + k.label.slice(1), (d) => fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), d, pins), deps));
+    const runnable = options.filter(optionRuns);
     if (runnable.length) return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: runnable };
     // No combination runs here yet (several crimes in one answer): said plainly, with the crimes named on their own offered.
     const alone = fromLedger(filledAll(ledger, "measure", keep), deps, pins);
@@ -1387,8 +1445,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (sexPart && sexPart.rule !== "shadow:button" && !(/\b(?:all|every|total)\b/i.test(sexPart.text) && !/\bforcible\b/i.test(sexPart.text))) {
     const keep = clause0("measure").filter((p) => p !== sexPart).map((p) => [String(p.value), p.text.trim()]);
     const options = [{ label: "Rape", add: [["rape", "rape"]] }, { label: "All sex offenses", add: [["sex_offense", "all sex offenses"]] }]
-      .map((k) => ({ label: k.label, continuation: fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), deps, pins) }));
-    const runnable = options.filter((o) => runsNow(o.continuation));
+      .map((k) => deferHeavy(k.label, (d) => fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), d, pins), deps));
+    const runnable = options.filter(optionRuns);
     if (runnable.length) return { kind: "clarify", about: "which sex offenses", question: ledger0.question, options: runnable };
   }
   // "The current murder trend" (Jeff 2026-11-05: Current Trends'): by month from January of last year through the
@@ -1404,11 +1462,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const noLength = clause0("rolling").find((p) => /:\?$/.test(String(p.value)));
   if (noLength) {
     const avg = String(noLength.value).startsWith("rolling-avg");
-    const options = [3, 6, 12].map((n) => ({ label: `${n} months`,
-      continuation: fromLedger(filled(ledger, "rolling", avg ? `rolling-avg:${n}` : n === 12 ? "rolling12" : `rolling:${n}`, `rolling ${n}-month ${avg ? "average" : "total"}`), deps, pins) }));
-    const runnable = options.filter((o) => runsNow(o.continuation));
+    const options = [3, 6, 12].map((n) => deferHeavy(`${n} months`,
+      (d) => fromLedger(filled(ledger, "rolling", avg ? `rolling-avg:${n}` : n === 12 ? "rolling12" : `rolling:${n}`, `rolling ${n}-month ${avg ? "average" : "total"}`), d, pins), deps));
+    const runnable = options.filter(optionRuns);
     if (runnable.length) return { kind: "clarify", about: "which rolling window", question: ledger0.question, options: [...runnable, { label: "Another length", entry: "how many months" }] };
-    return options[0].continuation;
+    return options[0].continuation!;
   }
   if (!clause0("place").length) {
     // "Big cities" or "the N largest cities" with no place named are the whole country's, said (Jeff 2026-11-11: "yes",
@@ -1456,7 +1514,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
-      { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
+      deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps),
       { label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }] };
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
@@ -2484,11 +2542,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       }
     }
     const opts: ShadowOption[] = trend
-      ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps, pins) },
-         { label: "Every year available", continuation: fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), deps, pins) },
+      ? [deferHeavy("The last 10 complete years", (d) => fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), d, pins), deps),
+         deferHeavy("Every year available", (d) => fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), d, pins), deps),
          { label: "Another range", entry: "which range of years" }]
-      : [{ label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
-         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps, pins) },
+      : [deferHeavy(`The latest complete year (${lcy})`, (d) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d, pins), deps),
+         deferHeavy("This year so far", (d) => fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), d, pins), deps),
          { label: "Another year", entry: "which year" }];
     return { kind: "clarify", about: trend ? "which range of years" : "which period", question: ledger0.question, options: opts };
   }

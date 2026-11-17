@@ -29,9 +29,14 @@ What it shows:
   QL-shr-349398af53, the slowest (360 s). The P122 guard hits none of the logged ones: it changed 0 ids.
 - **The real data answers (7)** include QL-hist-cf5a3d0bcc ("arrests per year in the United States"), QL-nibrs-25246a6b9b, QL-nibrs-fecedb1bda,
   QL-nibrs-21e388da4e, QL-shr-38c550f436 and QL-nibrs-98af404ff6 (a small statement: its slow time is probably load noise).
-- **Open design question:** a broader place-less guard (ask the place BEFORE computing the national plan) would speed up most of the clarify rows.
-  It conflicts with the "never a button that cannot run" rule (each ask option carries its answer, computed eagerly), so it needs a decision:
-  keep eager continuations and speed up the national statements, or compute an option only when it is pressed.
+- **Done (2026-11-17, speed plan option C):** a heavy national choice of an ask ("The United States", the period and kind-of-crime choices) is
+  offered without being built: the plan is built against a probe that refuses a statement over 100,000 characters, so reaching one proves it got
+  through reading, validation and every guard (a guard-declined plan never reaches SQL and is still dropped as a dead button); the answer is built
+  when the choice is read. Checked on the real release: QL-nibrs-0a3141365b, the sexual-assault and the juvenile-arrests asks return in about 1.4 s
+  (header lookups only), where each ran 3 to 300 s of national statements before. Answers, asks and wording are unchanged.
+- **Still open:** the national statements themselves (a clicked national answer, or a direct national question such as "arrests per year in the
+  United States") are as slow as above. Options without a new release table, measured on the laptop: the national statement as 51 state
+  statements (36 s against 55-75 s, rows identical), a persistent result cache warmed after each release build.
 
 | id | question | tab | outcome (baseline) | longest statement (chars, ms) | slowest (ms) |
 |---|---|---|---|---|---|

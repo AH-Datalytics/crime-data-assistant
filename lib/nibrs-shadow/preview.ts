@@ -11,7 +11,7 @@
  *                   the shadow's (P22).
  */
 import type { ChartConfig } from "../types";
-import type { ShadowOption, ShadowOutcome } from "./answer";
+import { isDeferred, type ShadowOption, type ShadowOutcome } from "./answer";
 import type { ChoicePresentation, Presentation } from "../answer-contract/contract";
 import type { PlaceIndex } from "./places";
 import { presentationOf } from "./presentation";
@@ -57,7 +57,9 @@ export type PreviewWithPresentation = PreviewResponse & { presentation?: Present
 
 // A continuation this build cannot answer (its years are outside the build) is shown, not offered: the build is the
 // limit, not the question. The preview has no follow-up turns, so an entry asks for the whole question again.
-const button = (o: ShadowOption, path: string[]): PreviewButton => o.continuation && o.continuation.kind === "decline" && o.continuation.notBuilt
+// A deferred choice (a heavy national statement, answer.ts deferHeavy) is a button that runs: reading its answer here would build it.
+const button = (o: ShadowOption, path: string[]): PreviewButton => isDeferred(o) ? { label: o.label, path: [...path, o.label], kind: "continuation" }
+  : o.continuation && o.continuation.kind === "decline" && o.continuation.notBuilt
   ? { label: o.label, path: [...path, o.label], kind: "not-built", note: `Not in the data this preview uses: ${o.continuation.explanation}` }
   : o.question ? { label: o.label, path: [...path, o.label], kind: "question", question: o.question }
   : o.continuation
