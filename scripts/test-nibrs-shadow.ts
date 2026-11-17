@@ -411,6 +411,13 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   // The pronoun is not the nation, and American Indian is not "American".
   assert.equal((ask("show us murders in 2024") as { about?: string }).about, "which place");
   assert.equal((ask("American Indian murders in 2024") as { about?: string }).about, "which place");
+  // PR 195 run: a national city ranking with no year asks the year (P05), never "a state or the nation together with other places";
+  // "the annual number of murders" is by year (P06); a "why" about the data (no crime named) is not an explanation decline.
+  const hdeps = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"])
+    assert.equal(as(shadowAnswer(q, hdeps), "clarify").about, "which period", q);
+  assert.ok(!/number of/.test(readQuestion("show me the annual number of murders in the us", 2026).text), "read as annual murders, a series by year");
+  assert.equal((ask("why can't you tell me which states are not represented?") as { about?: string }).about, "which place");
 }
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.

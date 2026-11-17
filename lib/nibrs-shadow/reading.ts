@@ -203,6 +203,8 @@ const PHRASES: [RegExp, string][] = [
   [/\bphilly\b/gi, "Philadelphia"],
   [/\bnola\b/gi, "New Orleans"],
   // San Francisco's initials and short name (scorecard 2026-11-16: "SF aggravated assault per month", "What is SFPD rape clearance rate?").
+  // "The annual number of murders" is "annual murders": a series by year (P06), not a question with no period.
+  [/\b(annual)\s+number\s+of\b/gi, "$1"],
   [/\bsfpd\b/gi, "San Francisco Police Department"],
   [/\bsan\s+fran\b/gi, "San Francisco"],
   [/(?<![A-Za-z.])sf(?![A-Za-z.\d])/gi, "San Francisco"],
