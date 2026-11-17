@@ -128,6 +128,23 @@ for (const t of ["shoplifting in Nashville in 2024 versus Memphis", "Murder rate
 // Codex follow-up review 01.1: a comparison referring to the answer ("that", "it") points back, whatever it names.
 for (const t of ["How does that compare to robberies in Houston and Dallas?", "Is it higher in Houston than in Dallas?", "Murder rates in Houston versus Dallas that year",
   "How does this last comparison of murder rates in Houston and Dallas differ?"]) assert.ok(!standsAlone(t), `follow-up: ${t}`);
+// Follow-up errors (2026-11-17, the query log's turns): a complete question typed as a follow-up is a question of its own.
+//  - a comparison that names its own places ("Compare ... in Tampa, New York City, and San Francisco since 1980", after "Indianapolis homicide rate trend");
+//  - "these cities: A, B, C" names them after the colon; "for as long as you have them" is the data's span;
+//  - "crime in Portland" names no crime but is a question with a place: asked "violent, property or both" (D09), not "what changed?";
+//  - police staffing with its place ("Chicago police staffing since 1930").
+for (const t of ["Compare homicide rates in Tampa, New York City, and San Francisco since 1980", "compare murders in Milwaukee and Chicago, 2022 to 2024",
+  "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX", "show me gun murders in denver for as long as you have them",
+  "crime in Portland since 2010", "Naperville, IL crime per year since 2015", "tell me about crime in Loudoun County, Virginia", "Chicago police staffing since 1930"])
+  assert.ok(standsAlone(t), `new: ${t}`);
+// The guard: real EDITS and pointers back are still follow-ups, never run as new questions.
+for (const t of ["compare to Dallas", "compare with Houston", "now for 2023", "just females", "now compare to Dallas", "now crime in Dallas", "also crime in Dallas",
+  "compare murders in Houston", "crime", "violent crime", "in these cities", "murders in these cities", "the same for those cities: Dallas and Houston", "police staffing"])
+  assert.ok(!standsAlone(t), `follow-up: ${t}`);
+// A previous turn that names nothing to change (a reply such as "Countywide total") leaves a follow-up with its own crime and place as the question it names.
+assert.equal(q(rw("Countywide total", "now compare to violent crime in Oakland since 2008")), "violent crime in Oakland since 2008");
+asked(rw("Countywide total", "now compare to that"));
+asked(rw("Countywide total", "by month"));
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);
