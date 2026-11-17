@@ -23,6 +23,7 @@ import { fmt, fmtRate, periodWords, SRS_SOURCE } from "./deliver";
 import { stateName } from "./places";
 import { headerStates } from "../nibrs-plan/state-codes";
 import { answerSrsSeveral, type SrsPlace } from "./srs";
+import { titleCase } from "./titles";
 
 /** Where the Crime Index build is, and the years it holds. */
 export type HistoricalBuild = { root: string; release: string; firstYear: number; lastYear: number; clearanceFirstYear: number };
@@ -415,6 +416,8 @@ export type HistoricalRankingQuestion = {
   measure: string; state: string; year: number; statistic: "count" | "rate"; direction: "top" | "bottom"; limit: number;
   /** P08: "large" cities, 250,000 residents or more by the year's published population. */
   minPopulation: number | null;
+  /** The floor came from the question ("large", "all American cities", a number), so the title says it; a default floor is a note. */
+  floorAsked?: boolean;
   /**
    * What is ranked (Jeff 2026-11-10, ranking decisions 1, 3 and 5): city agencies (Crime Index's geography type
    * "city", whatever the agency) in a state, or in the nation when `state` is "US"; every agency, city and county, when
@@ -460,16 +463,25 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const what = rate ? `${m.name} rates` : m.words;
   const most = rq.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
-  const text = [`${states ? "States" : rq.region ? `${ucFirst(unit)} in ${rq.region.name}` : `${where} ${unit}`}${floor}: the ${ranked.length} with the ${most} ${what}${rate ? " per 100,000" : ""}, ${rq.year}.`,
-    states ? `Ranked: the 50 states with a ${figure} in Crime Index for ${rq.year} (the District of Columbia is not a state); ties are ordered by name.`
-      : cities ? `Ranked: city agencies (Crime Index's city geography, whatever the agency) with a ${figure} in Crime Index for ${rq.year}; ties are ordered by agency name.`
-        : counties ? `Ranked: county agencies (sheriffs and county police, Crime Index's county type) with a ${figure} in Crime Index for ${rq.year}, each on its own coverage (mostly unincorporated areas); cities in the county are not included. Ties are ordered by agency name.`
-        : `Ranked: every agency, city and county, with a ${figure} in Crime Index for ${rq.year}; ties are ordered by agency name.`];
+  // A title that reads back the question's datapoints (Jeff 2026-11-17: "2024 Murder Rate by State"), then plain notes, then the source line.
+  const unitTitle = states ? "State" : counties ? "County Agency" : cities || rq.region ? "City" : "Agency";
+  const unitPlural = states ? "states" : counties ? "county agencies" : cities || rq.region ? "cities" : "agencies";
+  const title = `${rq.year} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} by ${unitTitle}${states ? "" : `, ${titleCase(where)}`}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}`;
+  const text = [title,
+    `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? "rates" : m.words} are shown.`,
+    states ? "The 50 states are ranked; the District of Columbia is not a state, so it is left out."
+      : cities ? "Cities are Crime Index's city agencies, whatever the agency."
+        : counties ? "County agencies are sheriffs and county police (Crime Index's county type), each on its own coverage, mostly unincorporated areas; cities in the county are not included."
+        : `Every agency, city and county, with a ${figure} is ranked.`];
   if (tie) {
     const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
     text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
   }
-  if (leftOut.length) text.push(`Not ranked because Crime Index has no ${figure} for them in ${rq.year}: ${leftOut.length <= 5 ? andList(leftOut.map((a) => a.name).sort((x, y) => x.localeCompare(y))) : `${leftOut.length} ${unit}`}.`);
+  if (leftOut.length) {
+    const names = leftOut.length <= 5 ? leftOut.map((a) => a.name).sort((x, y) => x.localeCompare(y)) : null;
+    text.push(`${names ? andList(names) : `${fmt(leftOut.length)} ${unit}`} ${names && names.length === 1 ? "isn't" : "aren't"} ranked because Crime Index has no ${figure} for ${names && names.length === 1 ? "it" : "them"} in ${rq.year}.`);
+  }
+  text.push(states ? "Ties are ordered by name." : "Ties are ordered by agency name.");
   if (rate) {
     text.push(`Rates are per 100,000 of each ${states ? "state" : "agency"}'s population as published by Crime Index.`);
     const computed = ranked.filter((a) => a.computed).map((a) => a.name);
@@ -778,8 +790,10 @@ export function answerHistoricalPosition(pq: PositionQuestion, build: Historical
   const near = ranked.map((e, i) => ({ e, i })).filter(({ i }) => Math.abs(i - at) <= 2);
   const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
   const what = rate ? `${m.name} rate` : m.words;
-  const text = [`${pq.label} ranks ${nth(place(at))} of ${ranked.length} ${said} by ${what} in ${pq.year} (1st is the highest).`,
-    `Ranked: cities with a ${m.name} ${rate ? "rate" : "figure"} in Crime Index for ${pq.year}; shown with the two above and below it. Ties share a place and are ordered by name.`];
+  // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
+  const text = [`Where ${pq.label.split(",")[0]} Ranks on ${pq.year} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} Among ${pq.scope === "size" ? "U.S. Cities" : `${stateName(pq.state)} Cities`}`,
+    `${pq.label} ranks ${nth(place(at))} of ${ranked.length} ${said} by ${what} in ${pq.year}; 1st is the highest.`,
+    "It is shown with the two cities above and the two below; ties share a place and are ordered by name."];
   if (rate) text.push("Rates are per 100,000 of each agency's population as published by Crime Index.");
   text.push(SRS_SOURCE);
   const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;

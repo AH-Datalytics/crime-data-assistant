@@ -28,6 +28,7 @@ import { stateName } from "./places";
 import { citySql, cityNameSql, type HistoricalBuild } from "./historical";
 import { carriesTo } from "./population-carry";
 import { rankAgencies } from "../nibrs-plan/transforms";
+import { titleCase } from "./titles";
 import { firstNeeded, rollingSums, unknownRuns } from "./rolling";
 
 export const SHR_FIRST_YEAR = 1985;
@@ -380,7 +381,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const what = shrWhat(sq);
   const text = [`${where}: ${what}${sq.rate ? " per 100,000 people" : ""}${sq.breakdown ? ` by ${DIM_WORDS[sq.breakdown.dim]}` : ""}${sq.grain === "year" ? " by year" : sq.grain === "month" ? " by month" : ""}, ${span}.`,
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
-    "From the FBI's Supplementary Homicide Reports: the homicides agencies reported to the FBI, each victim counted."];
+    "Counts are the homicides agencies reported to the FBI, each victim counted."];
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
@@ -556,11 +557,12 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   const what = rk.share ? `share of ${unitWords}${detail ? ` ${detail}` : ""}` : `${unitWords}${detail ? ` ${detail}` : ""}`;
   const most = rk.direction === "top" ? (rk.share ? "highest" : "most") : (rk.share ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
-  const text = [`Cities${rk.minPopulation ? ` of ${fmt(rk.minPopulation)} or more` : ""} with the ${most} ${what}, ${years}.`,
-    `Ranked: city agencies that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""}. Ties are ordered by agency name.`];
+  // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
+  const text = [`${years} ${titleCase(what)} by City${rk.minPopulation ? `, Population ${fmt(rk.minPopulation)} or More` : ""}`,
+    `City agencies that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""} are ranked, and ties are ordered by agency name.`];
   if (tie) { const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`; text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`); }
   // Jeff 2026-11-15: no left-out city is named; one plain note.
-  text.push("Not every city reports Homicide Reports data. Cities that did not report in this period are not ranked.");
+  text.push("Not every city has Homicide Reports data, and cities with no data in this period are not ranked.");
   text.push(rk.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : rk.measure === "homicide_all" ? "All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides (a felon killed by police or by a private citizen)."
     : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.");
@@ -615,7 +617,7 @@ function answerShrRolling(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const what = shrWhat(sq);
   const text = [`${where}: rolling ${n}-month ${what}, ${periodWords(sq.from, sq.to)}.`,
     `Each month shows the total of that month and the ${n - 1} months before it.`,
-    "From the FBI's Supplementary Homicide Reports: the homicides agencies reported to the FBI, each victim counted."];
+    "Counts are the homicides agencies reported to the FBI, each victim counted."];
   const blank = unknownRuns(rows);
   if (blank.length) text.push(`No total for ${blank.map((r) => (r.length > 1 ? `${monthLabel(r[0])} to ${monthLabel(r[r.length - 1])}` : monthLabel(r[0]))).join(", ")}: a month in its window has no Homicide Reports.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."

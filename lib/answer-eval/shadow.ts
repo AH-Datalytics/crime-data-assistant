@@ -476,13 +476,13 @@ function monthsNamed(words: string): string[] {
     for (const name of m[1].match(new RegExp(MONTH_WORDS.join("|"), "g")) ?? []) out.push(`${m[2]}-${String(MONTH_WORDS.indexOf(name) + 1).padStart(2, "0")}`);
   return out;
 }
-/** The months a "No report is known for ..." sentence names, ranges ("November 2025 to December 2025") expanded. */
+/** The months a "No data is known for ..." sentence names, ranges ("November 2025 to December 2025") expanded. */
 function monthsReported(text: string[]): Set<string> {
   const out = new Set<string>();
   const idx = (ym: string) => Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1;
   const ymOf = (k: number) => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
-  for (const t of text.filter((x) => /^No report is known for /.test(x))) {
-    const list = /^No report is known for (.+?)(?:[:,] |$)/.exec(t)?.[1] ?? "";
+  for (const t of text.filter((x) => /^No data is known for /.test(x))) {
+    const list = /^No data is known for (.+?)(?:[:,] |$)/.exec(t)?.[1] ?? "";
     for (const part of list.split(/,\s*/)) {
       const ends = part.split(/\s+to\s+/).map(monthsNamed).map((x) => x[0]).filter(Boolean);
       if (ends.length === 2) for (let k = idx(ends[0]); k <= idx(ends[1]); k++) out.add(ymOf(k));
@@ -523,7 +523,7 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
     || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
     || line.endsWith(`, ${E} against ${L}.`)
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
-      || new RegExp(`^No report is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
+      || new RegExp(`^No data is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
   const text = o.delivered.text;
   return text.every(allowed) && (changeLine === null || text.includes(changeLine)) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
 }
@@ -606,11 +606,11 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     }
     else if (/^gives each quarter as the sum of its three months; a quarter in which the agency did not report/.test(s)) {
       // P71: quarters from months; exactly the blank quarters are named incomplete.
-      const inc = text.find((t) => /^Incomplete: /.test(t)) ?? "";
+      const inc = text.find((t) => /shown blank, not as (?:a whole quarter|whole quarters), because the agency has data for only some of/.test(t)) ?? "";
       ok = o.plan.groupings.some((g) => g.dimension === "time.quarter")
         && o.delivered.table.rows.every((r) => { const [y, qn] = String(r[0]).split("-"); return (r[1] === null) === inc.includes(`${qn} ${y}`); });
     } else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
-    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|shown blank, not zero: reporting for|Shown blank, not zero, because reporting/.test(all);
+    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No data is known for|Not every month of|were recorded for|does not establish|shown blank, not zero: reporting for|Shown blank, not zero, because reporting/.test(all);
     else if (s === "names the months covered") ok = all.includes(periodWords(o.period.from, o.period.to));
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
     else if (/^says a unit with several categories counts once in each/.test(s)) ok = carries(o, "categories_overlap");
@@ -769,9 +769,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // The rule said, every ranked agency known, the left-out named with their months, and no button to include them.
       const when = periodWords(o.period.from, o.period.to);
       const full = o.period.from.slice(5) === "01" && o.period.to.slice(5) === "12" ? `all 12 months of ${when}` : `every month of ${when}`;
-      ok = text.includes(`Ranked: agencies that reported ${full}; ties are ordered by agency name.`)
+      ok = text.includes(`Only agencies with data for ${full} are ranked, and ties are ordered by agency name.`)
         && o.delivered.evidence.every((x) => x.status === "VALUE" || x.status === "REPORTED_ZERO")
-        && text.filter((t) => t.startsWith("Not ranked because they didn't report")).every((t) => /\((?:population [\d,]+, )?\d+ months?\)/.test(t))
+        && text.filter((t) => /(?:aren't|isn't) ranked because (?:data is missing|it has data for only)/.test(t)).every((t) => /\((?:population [\d,]+, )?\d+ months?\)/.test(t) || /it has data for only \d+ of the \d+ months/.test(t))
         && !("alternative" in o && (o as { alternative?: unknown }).alternative);
     } else if (s === "orders ties alphabetically by agency name") {
       const rows = o.delivered.table.rows;
@@ -933,15 +933,23 @@ export function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "an
   // P60 (Codex 02.6): a ranking with agencies left out names them, five or fewer each with its months reported, more
   // than five as their count and five of them, each named agency with its own months; none left out, no such line.
   if (expected.some((x) => x.position !== undefined)) {
-    const lines = o.delivered.text.filter((t) => t.startsWith("Not ranked because they didn't report"));
-    // Each "<name> (<n> months)" after the line's last colon; more than five are named as "The five with the largest
-    // populations: <name> (population <n>, <n> months), ..." (Codex 02 re-check C; coordinator 2026-11-07).
-    const named = lines.flatMap((t) => [...t.slice(t.lastIndexOf(": ") + 2).matchAll(/(?:^|, )([^,]+?) \((?:population [\d,]+, )?(\d+) months?\)/g)].map((m) => ({ key: m[1].replace(RETURN_A, ""), months: Number(m[2]) })));
+    // The line forms (Jeff 2026-11-17): "<name> isn't ranked because it has data for only <k> of the <n> months of ...", "<name> (<k> months) and
+    // <name> (<k> months) aren't ranked because data is missing for ...", and for more than five "<N> agencies aren't ranked because data is
+    // missing for ... The five with the largest populations are <name> (population <n>, <k> months), ...".
+    const lines = o.delivered.text.filter((t) => /(?:aren't|isn't) ranked because (?:data is missing|it has data for only)/.test(t));
+    const FIVE = ". The five with the largest populations are ";
+    const pairs = (s: string) => [...s.matchAll(/(?:^|, | and )([^,]+?) \((?:population [\d,]+, )?(\d+) months?\)/g)].map((m) => ({ key: m[1].replace(RETURN_A, ""), months: Number(m[2]) }));
+    const named = lines.flatMap((t) => {
+      const one = /^(.+?) isn't ranked because it has data for only (\d+) of the \d+ months/.exec(t);
+      if (one) return [{ key: one[1].replace(RETURN_A, ""), months: Number(one[2]) }];
+      const big = t.indexOf(FIVE);
+      return pairs(big >= 0 ? t.slice(big + FIVE.length) : t.slice(0, t.indexOf(" aren't ranked")));
+    });
     const months = new Map(leftOut.map((x) => [x.key, x.value]));
     const bad = (why: string, actual: string) => diffs.push({ field: `${prefix}left out`, expected: why, actual, kind: "material" });
     if (!leftOut.length) { if (lines.length) bad("no agency left out", lines.join(" / ")); }
     else if (lines.length !== 1) bad(`one line naming the ${leftOut.length} agencies left out`, lines.join(" / ") || "none");
-    else if (leftOut.length > 5 && !lines[0].includes(`: ${leftOut.length} agencies. The five with the largest populations: `)) bad(`${leftOut.length} agencies and the five with the largest populations`, lines[0]);
+    else if (leftOut.length > 5 && !(lines[0].startsWith(`${leftOut.length} agencies aren't ranked because data is missing for some of the `) && lines[0].includes(FIVE))) bad(`${leftOut.length} agencies and the five with the largest populations`, lines[0]);
     else if (named.length !== Math.min(5, leftOut.length) || new Set(named.map((n) => n.key)).size !== named.length || named.some((n) => months.get(n.key) !== n.months))
       bad(`${Math.min(5, leftOut.length)} of them, each with its months reported`, lines[0]);
   }

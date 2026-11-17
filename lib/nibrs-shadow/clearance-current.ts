@@ -90,9 +90,9 @@ export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; 
       const missing = deps.execute(`SELECT ori, period, n, n_status FROM (${cAll.query.sql}) ORDER BY period`)
         .filter((r) => !["VALUE", "REPORTED_ZERO"].includes(String(r[3]))).map((r) => String(r[1]).slice(0, 7));
       const named = missing.length ? runs(missing) : when;
-      return decline(`No clearance rate is given: no report is known for ${named}.`);
+      return decline(`No clearance rate is given: no data is known for ${named}.`);
     }
-    if (!c || c.rep < span0) return decline(`No clearance rate is given: no report is known for ${when}.`);
+    if (!c || c.rep < span0) return decline(`No clearance rate is given: no data is known for ${when}.`);
     if (!a.sum) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
     return deliver(c.sum, a.sum, [`${Where}: ${rateOf(c.sum, a.sum)}% of ${words} reported in ${when} were cleared.`]);
   }
