@@ -936,6 +936,8 @@ function nibrsHasNoReports(o: ShadowOutcome, ledger0: RequestLedger, deps: Shado
 
 /** The groupings an answer has, as dimensions (Historical's and the historical file's: by year or not). */
 export function answerDimensions(o: ShadowOutcome): string[] | null {
+  // The same months of each year: a table of years, whatever the source's own grouping of the months.
+  if ((o as { sameMonths?: boolean }).sameMonths) return ["time.year"];
   if (o.kind === "answer") return o.plan.groupings.map((g) => g.dimension);
   if (o.kind === "historical" || o.kind === "srs") return o.question.byYear ? ["time.year"] : [];
   if (o.kind === "current") return o.question.form === "months" ? ["time.month"] : [];
@@ -1260,10 +1262,91 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
 const SAFEST_SENTENCE = "There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.";
 /** P18's sentence, as the clearance answer says it for a state. */
 const STATE_CLEARANCE_SENTENCE = "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate.";
+const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/**
+ * The same months of each year (Jeff 2026-11-16, Q1): "Murders through April from 2017 to 2025", "homicides in the first 6 months of each
+ * year". One year is that year's month range, asked as such; several years are the table Year | figure, each year counting the same months,
+ * every figure the engine's own answer for that year (so its sources, limits and blanks apply), titled with the months. Never the whole
+ * year in place of the months, and never a clarify whose buttons would forget the months.
+ */
+function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome {
+  const NO = () => decline("unsupported_capability", "I can't answer this combination. Try a simpler version, for example one crime in one place for one year.");
+  const n = Number(String(part.value).slice(7));
+  if (!(n >= 1 && n <= 12)) return NO();
+  const parts0 = ledger0.parts.filter((p) => p.clause === 0 && p.state !== "context");
+  const periods = parts0.filter((p) => p.concept === "period"), grains = parts0.filter((p) => p.concept === "grain");
+  if (periods.length > 1 || grains.some((g) => g.value !== "year") || parts0.some((p) => p.concept === "rolling" || p.concept === "months-through" && p !== part)) return NO();
+  const lastComplete = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
+  const pv = periods.length ? /^(?:year:(\d{4})|range:(\d{4}):(\d{4})|since:(\d{4}))$/.exec(periods[0].value ?? "") : null;
+  if (periods.length && !pv) return NO();
+  const years: [number, number] = !pv ? [Number(deps.release.firstMonth.slice(0, 4)), lastComplete]
+    : pv[1] ? [Number(pv[1]), Number(pv[1])] : pv[2] ? [Number(pv[2]), Number(pv[3])] : [Number(pv[4]), lastComplete];
+  if (years[0] > years[1] || years[1] - years[0] > 100) return NO();
+  let base = ledger0.question;
+  for (const [s, e] of [part, ...periods, ...grains].map((p) => p.span).sort((a, b) => b[0] - a[0])) base = `${base.slice(0, s)} ${base.slice(e)}`;
+  base = base.replace(/\s+/g, " ").replace(/\s+([,?.!])/g, "$1").replace(/[?.!\s]+$/, "").replace(/(?:\s+(?:in|for|of|from|during|by|each|every))+$/i, "").trim();
+  const month = MONTH_NAME[n - 1];
+  const sub = (y: number) => (n === 1 ? `${base} in January ${y}` : `${base} from January ${y} through ${month} ${y}`);  type Delivering = Extract<ShadowOutcome, { delivered: unknown }>;
+  const results = [] as { y: number; o: ShadowOutcome }[];
+  for (let y = years[0]; y <= years[1]; y++) {
+    const o = shadowAnswer(sub(y), deps);
+    // The first year's ask or decline stands for the question (a place asked, a limit): never buttons that forget the months.
+    if (y === years[0] && o.kind === "clarify") return NO();
+    results.push({ y, o });
+  }
+  // The year's figure: the sum of its months (the engine's own month rows), blank when any month is not known (never a partial sum as the
+  // year's); or the one total an answer already is.
+  const value = (o: ShadowOutcome): number | null | undefined => {
+    const d = (o as Partial<Delivering>).delivered as { table?: { columns: { binding: { kind: string; dimension?: string } }[]; rows: unknown[][] } } | undefined;
+    if (!d?.table) return undefined;
+    const monthly = d.table.columns[0]?.binding.kind === "grouping" && d.table.columns[0].binding.dimension === "time.month";
+    const cells = d.table.rows.map((r) => r[r.length - 1]);
+    if (!monthly) return d.table.rows.length === 1 && (typeof cells[0] === "number" || cells[0] === null) ? (cells[0] as number | null) : undefined;
+    if (cells.length !== n || cells.some((c) => c !== null && typeof c !== "number")) return undefined;
+    return cells.some((c) => c === null) ? null : (cells as number[]).reduce((a, b) => a + b, 0);
+  };
+  const first = results.find((r) => value(r.o) !== undefined);
+  if (!first) return results[0].o.kind === "decline" ? results[0].o : NO();
+  const firstOut = first.o as Delivering;
+  const lastCol = firstOut.delivered.table.columns[firstOut.delivered.table.columns.length - 1];
+  const blank = results.filter((r) => !(typeof value(r.o) === "number")).map((r) => r.y);
+  const prefix = /^([^:]{2,60}): /.exec(firstOut.delivered.text[0])?.[1];
+  const title = `${prefix ? `${prefix}: ` : ""}${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}, ${years[0] === years[1] ? years[0] : `${years[0]} to ${years[1]}`}.`;
+  // Lines every year says alike (the source, who reported) stay; a line that differs by year is that year's own.
+  const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
+  // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
+  const why = results.filter((r) => blank.includes(r.y)).flatMap((r) => ((r.o as Partial<Delivering>).delivered?.text ?? []).filter((t) => /^No (?:report|figure) is known for/.test(t)));
+  // The blank years as runs ("1935 to 1984 and 2024"), so fifty years before the source starts are one phrase, not a list.
+  const runsOf = (ys: number[]) => {
+    const out: string[] = [];
+    for (let i = 0; i < ys.length;) { let j = i; while (j + 1 < ys.length && ys[j + 1] === ys[j] + 1) j++; out.push(j > i ? `${ys[i]} to ${ys[j]}` : `${ys[i]}`); i = j + 1; }
+    return out.length > 2 ? `${out.slice(0, -1).join(", ")} and ${out[out.length - 1]}` : out.join(" and ");
+  };
+  const noFigure = blank.length ? `No figure is known for ${runsOf(blank)}: shown blank, not zero.` : null;
+  const text = [title, `Each year counts the same months: January through ${month}.`, ...(!pv ? [`No years were given, so every year in the data is shown: ${years[0]} through ${years[1]}.`] : []),
+    ...(noFigure ? [noFigure] : []), ...why.filter((t) => !common.includes(t)), ...common];
+  const asName = (lastCol.binding as { as?: string }).as ?? "count";
+  const table = { columns: [{ binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }, { ...lastCol }], rows: results.map((r) => [String(r.y), typeof value(r.o) === "number" ? value(r.o) as number : null]) };
+  const evidence = results.map((r, i) => ({ row: i, statistic: asName, status: typeof value(r.o) === "number" ? "VALUE" : "UNKNOWN" })) as unknown as Delivered["evidence"];
+  const chart = results.length > 1 ? { kind: "bar" as const, x: "Year", y: [lastCol.header] } : null;
+  // Every period field says what the table shows, the whole span (the first year's own window is not the answer's), and the answer is
+  // grouped by year: the first year's sub-answer is by month, but this answer's rows are years.
+  const span = { from: `${years[0]}-01`, to: `${years[1]}-${String(n).padStart(2, "0")}` };
+  const fo = firstOut as unknown as { meaning?: Record<string, unknown>; plan?: Record<string, unknown>; question?: Record<string, unknown> };
+  return { ...firstOut, sameMonths: true, ...("period" in firstOut ? { period: span } : {}),
+    ...(fo.meaning && "period" in fo.meaning ? { meaning: { ...fo.meaning, period: span, groupings: ["year"] } } : {}),
+    ...(fo.plan ? { plan: { ...fo.plan, period: { kind: "absolute", ...span }, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] } } : {}),
+    ...(firstOut.kind === "shr" && fo.question ? { question: { ...fo.question, from: span.from, to: span.to, grain: "year" } } : {}),
+    delivered: { ...firstOut.delivered, table, evidence, chart, text, ...((firstOut.delivered as Partial<Delivered>).headline ? { headline: title } : {}) } } as unknown as ShadowOutcome;
+}
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
   const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
+  // The same months of each year (Q1): answered by its own function, or declined; the months are never dropped.
+  // With no place named, the place is asked first as before (its buttons run the whole question, months and all, and come back here).
+  const sameMonths = clause0("months-through");
+  if (sameMonths.length && clause0("place").length) return answerSameMonths(ledger0, sameMonths[0], deps);
 
   // "By state" (Jeff 2026-11-16, Q2): the 50 states from Crime Index for one Part I crime. One year is the table State | figure (the
   // ranking of all 50); years named, or a trend with none, is the long table State | Year | figure, no chart. No year and no trend asks the

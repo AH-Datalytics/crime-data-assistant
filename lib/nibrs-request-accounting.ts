@@ -89,8 +89,19 @@ const FENTANYL = notRecorded("fentanyl as its own drug type (it falls under broa
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
 
+/**
+ * The same months of each year needs the years named somewhere in the question, or "each year": "murders through April" with no year is not
+ * read as a rule (the old reading stays: the words are not understood), never every year in the data chosen for the user (scorecard 2026-11-17).
+ */
+const YEARS_NAMED = String.raw`(?:(?<=\b${YEAR}\b[^]*)|(?=[^]*\b${YEAR}\b)|(?=[^]*\b(?:each|every)\s+(?:calendar\s+)?year\b))`;
 /** Month periods: recorded before places so "May 2025" is a period, never a place. */
 const MONTH_PERIODS: Rule[] = [
+  // The same months of each year (Jeff 2026-11-16, Q1): "through April", "first 6 months", "first half": January through that month. Kept as a
+  // recognized part so the words stay in the question when it is asked back; the answer counts those months of each year named.
+  { concept: "months-through", value: (m) => `months:${Number(monthNo(m[1]))}`, pattern: R(String.raw`${YEARS_NAMED}\b(?:(?:from\s+)?(?:january|jan)\s+(?:to|through|thru|until)|through|thru)\s+(${MONTH})\b(?!\s+(?:of\s+)?${YEAR})(?:\s+of\s+(?:each|every)\s+(?:calendar\s+)?year)?`) },
+  { concept: "months-through", value: (m) => `months:${({ two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11 } as Record<string, number>)[m[1].toLowerCase()] ?? Number(m[1])}`,
+    pattern: R(String.raw`${YEARS_NAMED}\b(?:in\s+)?(?:the\s+)?first\s+(\d{1,2}|two|three|four|five|six|seven|eight|nine|ten|eleven)\s+months?\b(?:\s+of\s+(?:each|every)\s+(?:calendar\s+)?year)?`) },
+  { concept: "months-through", value: () => "months:6", pattern: R(String.raw`${YEARS_NAMED}\b(?:in\s+)?(?:the\s+)?first\s+half\b(?:\s+of\s+(?:each|every|the)\s+(?:calendar\s+)?year)?`) },
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
