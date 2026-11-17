@@ -359,7 +359,12 @@ function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps
   let memo: ShadowOutcome | null = null;
   const option = { label, targetSource: "nibrs" as const, ...extra } as ShadowOption;
   // Not enumerable: serializing an outcome (JSON.stringify, a spread) must not build it; the walkers that copy options go through mapOption.
-  Object.defineProperty(option, "continuation", { enumerable: false, configurable: true, get: () => (memo ??= build(deps)) });
+  Object.defineProperty(option, "continuation", { enumerable: false, configurable: true, get: () => {
+    if (memo) return memo;
+    // Never throws: whoever reads it (a clicked button, or a walker that visits every property) gets an outcome; a failure is a plain decline.
+    try { memo = build(deps); } catch (e) { memo = decline("reader", NOT_YET, { detail: `deferred answer failed: ${e instanceof Error ? e.message : String(e)}` }); }
+    return memo;
+  } });
   DEFERRED.add(option);
   return option;
 }

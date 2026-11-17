@@ -791,6 +791,22 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   const pv = toPreview(again, [], places, q);
   assert.equal(sqls.slice(mark).filter((x) => /unnest\(\[|WITH units AS/.test(x)).length, 0, "listing the buttons builds nothing");
   assert.ok(pv.kind === "clarify" && pv.buttons.some((b) => b.label === "The United States" && b.kind === "continuation"));
+  // Walking an outcome (JSON, Object.keys, for-in, spread, structuredClone) never builds a deferred choice, and reading one never throws.
+  {
+    const walk = as(shadowAnswer(q, heavy), "clarify");
+    const m = sqls.length;
+    const isPlan = (x: string) => /unnest\(\[|WITH units AS/.test(x);
+    JSON.stringify(walk); Object.keys(walk.options[0]); for (const o of walk.options) { for (const k in o) void k; void { ...o }; Object.keys(o); }
+    structuredClone(JSON.parse(JSON.stringify(walk)));
+    try { structuredClone(walk.options.map((o) => ({ ...o }))); } catch { /* functions in other fields are not this test's concern */ }
+    assert.equal(sqls.slice(m).filter(isPlan).length, 0, "walking an outcome runs no plan statement");
+    const boom = { ...heavy, execute: (sql: string) => { if (isPlan(sql)) throw new Error("boom"); return deps.execute(sql); } };
+    const broken = as(shadowAnswer(q, boom), "clarify").options.find((o) => o.label === "The United States")!;
+    assert.ok(isDeferred(broken));
+    const c = broken.continuation!;
+    assert.equal(c.kind, "decline", "a failing deferred answer reads as a decline, not an exception");
+    assert.equal(broken.continuation, c, "and is remembered");
+  }
   // A plan a guard declines never reaches a statement: it is not offered at all (the national choice of the P122 question).
   const guarded = as(shadowAnswer("annual counts of offenders by age from 1986 through 2025", heavy), "clarify");
   assert.ok(!guarded.options.some((o) => o.label === "The United States"), "a guard-declined plan is dropped as a dead button, not deferred");
