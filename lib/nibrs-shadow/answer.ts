@@ -1316,7 +1316,13 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
   // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
   const why = results.filter((r) => blank.includes(r.y)).flatMap((r) => ((r.o as Partial<Delivering>).delivered?.text ?? []).filter((t) => /^No (?:report|figure) is known for/.test(t)));
-  const noFigure = blank.length ? `No figure is known for ${blank.length > 2 ? `${blank.slice(0, -1).join(", ")} and ${blank[blank.length - 1]}` : blank.join(" and ")}: shown blank, not zero.` : null;
+  // The blank years as runs ("1935 to 1984 and 2024"), so fifty years before the source starts are one phrase, not a list.
+  const runsOf = (ys: number[]) => {
+    const out: string[] = [];
+    for (let i = 0; i < ys.length;) { let j = i; while (j + 1 < ys.length && ys[j + 1] === ys[j] + 1) j++; out.push(j > i ? `${ys[i]} to ${ys[j]}` : `${ys[i]}`); i = j + 1; }
+    return out.length > 2 ? `${out.slice(0, -1).join(", ")} and ${out[out.length - 1]}` : out.join(" and ");
+  };
+  const noFigure = blank.length ? `No figure is known for ${runsOf(blank)}: shown blank, not zero.` : null;
   const text = [title, `Each year counts the same months: January through ${month}.`, ...(!pv ? [`No years were given, so every year in the data is shown: ${years[0]} through ${years[1]}.`] : []),
     ...(noFigure ? [noFigure] : []), ...why.filter((t) => !common.includes(t)), ...common];
   const asName = (lastCol.binding as { as?: string }).as ?? "count";
