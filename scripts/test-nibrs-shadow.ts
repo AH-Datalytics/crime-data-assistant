@@ -2413,7 +2413,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murder victims"]);
     assert.equal(two.delivered.table.rows.length, 24);
     assert.deepEqual(two.delivered.table.rows[0], ["Chicago", "2024-01", 3]);
-    assert.equal(two.delivered.text[0], "Chicago, Illinois and Houston, Texas: murder victims with a firearm by month, 2024.");
+    assert.equal(two.delivered.text[0], "2024 Murder Victims With a Firearm by Month, Chicago, Illinois and Houston, Texas");
     assert.equal(two.delivered.text.filter((t) => /^Source: /.test(t)).length, 1);
   }
 }
@@ -2428,7 +2428,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   if (pa.kind === "shr") {
     assert.deepEqual(pa.delivered.table.rows, [[5]]);
     assert.ok(pa.delivered.text.includes("Rate per 100,000 people in the agencies that reported."));
-    assert.ok(/per 100,000 people, 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
+    assert.ok(/per 100,000 people in 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
   }
 }
 // P10 (Jeff 2026-11-16): "all homicides" as a plain count is Crime Index (murders by year, nothing else); with a breakdown of anything

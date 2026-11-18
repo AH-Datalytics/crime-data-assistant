@@ -1214,7 +1214,11 @@ function shrSeveral(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const columns = [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Agency" }, ...first.delivered.table.columns];
   const rows = answers.flatMap((a) => a.delivered.table.rows.map((r) => [shortAgency(agencyOf(a).label), ...r]));
   // The lines: the first title with every agency named, then each answer's other lines once (its own agency lines kept).
-  const title = first.delivered.text[0].replace(/^[^:]*:/, `${listed}:`);
+  // The first title with every agency named: a title ends with its place; a sentence ("Chicago had 12 murders in 2024.") becomes the title of the agencies' table.
+  const t0 = first.delivered.text[0], label0 = agencyOf(first).label;
+  const sentence = /^.+? had ([\d.,]+) (.+) in (.+)\.$/.exec(t0);
+  const title = t0.endsWith(`, ${label0}`) ? `${t0.slice(0, t0.length - label0.length)}${listed}`
+    : sentence ? seriesTitle(sentence[3], sentence[2].replace(/ per 100,000 people$/, ""), "Agency", listed) : t0;
   const rest: string[] = [];
   for (const a of answers) for (const t of a.delivered.text.slice(1)) if (!rest.includes(t) && !/^Source: /.test(t)) rest.push(t);
   const text = [title, ...rest, first.delivered.text[first.delivered.text.length - 1]];
