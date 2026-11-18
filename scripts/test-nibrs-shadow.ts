@@ -1581,7 +1581,7 @@ assert.match(raleigh.delivered.text[0], /because the FBI gives no 2024 populatio
 // (P63), with what it read; the covered part of a span with the rest named (D04, P14); a change (P54).
 const srs = (q: string) => { const o = ask(q); assert.equal(o.kind, "srs", `${q}: ${JSON.stringify(o).slice(0, 200)}`); return o as Extract<ShadowOutcome, { kind: "srs" }>; };
 const txRob = srs("Robberies in Texas in 2024");
-assert.deepEqual([txRob.delivered.table.rows, txRob.delivered.text, txRob.read.column, txRob.read.uids], [[[19935]], ["Texas: 19,935 robberies in 2024.", "Source: Crime Index."], "robbery_total", ["tx_2024"]]);
+assert.deepEqual([txRob.delivered.table.rows, txRob.delivered.text, txRob.read.column, txRob.read.uids], [[[19935]], ["Texas had 19,935 robberies in 2024.", "Source: Crime Index."], "robbery_total", ["tx_2024"]]);
 assert.deepEqual(srs("Burglary rate in Ohio in 2022").delivered.table.rows, [[259.5]]);
 assert.equal(srs("Violent crime in California in 2024").read.column, "violent_total", "the file's own sum, never re-added");
 assert.deepEqual(srs("Did robberies go up in Georgia in 2025?").delivered.table.rows, [[4426, 3799, -627, -14.2]]);
@@ -2441,7 +2441,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const plainCount = shadowAnswer("Show me data about all homicides reported in South Carolina since 2020", d2);
   assert.equal(plainCount.kind, "srs", JSON.stringify(plainCount).slice(0, 300));
   if (plainCount.kind === "srs") {
-    assert.ok(/^South Carolina: murders by year, 2020 to /.test(plainCount.delivered.text[0]), plainCount.delivered.text[0]);
+    assert.ok(/^2020 to \d{4} Murders by Year, South Carolina$/.test(plainCount.delivered.text[0]), plainCount.delivered.text[0]);
     assert.deepEqual(plainCount.delivered.table.columns.length, 2, "a year and a count, no breakdown");
     assert.ok(!plainCount.delivered.text.some((t) => /homicide|justifiable|disclaim/i.test(t)), "no disclaimer on Crime Index");
   }

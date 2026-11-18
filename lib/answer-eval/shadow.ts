@@ -1239,7 +1239,8 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     const st = /^names the state \((.+)\)$/.exec(s);
     const ag = /^names the agency \((.+)\)$/.exec(s);
     if (src) ok = text[text.length - 1] === src[1] && text.filter((t) => /^Source: /.test(t)).length === 1;
-    else if (st) ok = (text[0] ?? "").startsWith(`${st[1]}:`);
+    // The first line is a sentence ("Texas had 19,935 robberies in 2024.") or a title ("2020 to 2025 Murders by Year, South Carolina"): it names the state.
+    else if (st) ok = new RegExp(`(?:^|, )${st[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:'s|\\s|$)`).test(text[0] ?? "");
     // Historical's agencies, named by their FBI names ("Figures for the Denver Police Department.").
     else if (ag) ok = all.includes(ag[1]);
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
@@ -1250,10 +1251,12 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     else if (/^gives both counts, the change and the percent change, with no adjectives/.test(s)) {
       const [ev, lv, ch, pc] = rows[0] as (number | null)[];
       const f = (n: number) => n.toLocaleString("en-US");
-      const line = `${f(ev!)} in ${o.period.from.slice(0, 4)} and ${f(lv!)} in ${o.period.to.slice(0, 4)}: a change of ${ch! > 0 ? "+" : ch! < 0 ? "-" : ""}${ch === 0 ? "0" : f(Math.abs(ch!))}${pc !== null ? ` (${pc > 0 ? "+" : ""}${pc}%)` : ""}.`;
-      ok = [ev, lv, ch].every((x) => typeof x === "number") && text.includes(line) && !ADJECTIVES.test(all);
+      // The first line is the sentence ("Chicago had 461 murders in 2024 and 346 in 2025, a change of -115 (-24.9%).").
+      const change =`a change of ${ch! > 0 ? "+" : ch! < 0 ? "-" : ""}${ch === 0 ? "0" : f(Math.abs(ch!))}${pc !== null ? ` (${pc > 0 ? "+" : ""}${pc}%)` : ""}.`;
+      const line = new RegExp(` had ${f(ev!).replace(/[.,]/g, "\\$&")} .+ in ${o.period.from.slice(0, 4)} and ${f(lv!).replace(/[.,]/g, "\\$&")} in ${o.period.to.slice(0, 4)}, ${change.replace(/[.()+*?]/g, "\\$&")}$`);
+      ok = [ev, lv, ch].every((x) => typeof x === "number") && line.test(text[0] ?? "") && !ADJECTIVES.test(all);
     } else if (/^names the comparison year \((\d{4})\)$/.test(s)) ok = new RegExp(`\\b${/\((\d{4})\)/.exec(s)![1]}\\b`).test(text[0] ?? "");
-    else if (/^gives the national (\w+) clearance rate$/.test(s)) ok = /_cleared_rate$/.test(o.read.column) && /% of .+ were cleared in \d{4}\.$/.test(text[0] ?? "");
+    else if (/^gives the national (\w+) clearance rate$/.test(s)) ok = /_cleared_rate$/.test(o.read.column) && /^The United States cleared [\d.]+% of its .+ in \d{4}\.$/.test(text[0] ?? "");
     else if (/^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4}) are outside it/.test(s)) {
       const [, a, b, c, d] = /^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4})/.exec(s)!;
       ok = text.some((t) => t.includes(`cover ${a} through ${b}`) && t.includes(`${c} through ${d} are outside`));

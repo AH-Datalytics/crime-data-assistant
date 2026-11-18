@@ -70,7 +70,7 @@ const no = (q: Partial<HistoricalQuestion>) => { const r = ask(q); assert.equal(
 // A count as published, the plain availability line and P77's source line last; the build is read, never live tables.
 const one = ok({});
 assert.deepEqual(one.delivered.table.rows, [[351]]);
-assert.equal(one.delivered.text[0], "Memphis, Tennessee: 351 murders in 2023.");
+assert.equal(one.delivered.text[0], "Memphis had 351 murders in 2023.");
 assert.equal(one.delivered.text[one.delivered.text.length - 1], SRS_SOURCE);
 assert.equal(SRS_SOURCE, "Source: Crime Index.");
 assert.doesNotMatch(one.delivered.text.join(" "), /as published by Crime Index; a blank means/, "P86: no generic availability note");
@@ -81,7 +81,7 @@ assert.equal(one.meaning.source, "historical");
 // P75: the published rate (one decimal), never one calculated; no rate published: blank, said, not computed.
 const rate = ok({ statistic: "rate" });
 assert.deepEqual(rate.delivered.table.rows, [[57]]);
-assert.equal(rate.delivered.text[0], "Memphis, Tennessee: 57.0 murders per 100,000 in 2023.");
+assert.equal(rate.delivered.text[0], "Memphis's murder rate in 2023 was 57.0 per 100,000.");
 assert.equal(rate.read.column, "murder_capita");
 assert.match(no({ statistic: "rate", from: 2021, to: 2021 }), /^Crime Index has no murder rate for Memphis, Tennessee in 2021: not available in this data\.$/);
 assert.ok(!rate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)), "a published rate needs no note");
@@ -111,7 +111,7 @@ assert.ok(partly.delivered.text.some((t) => /2026 through 2027 are outside them/
 // A change (P54, P55): both counts, the change and the percent; a missing base gives none.
 const ch = ok({ from: 2022, to: 2023, comparison: { earlier: 2022, later: 2023 } });
 assert.deepEqual(ch.delivered.table.rows, [[252, 351, 99, 39.3]]);
-assert.equal(ch.delivered.text[1], "252 in 2022 and 351 in 2023: a change of +99 (+39.3%).");
+assert.equal(ch.delivered.text[0], "Memphis had 252 murders in 2022 and 351 in 2023, a change of +99 (+39.3%).");
 assert.match(no({ from: 2021, to: 2023, comparison: { earlier: 2021, later: 2023 } }), /no murders for Memphis, Tennessee in 2021: not available in this data, so there is no change/);
 
 // A change in a rate ("percent change in the violent crime rate from 2024-2025"): the two published rates, the change in
@@ -120,12 +120,12 @@ const rch = ok({ statistic: "rate", from: 2022, to: 2023, comparison: { earlier:
 // "2022 vs 2025" of a rate (no change asked in words) stays the years side by side, as before (runner gate on PR 212).
 assert.deepEqual(ok({ statistic: "rate", from: 2022, to: 2023, byYear: true, comparison: { earlier: 2022, later: 2023 } }).delivered.table.rows, [["2022", 40.3], ["2023", 57]]);
 assert.deepEqual(rch.delivered.table.rows, [[40.3, 57, 16.7, 41.4]]);
-assert.deepEqual(rch.delivered.text.slice(0, 2), ["Memphis, Tennessee: murders per 100,000, 2022 against 2023.", "40.3 in 2022 and 57.0 in 2023: a change of +16.7 (+41.4%)."]);
+assert.equal(rch.delivered.text[0], "Memphis's murder rate was 40.3 per 100,000 in 2022 and 57.0 in 2023, a change of +16.7 (+41.4%).");
 assert.match(no({ statistic: "rate", from: 2021, to: 2023, comparison: { earlier: 2021, later: 2023, change: true } }), /no murder rate for Memphis, Tennessee in 2021: not available in this data, so there is no change/);
 
 // Clearance: the published percentage with its counts; from 1960 only; one agency and one year.
 const clr = ok({ statistic: "clearance_rate" });
-assert.equal(clr.delivered.text[0], "Memphis, Tennessee: 15.1% of murders were cleared in 2023. That is 53 of 351 murders.");
+assert.equal(clr.delivered.text[0], "Memphis cleared 15.1% of its murders in 2023: 53 of 351.");
 assert.equal(clr.read.column, "murder_cleared_rate");
 assert.match(no({ statistic: "clearance_rate", from: 1950, to: 1950 }), /clearance figures in the data cover 1960 through 2025/);
 assert.match(no({ statistic: "clearance_rate", from: 2022, to: 2022 }), /no murder clearance rate for Memphis, Tennessee in 2022/);
@@ -134,7 +134,7 @@ assert.match(no({ statistic: "clearance_rate", from: 1959, to: 1960 }), /no murd
 // none blank and named; the leading years with none for any agency left out and named.
 const clrYears = ok({ statistic: "clearance_rate", from: 2021, to: 2023, byYear: true });
 assert.deepEqual(clrYears.delivered.table.rows, [["2022", 12.3], ["2023", 15.1]]);
-assert.deepEqual(clrYears.delivered.text, ["Memphis, Tennessee: the percentage of murders cleared by year, 2022 through 2023.",
+assert.deepEqual(clrYears.delivered.text, ["2022 to 2023 Murders Cleared (%) by Year, Memphis, Tennessee",
   "Crime Index has no murder clearance rate for Memphis, Tennessee in 2021, so the chart and table start in 2022.", SRS_SOURCE]);
 const clrPair = ok({ statistic: "clearance_rate", agencies: [memphis, dallas], from: 2022, to: 2023, byYear: true });
 assert.deepEqual(clrPair.delivered.table.rows, [["2022", 12.3, null], ["2023", 15.1, 40.2]]);
