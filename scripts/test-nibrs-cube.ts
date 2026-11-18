@@ -75,8 +75,11 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeUnits({ ...one, codes: ["13C"] }), null, "a code the manifest does not name stays raw");
   assert.equal(cubeUnits({ ...one, years: [2023, 2024] }), null, "a year the code cube lacks stays raw");
   assert.equal(cubeUnits({ ...one, conditioned: true }), null, "a weapon or any condition stays raw");
-  assert.equal(cubeUnits({ ...one, kind: "offenders", codes: ["13A"], attribute: { dimension: "offender.sex" } }), null,
-    "offender sex stays raw: the engine calls offender sequence 00 Unknown whatever its sex field holds, the cube keeps the field");
+  for (const d of ["offender.sex", "offender.race"]) {
+    const o = cubeUnits({ ...one, kind: "offenders", codes: ["13A"], attribute: { dimension: d } })!;
+    assert.ok(o, `${d} is read from the code cube (offender sequence 00 is blank there, as in the engine)`);
+    assert.match(o.sql, new RegExp(`unit = 'offender'[\\s\\S]*attribute = '${d.split(".")[1]}'`));
+  }
   const victimSex = cubeUnits({ ...one, codes: ["13A"], attribute: { dimension: "victim.sex" } })!;
   assert.match(victimSex.sql, /unit = 'victim'[\s\S]*attribute = 'sex'/);
   assert.ok(cubeUnits({ ...one, kind: "offenders", codes: ["13A"], attribute: { dimension: "offender.age", bins } }), "offender age is read from the code cube");
