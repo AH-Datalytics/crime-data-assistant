@@ -33,7 +33,7 @@
 import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
-import { ALL_CITIES_N, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
+import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
@@ -77,6 +77,8 @@ export type ShadowDeps = {
   shr?: ShrBuild;
   /** The hate crime export (hate.ts): with it, hate crime questions are answered from it; without it they are declined. Never NIBRS. */
   hate?: HateBuild;
+  /** The question as the user asked it, set while it is answered (the county-wide decline offers it without the county-wide words). */
+  asked?: string;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
   /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
@@ -918,7 +920,7 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
       if (runsNow(continuation)) { offer = { label: near, continuation }; break; }
     }
   }
-  const base = withNextStep(everyBreakdown(question, nibrsHasNoReports(fromLedger(ledger, deps), ledger, deps)), ledger, deps, question);
+  const base = withNextStep(everyBreakdown(question, nibrsHasNoReports(fromLedger(ledger, { ...deps, asked: deps.asked ?? question }), ledger, deps)), ledger, deps, question);
   return offer && base.kind === "clarify" && base.about === "which place" ? { ...base, options: [offer, ...base.options] } : base;
 }
 
@@ -1531,6 +1533,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // its state, or as a county): a word the reader took for a place ("index", "summer") or a misspelling goes on as before.
   if (unfound) {
     const u: Part = unfound;
+    // A county-wide sum asked for a county with no agency of its own in the file (P70, Jeff 2026-11-18): the one sentence, no offer.
+    if (flags(ledger0).countywide && /\b(?:county|parish)\b/i.test(u.text))
+      return decline("unresolved_place", `County-wide sums aren't given, and Crime Index has no agency for ${u.text.trim().replace(/[?.!,]+$/, "").replace(/,\s*[A-Za-z .]+$/, "")}.`);
     return decline("unresolved_place", `I couldn't find "${u.text.trim().replace(/[?.!,]+$/, "")}" among the city and county police agencies, states and the nation here.`);
   }
 
@@ -1782,32 +1787,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     return decline("unsupported_capability", `This isn't available: the ${setWords} with this question. They can be asked for one Part I crime, a count or a rate, by year through ${deps.historical?.lastYear ?? 2025}.`);
   }
-  // P70: an explicit county-wide request is the county's agencies summed (2017 on), never the county's own agency alone.
+  // P70 (Jeff 2026-11-18, overriding 2026-10-30): a county-wide sum is never given. The decline says whose figures the county's are (its own
+  // agency, the sheriff or county police: P25) and offers the question for that agency, the question as asked without the county-wide words.
   if (flags(ledger0).countywide) {
-    const sp = d.kind === "spec" ? d.spec : null;
-    const pl = sp?.type === "series" && sp.places.length === 1 ? sp.places[0] : null;
-    const county = pl?.kind === "agency" && pl.agencyKind === "county" ? resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`) : undefined;
-    const hb = deps.historical;
-    if (sp?.type === "series" && hb && county?.kind === "agency" && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && (sp.statistic === "count" || sp.statistic === "rate")
-      && !sp.filters.length && !sp.window && (sp.grain === "year" || sp.grain === "total") && historicalUnitFits(sp.measures[0], sp.unit)
-      && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
-      && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).combined && !flags(ledger0).column && !saysToDate(ledger0)
-      // A change (percent or not) of a county-wide total is not built: the county-wide years are never given in its place.
-      && !flags(ledger0).comparison) {
-      if (sp.period.form === "none" && sp.grain === "total") {
-        const y = hb.lastYear;
-        return { kind: "clarify", about: "which period", question: ledger0.question, options: [
-          { label: `${y}`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, `in ${y}`), deps, pins) }, { label: "Other years", entry: "which years" }] };
-      }
-      const yrs = yearSpan({ period: sp.period, grain: sp.grain }, Number(release.lastMonth.slice(0, 4)), COUNTYWIDE_FIRST_YEAR);
-      if (yrs) {
-        const r = answerCountywide({ measure: sp.measures[0], countyOri: county.ori, countyName: pl!.kind === "agency" ? pl!.name : "", state: county.ori.slice(0, 2) === (pl as { state: string }).state.toUpperCase() ? county.ori.slice(0, 2) : (pl as { state: string }).state.toUpperCase(),
-          from: yrs[0], to: yrs[1], statistic: sp.statistic === "rate" ? "rate" : "count", byYear: sp.grain === "year", canonicalRoot: deps.target.root }, hb, deps.execute);
-        if (r.kind === "historical") return r;
-        return decline(/cover|outside/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
-      }
-    }
-    return decline("unsupported_capability", `County-wide totals (every agency in a county, summed) are answered for one Part I crime, by count or rate, by year from ${COUNTYWIDE_FIRST_YEAR} through ${hb?.lastYear ?? 2025}. This question asks for something else.`);
+    const counties = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place" && /^county:/.test(String(p.value)))
+      .flatMap((p) => { const pl = resolved.get(String(p.value)); return pl?.kind === "agency" ? [{ name: String(p.value).split(":")[1] ?? p.text.trim(), ori: pl.ori }] : []; });
+    const theAgency = (ori: string) => reportedBy([agencyName(deps.places, ori)]).replace(/^Reported by /, "").replace(/\.$/, "");
+    const sentence = counties.length === 1
+      ? `County-wide sums aren't given; the figures for ${counties[0].name} are those of ${theAgency(counties[0].ori)}.`
+      : counties.length > 1 ? "County-wide sums aren't given; the figures for each county are those of its own agency."
+      : "County-wide sums aren't given; the figures for a county are those of its own agency.";
+    const offered = tidy((deps.asked ?? ledger0.question).replace(COUNTYWIDE_RE, " "));
+    const out = decline("unsupported_capability", sentence);
+    // The offer must run: an answer, or an ask for the next part (never a button that leads to a decline).
+    const runs = counties.length > 0 && !!offered && !deps.checkingOffer && ["answer", "historical", "srs", "current", "shr", "hate", "coverage", "clarify"]
+      .includes(shadowAnswer(offered, { ...deps, checkingOffer: true, asked: undefined }).kind);
+    return runs ? { ...out, alternative: { label: `Ask instead: "${offered}"`, question: offered } } as ShadowOutcome : out;
   }
   // "Where does Durham rank in murder rate in 2024?" (Jeff 2026-11-10, ranking decision 4): with no scope named, asked
   // (among the state's cities, or among U.S. cities of its size); "nationally" is the size group, "in the state" or the

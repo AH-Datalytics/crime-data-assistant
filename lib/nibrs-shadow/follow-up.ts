@@ -333,7 +333,8 @@ export const deterministicRewriter: FollowUpRewriter = {
 
     // A county asked for as a whole ("countywide total", "countywide", "for the whole county"): the previous question with "countywide" added
     // (P70), when its place is a county.
-    const countyPrev = /\b(?:county|parish)\b/i.test(placeWords(prev, prevParts.places)?.text ?? "");
+    // A county named anywhere in the previous question (a comparison of two places has no single span of place words).
+    const countyPrev = /\b(?:county|parish)\b/i.test(placeWords(prev, prevParts.places)?.text ?? "") || (prevParts.places.length > 0 && /\b(?:county|parish)\b/i.test(prev));
     if (/^(?:the\s+)?(?:county[-\s]?wide|(?:for\s+)?the\s+(?:whole|entire)\s+county)(?:\s+(?:total|figure|number|count))?(?:\s+only)?$/i.test(f)) {
       if (!countyPrev || /\bcounty[-\s]?wide\b/i.test(prev)) return ask("Which county is meant, or whether it is already the whole county.");
       return ok(`${prev.replace(/[?.!\s]+$/, "")}, countywide`, "P70: the whole county, every agency summed");

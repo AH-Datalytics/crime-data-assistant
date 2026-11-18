@@ -5812,20 +5812,16 @@
    "question": "show me countywide violent crime incidents for tarrant county, texas by year for 2021 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Counting incidents and summing all county agencies requires NIBRS."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -7008,20 +7004,16 @@
    "question": "What has been the countywide total violent crime in Montgomery County, MD since 2010?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "An explicit countywide sum uses all reporting agencies under P70."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -23028,24 +23020,16 @@
    "question": "Murders across all agencies in Kern County, California in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -27060,24 +27044,16 @@
    "question": "countywide murders in Cook County Illinois by year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "coordinator-2026-11-11",
-    "reviewed_by": "coordinator-2026-11-11",
-    "notes": "A Part I count by year is Crime Index's under Jeff's D3 and ranking decision 3, and a county-wide figure is the sum of those agency figures (P70, membership from the FBI's agency records, 2017 on); NIBRS also answers it (coordinator correction 2026-11-11, not an owner verdict)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -28377,20 +28353,16 @@
    "question": "What has been the countywide total violent crime in Montgomery County, MD since 2010?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P70 countywide sums aggregate reporting agencies."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -32389,24 +32361,16 @@
    "question": "Murders across all agencies in Cook County, Illinois in 2022",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -35772,24 +35736,16 @@
    "question": "How many murders across all agencies in Kern County, CA in 2025?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -48406,24 +48362,16 @@
    "question": "Countywide murder offenders by age in Tarrant County, Texas from 2021 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "source_any": [
-     "shr",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -60390,20 +60338,16 @@
    "question": "show me countywide violent crime indicents by offender age by year for 2021-2025 for tarrant county, texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -83574,20 +83518,16 @@
    "question": "countywide total",
    "previous": "compare murders between the City of St. Louis, and St. Louis County, MO from 1990 to the most recent data",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Explicit countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -84335,20 +84275,16 @@
    "question": "countywide total",
    "previous": "calculate the percent change in violent crime rates for Maricopa county, AZ from 2024-2025",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -84870,20 +84806,16 @@
    "question": "calculate the countywide percent change in violent crime rates in Cook County, IL from 2024-2025",
    "previous": "use rates",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -85811,20 +85743,16 @@
    "question": "calculate the countywide percent change in violent crimes in Cook County, IL from 2024-2025",
    "previous": "calculate the same for Cook County, IL",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -90586,20 +90514,16 @@
    "question": "Countywide total",
    "previous": "violent crime in Alameda County since 2008",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -90811,19 +90735,16 @@
    "question": "Add countywide violent crimes in Dallas county, Texas",
    "previous": "Countywide",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -91353,20 +91274,16 @@
    "question": "Countywide",
    "previous": "how many murders in baltimore county this year",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -93747,20 +93664,16 @@
    "question": "countywide total",
    "previous": "anne arundel county property crime counts 1975-present",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 aggregation."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -99883,20 +99796,16 @@
    "question": "countywide",
    "previous": "what is the trend of aggravated assaults with a firearm in DC and Prince George's County over the past 10 years",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "F3",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -100310,20 +100219,16 @@
    "question": "show me countywide violent crime incidents by offender age by year for 2021 to 2025 for tarrant county, texas",
    "previous": "adjust for incomplete reporting",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
@@ -103503,20 +103408,16 @@
    "question": "Show me countywide violent offenders by age by year for 2021 to 2025 for tarrant county, Texas",
    "previous": "Show me violent crime offenders by age in tarrant county, Texas",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {
