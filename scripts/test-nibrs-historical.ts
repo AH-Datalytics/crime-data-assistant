@@ -810,6 +810,20 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = shadowAnswer(q, base as never) as { kind: string; delivered?: { text: string[] } };
     assert.ok(!(o.kind === "historical" && /\bRanks on\b/.test(o.delivered?.text[0] ?? "")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }
+  // "Where does X stand on ..." is "where does X rank in ..." (Jeff 2026-11-17, P132): the same reading, the same answer or ask.
+  const concepts = (q: string) => readQuestion(q, 2026, "2026-09").ledger.parts.filter((p) => p.state !== "context").map((p) => `${p.concept}:${p.state}`).sort().join();
+  assert.equal(concepts("Where does Houston stand on murder rate in 2024 in the state?"), concepts("Where does Houston rank in murder rate in 2024 in the state?"));
+  assert.equal(concepts("where does houston stand on murder rate 2024"), concepts("where does houston rank in murder rate 2024"));
+  const field2: unknown[][] = [["TXHPD0000", "Houston", 2_300_000, 334, 14.5, "TX"], ["TXDPD0000", "Dallas", 1_300_000, 181, 13.9, "TX"], ["TX0000001", "Beaumont", 110_000, 14, 12.7, "TX"]];
+  const standBase = { ...base, execute: (s2: string) => (/^SELECT population/.test(s2) ? [[2_300_000]] : field2) };
+  const asRank = shadowAnswer("Where does Houston rank in murder rate in 2024 in the state?", standBase as never) as { kind: string; delivered?: unknown };
+  const asStand = shadowAnswer("Where does Houston stand on murder rate in 2024 in the state?", standBase as never) as { kind: string; delivered?: unknown };
+  assert.equal(asRank.kind, "historical", JSON.stringify(asRank).slice(0, 200));
+  assert.deepEqual(asStand, asRank, "stand on reads as rank");
+  // With no scope named it asks, as "rank" does; and it never reads as the position when more is asked ("compared to Dallas").
+  const noScope = shadowAnswer("where does houston stand on murder rate 2024", standBase as never) as { kind: string };
+  const noScopeRank = shadowAnswer("where does houston rank on murder rate 2024", standBase as never) as { kind: string };
+  assert.equal(noScope.kind, noScopeRank.kind);
 }
 // Engine 2, rules 1 and 3 (Jeff 2026-11-12): a rate for a group of people (D03) and what the data doesn't record are declined
 // in plain words before any place, period or crime is asked; counts and shares by group, and place names, still answer.
