@@ -7,7 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { askInsteadChecks, heavyNationalSentence, isDeferred, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
@@ -201,6 +201,13 @@ assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: st
   assert.notEqual(ask("Shoplifting in Baton Rouge, LA in 2024").kind, "clarify");
   assert.notEqual((ask("Shoplifting in La Crosse in 2024") as { about?: string }).about, "which LA");
   assert.notEqual((ask("Shoplifting in LA CROSSE in 2024") as { about?: string }).about, "which LA", "Codex review 01.6: a name in capitals");
+  // P141: listed with other cities, LA is Los Angeles (never asked, never the state); a state qualifier or a list of states keeps Louisiana.
+  assert.equal(listedNicknames("Chicago violent crime vs. LA, NYC, Houston over the past 35 years"), "Chicago violent crime vs. Los Angeles, NYC, Houston over the past 35 years");
+  assert.equal(listedNicknames("Chicago, Houston, LA murders"), "Chicago, Houston, Los Angeles murders");
+  assert.equal(listedNicknames("Houston, TX and SF murders"), "Houston, TX and San Francisco murders");
+  for (const q of ["Baton Rouge, LA murders in 2024", "Baton Rouge, LA and Houston, TX murders", "murders in CA, LA, TX", "Shreveport and Baton Rouge, LA murders"])
+    assert.equal(listedNicknames(q), q);
+  assert.notEqual(ask("Chicago violent crime vs. LA, NYC, Houston in 2024").kind === "clarify" && (ask("Chicago violent crime vs. LA, NYC, Houston in 2024") as { about?: string }).about, "which LA");
 }
 // A misspelled large place is read as it: one large place within two edits, same first letter (coordinator 2026-11-03).
 assert.equal(nearestPlaceName(places, "batlimore"), "Baltimore");
