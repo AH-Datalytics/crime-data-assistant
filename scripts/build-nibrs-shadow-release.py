@@ -18,6 +18,7 @@ from email.utils import parsedate_to_datetime
 ap = argparse.ArgumentParser()
 ap.add_argument("--release-dir", required=True)
 ap.add_argument("--source-archive", required=True)
+ap.add_argument("--first-year", type=int, help="the first year the engine reads (default: the earliest year of the build); the labels, cubes and gates start in 2017, so a build that reaches back further is pinned here (Jeff, 2026-11-18)")
 a = ap.parse_args()
 OUT = os.path.join(os.path.dirname(__file__), "fixtures", "nibrs-shadow", "release.json")
 
@@ -33,7 +34,7 @@ if obj is None:
     raise SystemExit(f"the source archive has no object with SHA-256 {sha} (the build's {latest} master file)")
 released = parsedate_to_datetime(obj["cde_last_modified"]).strftime("%Y-%m-%dT%H:%M:%SZ")  # an RFC 1123 GMT time
 out = {"_comment": "The NIBRS release the shadow reads (scripts/build-nibrs-shadow-release.py): its latest-year master file's CDE release date.",
-       "release": m["release_id"], "first_year": years[0], "latest_year": years[-1], "source_sha256": sha,
+       "release": m["release_id"], "first_year": a.first_year or years[0], "latest_year": years[-1], "source_sha256": sha,
        "cde_key": obj["cde_key"], "released": released}
 with open(OUT, "w", encoding="utf-8", newline="\n") as f:
     json.dump(out, f, indent=1)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the agencies' FBI names: scripts/fixtures/nibrs-shadow/agency-names.json.
 
-    python -I scripts/build-nibrs-agency-names.py --model <nibrs-model checkout>
+    python -I scripts/build-nibrs-agency-names.py --model <nibrs-model checkout> --release <canonical release id>
 
 The names are nibrs-model's reference/agency-names/agency-names.csv on its main branch (read with git show, never from
 a work tree): the FBI Crime Data Explorer agency directory (retrieved 2026-10-29), then the CDE participation download
@@ -19,6 +19,7 @@ import subprocess
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--model", required=True)
+ap.add_argument("--release", required=True)  # the canonical release id, recorded in the file (the names are the directory's, not the release's: ORIs the directory lacks have no name)
 a = ap.parse_args()
 OUT = os.path.join(os.path.dirname(__file__), "fixtures", "nibrs-shadow", "agency-names.json")
 
@@ -35,8 +36,8 @@ return_a = sorted(r["ori"] for r in rows if r["source"] == "reta_2025" and r["ag
 
 with open(OUT, "w", encoding="utf-8", newline="\n") as f:
     f.write(json.dumps({
-        "_comment": "FBI agency names for the ORIs of canonical release test6-20261031-host, from nibrs-model's reference/agency-names/agency-names.csv (scripts/build-nibrs-agency-names.py).",
-        "release": "test6-20261031-host",
+        "_comment": f"FBI agency names for the ORIs of canonical release {a.release}, from nibrs-model's reference/agency-names/agency-names.csv (scripts/build-nibrs-agency-names.py).",
+        "release": a.release,
         "source": {"repo": "nibrs-model", "commit": commit, "file": "reference/agency-names/agency-names.csv",
                    "sources": [{"source": s, "date": d} for s, d in sources]},
         "build_oris": len(rows), "named": len(names),
