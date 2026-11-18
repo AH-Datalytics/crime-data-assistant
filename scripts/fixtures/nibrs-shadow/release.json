@@ -1,9 +1,9 @@
 {
  "_comment": "The NIBRS release the shadow reads (scripts/build-nibrs-shadow-release.py): its latest-year master file's CDE release date.",
- "release": "test6-20261031-host",
+ "release": "canon2-20261118-host",
  "first_year": 2017,
  "latest_year": 2026,
- "source_sha256": "05e59b0396931aa2667c42833de98bef9f0427ea8a24dd02a9441c5aee486a6d",
+ "source_sha256": "4ada0be5a730294ca6735607c6a6fbd770861bae1632e5a2f79b02b21057e249",
  "cde_key": "master_files/nibrs/nibrs-2026.zip",
- "released": "2026-10-15T12:01:34Z"
+ "released": "2026-11-15T14:21:20Z"
 }
