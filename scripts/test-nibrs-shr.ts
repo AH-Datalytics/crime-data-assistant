@@ -177,11 +177,12 @@ const ranked = answerShrRanking(rk, build, hist, (s) => { sqlSeen.push(s); retur
 assert.ok(ranked.kind === "shr", JSON.stringify(ranked));
 if (ranked.kind === "shr") {
   assert.deepEqual(ranked.delivered.table.rows, [["DALLAS, TX", 90], ["OMAHA, NE", 90], ["HOUSTON, TX", 80], ["NEW YORK, NY", 40]], "Chicago filed nothing and Philadelphia has no victim: neither is ranked");
-  assert.equal(ranked.delivered.text[0], "Cities of 250,000 or more with the highest share of murder victims killed with a firearm, 2024.");
-  assert.equal(ranked.delivered.text[1], "Ranked: city agencies that filed Homicide Reports in 2024 and had at least one murder victim. Ties are ordered by agency name.");
+  // A title that reads back the question (Jeff 2026-11-17), then plain notes, then the source.
+  assert.equal(ranked.delivered.text[0], "2024 Share of Murder Victims Killed With a Firearm by City, Population 250,000 or More");
+  assert.equal(ranked.delivered.text[1], "City agencies that filed Homicide Reports in 2024 and had at least one murder victim are ranked, and ties are ordered by agency name.");
   assert.ok(ranked.delivered.text.includes("Share = the city's victims with this detail out of all its murder victims in the period."));
   assert.ok(!ranked.delivered.text.some((t) => /CHICAGO|Not ranked/.test(t)), "no left-out city is named");
-  assert.ok(ranked.delivered.text.some((t) => t === "Not every city reports Homicide Reports data. Cities that did not report in this period are not ranked."), JSON.stringify(ranked.delivered.text));
+  assert.ok(ranked.delivered.text.some((t) => t === "Not every city has Homicide Reports data, and cities with no data in this period are not ranked."), JSON.stringify(ranked.delivered.text));
   assert.equal(ranked.meaning.statistic, "rank");
   assert.deepEqual(ranked.question.ranking, { direction: "top", limit: 20, minPopulation: 250000 });
 }
@@ -197,7 +198,7 @@ const counts = answerShrRanking({ ...rk, share: false, direction: "bottom", limi
 assert.ok(counts.kind === "shr" && JSON.stringify(counts.delivered.table.rows) === '[["PHILADELPHIA, PA",0],["OMAHA, NE",9]]', JSON.stringify(counts));
 // A victim's own age, by its range; offenders' details are not a city ranking's.
 const teen = answerShrRanking({ ...rk, filters: [{ dim: "victim.age", ages: [13, 19] }] }, build, hist, (s) => (sqlSeen.push(s), rankRows));
-assert.ok(teen.kind === "shr" && teen.delivered.text[0].includes("share of murder victims aged 13 to 19"), JSON.stringify(teen));
+assert.ok(teen.kind === "shr" && teen.delivered.text[0].includes("Share of Murder Victims Aged 13 to 19"), JSON.stringify(teen));
 assert.match(sqlSeen[sqlSeen.length - 1], /FILTER \(WHERE p\.age BETWEEN 13 AND 19\)/);
 assert.equal(answerShrRanking({ ...rk, filters: [{ dim: "offender.sex", codes: ["M"] }] }, build, hist, () => rankRows).kind, "shr-decline");
 // Nothing filed, or no city of that size: said.

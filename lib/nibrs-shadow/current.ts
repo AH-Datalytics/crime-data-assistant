@@ -23,6 +23,7 @@ import { CITY_AS, cityNameSql, citySql, HISTORICAL_MEASURE } from "./historical"
 import { stateName } from "./places";
 import { fmt } from "./deliver";
 import { aboutPeople } from "./presentation";
+import { periodTitle, titleCase } from "./titles";
 
 /** Where the Crime Index build's Current Trends tables are, and the months they hold. */
 export type CurrentBuild = { root: string; release: string; firstMonth: string; lastMonth: string; finalFirstMonth: string };
@@ -351,6 +352,8 @@ export type CurrentRankQuestion = {
   /** A ranking (top or bottom, cut at the limit), or the N largest by population. */
   pick: { kind: "rank"; direction: "top" | "bottom"; limit: number } | { kind: "largest"; n: number };
   minPopulation: number | null; entity: "city" | "agency" | "county";
+  /** The floor came from the question (so the title says it); a default floor is a note. */
+  floorAsked?: boolean;
   /** A Census region: its states (`state` is then "US") and its name. */
   region?: { name: string; states: string[] };
 };
@@ -381,6 +384,8 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
   const { entries } = currentEntries(b, historicalRoot, rq, execute);
   const where = rq.region ? rq.region.name : rq.state === "US" ? "the United States" : stateName(rq.state);
   const kindWord = rq.entity === "city" ? "city agencies" : rq.entity === "county" ? "county agencies" : "agencies";
+  const unitTitle = rq.entity === "city" ? "City" : rq.entity === "county" ? "County Agency" : "Agency";
+  const unitPlural = rq.entity === "city" ? "cities" : kindWord;
   const floor = rq.minPopulation ? ` with a population of ${rq.minPopulation.toLocaleString("en-US")} or more` : "";
   if (!entries.length) return { kind: "current-decline", explanation: `Current Trends' sample has no ${kindWord}${floor} in ${where} for ${spanWords(rq.from, rq.to)}.` };
   const rate = rq.statistic === "rate";
@@ -391,7 +396,9 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     const r = rank(entries, rq.pick.direction, rq.pick.limit);
     shown = r.ranked; leftOut = r.leftOut;
     const most = rq.pick.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
-    lead = `Current Trends' sample ${kindWord}${floor} in ${where}: the ${shown.length} with the ${most} ${rate ? `${SINGULAR[col]} rates per 100,000` : WORDS[col]}, ${span}.`;
+    // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes (the sample note, ties, who is left out), then the source.
+    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${titleCase(where.replace(/^the /i, ""))}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}`;
+    extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.`);
     if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
   } else {
     // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
@@ -401,13 +408,19 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     const byPop = sorted.filter((e, i) => i < n || e.population === cutPop);
     shown = byPop.filter((e) => e.known); leftOut = byPop.filter((e) => !e.known);
     shown = byPop;
-    lead = `The ${byPop.length} largest cities in Current Trends' sample in ${where} by population (${monthWords(rq.to)}): ${rate ? `${SINGULAR[col]} rate per 100,000` : WORDS[col]}, ${span}.`;
+    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${rq.state === "US" && !rq.region ? "" : `${titleCase(where.replace(/^the /i, ""))}, `}${byPop.length} Largest Cities`;
+    extra.push(`The cities are the ${byPop.length} largest in Current Trends' sample by population (${monthWords(rq.to)}), ${span}.`);
   }
   if (!shown.length) return { kind: "current-decline", explanation: `No ${kindWord} in Current Trends' sample have a figure for every month of ${span}.` };
   const text = [lead,
     `Only Current Trends' sample agencies are included (about 550 agencies, not every agency), and only those with a figure for every month of ${span} ${rq.pick.kind === "rank" ? "are ranked" : "have a figure"}.`];
   text.push(...extra);
-  if (leftOut.length) text.push(`${rq.pick.kind === "rank" ? "Not ranked" : "Blank"} because a month is missing: ${leftOut.length <= 5 ? leftOut.map((e) => e.name).sort().join(", ") : `${leftOut.length} ${kindWord}`}.`);
+  if (leftOut.length) {
+    const names = leftOut.length <= 5 ? leftOut.map((e) => e.name).sort() : null;
+    const who = names ? (names.length > 2 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join(" and ")) : `${leftOut.length} ${unitPlural}`;
+    const one = !!names && names.length === 1;
+    text.push(rq.pick.kind === "rank" ? `${who} ${one ? "isn't" : "aren't"} ranked because a month is missing.` : `${who} ${one ? "is" : "are"} blank because a month is missing.`);
+  }
   if (rate) text.push(`Rates are per 100,000 of each agency's population for ${monthWords(rq.to)}, for the months shown; not scaled to a full year.`);
   text.push("Source: Crime Index.");
   const header = rate ? `${ucFirst(SINGULAR[col])} rate per 100,000` : ucFirst(WORDS[col]);

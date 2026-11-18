@@ -483,9 +483,14 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(r.kind === "historical", JSON.stringify(r));
   if (r.kind === "historical") {
     assert.deepEqual(r.delivered.table.rows, [["Houston", 91], ["Dallas", 59], ["Abilene", 48], ["Fort Worth", 48]]);
-    assert.equal(r.delivered.text[0], "Texas city agencies: the 4 with the most murders, 1950.");
+    // A title that reads back the question (Jeff 2026-11-17), then plain notes, then the source.
+    assert.equal(r.delivered.text[0], "1950 Murder Count by City, Texas");
+    assert.equal(r.delivered.text[1], "The 4 cities with the most murders are shown.");
+    assert.equal(r.delivered.text[2], "Cities are Crime Index's city agencies, whatever the agency.");
     assert.ok(r.delivered.text.includes("Abilene and Fort Worth tie for 3rd, so 4 agencies are shown."), JSON.stringify(r.delivered.text));
-    assert.ok(r.delivered.text.includes("Not ranked because Crime Index has no murder figure for them in 1950: Laredo and Tyler."), JSON.stringify(r.delivered.text));
+    assert.ok(r.delivered.text.includes("Laredo and Tyler aren't ranked because Crime Index has no murder figure for them in 1950."), JSON.stringify(r.delivered.text));
+    assert.ok(r.delivered.text.includes("Ties are ordered by agency name."), JSON.stringify(r.delivered.text));
+    assert.ok(!r.delivered.text.some((t) => /^(?:Ranked|Not ranked because)\b.*:/.test(t)), "no Label: lead-in is left");
     assert.ok(r.delivered.text.some((t) => /^Data before 1960 may reflect incomplete or limited reporting/.test(t)));
     assert.equal(r.delivered.text[r.delivered.text.length - 1], SRS_SOURCE);
     assert.equal(r.meaning.statistic, "rank");
@@ -532,11 +537,12 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const ST: unknown[][] = [["LA", "Louisiana", 4_600_000, 760, 16.5, "LA"], ["MS", "Mississippi", 2_900_000, 420, 14.4, "MS"], ["AL", "Alabama", 5_000_000, 600, 12, "AL"]];
   const rexec = (sql: string) => { rsql.push(sql); return /state_crime/.test(sql) ? ST : /agency_crime/.test(sql) ? US : []; };
   // The nation's cities: named with their state, so two Columbuses stay apart; no state in the query.
-  const us = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "count", direction: "top", limit: 3, minPopulation: 250000 }, build, rexec);
+  const us = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "count", direction: "top", limit: 3, minPopulation: 250000, floorAsked: true }, build, rexec);
   assert.ok(us.kind === "historical", JSON.stringify(us));
   if (us.kind === "historical") {
     assert.deepEqual(us.delivered.table.rows, [["Chicago, IL", 461], ["New York City, NY", 356], ["Houston, TX", 334]]);
-    assert.equal(us.delivered.text[0], "United States city agencies with a population of 250,000 or more: the 3 with the most murders, 2024.");
+    // The floor the question carried is in the title; a default floor (not asked) is a note instead.
+    assert.equal(us.delivered.text[0], "2024 Murder Count by City, United States, Population 250,000 or More");
     assert.match(rsql[0], /agency_crime\.parquet'\) WHERE \(type = 'city' OR ori IN \('FL0160000'\)\) AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200'\) AND year = 2024 AND population >= 250000/);
   }
   // Every agency, city and county: no type in the query.
@@ -621,14 +627,29 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(r.kind === "current", JSON.stringify(r));
   if (r.kind === "current") {
     assert.deepEqual(r.delivered.table.rows, [["Dallas", 89], ["San Antonio", 58]]);
-    assert.equal(r.delivered.text[0], "Current Trends' sample city agencies in Texas: the 2 with the most murders, January 2026 through August 2026.");
-    assert.ok(r.delivered.text.some((t) => /^Not ranked because a month is missing: Houston\./.test(t)), JSON.stringify(r.delivered.text));
+    assert.equal(r.delivered.text[0], "2026 Year to Date Murder Count by City, Texas");
+    assert.ok(r.delivered.text.includes("The 2 cities with the most murders are shown, January 2026 through August 2026."), JSON.stringify(r.delivered.text));
+    assert.ok(r.delivered.text.includes("Houston isn't ranked because a month is missing."), JSON.stringify(r.delivered.text));
     assert.ok(r.delivered.text.some((t) => /Only Current Trends' sample agencies are included/.test(t)));
     assert.match(csql[0], /WHERE sample AND year \* 100 \+ month BETWEEN 202601 AND 202608 AND state = 'TX'/);
     assert.match(csql[0], /agency_crime\.parquet'\)\) SELECT .* WHERE \(n\.type = 'city' OR n\.ori IN \('FL0160000'\)\)/);
   }
+  // The largest cities (a set by population): a title that reads the question back, then plain notes; no "Label:" lead-in is left.
+  const big = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "count", pick: { kind: "largest", n: 2 },
+    minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
+  assert.ok(big.kind === "current", JSON.stringify(big));
+  if (big.kind === "current") {
+    assert.equal(big.delivered.text[0], "2026 Year to Date Murder Count by City, Texas, 2 Largest Cities");
+    assert.ok(big.delivered.text.includes("The cities are the 2 largest in Current Trends' sample by population (August 2026), January 2026 through August 2026."), JSON.stringify(big.delivered.text));
+    assert.ok(!big.delivered.text.some((t) => /^(?:Ranked|Not ranked because|Blank because)\b.*:/.test(t)), "no Label: lead-in is left");
+  }
+  // The nation after the comma is "United States", not "The United States".
+  const nat = answerCurrentRanking({ measure: "murder", state: "US", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 2 },
+    minPopulation: 250000, floorAsked: true, entity: "city" }, cb, "/ci", cexec, rankAgencies);
+  assert.ok(nat.kind === "current", JSON.stringify(nat));
+  if (nat.kind === "current") assert.equal(nat.delivered.text[0], "2026 Year to Date Murder Rate by City, United States, Population 250,000 or More");
   // A rate: per 100,000 of the latest month's population, not scaled to a full year.
-  const rr = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
+  const rr =answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
     minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
   assert.ok(rr.kind === "current" && JSON.stringify(rr.delivered.table.rows) === '[["Dallas",6.8]]' && rr.delivered.text.some((t) => /not scaled to a full year/.test(t)), JSON.stringify(rr));
   // The set: the largest by population, Houston blank (a month missing), said.
@@ -752,7 +773,9 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     ex((s2) => (/^SELECT population/.test(s2) ? [[290_000]] : field)));
   assert.ok(pos.kind === "historical", JSON.stringify(pos));
   if (pos.kind === "historical") {
-    assert.equal(pos.delivered.text[0], "Durham, North Carolina ranks 3rd of 6 U.S. cities of 250,000 or more (the FBI's population group Durham, North Carolina is in) by murder rate in 2024 (1st is the highest).");
+    assert.equal(pos.delivered.text[0], "Where Durham Ranks on 2024 Murder Rate Among U.S. Cities");
+    assert.equal(pos.delivered.text[1], "Durham, North Carolina ranks 3rd of 6 U.S. cities of 250,000 or more (the FBI's population group Durham, North Carolina is in) by murder rate in 2024; 1st is the highest.");
+    assert.equal(pos.delivered.text[2], "It is shown with the two cities above and the two below; ties share a place and are ordered by name.");
     assert.deepEqual(pos.delivered.table.rows.map((r) => r[1]), ["Alpha, NC", "Beta, NC", "Durham, NC", "Epsilon, NC", "Phi, NC"]);
     assert.ok(sql.some((x) => /population >= 250000 ORDER BY ori/.test(x)));
   }
@@ -785,7 +808,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.notEqual(shadowAnswer("Countywide population in Kern County, California in 2024", base as never).kind, "historical");
   for (const q of ["Where does Durham rank in murder rate so far in 2025 nationally?", "Where does Durham rank in murder rate per 1,000 in 2024 nationally?"]) {
     const o = shadowAnswer(q, base as never) as { kind: string; delivered?: { text: string[] } };
-    assert.ok(!(o.kind === "historical" && /ranks/.test(o.delivered?.text[0] ?? "")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+    assert.ok(!(o.kind === "historical" && /\bRanks on\b/.test(o.delivered?.text[0] ?? "")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }
 }
 // Engine 2, rules 1 and 3 (Jeff 2026-11-12): a rate for a group of people (D03) and what the data doesn't record are declined
