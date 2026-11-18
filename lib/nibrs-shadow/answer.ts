@@ -501,6 +501,29 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 /** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
 const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
 /**
+ * P141: "LA" and "SF" as a city when listed with other cities ("Chicago vs. LA, NYC, Houston"). Not when the list is of
+ * states ("CA, LA, TX") or the token qualifies a city ("Baton Rouge, LA"; "Baton Rouge, LA and Houston, TX").
+ */
+const NICKNAMES: Record<string, string> = { LA: "Los Angeles", SF: "San Francisco" };
+const LIST_SEP = String.raw`(?:,|&|\band\b|\bvs\.?|\bversus\b)`;
+export function listedNicknames(q: string): string {
+  let out = "", at = 0;
+  for (const m of q.matchAll(/\b(LA|SF)\b/g)) {
+    const i = m.index!, before = q.slice(0, i), after = q.slice(i + 2);
+    const next = new RegExp(String.raw`^\s*${LIST_SEP}\s*([A-Za-z][\w.'-]*)(\s*,\s*[A-Z]{2}\b)?`).exec(after);
+    const stateNext = next !== null && (/^[A-Z]{2}$/.test(next[1]) || next[2] !== undefined);
+    const afterSep = /(?:\bvs\.?|\bversus\b|\band\b|&)\s*$/i.test(before);
+    const afterComma = /,\s*$/.test(before);
+    const firstOfList = /(?:^|\b(?:for|in|of|compare|between)\s+)$/i.test(before);
+    const city = !stateNext && (afterSep || (next !== null && firstOfList)
+      || (afterComma && ((before.match(/,/g) ?? []).length >= 2 || (next !== null && /\b(?:vs\.?|versus|and|&)\b/i.test(before)))));
+    if (!city) continue;
+    out += q.slice(at, i) + NICKNAMES[m[1]]; at = i + 2;
+  }
+  return out + q.slice(at);
+}
+
+/**
  * The question with one of its words replaced, in the user's own words: the reader's text has circumstance and other
  * words taken out ("gangland"), so its offsets would drop them (Codex ties/P75 review 01.1). The word is found in the
  * original by its text, or by the misspelling the reader corrected ("assualts"); when neither is there, null, and the
@@ -787,6 +810,9 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
     return withNextStep(decline("not_recorded_in_nibrs", UNDEFINED_TERM.gang), ledger, deps, question);
   }
+  // P141 (Jeff 2026-11-18): "LA" and "SF" listed with other cities are the cities, not asked and never the state.
+  const listed = listedNicknames(question);
+  if (listed !== question) return shadowAnswer(listed, deps);
   // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
   if (LA.test(question)) {
     const as = (name: string) => question.replace(LA, name);
