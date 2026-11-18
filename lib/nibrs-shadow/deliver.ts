@@ -16,6 +16,7 @@ import { ANSWER_STATEMENTS, checkEnvelope, shownStatements, finalStatistics, peo
 import { MEASURE_CODES, MEASURE_LABEL } from "../nibrs-question-types";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
+import { agencySubject, changeSentence, nationSubject, seriesTitle, type Subject } from "./headline";
 
 export type Delivered = {
   table: ResultTable;
@@ -284,6 +285,9 @@ export function incidentsBeside(plan: NibrsPlan): string | null {
 /** The place an answer names: the agency's label, a state's name, or the United States (a state or national sum by category). */
 const placeLabel = (p: NibrsPlan["geography"]["places"][number]) =>
   p.kind === "agency" ? p.label : p.kind === "state" ? stateName((p as { code: string }).code) : p.kind === "national" ? "United States" : "the place";
+/** The place as the subject of a sentence ("Detroit", "Texas", "The United States"): an agency short, with its state only when another city of the name is as large. */
+const placeSubject = (p: NibrsPlan["geography"]["places"][number]): Subject =>
+  p.kind === "agency" ? agencySubject(p.label, p.ori) : p.kind === "national" ? nationSubject : { text: placeLabel(p) };
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null, opts: TimeOptions = {}): Delivered {
   const place = plan.geography.places[0];
@@ -411,26 +415,27 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const lo = at("left_out") >= 0 ? leftOutOf(rows[0]?.[at("left_out")]) : [];
     text.push(v === null || v === undefined
       ? (statusOf(rows[0] ?? []) === "NOT_REPORTED" ? `The agency has no reported crimes or data for any month of ${when}, so no total is given.`
-        : `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`)
-      : `${agency}: ${fmt(v)} ${one(v, what)} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} ${one(tableRows[0][1] as number, "incidents")}` : ""}.`);
+        : `The available evidence does not establish the number of ${what} for ${placeSubject(place).text} in ${when}, so no number is given.`)
+      : `${placeSubject(place).text} had ${fmt(v)} ${one(v, what)} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} ${one(tableRows[0][1] as number, "incidents")}` : ""}.`);
     if (lo.length && v !== null && v !== undefined) text.push(leftOutSentence(lo, "left out"));
   } else if (!cats.length && opts.rolling) {
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;
     // An average (Jeff 2026-11-05): each window's total over its ${n} months, said as an average, never as the total.
-    text.push(opts.rolling.average ? `${agency}: ${what}, rolling ${n}-month averages per month (each window's total divided by ${n}), by month, ${when}.`
-      : `${agency}: ${what}, rolling ${n}-month totals by month, ${when}.`);
+    text.push(opts.rolling.average ? seriesTitle(when, `${what}, Rolling ${n}-Month Averages per Month`, "Month", agency)
+      : seriesTitle(when, `${what}, Rolling ${n}-Month Totals`, "Month", agency));
+    if (opts.rolling.average) text.push(`Each window's total is divided by ${n}.`);
     const leftOutRoll = opts.rolling.leftOut ?? [];
     if (leftOutRoll.length) text.push(`No crimes were reported in ${leftOutWords(leftOutRoll)}, so no rolling ${opts.rolling.average ? "average" : "total"} is given for any window containing ${leftOutRoll.length === 1 ? "it" : "them"}.`);
     if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
       text.push(`No data is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter ${opts.rolling.average ? "average" : "total"}.`);
   } else if (!cats.length && opts.quarters) {
     // P71: each quarter the sum of its three months; an incomplete quarter is marked, never shown as a whole quarter.
-    text.push(`${agency}: ${what} by quarter, ${when}.`);
+    text.push(seriesTitle(when, what, "Quarter", agency));
     const q = (k: string) => `Q${k.slice(6)} ${k.slice(0, 4)}`;
     if (opts.quarters.incomplete.length) text.push(`${andList(opts.quarters.incomplete.map(q))} ${opts.quarters.incomplete.length === 1 ? "is" : "are"} shown blank, not as ${opts.quarters.incomplete.length === 1 ? "a whole quarter" : "whole quarters"}, because the agency has data for only some of ${opts.quarters.incomplete.length === 1 ? "its" : "their"} months.`);
   } else if (!cats.length) {
-    text.push(`${agency}: ${what} by ${by}, ${when}.`);
+    text.push(seriesTitle(when, what, by, agency));
     if (leadingGap.length) {
       const start = String(rows[0][ip]);
       text.push(`No data is known for ${runs(leadingGap)}, so the chart and table start at ${start.length === 7 ? monthName(start) : start}.`);
@@ -447,7 +452,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
       if (zero.length) text.push(`The agency has no reported crimes or data for any month of ${andList(zero)}, so no total is given.`);
     } else if (zero.length) text.push(leftOutSentence(zero, "blank"));
   } else {
-    text.push(`${agency}: ${what} by ${by}, ${when}.`);
+    text.push(seriesTitle(when, what, by, agency));
     // P86: the share's meaning is its column header ("Share of all ... (%)"), not a sentence.
     // A category's total is known only when every month of it is: a month without reporting evidence leaves it unknown.
     // Said once per period (coordinator, 2026-11-01): a period with every category blank is one plain sentence.
@@ -512,9 +517,9 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
   const evidence: CellEvidence[] = [{ row: 0, statistic: cCount, status: st(cCount) }, { row: 0, statistic: cInc, status: st(cInc) }, { row: 0, statistic: aCount, status: st(aCount) },
     { row: 0, statistic: ratio, status: shareStatus }];
   const when = periodWords(effective.from, effective.to);
-  const text = [share !== null && inc !== null
-    ? `${agency}: ${fmt(c!)} of the ${fmt(t!)} ${whatAll} in ${when} were cleared (${share}%); the cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`
-    : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
+  const text = share !== null && inc !== null
+    ? [`${placeSubject(place).text} cleared ${fmt(c!)} of its ${fmt(t!)} ${whatAll} in ${when} (${share}%).`, `The cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`]
+    : [`The available evidence does not establish the share of ${whatAll} cleared for ${placeSubject(place).text} in ${when}, so no share is given.`];
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
   text.push(...shownStatements(statements));
@@ -556,7 +561,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
   if (combined) text.push(combined.definition);
   if (!time) {
     const v = tableRows[0] ?? [];
-    text.push(`${agency}, ${when}: ${stats.map((s, i) => (v[i] === null || v[i] === undefined ? `the number of ${s.what} is not established` : `${fmt(v[i] as number)} ${s.what}`)).join("; ")}.`);
+    text.push(`${placeSubject(place).text} had ${andList(stats.map((s, i) => (v[i] === null || v[i] === undefined ? `no established number of ${s.what}` : `${fmt(v[i] as number)} ${s.what}`)))} in ${when}.`);
     if (combined) {
       const known = v.length === stats.length && v.every((x) => x !== null && x !== undefined);
       text.push(known ? `Together: ${fmt((v as number[]).reduce((a, b) => a + b, 0))} ${combined.label} in ${when}.`
@@ -567,7 +572,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
     else if (stats.length && String(rows[0]?.[at(`${stats[0].as}_status`)]) === "NOT_REPORTED") text.push(`The agency has no reported crimes or data for any month of ${when}, so no total is given.`);
     if (v.some((x) => x === null || x === undefined) && !(stats.length && String(rows[0]?.[at(`${stats[0].as}_status`)]) === "NOT_REPORTED")) text.push("A number not established is shown blank, not zero: reporting evidence is incomplete.");
   } else {
-    text.push(`${agency}: ${list} by ${time === "time.month" ? "month" : "year"}, ${when}.`);
+    text.push(seriesTitle(when, list, time === "time.month" ? "month" : "year", agency));
     // As for one measure (the same sentence): the periods without reporting evidence.
     const missing = rows.filter((r) => stats.some((s) => String(r[at(`${s.as}_status`)]) === "UNKNOWN")).map((r) => String(r[ip]));
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No data is known for ${runs(missing)}: shown blank, not zero.`);
@@ -622,11 +627,13 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
   const tableCols: ResultColumn[] = outs.map((o) => ({ binding: { kind: "statistic", as: o }, header: headerOf[o] }));
   const evidence: CellEvidence[] = outs.map((o) => ({ row: 0, statistic: o, status: cellOf[o].status as CellStatus }));
   const table: ResultTable = { columns: tableCols, rows: [outs.map((o) => cellOf[o].value)] };
-  const text: string[] = [`${agency}: ${what}, ${E} against ${L}.`];
+  const who = placeSubject(place);
   const months = monthsOf(periods.earlier);
+  const text: string[] = cmp.change.value !== null
+    ? [changeSentence(who, what, fmt(cmp.earlier.value!), fmt(cmp.later.value!), E, L, signed(cmp.change.value), cmp.pctChange.value)]
+    : [`No change in ${who.text}'s ${what} is given between ${E} and ${L}.`];
   if (months && months === monthsOf(periods.later)) text.push(`Compares the same months of each year: ${months}.`);
   if (cmp.change.value !== null) {
-    text.push(`${fmt(cmp.earlier.value!)} in ${E} and ${fmt(cmp.later.value!)} in ${L}: a change of ${signed(cmp.change.value)}${cmp.pctChange.value !== null ? ` (${cmp.pctChange.value > 0 ? "+" : ""}${cmp.pctChange.value}%)` : ""}.`);
     if (cmp.zeroBase) text.push("The percent change cannot be computed from a zero base.");
   } else {
     for (const [p, words] of [[cmp.earlier, E], [cmp.later, L]] as const)
