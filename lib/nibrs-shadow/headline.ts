@@ -32,11 +32,11 @@ export const titlePlace = (s: string) => (s === "The United States" ? "United St
 
 export const possessive = (name: string) => `${name}'s`;
 /** "Chicago's violent crime rate in 2024 was 539.8 per 100,000." / "The United States had a violent crime rate of 327.6 per 100,000 in 2025." */
-export function rateSentence(who: Subject, measure: string, when: string, rate: string): string {
-  return who.nation ? `${who.text} had a ${measure} rate of ${rate} per 100,000 in ${when}.` : `${possessive(who.text)} ${measure} rate in ${when} was ${rate} per 100,000.`;
+export function rateSentence(who: Subject, measure: string, when: string, rate: string, prep = "in"): string {
+  return who.nation ? `${who.text} had a ${measure} rate of ${rate} per 100,000 ${prep} ${when}.` : `${possessive(who.text)} ${measure} rate ${prep} ${when} was ${rate} per 100,000.`;
 }
-/** "Dallas had 181 murders in 2024." */
-export const countSentence = (who: Subject, n: string, words: string, when: string) => `${who.text} had ${n} ${words} in ${when}.`;
+/** "Dallas had 181 murders in 2024." (`prep` "from" for "from January through March 2026") */
+export const countSentence = (who: Subject, n: string, words: string, when: string, prep = "in") => `${who.text} had ${n} ${words} ${prep} ${when}.`;
 /** "Chicago had 461 murders in 2024 and 346 in 2025, a change of -115 (-24.9%)." */
 export function changeSentence(who: Subject, words: string, e: string, l: string, E: string, L: string, change: string, pct: number | null): string {
   return `${who.text} had ${e} ${words} in ${E} and ${l} in ${L}, a change of ${change}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`;
