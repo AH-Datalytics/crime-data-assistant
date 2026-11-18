@@ -30,6 +30,9 @@ assert.match(asked(rw(P, "how many agencies reported")).why, /state or national 
 // Group 2 follow-ups of the query log (2026-11-18): "countywide", "calculate for X", "do it for X", a crime with a grain, a start year.
 assert.equal(q(rw("violent crime in Alameda County since 2008", "Countywide total")), "violent crime in Alameda County since 2008, countywide");
 assert.equal(q(rw("how many murders in baltimore county this year", "countywide")), "how many murders in baltimore county this year, countywide");
+// A county named anywhere in the previous question, also in a comparison of two places (QL-ct-75a35f41a5, QL-nibrs-68bb961815).
+assert.match(q(rw("compare murders between the City of St. Louis, and St. Louis County, MO from 1990 to the most recent data", "countywide total")), /, countywide$/);
+assert.match(q(rw("what is the trend of aggravated assaults with a firearm in DC and Prince George's County over the past 10 years", "countywide")), /, countywide$/);
 asked(rw("violent crime in Memphis in 2024", "countywide"));
 asked(rw("violent crime in Alameda County countywide since 2020", "countywide total"));
 assert.equal(q(rw("violent crime rate in Minneapolis, MN from 2024 to 2025", "calculate for Chicago, IL")), "violent crime rate in Chicago, IL from 2024 to 2025");
