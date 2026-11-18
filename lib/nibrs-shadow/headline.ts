@@ -9,6 +9,7 @@
  * badly, says "had a ... rate of".
  */
 import { ASK_POPULATION, loadPlaceIndex, type PlaceIndex } from "./places";
+import { titleCase } from "./titles";
 
 let index: PlaceIndex | null = null;
 const places = () => (index ??= loadPlaceIndex());
@@ -48,4 +49,4 @@ export function rateChangeSentence(who: Subject, measure: string, e: string, l: 
     : `${possessive(who.text)} ${measure} rate was ${e} per 100,000 in ${E} and ${l} in ${L}, ${tail}`;
 }
 /** "2016 to 2025 Murders by Year, Atlanta, Georgia": the period, what is counted, the grouping, the place. */
-export const seriesTitle = (period: string, what: string, grouping: string, place: string) => `${period} ${what} by ${grouping}, ${titlePlace(place)}`;
+export const seriesTitle = (period: string, what: string, grouping: string, place: string) => `${period} ${titleCase(what)} by ${grouping}, ${titlePlace(place)}`;
