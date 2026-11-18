@@ -199,11 +199,14 @@ const deps: ShadowDeps = {
 export { tableDigest };
 
 /** What the engine did, in the label's terms. */
-function got(o: { kind: string } & Record<string, unknown>, ms: number): Got {
+function got(o: { kind: string } & Record<string, unknown>, ms: number, labelSource: string | null = null): Got {
   switch (o.kind) {
+    // A data coverage answer (coverage.ts) describes the data in general, not one tab's source: it fits the source the label names,
+    // and stays unverified (its numbers have no independent check yet).
     case "answer": return { kind: "answer", source: "nibrs", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "srs": case "historical": return { kind: "answer", source: "historical", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "current": return { kind: "answer", source: "rtci", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
+    case "coverage": return { kind: "answer", source: labelSource ?? "nibrs", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "hate": return { kind: "answer", source: "hate_crime", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "shr": return { kind: "answer", source: "shr", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "route": return { kind: "route", source: String(o.source), ms };
@@ -315,7 +318,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
         else via = `gemini refused: ${v.reason}`;
       }
     }
-    g = { ...got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t), ...(via ? { via } : {}), ...(read ? { read } : {}) };
+    g = { ...got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t, l.expected.source), ...(via ? { via } : {}), ...(read ? { read } : {}) };
   } catch (e) {
     // A process that can't be ended stops the run (incomplete, so not judged): the next one must never run beside it.
     if (/duckdb executor:/.test(String(e))) throw e;

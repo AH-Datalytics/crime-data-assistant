@@ -2754,6 +2754,15 @@
       "note": "Hate crimes in the new engine (Jeff 2026-11-15): answered from the hate crime export only, never NIBRS; the release manifest check, the bias code and distinct-incident SQL, the latest-date rule, the reporting caveat; a stub executor stands in for DuckDB"
     },
     {
+      "id": "test-nibrs-coverage",
+      "tier": "F",
+      "script": "scripts/test-nibrs-coverage.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Questions about the data itself (Jeff 2026-11-18): agencies reporting (any month, every month beside it), states with no data by year, years covered, where the numbers come from, where a term is defined (the FBI Crime Data Explorer link only); a stub executor stands in for DuckDB"
+    },
+    {
       "id": "test-no-yet",
       "tier": "F",
       "script": "scripts/test-no-yet.js",

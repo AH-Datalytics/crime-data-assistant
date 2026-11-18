@@ -1035,7 +1035,7 @@ function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, 
     const own = ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
     return (o.buttons ?? []).reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}button "${x.label}" `, `${key}|button`, x.continuation, r, ev, ctx)) : acc), own);
   }
-  if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "shr" || o.kind === "hate" || o.kind === "route") return none();
+  if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "shr" || o.kind === "hate" || o.kind === "coverage" || o.kind === "route") return none();
   if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
   return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
@@ -1062,8 +1062,8 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   // Not available yet (a capability the shadow doesn't have): the plain prefix, or the plain sentence for an internal reason (P74).
   if (c.kind === "decline" && (/^This isn't available/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
   // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
-  if (c.kind === "srs" || c.kind === "historical" || c.kind === "current" || c.kind === "shr" || c.kind === "hate" || c.kind === "route")
-    return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : c.kind === "shr" ? "a Homicide Reports answer" : c.kind === "hate" ? "a hate crime answer" : "a historical-file answer", "unverified"));
+  if (c.kind === "srs" || c.kind === "historical" || c.kind === "current" || c.kind === "shr" || c.kind === "hate" || c.kind === "coverage" || c.kind === "route")
+    return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : c.kind === "shr" ? "a Homicide Reports answer" : c.kind === "hate" ? "a hate crime answer" : c.kind === "coverage" ? "a data coverage answer" : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
     return deliveredCheck(prefix, key, c, want, r, ev, ctx);
@@ -1135,6 +1135,14 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
     const fits = e.action === "answer" && e.meaning.source === "hate_crime";
     const diffs: Diff[] = [fits ? { field: "values", expected: "hate crime values", actual: "not checked by this harness", kind: "unverified" }
       : { field: e.action === "answer" ? "source" : "action", expected: e.action === "answer" ? e.meaning.source : e.action, actual: "a hate crime answer", kind: "material" }];
+    const outcome = outcomeOf(e.action, "answer", { material: fits ? 0 : 1, unverified: fits ? 1 : 0, structured: true, alternativeMissing: false });
+    return { result: { id: c.id, split: c.split, expected: e.action, actual: "answer", outcome, diffs, notes: [`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`], capability: ctx.capability, era: ctx.era } };
+  }
+  // A data coverage answer (coverage.ts): computed from the release's agency lists, not checked by this harness; unverified when the label wants an answer.
+  if (o.kind === "coverage") {
+    const fits = e.action === "answer";
+    const diffs: Diff[] = [fits ? { field: "values", expected: "coverage values", actual: "not checked by this harness", kind: "unverified" }
+      : { field: "action", expected: e.action, actual: "a data coverage answer", kind: "material" }];
     const outcome = outcomeOf(e.action, "answer", { material: fits ? 0 : 1, unverified: fits ? 1 : 0, structured: true, alternativeMissing: false });
     return { result: { id: c.id, split: c.split, expected: e.action, actual: "answer", outcome, diffs, notes: [`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`], capability: ctx.capability, era: ctx.era } };
   }

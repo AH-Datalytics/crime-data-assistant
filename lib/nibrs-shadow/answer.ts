@@ -60,6 +60,7 @@ import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } fr
 import { answerCurrentClearance } from "./clearance-current";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
+import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
@@ -189,7 +190,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     if (![...asks].every((x) => got.has(x))) return false;
     if (kept(q) !== kept(asked)) return false;
     const r = shadowAnswer(q, { ...deps, checkingOffer: true });
-    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate";
+    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate" || r.kind === "coverage";
   };
   const question = ledger.question;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
@@ -263,7 +264,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
   if (/\bfor example\b/i.test(o.explanation)) return o;
   const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
-  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate"; };
+  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate" || r.kind === "coverage"; };
   const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
     .map(tidy).find((q) => readsWhole(q, year) && answers(q));
   return { ...o, explanation: `${o.explanation} ${related ? `For example: "${related}".` : EXAMPLE}` };
@@ -283,6 +284,8 @@ export type ShadowOutcome =
   | ShrAnswer
   /** Hate crime incidents from the hate crime data (hate.ts), never from NIBRS. */
   | HateAnswer
+  /** A question about the data itself: agencies reporting, states with no data, years covered, sources, definitions (coverage.ts). */
+  | CoverageAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[]; /** Said with the ask (what the choices leave out). */ note?: string }
@@ -659,7 +662,7 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
   const fr = fillerRewrite(question, ledger);
   const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true }) : null;
   // Only pure filler left unread: the rest was read in full, so its answer is the question's (Jeff 2026-11-11).
-  if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate"].includes(again.kind)) return again;
+  if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(again.kind)) return again;
   if (!fr || again?.kind !== "clarify") return null;
   // Words with a meaning of their own left out ("up in", "average"): said, so a button's answer is never taken for
   // the change or the average asked (Codex review 01.2).
@@ -754,7 +757,21 @@ function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): Shadow
   return deps.rewritten ? o : clarifyInstead(question, o, deps) ?? o;
 }
 
+/** A question about the data itself (coverage.ts), answered; null when the question is something else. */
+function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
+  const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+  const own = ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  const hasMeasure = own.some((p) => p.concept === "measure");
+  const hasPlace = own.some((p) => p.concept === "place" && !/^state:|^national/.test(String(p.value)));
+  const cq = readCoverage(question, hasMeasure, hasPlace);
+  if (!cq) return null;
+  return answerCoverage(cq, { root: deps.target.root, release: deps.release, execute: deps.execute,
+    crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null });
+}
+
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
+  const cov = coverageOf(question, deps);
+  if (cov) return cov;
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
@@ -976,6 +993,9 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // P38: a follow-up in gang words ("only gang-related", "what about gangs?") is declined as a first question would be,
   // with no follow-up reading offered (Codex review 19.2, 19.3).
   if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
+  // A question about the data itself ("Sources?", "what states are not represented?") is answered on its own, whatever came before.
+  const about = coverageOf(followUp, deps);
+  if (about) return { ...about, rewrite: followUp, rewriteKind: "new" };
   // A turn that stands on its own (its own crime and place, nothing pointing back) is a new question: answered as a
   // first question would be, the previous turn ignored (Jeff 2026-11-01). When the rules would have read it as a
   // follow-up meaning something else, that reading is offered as a button, run only when chosen.
