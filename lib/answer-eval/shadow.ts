@@ -518,14 +518,18 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   const E = periodWords(t.earlier.from, t.earlier.to), L = periodWords(t.later.from, t.later.to);
   const f = (n: number) => n.toLocaleString("en-US");
   const signed = (n: number) => (n > 0 ? `+${f(n)}` : n < 0 ? `-${f(-n)}` : "0");
-  const changeLine = cols.change === null ? null : `${f(cols.earlier!)} in ${E} and ${f(cols.later!)} in ${L}: a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
-  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
+  // The change is the first line, a sentence ("Detroit had 84 shoplifting offenses in 2022 and 84 in 2023, a change of 0 (0%).") whose numbers are the table's.
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const changeTail = cols.change === null ? null : `a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
+  const changeRe = changeTail === null ? null : new RegExp(`^.+ had ${esc(f(cols.earlier!))} .+ in ${esc(E)} and ${esc(f(cols.later!))} in ${esc(L)}, ${esc(changeTail)}$`);
+  const changeLine = changeRe;
+  const allowed = (line: string) => (changeRe !== null && changeRe.test(line)) || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
     || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
-    || line.endsWith(`, ${E} against ${L}.`)
+    || (cols.change === null && new RegExp(`^No change in .+ is given between ${esc(E)} and ${esc(L)}\\.$`).test(line))
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
       || new RegExp(`^No data is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
   const text = o.delivered.text;
-  return text.every(allowed) && (changeLine === null || text.includes(changeLine)) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
+  return text.every(allowed) && (changeLine === null || text.some((l) => changeLine.test(l))) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
 }
 
 /**

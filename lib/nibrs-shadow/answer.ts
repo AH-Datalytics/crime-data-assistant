@@ -61,6 +61,8 @@ import { answerCurrentClearance } from "./clearance-current";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
+import { seriesTitle } from "./headline";
+import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
@@ -1354,8 +1356,13 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   const y0 = results[0].y;
   const lastCol = firstOut.delivered.table.columns[firstOut.delivered.table.columns.length - 1];
   const blank = results.filter((r) => !(typeof value(r.o) === "number")).map((r) => r.y);
-  const prefix = /^([^:]{2,60}): /.exec(firstOut.delivered.text[0])?.[1];
-  const title = `${prefix ? `${prefix}: ` : ""}${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}, ${y0 === years[1] ? y0 : `${y0} to ${years[1]}`}.`;
+  // The title: the years, what is counted and the months, by year, and the place (an agency by its label, a state by its name).
+  const firstPlace = (firstOut as { plan?: { geography: { places: { kind: string; label?: string; code?: string }[] } }; question?: { place?: { kind: string; label?: string; code?: string } } });
+  const pl0 = firstPlace.plan?.geography.places[0] ?? firstPlace.question?.place;
+  const placeText = pl0 ? (pl0.kind === "agency" ? pl0.label : pl0.kind === "state" ? stateName(pl0.code ?? "") : "United States") : null;
+  const sameWhat = `${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}`;
+  const sameYears = y0 === years[1] ? String(y0) : `${y0} to ${years[1]}`;
+  const title = placeText ? seriesTitle(sameYears, sameWhat, "Year", placeText) : `${sameYears} ${titleCase(sameWhat)} by Year`;
   // Lines every year says alike (the source, who reported) stay; a line that differs by year is that year's own.
   const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
   // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
