@@ -397,7 +397,7 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     shown = r.ranked; leftOut = r.leftOut;
     const most = rq.pick.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes (the sample note, ties, who is left out), then the source.
-    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${titleCase(where)}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}`;
+    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${titleCase(where.replace(/^the /i, ""))}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}`;
     extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.`);
     if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
   } else {
@@ -408,7 +408,7 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     const byPop = sorted.filter((e, i) => i < n || e.population === cutPop);
     shown = byPop.filter((e) => e.known); leftOut = byPop.filter((e) => !e.known);
     shown = byPop;
-    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${rq.state === "US" && !rq.region ? "" : `${titleCase(where)}, `}${byPop.length} Largest Cities`;
+    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${rq.state === "US" && !rq.region ? "" : `${titleCase(where.replace(/^the /i, ""))}, `}${byPop.length} Largest Cities`;
     extra.push(`The cities are the ${byPop.length} largest in Current Trends' sample by population (${monthWords(rq.to)}), ${span}.`);
   }
   if (!shown.length) return { kind: "current-decline", explanation: `No ${kindWord} in Current Trends' sample have a figure for every month of ${span}.` };

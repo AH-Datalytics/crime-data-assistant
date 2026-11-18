@@ -643,8 +643,13 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.ok(big.delivered.text.includes("The cities are the 2 largest in Current Trends' sample by population (August 2026), January 2026 through August 2026."), JSON.stringify(big.delivered.text));
     assert.ok(!big.delivered.text.some((t) => /^(?:Ranked|Not ranked because|Blank because)\b.*:/.test(t)), "no Label: lead-in is left");
   }
+  // The nation after the comma is "United States", not "The United States".
+  const nat = answerCurrentRanking({ measure: "murder", state: "US", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 2 },
+    minPopulation: 250000, floorAsked: true, entity: "city" }, cb, "/ci", cexec, rankAgencies);
+  assert.ok(nat.kind === "current", JSON.stringify(nat));
+  if (nat.kind === "current") assert.equal(nat.delivered.text[0], "2026 Year to Date Murder Rate by City, United States, Population 250,000 or More");
   // A rate: per 100,000 of the latest month's population, not scaled to a full year.
-  const rr = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
+  const rr =answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
     minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
   assert.ok(rr.kind === "current" && JSON.stringify(rr.delivered.table.rows) === '[["Dallas",6.8]]' && rr.delivered.text.some((t) => /not scaled to a full year/.test(t)), JSON.stringify(rr));
   // The set: the largest by population, Houston blank (a month missing), said.
