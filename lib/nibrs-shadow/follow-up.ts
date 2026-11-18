@@ -41,6 +41,26 @@ const ucFirst = (s: string) => s.replace(/^([a-z])/, (c) => c.toUpperCase());
 const clean = (s: string) => s.replace(/\s{2,}/g, " ").replace(/\s+([,?.!])/g, "$1").trim();
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const ask = (why: string, options: { label: string; question: string }[] = []): Rewrite => ({ kind: "ask", why, options });
+/** "Is it getting better?", "Is it getting worse?", "Has it improved?": a follow-up that asks for a verdict, not a figure (Jeff 2026-11-18). */
+export const JUDGEMENT = /^\s*(?:(?:and|so|ok|okay|well)[,\s]+)?(?:is|are|was|were|has|have|did|does|will)\s+(?:it|this|that|they|things|crime|violence)\s+(?:(?:been|gotten|getting|got|going|become|becoming)\s+)?(?:any\s+|much\s+|a\s+lot\s+)?(?:better|worse|improv\w+|worsen\w+)(?:\s+or\s+(?:better|worse))?\s*[?.!]*\s*$/i;
+export const JUDGEMENT_SENTENCE = "I report figures and don't judge whether they're getting better or worse.";
+/**
+ * The comparison offered instead: the previous question's one crime and one place, the latest complete year against the year before
+ * (or the previous question's own last year when it names years and stops there). Null without exactly one crime and one place.
+ */
+export function judgementOffer(previous: string, lastCompleteYear: number, firstYear: number): string | null {
+  const p = partsOf(previous);
+  if (p.measures.length !== 1 || p.places.length !== 1) return null;
+  const place = placeWords(previous, p.places)?.text;
+  // The crime must be said in the previous question as written: one the reader changed ("fatal shootings" read as murders) is not offered.
+  if (!place || !previous.toLowerCase().includes(p.measures[0].text.trim().toLowerCase())) return null;
+  const years = (previous.match(/\b(?:19|20)\d{2}\b/g) ?? []).map(Number);
+  const open = /\b(?:since|present|now|today|to date|this year|so far|past|last|recent)\b/i.test(previous);
+  const end = years.length && !open ? Math.min(lastCompleteYear, Math.max(...years)) : lastCompleteYear;
+  if (end - 1 < firstYear) return null;
+  const rate = /\brate\b|per (?:capita|100)/i.test(previous);
+  return `${ucFirst(p.measures[0].text.trim())}${rate ? " rate" : ""} in ${place} in ${end} compared with ${end - 1}`;
+}
 /** A follow-up that changes the last question in no way the rules can tell (plain wording, P74). */
 export const PLACE_ASK = "I couldn't tell how this changes your last question. Ask the whole question, for example \"robberies in Denver in 2024\".";
 

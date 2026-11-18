@@ -5,7 +5,7 @@
  * Offline: no database, no model.
  */
 import assert from "node:assert/strict";
-import { deterministicRewriter as R, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
+import { deterministicRewriter as R, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
 import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
@@ -216,6 +216,21 @@ const before = ran, b = shadowFollowUp(P, "why did it go up?", deps);
 assert.equal(b.kind, "clarify");
 assert.equal(b.rewrite, null);
 assert.equal(ran, before, "an ask with no options runs nothing");
+
+// A verdict is not given (Jeff 2026-11-18): "Is it getting better?" is declined with one sentence; the offer is the latest complete year against
+// the year before, for the previous question's one crime and place (a stub that holds no data offers nothing: an offer must run).
+for (const f of ["Is it getting better?", "Is it getting worse?", "has it improved?", "is it getting better or worse?", "so is it getting any better"]) assert.ok(JUDGEMENT.test(f), f);
+for (const f of ["Is it getting better in Dallas?", "show it by year", "is it higher than last year", "What is better, rate or count?"]) assert.ok(!JUDGEMENT.test(f), f);
+assert.equal(judgementOffer("violent crime in Detroit by year since 2020", 2025, 2017), "Violent crime in Detroit in 2025 compared with 2024");
+assert.equal(judgementOffer("violent crime rate in Detroit from 2020 to 2025", 2025, 2017), "Violent crime rate in Detroit in 2025 compared with 2024");
+assert.equal(judgementOffer("violent crime in Detroit from 2018 to 2022", 2025, 2017), "Violent crime in Detroit in 2022 compared with 2021");
+assert.equal(judgementOffer("murders in Texas and Florida in 2024", 2025, 2017), null, "two places: no offer");
+assert.equal(judgementOffer("fatal shootings in Chicago by year since 2020", 2025, 2017), null, "a crime the reader changed is not offered");
+assert.equal(judgementOffer("murders in Detroit in 2017", 2025, 2017), null, "no year before the data starts");
+const verdict = shadowFollowUp("violent crime in Detroit by year since 2020", "Is it getting better?", deps);
+assert.equal(verdict.kind, "decline");
+assert.equal((verdict as Extract<typeof verdict, { kind: "decline" }>).explanation, JUDGEMENT_SENTENCE);
+assert.equal(JUDGEMENT_SENTENCE, "I report figures and don't judge whether they're getting better or worse.");
 
 // An age word (P120, coordinator 2026-11-16): it goes in front of the previous question's crime and person word; the person is the
 // follow-up's, else the previous question's; asked when neither names one or they differ; another age is replaced only when plain.
