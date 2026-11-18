@@ -51,7 +51,7 @@ export type SrsQuestion = {
   measure: string; place: SrsPlace; from: number; to: number; byYear: boolean;
   /** Several states or the nation side by side (answerSrsSeveral); `place` is then the first. */
   places?: SrsPlace[];
-  statistic: "count" | "rate" | "clearance_rate"; comparison: { earlier: number; later: number } | null;
+  statistic: "count" | "rate" | "clearance_rate"; comparison: { earlier: number; later: number; change?: true } | null;
   /** Lines after the title (a span reaching this year names it as Current Trends'). */
   notes?: string[];
 };
@@ -134,7 +134,8 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${q.statistic === "rate" ? " per 100,000" : ""}`;
 
   // A change (P54): the earlier and later years, the change and percent change (P55: none from a zero base).
-  if (q.comparison) {
+  // A rate's change only when the change is asked in words ("2022 vs 2025" of a rate stays the two years side by side, as before).
+  if (q.comparison && (q.statistic === "count" || q.comparison.change)) {
     const [E, L] = [q.comparison.earlier, q.comparison.later];
     const rate = q.statistic === "rate";
     const e = value(rowFor(crime(), q.place, E)), l = value(rowFor(crime(), q.place, L));

@@ -108,6 +108,8 @@ for (const q of ["calculate percent change in violent crime rates from 2024-2025
   assert.deepEqual([c.comparison?.earlier, c.comparison?.later], [{ from: "2024-01", to: "2024-12" }, { from: "2025-01", to: "2025-12" }], q);
 }
 assert.equal(cmp("percent change in murders in Chicago 2025-2024").comparison, null, "the later year first: not a change");
+assert.equal(cmp("percent change in murders in Chicago 2024-2025").comparison?.change, true, "the change asked in words");
+assert.equal(cmp("Homicide rates in Kansas City in 2022 vs 2025").comparison?.change, undefined, "two years side by side: no change asked");
 assert.deepEqual(cmp("Did burglaries go up in Tulsa in 2025?").forecast, false, "a past year is not a forecast");
 assert.deepEqual(cmp("Is shoplifting in Tulsa up this year compared with last year?").comparison, { earlier: { from: "2025-01", to: "2025-12" }, later: { from: "2026-01", to: "2026-12" }, matched: true });
 assert.deepEqual(cmp("Shoplifting in Tulsa January through June 2024 compared with January through June 2023").comparison,

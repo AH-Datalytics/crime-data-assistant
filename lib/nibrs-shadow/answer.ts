@@ -1771,7 +1771,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (sp?.type === "series" && hb && county?.kind === "agency" && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && (sp.statistic === "count" || sp.statistic === "rate")
       && !sp.filters.length && !sp.window && (sp.grain === "year" || sp.grain === "total") && historicalUnitFits(sp.measures[0], sp.unit)
       && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
-      && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).combined && !flags(ledger0).column && !saysToDate(ledger0)) {
+      && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).combined && !flags(ledger0).column && !saysToDate(ledger0)
+      // A change (percent or not) of a county-wide total is not built: the county-wide years are never given in its place.
+      && !flags(ledger0).comparison) {
       if (sp.period.form === "none" && sp.grain === "total") {
         const y = hb.lastYear;
         return { kind: "clarify", about: "which period", question: ledger0.question, options: [
@@ -2067,7 +2069,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const srsPlace = (p: (typeof sp.places)[number]): SrsPlace => (p.kind === "state" ? { kind: "state", code: p.code } : { kind: "national" });
       const srsQ = { measure: sp.measures[0], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1],
         byYear: sp.grain === "year" || openSpan(sp), statistic: sp.statistic,
-        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)), ...(cmp.change ? { change: true as const } : {}) } : null,
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [] };
       const r = geos ? answerSrsSeveral(srsQ, geos.map(srsPlace)) : answerSrs({ ...srsQ, place: srsPlace(geo!) });
       if (r.kind === "srs") return r;
@@ -2147,7 +2149,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         const oris = places.flatMap((p) => ("agency" in p ? [p.agency.ori] : []));
         const note = sheriffNote(deps, oris, ledger0.question);
         const r = answerBeside({ measure: sp.measures[0], agencies: [], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp),
-          statistic: sp.statistic, comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+          statistic: sp.statistic, comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)), ...(cmp.change ? { change: true as const } : {}) } : null,
           notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
           agencyLine: reportedBy(oris.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for "), ...(note ? { agencyNote: note } : {}) }, places, deps.historical, deps.execute);
         if (r.kind === "historical") return r;
@@ -2200,7 +2202,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const list = agencies as Extract<Place, { kind: "agency" }>[];
       const r = answerHistorical({ measure: sp.measures[0], agencies: list.map((a, i) => ({ ori: a.ori, label: a.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state })),
         from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp), statistic: sp.statistic,
-        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)), ...(cmp.change ? { change: true as const } : {}) } : null,
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
         agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, list.map((a) => a.ori), ledger0.question) ? { agencyNote: sheriffNote(deps, list.map((a) => a.ori), ledger0.question) } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;

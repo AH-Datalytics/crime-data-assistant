@@ -78,7 +78,7 @@ export function historicalUnitFits(measure: string, unit: string | null): boolea
 export type HistoricalAgency = { ori: string; label: string; name: string; state: string };
 export type HistoricalQuestion = {
   measure: string; agencies: HistoricalAgency[]; from: number; to: number; byYear: boolean;
-  statistic: "count" | "rate" | "clearance_rate"; comparison: { earlier: number; later: number } | null;
+  statistic: "count" | "rate" | "clearance_rate"; comparison: { earlier: number; later: number; change?: true } | null;
   /** Lines after the title (a span reaching this year names it as Current Trends'). */
   notes?: string[];
   /** The agencies by their FBI names ("Figures for the Denver Police Department."): named, not "reported by" (design note, section 3). */
@@ -281,7 +281,8 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
 
   // A change in a rate: the two years' published rates (a blank one computed from the count and population, as in a series),
   // the change in points per 100,000 and the percent change.
-  if (hq.comparison && hq.statistic === "rate") {
+  // Only when the change is asked in words: "2022 vs 2025" of a rate stays the two years side by side, as before.
+  if (hq.comparison?.change && hq.statistic === "rate") {
     if (several) return { kind: "historical-decline", explanation: "This isn't available: a change for more than one agency. Ask for one agency." };
     const [E, L] = [hq.comparison.earlier, hq.comparison.later];
     const ori = hq.agencies[0].ori;
