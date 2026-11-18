@@ -15,6 +15,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { fmt, monthName, periodWords } from "./deliver";
 import { stateName } from "./places";
+import { agencySubject, seriesTitle } from "./headline";
 import { CONSOLIDATED_AGENCIES } from "../agency-consolidations";
 import { firstNeeded, monthRange, rollingSums } from "./rolling";
 
@@ -142,6 +143,7 @@ const ym2 = (v: number) => `${Math.floor(v / 100)}-${String(v % 100).padStart(2,
 export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
   const where = hq.place.kind === "agency" ? hq.place.label : hq.place.kind === "state" ? stateName(hq.place.code) : "the United States";
   const what = hq.bias ? `${hq.bias.name} hate crimes` : "hate crimes";
+  const who = hq.place.kind === "agency" ? agencySubject(hq.place.label).text : hq.place.kind === "state" ? stateName(hq.place.code) : "The United States";
   const span = periodWords(hq.from, hq.to);
   const fromY = Number(hq.from.slice(0, 4)), toY = Number(hq.to.slice(0, 4));
   const columns: ResultTable["columns"] = [];
@@ -153,12 +155,12 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
     const n = Number(execute(hateSql(hq, build))[0]?.[0] ?? 0);
     columns.push({ binding: { kind: "statistic", as: "count" }, header: head });
     rows.push([n]);
-    text.push(/^\d{4}$/.test(span) ? `${head}: ${fmt(n)} in ${where} in ${span}.` : `${head}: ${fmt(n)} in ${where}, ${span}.`);
+    text.push(`${who} had ${fmt(n)} ${what[0].toLowerCase()}${what.slice(1)} in ${span}.`);
   } else if (hq.grain === "year") {
     const got = new Map(execute(hateSql(hq, build)).map((r) => [Number(r[0]), Number(r[1])]));
     columns.push({ binding: { kind: "grouping", dimension: "time.year" }, header: "Year" }, { binding: { kind: "statistic", as: "count" }, header: head });
     for (let y = fromY; y <= toY; y++) rows.push([String(y), got.get(y) ?? 0]);
-    text.push(`${head} in ${where} by year, ${span}.`);
+    text.push(seriesTitle(span, what, "Year", where));
   } else {
     const start = hq.grain === "rolling" ? firstNeeded(hq.from, hq.window!) : hq.from;
     const got = new Map(execute(hateSql(hq, build, start)).map((r) => [ym2(Number(r[0])), Number(r[1])]));
@@ -166,14 +168,14 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
     if (hq.grain === "month") {
       columns.push({ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "count" }, header: head });
       for (const c of cells) rows.push([c.ym, c.value]);
-      text.push(`${head} in ${where} by month, ${span}.`);
+      text.push(seriesTitle(span, what, "Month", where));
     } else {
       // A window is complete from the data's first month on; the first months of 1991 have none and are not shown (no blank rows, no
       // gap sentence: the start line says where the data begin). Months with no row are 0 here, as the reporting caveat says.
       const roll = rollingSums(cells, hq.window!, hq.from, hq.to).filter((r) => r.value !== null);
       columns.push({ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "count" }, header: `${head}, rolling ${hq.window} months` });
       for (const r of roll) rows.push([r.ym, r.value]);
-      text.push(`${head} in ${where}, rolling ${hq.window} months, ${span}.`);
+      text.push(seriesTitle(span, `${what}, Rolling ${hq.window}-Month Totals`, "Month", where));
     }
   }
   text.push(HATE_REPORTING_CAVEAT);

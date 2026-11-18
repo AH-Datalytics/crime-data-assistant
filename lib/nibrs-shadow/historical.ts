@@ -551,7 +551,7 @@ export function answerHistoricalStatesByYear(rq: HistoricalStatesByYearQuestion,
   const rows = got.map((r) => [String(r[0]), String(r[1]), rate ? historicalRate(num(r[4]), num(r[3]), num(r[2])).rate : num(r[3])] as [string, string, number | null]);
   if (!rows.length || rows.every((r) => r[2] === null)) return { kind: "historical-decline", explanation: `Crime Index has no ${rate ? `${m.name} rate` : `${m.name} figure`} for any state from ${from} to ${to}: not available in this data.` };
   const what = rate ? `${m.name} rates per 100,000` : m.words;
-  const text = [`States: ${what} by year, ${from} to ${to}.`,
+  const text = [`${from} to ${to} ${titleCase(rate ? `${m.name} rate` : m.words)} by State and Year`,
     "Every state with a figure in Crime Index for the year (the District of Columbia is not a state), ordered by state and year."];
   if (rq.from < first) text.push(`State figures in the data start in ${first}.`);
   if (rate) text.push("Rates are per 100,000 of each state's population as published by Crime Index.");
@@ -676,7 +676,7 @@ export function answerHistoricalRegion(hq: HistoricalRegionQuestion, build: Hist
   let rows: (string | number | null)[][];
   if (hq.byYear || hq.from !== hq.to) rows = years.map((y) => [String(y), value(y)]);
   else rows = [[value(hq.from)]];
-  const text = [`${name} (${states.length} states): ${what}${hq.byYear || hq.from !== hq.to ? " by year" : ""}, ${span}.`,
+  const text = [hq.byYear || hq.from !== hq.to ? `${span} ${titleCase(rate ? `${m.name} rate` : m.words)} by Year, ${name}` : `${name} had ${what} ${span}.`,
     `The region's states summed from Crime Index's state totals${rate ? "; the rate is per 100,000 of their summed population" : ""}.`];
   if (hq.region.states.includes("DC")) text.push("The District of Columbia isn't in the state totals, so it isn't included.");
   if (rows.some((r) => r[r.length - 1] === null)) text.push("A blank year is one in which a state of the region has no figure.");

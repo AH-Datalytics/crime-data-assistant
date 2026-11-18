@@ -42,7 +42,7 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
 
 // Jeff's form for a named bias in a state and year; the SQL is the hate crime table, the bias code 32, distinct incidents.
 const hispanic = as(ask("anti-Hispanic hate crimes in Texas in 2024"), "hate");
-assert.equal(hispanic.delivered.text[0], "Anti-Hispanic or Latino hate crimes: 857 in Texas in 2024.");
+assert.equal(hispanic.delivered.text[0], "Texas had 857 anti-Hispanic or Latino hate crimes in 2024.");
 assert.ok(hispanic.delivered.text.includes(HATE_REPORTING_CAVEAT) && hispanic.delivered.text.includes(HATE_SOURCE));
 assert.equal(hispanic.meaning.source, "hate_crime");
 const sql = sqls[sqls.length - 1];

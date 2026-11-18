@@ -401,12 +401,12 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const hist = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`); return o as Extract<ShadowOutcome, { kind: "historical" }>; };
   const officers = hist("Show me the number of police officers in Memphis in 2023");
   assert.deepEqual(officers.delivered.table.rows, [[1900]]);
-  assert.deepEqual(officers.delivered.text, ["Memphis, Tennessee: 1,900 sworn officers in 2023.", "Figures for the Memphis Police Department.", SRS_SOURCE]);
+  assert.deepEqual(officers.delivered.text, ["Memphis had 1,900 sworn officers in 2023.", "Figures for the Memphis Police Department.", SRS_SOURCE]);
   const per1000 = hist("officers per 1,000 population in Memphis in 2023");
   // P97 (Jeff 2026-11-07: "Convert to per 1,000"): the published per-100,000 rate at the asked base, labeled, said once.
   assert.deepEqual(per1000.delivered.table.rows, [[3.084]]);
   assert.deepEqual(per1000.delivered.table.columns.map((c) => c.header), ["Sworn officers per 1,000"]);
-  assert.deepEqual(per1000.delivered.text, ["Memphis, Tennessee: 3.084 sworn officers per 1,000 people in 2023.", "Figures for the Memphis Police Department.",
+  assert.deepEqual(per1000.delivered.text, ["Memphis had 3.084 sworn officers per 1,000 people in 2023.", "Figures for the Memphis Police Department.",
     "Rates per 1,000 are Crime Index's published rates per 100,000, divided by 100.", SRS_SOURCE]);
   const per10k = hist("officers per 10,000 residents in Memphis by year from 2022 to 2023");
   assert.deepEqual(per10k.delivered.table.rows, [["2022", 31.2], ["2023", 30.84]]);

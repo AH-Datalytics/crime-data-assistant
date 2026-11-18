@@ -7,6 +7,7 @@
  */
 import type { ResultTable } from "../nibrs-plan/result";
 import { fmt, fmtRate, SRS_SOURCE } from "./deliver";
+import { agencySubject, seriesTitle } from "./headline";
 import { historicalRate, type HistoricalAgency, type HistoricalAnswer, type HistoricalBuild, type HistoricalDecline } from "./historical";
 
 export type StaffKind = "officers" | "civilians" | "employees";
@@ -83,18 +84,18 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
     if (several) {
       columns = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header }];
       rows = agencies.map((a) => [a.label, value(a.ori, y)]);
-      title = `${where}: ${what} in ${y}.`;
+      title = seriesTitle(String(y), what, "Agency", where);
     } else {
       const v = value(agencies[0].ori, y);
       columns = [{ binding: { kind: "statistic", as: "x" }, header }];
       rows = [[v]];
-      title = `${where}: ${rate ? shownRate(v!) : fmt(v!)} ${what} in ${y}.`;
+      title = `${agencySubject(agencies[0].label, agencies[0].ori).text} had ${rate ? shownRate(v!) : fmt(v!)} ${what} in ${y}.`;
     }
   } else {
     columns = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
       ...agencies.map((a, i) => ({ binding: { kind: "statistic" as const, as: several ? `x.${i}` : "x" }, header: several ? `${a.label}: ${header.toLowerCase()}` : header }))];
     rows = years.map((y) => [String(y), ...agencies.map((a) => value(a.ori, y))]);
-    title = `${where}: ${what} by year, ${yearsWords(years[0], years[years.length - 1])}.`;
+    title = seriesTitle(years[0] === years[years.length - 1] ? String(years[0]) : `${years[0]} to ${years[years.length - 1]}`, what, "Year", where);
   }
   return {
     kind: "historical", period,

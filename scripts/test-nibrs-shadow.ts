@@ -400,7 +400,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   const long = tab("Murder rates 1960 to 2024, broken down by all 50 states");
   assert.deepEqual(long.table.columns.map((c) => c.header), ["State", "Year", "Murders per 100,000"]);
   assert.equal(long.table.rows.length, 50 * 65);
-  assert.equal(long.text[0], "States: murder rates per 100,000 by year, 1960 to 2024.");
+  assert.equal(long.text[0], "1960 to 2024 Murder Rate by State and Year");
   assert.deepEqual(chartOptionsOf(long.table as never).allowed, [], "a table only");
   assert.equal(tab("trends in murder by state").table.rows.length, 50 * 66, "a trend with no years is every year, 1960 to 2025");
   assert.equal(tab("dispaly murder totals by year for each state").table.rows.length, 50 * 66);
