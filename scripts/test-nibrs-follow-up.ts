@@ -34,6 +34,15 @@ assert.equal(q(rw("how many murders in baltimore county this year", "countywide"
 assert.match(q(rw("compare murders between the City of St. Louis, and St. Louis County, MO from 1990 to the most recent data", "countywide total")), /, countywide$/);
 assert.match(q(rw("what is the trend of aggravated assaults with a firearm in DC and Prince George's County over the past 10 years", "countywide")), /, countywide$/);
 asked(rw("violent crime in Memphis in 2024", "countywide"));
+// After an answer about the data itself (definitions, sources, agencies reporting, states with no data) there is no figure to change: the follow-up is a
+// question of its own, never rebuilt into another question about the data (QL-nibrs-534978cb8e: "Carjackings per year" after "how is domestic violence defined?").
+for (const prevQ of ["how is domestic violence defined?", "where is this data taken from", "How many agencies reported NIBRS data in 2023?", "what states are not represented?"]) {
+  const r = rw(prevQ, "Carjackings per year");
+  assert.equal(r.kind, "new", prevQ);
+  assert.equal(q(r), "Carjackings per year", prevQ);
+}
+assert.equal(rw("murders in Texas in 2024", "make it a bar chart").kind, "presentation", "presentation follow-ups are unchanged");
+assert.notEqual(rw("murders in Texas in 2024", "Carjackings per year").kind, "new", "a data question is still changed as before");
 asked(rw("violent crime in Alameda County countywide since 2020", "countywide total"));
 assert.equal(q(rw("violent crime rate in Minneapolis, MN from 2024 to 2025", "calculate for Chicago, IL")), "violent crime rate in Chicago, IL from 2024 to 2025");
 assert.equal(q(rw("What was the violent crime rate in Minneapolis, MN in 2024?", "show the same chart and table for Chicago")), "What was the violent crime rate in Chicago in 2024?");
