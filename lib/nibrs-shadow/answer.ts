@@ -34,7 +34,7 @@ import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
-import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
+import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
@@ -995,6 +995,15 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // P38: a follow-up in gang words ("only gang-related", "what about gangs?") is declined as a first question would be,
   // with no follow-up reading offered (Codex review 19.2, 19.3).
   if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
+  // "Is it getting better?" (Jeff 2026-11-18): a verdict is not given; the decline says so and offers a comparison built from the previous
+  // question, the latest complete year against the year before.
+  if (JUDGEMENT.test(followUp)) {
+    const lastY = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
+    const offered = judgementOffer(previous, lastY, deps.historical?.firstYear ?? 2017);
+    const out = decline("unsupported_capability", JUDGEMENT_SENTENCE);
+    const runs = !!offered && !deps.checkingOffer && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(shadowAnswer(offered, { ...deps, checkingOffer: true }).kind);
+    return { ...(runs ? { ...out, alternative: { label: `Ask instead: "${offered}"`, question: offered! } } : out), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
+  }
   // A question about the data itself ("Sources?", "what states are not represented?") is answered on its own, whatever came before.
   const about = coverageOf(followUp, deps);
   if (about) return { ...about, rewrite: followUp, rewriteKind: "new" };

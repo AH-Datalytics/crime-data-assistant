@@ -86813,24 +86813,16 @@
    "question": "Is it getting better?",
    "previous": "monthly murders in Houston since 2021",
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "the app reports figures and does not judge better or worse, and offers a comparison"
    },
    "label": {
     "status": "reviewed",
     "rule": "F3",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "the app reports figures and does not judge better or worse (P138, Jeff 2026-11-18)"
    }
   },
   {
@@ -106693,20 +106685,16 @@
    "question": "Is it getting worse?",
    "previous": "fatal shootings in Chicago by year since 2020",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "the app reports figures and does not judge better or worse, and offers a comparison"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Inherited agency firearm homicide trends require NIBRS."
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "the app reports figures and does not judge better or worse (P138, Jeff 2026-11-18)"
    }
   },
   {
