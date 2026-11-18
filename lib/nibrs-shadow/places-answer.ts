@@ -160,7 +160,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   if (monthRate) {
     const a = agencies[0], cells = byOri.get(a.ori) ?? [];
     const rows = cells.map((x) => ({ key: x.ym, ...rate({ value: x.value, status: x.status } as Cell, pops.get(`${a.ori}|${Number(x.ym.slice(0, 4))}`)) }));
-    lines.push(`${a.label}: ${what} per 100,000 people for each month, ${when}.`, "Each month's own count, not scaled to a full year.", reporter);
+    lines.push(seriesTitle(when, `${what} per 100,000 people`, "Month", a.label),"Each month's own count, not scaled to a full year.", reporter);
     lines.push(`Each month's rate uses the FBI's population for its year: ${years.map((y) => `${y} ${pops.get(`${a.ori}|${y}`) ? fmt(pops.get(`${a.ori}|${y}`)!) : "(none)"}`).join("; ")}.`);
     const noRate = rows.filter((r) => r.value === null).map((r) => r.key);
     if (noRate.length) lines.push(`No rate for ${runs(noRate)}: no data is known or the FBI gives no population, shown blank.`);
@@ -172,7 +172,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   if (monthMode) {
     const listed = agencies.map((a) => a.label);
     const names = listed.length > 2 ? `${listed.slice(0, -1).join("; ")} and ${listed[listed.length - 1]}` : listed.join(" and ");
-    lines.push(`${names}: ${what} by month, ${when}.`, reporter);
+    lines.push(seriesTitle(when, what, "Month", names), reporter);
     for (const a of agencies) { const miss = rollup(byOri.get(a.ori) ?? []).missing; if (miss.length) lines.push(`No data is known for ${runs(miss)} for ${a.label}, shown blank.`); }
     const delivered = deliverMonthly(plan, { dimension: geoG!.dimension, header: "Agency" }, { as: st.as, header: Header },
       agencies.map((a) => ({ key: a.name, cells: byOri.get(a.ori) ?? [] })), lines, statements, deps.release.id, readings);
@@ -186,7 +186,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
       const v = valueOf(cells.filter((x) => x.ym.startsWith(`${y}-`)), a.ori, y);
       return { key: String(y), value: v.value, status: v.status, missing: v.missing };
     });
-    lines.push(`${a.label}: ${isRate ? `${what} per 100,000` : what} by year, ${when}.`, reporter);
+    lines.push(seriesTitle(when, isRate ? `${what} per 100,000` : what, "Year", a.label), reporter);
     if (isRate) lines.push(`Each year's rate uses the FBI's population for that year: ${years.map((y) => `${y} ${pops.get(`${a.ori}|${y}`) ? fmt(pops.get(`${a.ori}|${y}`)!) : "(none)"}`).join("; ")}.`);
     const missing = rows.flatMap((r) => r.missing);
     if (missing.length) lines.push(`No data is known for ${runs(missing)}: that year's ${isRate ? "rate" : "total"} is not given.`);
@@ -207,9 +207,9 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const together = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
     // A blank says why: months not known (UNKNOWN), or no FBI population for an agency (UNAVAILABLE) (Codex 02.8).
     const noPop = agencies.filter((a) => !pops.get(`${a.ori}|${year}`)).map((a) => `the ${a.name}`);
-    lines.push(v.value !== null ? `${together}, combined: ${isRate ? `${fmtRate(v.value)} ${what} per 100,000` : `${fmt(v.value)} ${what}`} in ${when}.`
-      : v.status === "UNAVAILABLE" ? `${together}, combined: no rate is given for ${when}, because the FBI gives no ${year} population for ${noPop.join(" or ")}.`
-      : `${together}, combined: no ${isRate ? "rate" : "total"} is given for ${when}, because not every month is known for every agency counted.`, reporter);
+    lines.push(v.value !== null ? `${together} had a combined ${isRate ? `${rateNoun(what)} rate of ${fmtRate(v.value)} per 100,000` : `${fmt(v.value)} ${what}`} in ${when}.`
+      : v.status === "UNAVAILABLE" ? `No combined rate is given for ${together} in ${when}, because the FBI gives no ${year} population for ${noPop.join(" or ")}.`
+      : `No combined ${isRate ? "rate" : "total"} is given for ${together} in ${when}, because not every month is known for every agency counted.`, reporter);
     const all = agencies.length === 2 ? "both agencies'" : `all ${agencies.length} agencies'`;
     if (isRate && v.value !== null) lines.push(`The rate is ${all} offenses over ${all} populations (the FBI's ${year} figures: ${agencies.map((a) => `${a.name} ${fmt(pops.get(`${a.ori}|${year}`)!)}`).join("; ")}).`);
     for (const a of agencies) { const miss = rollup(byOri.get(a.ori) ?? []).missing; if (miss.length) lines.push(`No data is known for ${runs(miss)} for ${a.label}.`); }

@@ -173,7 +173,7 @@ assert.ok(!named.delivered.text.some((t) => /reported by/i.test(t)));
   assert.equal(year.kind, "historical", JSON.stringify(year));
   if (year.kind === "historical") {
     assert.deepEqual(year.delivered.table.rows, [["Memphis, Tennessee", 57], ["Tennessee", 10]]);
-    assert.deepEqual(year.delivered.text, ["Memphis, Tennessee and Tennessee: murders per 100,000 in 2023.", "Figures for the Memphis Police Department.",
+    assert.deepEqual(year.delivered.text, ["2023 Murders per 100,000 by Place, Memphis, Tennessee and Tennessee", "Figures for the Memphis Police Department.",
       "Each rate is per 100,000 of that place's own population.", SRS_SOURCE]);
     assert.deepEqual(year.meaning.places, [{ kind: "agency", name: "Memphis", state: "TN" }, { kind: "state", name: "Tennessee", state: "TN" }]);
     assert.deepEqual([year.question.shown, year.question.beside], [["Memphis, Tennessee", "Tennessee"], [{ kind: "state", code: "TN" }]]);
@@ -184,7 +184,7 @@ assert.ok(!named.delivered.text.some((t) => /reported by/i.test(t)));
   if (years.kind === "historical") {
     assert.deepEqual(years.delivered.table.rows, [["2022", 21923, 252], ["2023", 19935, 351]]);
     assert.deepEqual(years.delivered.table.columns.map((c) => c.header), ["Year", "United States: murders", "Memphis, Tennessee: murders"]);
-    assert.equal(years.delivered.text[0], "The United States and Memphis, Tennessee: murders by year, 2022 to 2023.");
+    assert.equal(years.delivered.text[0], "2022 to 2023 Murders by Year, United States and Memphis, Tennessee");
   }
   // A year with no agency figure that the state has starts the series, the agency blank (not "starts in 2022").
   const blank = beside({ from: 2021, to: 2022, byYear: true }, [{ agency: memphis }, tn]);

@@ -7,7 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { askInsteadChecks, heavyNationalSentence, isDeferred, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
@@ -25,6 +25,8 @@ import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow"
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
+import { titleCase } from "../lib/nibrs-shadow/titles";
+assert.equal(titleCase("drug/narcotic violation offenses"), "Drug/Narcotic Violation Offenses");
 
 const places = loadPlaceIndex();
 const sqls: string[] = [];
@@ -199,6 +201,13 @@ assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: st
   assert.notEqual(ask("Shoplifting in Baton Rouge, LA in 2024").kind, "clarify");
   assert.notEqual((ask("Shoplifting in La Crosse in 2024") as { about?: string }).about, "which LA");
   assert.notEqual((ask("Shoplifting in LA CROSSE in 2024") as { about?: string }).about, "which LA", "Codex review 01.6: a name in capitals");
+  // P141: listed with other cities, LA is Los Angeles (never asked, never the state); a state qualifier or a list of states keeps Louisiana.
+  assert.equal(listedNicknames("Chicago violent crime vs. LA, NYC, Houston over the past 35 years"), "Chicago violent crime vs. Los Angeles, NYC, Houston over the past 35 years");
+  assert.equal(listedNicknames("Chicago, Houston, LA murders"), "Chicago, Houston, Los Angeles murders");
+  assert.equal(listedNicknames("Houston, TX and SF murders"), "Houston, TX and San Francisco murders");
+  for (const q of ["Baton Rouge, LA murders in 2024", "Baton Rouge, LA and Houston, TX murders", "murders in CA, LA, TX", "Shreveport and Baton Rouge, LA murders"])
+    assert.equal(listedNicknames(q), q);
+  assert.notEqual(ask("Chicago violent crime vs. LA, NYC, Houston in 2024").kind === "clarify" && (ask("Chicago violent crime vs. LA, NYC, Houston in 2024") as { about?: string }).about, "which LA");
 }
 // A misspelled large place is read as it: one large place within two edits, same first letter (coordinator 2026-11-03).
 assert.equal(nearestPlaceName(places, "batlimore"), "Baltimore");
@@ -1335,6 +1344,8 @@ const goUp = as(ask("Did shoplifting go up in Detroit in 2024?"), "answer");
 assert.deepEqual(goUp.delivered.table.rows, [[84, null, null, null]]);
 assert.ok(goUp.delivered.text.includes("No data is known for March 2024, so the 2024 total is not established and no change is given."));
 assert.ok(!goUp.delivered.text.some((t) => /a change of/.test(t)));
+// P140: what is known and what is not, in one sentence (the missing month is the cause).
+assert.equal(goUp.delivered.text[0], "Detroit had 84 shoplifting offenses in 2023, but the data for 2024 is incomplete, so no change is given.");
 // This year against last year: the same months, through the latest month (P52, D06).
 const ytdCmp = as(ask("Is shoplifting in Detroit up this year compared with last year?"), "answer");
 assert.deepEqual(ytdCmp.period, { from: "2025-01", to: "2026-09" });
@@ -1354,6 +1365,7 @@ for (const q of ["YTD 2026 compared to 2025 shoplifting in Detroit", "Shopliftin
   assert.deepEqual(o.period, { from: "2024-01", to: "2026-09" });
   assert.deepEqual(o.delivered.table.rows, [[null, 63, null, null]]);
   assert.ok(o.delivered.text.includes("Compares the same months of each year: January through September."));
+  assert.equal(o.delivered.text[0], "Detroit had 63 shoplifting offenses in January through September 2026, but the data for January through September 2024 is incomplete, so no change is given.");
   assert.ok(o.delivered.text.includes("No data is known for March 2024, so the January through September 2024 total is not established and no change is given."));
 }
 // Not changed: no to-date word keeps today's reading; one year to date alone is not a comparison.
@@ -1457,7 +1469,7 @@ assert.equal(tulsaOkc.delivered.text[0], "2024 Shoplifting Offenses by Agency, T
 assert.ok(sqls.some((s) => s.includes("unnest(['OK0550600', 'OK0720500']) AS ori")), "one grid query for both agencies");
 const combinedTotal = ok4("Shoplifting in Tulsa and Oklahoma City combined in 2024");
 assert.deepEqual(combinedTotal.delivered.table.rows, [[120]]);
-assert.equal(combinedTotal.delivered.text[0], "Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 120 shoplifting offenses in 2024.");
+assert.equal(combinedTotal.delivered.text[0], "Tulsa, Oklahoma and Oklahoma City, Oklahoma had a combined 120 shoplifting offenses in 2024.");
 assert.deepEqual(ok4("Shoplifting in Tulsa Police Department, Tulsa, and Oklahoma City combined in 2024").delivered.table.rows, [[120]], "an agency named twice is counted once");
 // A combined total needs every month of every agency (D6): Greensboro's unknown months blank the total, never a part-sum.
 const gr = ok4("Shoplifting in Greensboro and Raleigh combined in 2025");

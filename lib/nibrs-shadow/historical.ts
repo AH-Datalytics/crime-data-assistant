@@ -418,7 +418,8 @@ export function answerBeside(hq: HistoricalQuestion, places: BesidePlace[], buil
     : [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
       ...places.map((_, i) => ({ binding: { kind: "statistic" as const, as: `x.${i}` }, header: `${names[i]}: ${header.toLowerCase()}` }))];
   const rows = oneYear ? places.map((p, i) => [names[i], value(p, years[0])]) : years.map((y) => [y, ...places.map((p) => value(p, y))]);
-  const title = oneYear ? `${where}: ${words} in ${years[0]}.` : `${where}: ${words} by year, ${periodWords(period.from, period.to)}.`;
+  const titleWhere = where.replace(/^The United States/, "United States");
+  const title = oneYear ? seriesTitle(String(years[0]), words, "Place", titleWhere) : seriesTitle(periodWords(period.from, period.to), words, "Year", titleWhere);
   const placeMeaning = (p: BesidePlace): Meaning["places"][number] => ("agency" in p ? placeOf(p.agency)
     : p.geo.kind === "national" ? { kind: "national", name: "United States" } : { kind: "state", name: stateName(p.geo.code), state: p.geo.code });
   return {
