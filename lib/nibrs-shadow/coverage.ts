@@ -194,7 +194,7 @@ export function answerCoverage(cq: CoverageQuestion, d: CoverageDeps): CoverageA
         ["FBI Supplementary Homicide Reports", "Homicide Reports"], ["FBI Hate Crime Statistics", "Hate crimes"]] }, text }, read };
   }
 
-  const text = ["Where Terms Are Defined", `The FBI Crime Data Explorer defines these terms: ${DEFINITIONS_LINK}`, "Source: FBI Crime Data Explorer."];
+  const text = [`The FBI Crime Data Explorer defines these terms: ${DEFINITIONS_LINK}`, "Source: FBI Crime Data Explorer."];
   return { kind: "coverage", shape: "definitions", period: span0, meaning: meaning("definitions", null, []),
     delivered: { table: { columns: [txt("coverage.link", "Where the FBI defines these terms")], rows: [[DEFINITIONS_LINK]] }, text }, read };
 }

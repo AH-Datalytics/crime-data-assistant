@@ -61,6 +61,8 @@ import { answerCurrentClearance } from "./clearance-current";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
+import { seriesTitle } from "./headline";
+import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
 
 export type ShadowDeps = {
@@ -1212,7 +1214,11 @@ function shrSeveral(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const columns = [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Agency" }, ...first.delivered.table.columns];
   const rows = answers.flatMap((a) => a.delivered.table.rows.map((r) => [shortAgency(agencyOf(a).label), ...r]));
   // The lines: the first title with every agency named, then each answer's other lines once (its own agency lines kept).
-  const title = first.delivered.text[0].replace(/^[^:]*:/, `${listed}:`);
+  // The first title with every agency named: a title ends with its place; a sentence ("Chicago had 12 murders in 2024.") becomes the title of the agencies' table.
+  const t0 = first.delivered.text[0], label0 = agencyOf(first).label;
+  const sentence = /^.+? had ([\d.,]+) (.+) in (.+)\.$/.exec(t0);
+  const title = t0.endsWith(`, ${label0}`) ? `${t0.slice(0, t0.length - label0.length)}${listed}`
+    : sentence ? seriesTitle(sentence[3], sentence[2].replace(/ per 100,000 people$/, ""), "Agency", listed) : t0;
   const rest: string[] = [];
   for (const a of answers) for (const t of a.delivered.text.slice(1)) if (!rest.includes(t) && !/^Source: /.test(t)) rest.push(t);
   const text = [title, ...rest, first.delivered.text[first.delivered.text.length - 1]];
@@ -1354,8 +1360,13 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   const y0 = results[0].y;
   const lastCol = firstOut.delivered.table.columns[firstOut.delivered.table.columns.length - 1];
   const blank = results.filter((r) => !(typeof value(r.o) === "number")).map((r) => r.y);
-  const prefix = /^([^:]{2,60}): /.exec(firstOut.delivered.text[0])?.[1];
-  const title = `${prefix ? `${prefix}: ` : ""}${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}, ${y0 === years[1] ? y0 : `${y0} to ${years[1]}`}.`;
+  // The title: the years, what is counted and the months, by year, and the place (an agency by its label, a state by its name).
+  const firstPlace = (firstOut as { plan?: { geography: { places: { kind: string; label?: string; code?: string }[] } }; question?: { place?: { kind: string; label?: string; code?: string } } });
+  const pl0 = firstPlace.plan?.geography.places[0] ?? firstPlace.question?.place;
+  const placeText = pl0 ? (pl0.kind === "agency" ? pl0.label : pl0.kind === "state" ? stateName(pl0.code ?? "") : "United States") : null;
+  const sameWhat = `${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}`;
+  const sameYears = y0 === years[1] ? String(y0) : `${y0} to ${years[1]}`;
+  const title = placeText ? seriesTitle(sameYears, sameWhat, "Year", placeText) : `${sameYears} ${titleCase(sameWhat)} by Year`;
   // Lines every year says alike (the source, who reported) stay; a line that differs by year is that year's own.
   const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
   // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
@@ -2917,8 +2928,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const reported = (d: Delivered): Delivered => {
     const p = checked.geography.places[0];
     if (p.kind !== "agency") return d;
-    // After the title: the first line naming the place (a definition may come before it).
-    const at = d.text.findIndex((t) => t.startsWith(p.label)) + 1 || 1;
+    // After the headline (a definition may come before it): the sentence or title that names the place.
+    const hl = d.headline !== undefined ? d.text.indexOf(d.headline) : -1;
+    const at = (hl >= 0 ? hl : d.text.findIndex((t) => t.includes(p.label) || t.startsWith(p.label.split(",")[0]))) + 1 || 1;
     return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]), ...(sheriffNote(deps, [p.ori], ledger0.question) ? [sheriffNote(deps, [p.ori], ledger0.question)] : []), ...d.text.slice(at)] };
   };
   // P71 (Jeff 2026-10-31: "Add up months"): each quarter the sum of its three months; a quarter in which the agency did

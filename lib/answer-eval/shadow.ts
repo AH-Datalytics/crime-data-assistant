@@ -518,14 +518,18 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   const E = periodWords(t.earlier.from, t.earlier.to), L = periodWords(t.later.from, t.later.to);
   const f = (n: number) => n.toLocaleString("en-US");
   const signed = (n: number) => (n > 0 ? `+${f(n)}` : n < 0 ? `-${f(-n)}` : "0");
-  const changeLine = cols.change === null ? null : `${f(cols.earlier!)} in ${E} and ${f(cols.later!)} in ${L}: a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
-  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
+  // The change is the first line, a sentence ("Detroit had 84 shoplifting offenses in 2022 and 84 in 2023, a change of 0 (0%).") whose numbers are the table's.
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const changeTail = cols.change === null ? null : `a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
+  const changeRe = changeTail === null ? null : new RegExp(`^.+ had ${esc(f(cols.earlier!))} .+ in ${esc(E)} and ${esc(f(cols.later!))} in ${esc(L)}, ${esc(changeTail)}$`);
+  const changeLine = changeRe;
+  const allowed = (line: string) => (changeRe !== null && changeRe.test(line)) || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
     || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
-    || line.endsWith(`, ${E} against ${L}.`)
+    || (cols.change === null && new RegExp(`^No change in .+ is given between ${esc(E)} and ${esc(L)}\\.$`).test(line))
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
       || new RegExp(`^No data is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
   const text = o.delivered.text;
-  return text.every(allowed) && (changeLine === null || text.includes(changeLine)) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
+  return text.every(allowed) && (changeLine === null || text.some((l) => changeLine.test(l))) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
 }
 
 /**
@@ -594,7 +598,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     // A state or national sum by category (coordinator 2026-11-04): the agencies it sums over, or the fixed set it counts.
     else if (s === "names how many agencies it sums over") ok = /Summed over the [\d,]+ agencies that reported\./.test(all) && !!o.stateSum;
-    else if (s === "names the Consistent Reporting Agencies it counts") ok = /Counting only the [\d,]+ Consistent Reporting Agencies that reported every month/.test(all) && !!o.stateSum;
+    else if (s === "names the Consistent Reporting Agencies it counts") ok = /(?:Counting|Counts) only the [\d,]+ Consistent Reporting Agencies that reported every month/i.test(all) && !!o.stateSum;
     else if (s === "lists the unknown category after the known ones in each period") {
       // P86 (coordinator 2026-11-02): within each period, the not-known categories after the known ones, Unknown once.
       const cols = o.delivered.table.columns;
@@ -718,7 +722,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const b = (o.buttons ?? []).find((x) => x.label === "Consistent Reporting Agencies")?.continuation;
       const same = (p: NibrsPlan) => JSON.stringify([p.geography, p.measures, p.filters, p.period, p.groupings, p.statistics]) === JSON.stringify([o.plan.geography, o.plan.measures, o.plan.filters, o.plan.period, o.plan.groupings, o.plan.statistics]);
       ok = !!b && b.kind === "answer" && b.plan.coverage.cohort === "same_agencies" && same(b.plan) && !!b.stateSum && b.delivered.table.rows.length === o.delivered.table.rows.length
-        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies that reported every month (?:from |in )`).test(b.delivered.text[0] ?? ""));
+        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies that reported every month (?:from |in )`).test(b.delivered.text.join("\n")));
     } else if (/^states how many agencies reported every month and what share of residents they cover/.test(s))
       ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: o.stateSum!.years.length > 1 ? o.stateSum!.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 })), "Consistent Reporting Agencies");
     else if (/^gives each year's agencies counted and share of residents covered/.test(s))
@@ -1239,7 +1243,8 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     const st = /^names the state \((.+)\)$/.exec(s);
     const ag = /^names the agency \((.+)\)$/.exec(s);
     if (src) ok = text[text.length - 1] === src[1] && text.filter((t) => /^Source: /.test(t)).length === 1;
-    else if (st) ok = (text[0] ?? "").startsWith(`${st[1]}:`);
+    // The first line is a sentence ("Texas had 19,935 robberies in 2024.") or a title ("2020 to 2025 Murders by Year, South Carolina"): it names the state.
+    else if (st) ok = new RegExp(`(?:^|, )${st[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:'s|\\s|$)`).test(text[0] ?? "");
     // Historical's agencies, named by their FBI names ("Figures for the Denver Police Department.").
     else if (ag) ok = all.includes(ag[1]);
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
@@ -1250,10 +1255,12 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     else if (/^gives both counts, the change and the percent change, with no adjectives/.test(s)) {
       const [ev, lv, ch, pc] = rows[0] as (number | null)[];
       const f = (n: number) => n.toLocaleString("en-US");
-      const line = `${f(ev!)} in ${o.period.from.slice(0, 4)} and ${f(lv!)} in ${o.period.to.slice(0, 4)}: a change of ${ch! > 0 ? "+" : ch! < 0 ? "-" : ""}${ch === 0 ? "0" : f(Math.abs(ch!))}${pc !== null ? ` (${pc > 0 ? "+" : ""}${pc}%)` : ""}.`;
-      ok = [ev, lv, ch].every((x) => typeof x === "number") && text.includes(line) && !ADJECTIVES.test(all);
+      // The first line is the sentence ("Chicago had 461 murders in 2024 and 346 in 2025, a change of -115 (-24.9%).").
+      const change =`a change of ${ch! > 0 ? "+" : ch! < 0 ? "-" : ""}${ch === 0 ? "0" : f(Math.abs(ch!))}${pc !== null ? ` (${pc > 0 ? "+" : ""}${pc}%)` : ""}.`;
+      const line = new RegExp(` had ${f(ev!).replace(/[.,]/g, "\\$&")} .+ in ${o.period.from.slice(0, 4)} and ${f(lv!).replace(/[.,]/g, "\\$&")} in ${o.period.to.slice(0, 4)}, ${change.replace(/[.()+*?]/g, "\\$&")}$`);
+      ok = [ev, lv, ch].every((x) => typeof x === "number") && line.test(text[0] ?? "") && !ADJECTIVES.test(all);
     } else if (/^names the comparison year \((\d{4})\)$/.test(s)) ok = new RegExp(`\\b${/\((\d{4})\)/.exec(s)![1]}\\b`).test(text[0] ?? "");
-    else if (/^gives the national (\w+) clearance rate$/.test(s)) ok = /_cleared_rate$/.test(o.read.column) && /% of .+ were cleared in \d{4}\.$/.test(text[0] ?? "");
+    else if (/^gives the national (\w+) clearance rate$/.test(s)) ok = /_cleared_rate$/.test(o.read.column) && /^The United States cleared [\d.]+% of its .+ in \d{4}\.$/.test(text[0] ?? "");
     else if (/^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4}) are outside it/.test(s)) {
       const [, a, b, c, d] = /^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4})/.exec(s)!;
       ok = text.some((t) => t.includes(`cover ${a} through ${b}`) && t.includes(`${c} through ${d} are outside`));

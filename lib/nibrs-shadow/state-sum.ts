@@ -21,6 +21,7 @@ import { rate } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliver as deliverRows, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
+import { nationSubject, rateNoun, rateSentence, seriesTitle } from "./headline";
 import { srsPopulation } from "./srs";
 import { headerStates } from "../nibrs-plan/state-codes";
 import type { ShadowDeps, ShadowOption, ShadowOutcome } from "./answer";
@@ -198,11 +199,12 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       // No rate over an incomplete denominator (P62, review 2.5).
       const v = isRate ? (noPop ? null : rate({ value: n, status: "VALUE" }, P).value) : n;
       const counted = every ? `the ${CRA}` : "the agencies counted";
+      const subject = Where === "United States" ? "The United States" : Where;
       lines.push(isRate && v === null
-        ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
+        ? `No rate is given for ${Where} in ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
         : every
-        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
-        : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
+        ? `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
+        : `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, summed over the agencies that reported.`);
       lines.push(note(every));
       if (isRate && v !== null) lines.push(`The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
@@ -211,9 +213,10 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         coverage: [covered(every ? y.every.share : y.share, noPop)],
         population: [noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" }] };
     }
+    lines.push(seriesTitle(when, what, "Year", Where));
     lines.push(every
-      ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
-      : `${Where}: ${what} by year, ${when}, summed over the agencies that reported each year.`);
+      ? `Counts only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
+      : "Summed over the agencies that reported each year.");
     lines.push(note(every));
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),

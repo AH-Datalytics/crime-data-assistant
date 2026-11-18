@@ -29,6 +29,7 @@ import { citySql, cityNameSql, type HistoricalBuild } from "./historical";
 import { carriesTo } from "./population-carry";
 import { rankAgencies } from "../nibrs-plan/transforms";
 import { titleCase } from "./titles";
+import { agencySubject, seriesTitle } from "./headline";
 import { firstNeeded, rollingSums, unknownRuns } from "./rolling";
 
 export const SHR_FIRST_YEAR = 1985;
@@ -379,7 +380,12 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   }
   const span = periodWords(sq.from, sq.to);
   const what = shrWhat(sq);
-  const text = [`${where}: ${what}${sq.rate ? " per 100,000 people" : ""}${sq.breakdown ? ` by ${DIM_WORDS[sq.breakdown.dim]}` : ""}${sq.grain === "year" ? " by year" : sq.grain === "month" ? " by month" : ""}, ${span}.`,
+  // One figure (no breakdown, no year or month): a sentence. Anything with a table or chart: a title that reads the question back.
+  const lone = !sq.breakdown && sq.grain !== "year" && sq.grain !== "month" && rows.length === 1 && typeof rows[0][rows[0].length - 1] === "number" ? (rows[0][rows[0].length - 1] as number) : null;
+  const subject = sq.place.kind === "agency" ? agencySubject(sq.place.label, sq.place.ori).text : where;
+  const groupBy = [sq.grain === "year" ? "year" : sq.grain === "month" ? "month" : null, sq.breakdown ? DIM_WORDS[sq.breakdown.dim] : null].filter(Boolean).join(" and ");
+  const text = [lone !== null ? (sq.rate ? `${subject} had ${lone} ${what} per 100,000 people in ${span}.` : `${subject} had ${fmt(lone)} ${what} in ${span}.`)
+      : seriesTitle(span, `${what}${sq.rate ? " per 100,000 people" : ""}`, groupBy || "Period", where),
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
     "Counts are the homicides agencies reported to the FBI, each victim counted."];
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
@@ -615,7 +621,7 @@ function answerShrRolling(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   }
   const rows = rollingSums(cells, n, sq.from, sq.to);
   const what = shrWhat(sq);
-  const text = [`${where}: rolling ${n}-month ${what}, ${periodWords(sq.from, sq.to)}.`,
+  const text = [seriesTitle(periodWords(sq.from, sq.to), `${what}, Rolling ${n}-Month Totals`, "Month", where),
     `Each month shows the total of that month and the ${n - 1} months before it.`,
     "Counts are the homicides agencies reported to the FBI, each victim counted."];
   const blank = unknownRuns(rows);

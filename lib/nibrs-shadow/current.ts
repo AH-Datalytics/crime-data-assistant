@@ -24,6 +24,13 @@ import { stateName } from "./places";
 import { fmt } from "./deliver";
 import { aboutPeople } from "./presentation";
 import { periodTitle, titleCase } from "./titles";
+import { agencySubject, changeSentence, countSentence, nationSubject, rateSentence, seriesTitle, type Subject } from "./headline";
+
+/** A place as the subject of a sentence: an agency short ("Detroit"), the nation "The United States", a state or region by its label. */
+const subjectOf = (p: CurrentPlace): Subject => (p.kind === "agency" ? agencySubject(p.label, p.ori) : p.states === null ? nationSubject : { text: p.label });
+/** The months of a series in a title: "2025" for whole January-to-December, else "January 2025 to September 2026". */
+const spanTitle = (a: string, b: string) => (a.endsWith("-01") && b.endsWith("-12") && a.slice(0, 4) === b.slice(0, 4) ? a.slice(0, 4) : a === b ? monthWordsOf(a) : `${monthWordsOf(a)} to ${monthWordsOf(b)}`);
+const monthWordsOf = (m: string) => `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
 
 /** Where the Crime Index build's Current Trends tables are, and the months they hold. */
 export type CurrentBuild = { root: string; release: string; firstMonth: string; lastMonth: string; finalFirstMonth: string };
@@ -219,7 +226,7 @@ export function answerCurrentChange(cq: CurrentQuestion, earlier: [Month, Month]
   return { ...lr, period: { from: earlier[0], to: later[1] }, meaning: { ...lr.meaning, period: { from: earlier[0], to: later[1] }, statistic: "change" },
     delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` },
       header: k === "earlier" ? ew : k === "later" ? lw : k === "change" ? "Change" : "Percent change" })), rows: [[e.value, l.value, ch, pct]] },
-      text: [`${cq.place.label}: ${words}, ${ew} against ${lw}.`, `${fmt(e.value)} and ${fmt(l.value)}: a change of ${signed(ch)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+      text: [changeSentence(subjectOf(cq.place), words, fmt(e.value), fmt(l.value), ew, lw, signed(ch), pct),
         ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), ...lr.delivered.text.slice(1)] } };
 }
 
@@ -293,7 +300,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
       const avg = Math.round((10 * c.value) / wn) / 10;
       return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
         delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)}, average per month over ${wn} months` }], rows: [[avg]] },
-          text: [`${where}: ${avg.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${words} a month on average ${what}.`, `That is ${fmt(c.value)} in all.`, ...head, ...cohortLine, ...leftOutLine, source] } };
+          text: [`${subjectOf(cq.place).text} averaged ${avg.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${words} a month ${what}.`, `That is ${fmt(c.value)} in all.`, ...head, ...cohortLine, ...leftOutLine, source] } };
     }
     if (rate) {
       // The population: the agency's in the span's last month; a group's, its counted agencies' summed population then.
@@ -305,11 +312,11 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
       const rateLine = cq.place.kind === "group" ? [`The rate counts the ${fmt(base.agencies)} Consistent Reporting ${base.agencies === 1 ? "Agency" : "Agencies"} with a ${one} figure for every month, ${fmt(base.count)} ${words} among roughly ${aboutPeople(base.population!)} people.`] : [];
       return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
         delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)} per 100,000` }], rows: [[r]] },
-          text: [`${where}: ${r.toFixed(1)} ${words} per 100,000 people ${what}.`, "Not scaled to a full year.", ...head, ...(cq.place.kind === "agency" ? [`That is ${fmt(base.count)} ${words}.`] : rateLine), ...cohortLine, source] } };
+          text: [rateSentence(subjectOf(cq.place), one, what.replace(/^(?:in|from) /, ""), r.toFixed(1), /^from /.test(what) ? "from" : "in"), "Not scaled to a full year.", ...head, ...(cq.place.kind === "agency" ? [`That is ${fmt(base.count)} ${words}.`] : rateLine), ...cohortLine, source] } };
     }
     return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },
-        text: [`${where}: ${fmt(c.value)} ${words} ${what}.`, ...head, ...cohortLine, ...leftOutLine, source] } };
+        text: [countSentence(subjectOf(cq.place), fmt(c.value), words, what.replace(/^(?:in|from) /, ""), /^from /.test(what) ? "from" : "in"), ...head, ...cohortLine, ...leftOutLine, source] } };
   }
   // P96: month by month, each month's count per 100,000 of that month's population, not annualized. A group's month has a
   // rate only when every agency counted has a figure (its population covers them all).
@@ -326,15 +333,15 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
       delivered: { table: { columns: rateCols, rows: covered.map((m, i) => [m, rates[i]]) },
         text: [covered.length === 1 && rates[0] !== null
-          ? `${where}: ${rates[0]!.toFixed(1)} ${words} per 100,000 people in ${monthWords(covered[0])}.`
-          : `${where}: ${words} per 100,000 people for each month, ${spanWords(period.from, period.to)}.`, `${covered.length === 1 ? "That month's" : "Each month's"} own count, not scaled to a full year.`, ...head, ...cohortLine, ...outside,
+          ? rateSentence(subjectOf(cq.place), one, monthWords(covered[0]), rates[0]!.toFixed(1))
+          : seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", where), `${covered.length === 1 ? "That month's" : "Each month's"} own count, not scaled to a full year.`, ...head, ...cohortLine, ...outside,
           ...(noRate.length ? [`No rate for ${noRate.join(", ")}: ${group ? "an agency counted had no figure or there was no population" : "no figure or no population"}, shown blank.`] : []), source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
   return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
     delivered: { table: { columns, rows: covered.map((m, i) => [m, vals[i]]) },
-      text: [`${where}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...head, ...cohortLine, ...outside, ...leftOutLine,
+      text: [seriesTitle(spanTitle(period.from, period.to), ucFirst(words), "Month", where), ...head, ...cohortLine, ...outside, ...leftOutLine,
         ...(blanks.length ? [`No figure is known for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
 }
 
@@ -472,6 +479,6 @@ export function answerCurrentSeveral(cq: { measure: string; places: Extract<Curr
     kind: "current", period, coverage: [], read: { tables: ["current_final", "current_crime"], table: "current_final + current_crime", column: `${col}_total`, release: b.release },
     question: { measure: cq.measure, place: first, agencies: cq.places.slice(1), from: cq.from, to: cq.to, form: "months", statistic: "count" },
     meaning: { source: "rtci", places: cq.places.map((a) => ({ kind: "agency" as const, name: a.name, state: a.state })), period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: ["agency", "month"], statistic: "count" },
-    delivered: { table: { columns, rows }, text: [`${listed}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...(cq.agencyLine ? [cq.agencyLine] : []), ...outside, ...gapLines, "Source: Crime Index."] },
+    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), ucFirst(words), "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...outside, ...gapLines, "Source: Crime Index."] },
   };
 }
