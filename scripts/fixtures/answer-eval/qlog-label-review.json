@@ -18599,7 +18599,12 @@
 },
 "QL-ct-f6f080be26": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "the app reports figures and does not judge better or worse (P138, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "the app reports figures and does not judge better or worse, and offers a comparison"
+}
 },
 "QL-ct-f71801135d": {
 "status": "reviewed",
@@ -21531,12 +21536,12 @@
 }
 },
 "QL-shr-57f28e29f7": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Inherited agency firearm homicide trends require NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "the app reports figures and does not judge better or worse (P138, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "the app reports figures and does not judge better or worse, and offers a comparison"
 }
 },
 "QL-shr-59b4a8c1a5": {
