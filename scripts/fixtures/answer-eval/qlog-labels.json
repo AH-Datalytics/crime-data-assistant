@@ -90735,19 +90735,16 @@
    "question": "Add countywide violent crimes in Dallas county, Texas",
    "previous": "Countywide",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "drafted_by": "jeff-2026-11-18",
+    "reviewed_by": "jeff-2026-11-18",
+    "notes": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)"
    }
   },
   {

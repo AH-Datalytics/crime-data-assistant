@@ -19208,7 +19208,12 @@
 },
 "QL-hist-618159881c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-hist-61eb60aae9": {
 "status": "reviewed",
