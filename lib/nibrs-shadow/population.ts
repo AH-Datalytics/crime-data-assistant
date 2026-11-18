@@ -9,6 +9,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import { fmt, periodWords, SRS_SOURCE } from "./deliver";
 import type { HistoricalAgency, HistoricalAnswer, HistoricalBuild, HistoricalDecline } from "./historical";
 import { stateName } from "./places";
+import { agencySubject, seriesTitle } from "./headline";
 import { carriedPopulation } from "./population-carry";
 import { srsPopulation, SRS_YEARS, type SrsPlace } from "./srs";
 
@@ -66,18 +67,20 @@ export function answerPopulation(places: PopulationPlace[], from: number, to: nu
     if (several) {
       columns = [{ binding: { kind: "grouping", dimension: "geo.place" }, header: "Place" }, { binding: { kind: "statistic", as: "x" }, header: "Population" }];
       rows = places.map((p, i) => [names[i], value(p, y)]);
-      title = `${where}: population in ${y}.`;
+      title = seriesTitle(String(y), "Population", "Place", where);
     } else {
       const v = value(places[0], y);
       columns = [{ binding: { kind: "statistic", as: "x" }, header: "Population" }];
       rows = [[v]];
-      title = `${where}: population ${fmt(v!)} in ${y}.`;
+      // A sentence: the population is one figure, no chart.
+      const p0 = places[0];
+      title = `${"geo" in p0 ? (p0.geo.kind === "national" ? "The United States" : stateName(p0.geo.code)) : agencySubject(p0.agency.label, p0.agency.ori).text} had a population of ${fmt(v!)} in ${y}.`;
     }
   } else {
     columns = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
       ...places.map((_, i) => ({ binding: { kind: "statistic" as const, as: several ? `x.${i}` : "x" }, header: several ? `${names[i]}: population` : "Population" }))];
     rows = years.map((y) => [String(y), ...places.map((p) => value(p, y))]);
-    title = `${where}: population by year, ${periodWords(period.from, period.to)}.`;
+    title = seriesTitle(periodWords(period.from, period.to), "Population", "Year", where);
   }
   const placeMeaning = (p: PopulationPlace): Meaning["places"][number] => ("agency" in p ? { kind: "agency", name: p.agency.name, ...(p.agency.state ? { state: p.agency.state } : {}) }
     : p.geo.kind === "national" ? { kind: "national", name: "United States" } : { kind: "state", name: stateName(p.geo.code), state: p.geo.code });
@@ -118,7 +121,7 @@ export function answerAgencyList(state: string, year: number, build: HistoricalB
   const blank = rows.filter((r) => r.population === null).length;
   const top = rows.filter((r) => r.population !== null).slice(0, 3).map((r) => ({ label: r.label, population: r.population! }));
   const period = { from: `${year}-01`, to: `${year}-12` };
-  const text = [`${where}: the ${fmt(rows.length)} agencies Crime Index publishes for ${year}, largest population first.`,
+  const text = [`${year} Agencies by Population, ${where}`, `The ${fmt(rows.length)} agencies Crime Index publishes for ${year} are listed with the largest population first.`,
     ...(blank ? [`${fmt(blank)} ${blank === 1 ? "agency has" : "agencies have"} no population for ${year}, listed last, blank.`] : []),
     "An agency's population is the population it covers, as Crime Index publishes it.", SRS_SOURCE];
   return {

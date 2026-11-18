@@ -494,7 +494,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("teen robbery victims in Houston in 2024 by month"), "2024 Robbery Victims Aged 13 to 19 by Month, Houston, Texas");
   assert.equal(title("teenage homicide victims in Houston in 2024 by month"), "2024 Homicide Victims Aged 13 to 19 by Month, Houston, Texas");
   assert.equal(title("child victims of burglary in Houston in 2024 by month"), "2024 Burglary Victims Under 18 by Month, Houston, Texas");
-  assert.ok(/^Ohio: 120 robbery victims under 18 in 2024/.test(title("How many juvenile robbery victims in Ohio in 2024?")));
+  assert.ok(/^Ohio had 120 robbery victims under 18 in 2024/.test(title("How many juvenile robbery victims in Ohio in 2024?")));
   assert.equal(title("juvenile robberies in Houston in 2024 by month"), "2024 Robbery Offenses With an Offender Under 18 by Month, Houston, Texas");
   assert.equal(title("robbery victims in Houston in 2024 by month"), "2024 Robbery Offenses by Month, Houston, Texas", "no age: property victims stay counted by offense (P11)");
 }
@@ -507,7 +507,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("teen arrests for robbery in Houston in 2024 by month"), "2024 Robbery Arrests of Arrestees Aged 13 to 19 by Month, Houston, Texas");
   assert.equal(title("juvenile arrests for robbery in Houston in 2024 by month"), "2024 Robbery Arrests of Arrestees Under 18 by Month, Houston, Texas");
   assert.equal(title("juvenile robbery offenders in Houston in 2024 by month"), "2024 Robbery Offenders Under 18 by Month, Houston, Texas");
-  assert.ok(/^Ohio: [\d,]+ robbery offenders aged 13 to 19 in 2024, summed over the agencies that reported\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
+  assert.ok(/^Ohio had [\d,]+ robbery offenders aged 13 to 19 in 2024, summed over the agencies that reported\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
   assert.equal(title("murders against teens in Houston in 2024 by month"), "2024 Murder Victims Aged 13 to 19 by Month, Houston, Texas");
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "2024 Murder Victims Under 18 by Month, Houston, Texas");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
@@ -1453,7 +1453,7 @@ assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", unde
 const ok4 = (q: string) => { const o = as(ask(q), "answer"); assert.deepEqual(o.delivered.contractProblems, [], q); return o; };
 const tulsaOkc = ok4("Shoplifting in Tulsa and Oklahoma City in 2024");
 assert.deepEqual(tulsaOkc.delivered.table.rows, [["Tulsa Police Department", 60], ["Oklahoma City Police Department", 60]]);
-assert.equal(tulsaOkc.delivered.text[0], "Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses by agency, 2024.");
+assert.equal(tulsaOkc.delivered.text[0], "2024 Shoplifting Offenses by Agency, Tulsa, Oklahoma and Oklahoma City, Oklahoma");
 assert.ok(sqls.some((s) => s.includes("unnest(['OK0550600', 'OK0720500']) AS ori")), "one grid query for both agencies");
 const combinedTotal = ok4("Shoplifting in Tulsa and Oklahoma City combined in 2024");
 assert.deepEqual(combinedTotal.delivered.table.rows, [[120]]);
@@ -1687,7 +1687,7 @@ assert.deepEqual([first(txConflict), txConflict.stateSum!.years[0].conflicts, tx
 assert.ok(!txConflict.delivered.text.some((t) => /disagree/.test(t)), txConflict.delivered.text.join(" / "));
 CONFLICT = null;
 // 5. A missing population is never 0: no rate, and the share covered is a lower bound.
-assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /no rate is given for 2024, because 1 of the agencies counted have no FBI population/);
+assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /^No rate is given for North Carolina in 2024, because 1 of the agencies counted have no FBI population/);
 const nc = as(ask("Shoplifting in North Carolina in 2024, with the number of agencies reporting"), "answer");
 assert.match(String(nc.delivered.table.rows[0][2]), /^≥[\d.]+%$/, "a lower bound is marked in its cell");
 assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
@@ -2105,7 +2105,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const ev = as(span.buttons![0].continuation!, "answer");
   assert.equal(span.stateSum!.everyAgencies, 3);
   assert.deepEqual(ev.delivered.table.rows.map((r) => r[2]), [3, 3], "the same set each year");
-  assert.match(ev.delivered.text[0], /only the 3 Consistent Reporting Agencies that reported every month from January 2023 through December 2024\.$/);
+  assert.ok(ev.delivered.text.some((t) => /^Counts only the 3 Consistent Reporting Agencies that reported every month from January 2023 through December 2024\.$/.test(t)), ev.delivered.text.join(" / "));
   assert.ok(span.stateSum!.years.find((y) => y.year === 2023)!.agencies > 3, "Austin reported 2023 in full, yet is not in the set");
 }
 // Jeff (2026-11-16): for ONE agency a month reported as zero crimes is NOT reported: left out of a total, blank in a chart, no rolling window

@@ -32,6 +32,8 @@ export const nationSubject: Subject = { text: "The United States", nation: true 
 export const titlePlace = (s: string) => (s === "The United States" ? "United States" : s);
 
 export const possessive = (name: string) => `${name}'s`;
+/** The thing a rate counts, one: "robbery offenses" as "robbery offense", "burglaries" as "burglary" ("a robbery offense rate"). */
+export const rateNoun = (plural: string) => plural.replace(/ies$/, "y").replace(/([^s])s$/, "$1");
 /** "Chicago's violent crime rate in 2024 was 539.8 per 100,000." / "The United States had a violent crime rate of 327.6 per 100,000 in 2025." */
 export function rateSentence(who: Subject, measure: string, when: string, rate: string, prep = "in"): string {
   return who.nation ? `${who.text} had a ${measure} rate of ${rate} per 100,000 ${prep} ${when}.` : `${possessive(who.text)} ${measure} rate ${prep} ${when} was ${rate} per 100,000.`;

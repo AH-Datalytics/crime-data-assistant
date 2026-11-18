@@ -326,7 +326,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const pop = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`); return o as Extract<ShadowOutcome, { kind: "historical" }>; };
   const one = pop("Population of Memphis in 2023");
   assert.deepEqual(one.delivered.table.rows, [[616061]]);
-  assert.deepEqual(one.delivered.text, ["Memphis, Tennessee: population 616,061 in 2023.", "Figures for the Memphis Police Department.",
+  assert.deepEqual(one.delivered.text, ["Memphis had a population of 616,061 in 2023.", "Figures for the Memphis Police Department.",
     "An agency's population is the population it covers, as Crime Index publishes it.", SRS_SOURCE]);
   assert.ok(sqls[sqls.length - 1].includes("SELECT ori, year, population FROM read_parquet('/ci/agency_crime.parquet')"), sqls[sqls.length - 1]);
   assert.deepEqual(pop("population of Memphis and Tennessee in 2023").delivered.table.rows, [["Memphis, Tennessee", 616061], ["Tennessee", 7148304]]);

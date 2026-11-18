@@ -23,6 +23,7 @@ import { agencyName, reportedBy, stateName } from "./places";
 import { deliverMonthly, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 import { periodTitle, titleCase } from "./titles";
+import { agencySubject, rateNoun, rateSentence, seriesTitle } from "./headline";
 
 const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
 
@@ -223,13 +224,14 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const rows = agencies.map((a) => { const v = valueOf(byOri.get(a.ori) ?? [], a.ori, year); return { key: a.name, value: v.value, status: v.status, missing: v.missing, a }; });
   if (agencies.length === 1) {
     const r = rows[0];
-    lines.push(r.value !== null ? `${r.a.label}: ${isRate ? `${fmtRate(r.value)} ${what} per 100,000` : `${fmt(r.value)} ${what}`} in ${when}.`
-      : r.status === "UNAVAILABLE" ? `${r.a.label}: no rate is given for ${when}, because the FBI gives no ${year} population for the ${r.a.name}.`
-      : `${r.a.label}: no ${isRate ? "rate" : "number"} is given for ${when}, because not every month is known.`, reporter);
+    const who = agencySubject(r.a.label, r.a.ori).text;
+    lines.push(r.value !== null ? (isRate ? rateSentence(agencySubject(r.a.label, r.a.ori), rateNoun(what), when, fmtRate(r.value)) : `${who} had ${fmt(r.value)} ${what} in ${when}.`)
+      : r.status === "UNAVAILABLE" ? `No rate is given for ${who} in ${when}, because the FBI gives no ${year} population for the ${r.a.name}.`
+      : `No ${isRate ? "rate" : "number"} is given for ${who} in ${when}, because not every month is known.`, reporter);
   } else {
     const places = agencies.map((a) => a.label);
     const listed = places.length > 2 ? `${places.slice(0, -1).join("; ")} and ${places[places.length - 1]}` : places.join(" and ");
-    lines.push(`${listed}: ${what}${isRate ? " per 100,000" : ""} by agency, ${when}.`, reporter);
+    lines.push(seriesTitle(when, `${what}${isRate ? " per 100,000" : ""}`, "Agency", listed), reporter);
   }
   if (isRate) lines.push(popLine(year, agencies));
   for (const r of rows) if (r.missing.length) lines.push(`No data is known for ${runs(r.missing)} for the ${r.key}, so its ${isRate ? "rate" : `${when} total`} is not given.`);

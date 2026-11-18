@@ -598,7 +598,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     // A state or national sum by category (coordinator 2026-11-04): the agencies it sums over, or the fixed set it counts.
     else if (s === "names how many agencies it sums over") ok = /Summed over the [\d,]+ agencies that reported\./.test(all) && !!o.stateSum;
-    else if (s === "names the Consistent Reporting Agencies it counts") ok = /Counting only the [\d,]+ Consistent Reporting Agencies that reported every month/.test(all) && !!o.stateSum;
+    else if (s === "names the Consistent Reporting Agencies it counts") ok = /(?:Counting|Counts) only the [\d,]+ Consistent Reporting Agencies that reported every month/i.test(all) && !!o.stateSum;
     else if (s === "lists the unknown category after the known ones in each period") {
       // P86 (coordinator 2026-11-02): within each period, the not-known categories after the known ones, Unknown once.
       const cols = o.delivered.table.columns;
@@ -722,7 +722,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const b = (o.buttons ?? []).find((x) => x.label === "Consistent Reporting Agencies")?.continuation;
       const same = (p: NibrsPlan) => JSON.stringify([p.geography, p.measures, p.filters, p.period, p.groupings, p.statistics]) === JSON.stringify([o.plan.geography, o.plan.measures, o.plan.filters, o.plan.period, o.plan.groupings, o.plan.statistics]);
       ok = !!b && b.kind === "answer" && b.plan.coverage.cohort === "same_agencies" && same(b.plan) && !!b.stateSum && b.delivered.table.rows.length === o.delivered.table.rows.length
-        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies that reported every month (?:from |in )`).test(b.delivered.text[0] ?? ""));
+        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies that reported every month (?:from |in )`).test(b.delivered.text.join("\n")));
     } else if (/^states how many agencies reported every month and what share of residents they cover/.test(s))
       ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: o.stateSum!.years.length > 1 ? o.stateSum!.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 })), "Consistent Reporting Agencies");
     else if (/^gives each year's agencies counted and share of residents covered/.test(s))
