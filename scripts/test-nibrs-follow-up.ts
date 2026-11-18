@@ -27,6 +27,20 @@ assert.equal(q(rw("Shoplifting in Kansas in 2024", "how many agencies reported")
 assert.match(asked(rw(P, "add a column for population")).why, /goes with a rate/);
 assert.match(asked(rw(P, "how many agencies reported")).why, /state or national total/);
 
+// Group 2 follow-ups of the query log (2026-11-18): "countywide", "calculate for X", "do it for X", a crime with a grain, a start year.
+assert.equal(q(rw("violent crime in Alameda County since 2008", "Countywide total")), "violent crime in Alameda County since 2008, countywide");
+assert.equal(q(rw("how many murders in baltimore county this year", "countywide")), "how many murders in baltimore county this year, countywide");
+asked(rw("violent crime in Memphis in 2024", "countywide"));
+asked(rw("violent crime in Alameda County countywide since 2020", "countywide total"));
+assert.equal(q(rw("violent crime rate in Minneapolis, MN from 2024 to 2025", "calculate for Chicago, IL")), "violent crime rate in Chicago, IL from 2024 to 2025");
+assert.equal(q(rw("What was the violent crime rate in Minneapolis, MN in 2024?", "show the same chart and table for Chicago")), "What was the violent crime rate in Chicago in 2024?");
+assert.equal(q(rw("kentucky murders rolling over 12 months", "now do violent crime")), "kentucky violent crime rolling over 12 months");
+assert.equal(q(rw("atlanta violent crime per year since 2016", "murders per year")), "atlanta murders by year since 2016");
+assert.equal(q(rw("Houston hate crimes rolling over 12 months", "Start rolling in 2000")), "Houston hate crimes rolling over 12 months since 2000");
+assert.equal(q(rw("Show me violent crime rates for Minnesota from 1998 to present", "Can you change the start year to 1988?")), "Show me violent crime rates for Minnesota from 1988 to present");
+assert.equal(q(rw("clearance rates in Albuquerque in 2024", "ok; let's do 2020 through 2024")), "clearance rates in Albuquerque from 2020 to 2024");
+asked(rw("kentucky murders rolling over 12 months", "do it for shootings and rapes"));
+
 // A complete question of its own is asked as it is; a presentation edit keeps the data question (P69).
 const own = rw(P, "How many robberies were there in Detroit in 2023?");
 assert.equal(own.kind, "new");

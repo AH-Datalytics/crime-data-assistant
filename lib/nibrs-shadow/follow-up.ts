@@ -272,7 +272,7 @@ export const deterministicRewriter: FollowUpRewriter = {
     const raw = followUp.trim();
     // The follow-up's own words, without lead-ins and "instead". An additive lead-in ("also 2023", "and Nashville") keeps
     // its meaning: the rest is read as "add ...", which only a place or a year completes (Codex 7b-04 re-check 1).
-    const unled = raw.replace(/^(?:(?:ok(?:ay)?|now|then|so|please|can you|could you)\b[,\s]*)+/i, "");
+    const unled = raw.replace(/^(?:(?:ok(?:ay)?|now|then|so|please|can you|could you)\b[,;\s]*)+/i, "");
     const additive = /^(?:and|also|plus|as well as)\b[,\s]*/i.exec(unled);
     let f = unled.slice(additive ? additive[0].length : 0).replace(/\s*\binstead\b/i, "").replace(/[?.!\s]+$/, "").trim();
     if (additive) f = `add ${f}`;
@@ -329,6 +329,14 @@ export const deterministicRewriter: FollowUpRewriter = {
       const geo = prevParts.places.some((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
       return geo ? ok(`${prev.replace(/[?.]\s*$/, "")}, with the number of agencies reporting`, "P72: agencies reporting, for a state or national total")
         : ask("The number of agencies reporting goes with a state or national total (P72).");
+    }
+
+    // A county asked for as a whole ("countywide total", "countywide", "for the whole county"): the previous question with "countywide" added
+    // (P70), when its place is a county.
+    const countyPrev = /\b(?:county|parish)\b/i.test(placeWords(prev, prevParts.places)?.text ?? "");
+    if (/^(?:the\s+)?(?:county[-\s]?wide|(?:for\s+)?the\s+(?:whole|entire)\s+county)(?:\s+(?:total|figure|number|count))?(?:\s+only)?$/i.test(f)) {
+      if (!countyPrev || /\bcounty[-\s]?wide\b/i.test(prev)) return ask("Which county is meant, or whether it is already the whole county.");
+      return ok(`${prev.replace(/[?.!\s]+$/, "")}, countywide`, "P70: the whole county, every agency summed");
     }
 
     // A rate in place of a count (P58, P59).
@@ -401,9 +409,13 @@ export const deterministicRewriter: FollowUpRewriter = {
     }
 
     // "change the start year to 1988", "going back to 1940": the first year of a range or "since" replaced (follow-up errors, 2026-11-17).
-    const startYear = /^(?:(?:change|set|make)\s+(?:the\s+)?(?:start|starting|first)\s+year\s+(?:to|be)|(?:the same data,?\s*)?(?:but\s+)?(?:going\s+)?back\s+(?:to|until|as far as))\s+((?:19|20)\d{2})$/i.exec(f.replace(/^show me /i, ""));
+    // ("start rolling in 2000", "start in 2000": the same, for a rolling or any question with a first year or none.)
+    const startYear = /^(?:(?:change|set|make)\s+(?:the\s+)?(?:start|starting|first)\s+year\s+(?:to|be)|(?:the same data,?\s*)?(?:but\s+)?(?:going\s+)?back\s+(?:to|until|as far as)|start(?:\s+rolling)?\s+(?:in|from|at))\s+((?:19|20)\d{2})$/i.exec(f.replace(/^show me /i, ""));
     if (startYear) {
       const y = startYear[1];
+      const toPresent = /\bfrom\s+((?:19|20)\d{2})\s+(?:to|through)\s+(?:present|now|today|the present)\b/i.exec(prev);
+      if (toPresent) return ok(prev.replace(/\bfrom\s+(?:19|20)\d{2}/i, `from ${y}`), "the range's first year replaced");
+      if (!/\b(?:19|20)\d{2}\b/.test(prev) && /\brolling\b/i.test(prev) && prevParts.periods.length === 0) return ok(`${prev.replace(/[?.!\s]+$/, "")} since ${y}`, "the rolling question takes a first year");
       const fromTo = /\bfrom\s+((?:19|20)\d{2})\s+(to|through)\s+((?:19|20)\d{2})\b/i.exec(prev);
       const sinceM = /\bsince\s+((?:19|20)\d{2})\b/i.exec(prev);
       if (fromTo && Number(y) < Number(fromTo[3])) return ok(prev.replace(fromTo[0], `from ${y} ${fromTo[2]} ${fromTo[3]}`), "the range's first year replaced");
@@ -467,7 +479,7 @@ export const deterministicRewriter: FollowUpRewriter = {
     // try): a year, a range of years or a month, after a lead-in or none; relative periods computed from the previous
     // question's period. The previous question must have one period; otherwise it is asked about.
     // ("make it 2010 to 2025", "do it for 2024", "what's the data on 2026", "since 2019": the query log's wordings, 2026-11-17.)
-    const lead = /^(?:(?:show|give)(?: me)?|(?:what|how) about|(?:the )?same(?: thing)? for|do it for|make it|what(?:'s| is) the data (?:on|for)|do|for|in|during)\s+/i;
+    const lead = /^(?:(?:show|give)(?: me)?|(?:let'?s|lets) do|(?:what|how) about|(?:the )?same(?: thing)? for|do it for|make it|what(?:'s| is) the data (?:on|for)|do|for|in|during)\s+/i;
     const asPeriod = f.replace(lead, "").trim();
     const pr = onePeriod(prev);
     const range = new RegExp(`^(?:from\\s+)?((?:19|20)\\d{2})\\s*(?:to|through|-|–)\\s*((?:19|20)\\d{2})$`, "i").exec(asPeriod);
@@ -545,7 +557,7 @@ export const deterministicRewriter: FollowUpRewriter = {
         return ok(`${prev.slice(0, pw.at)}${a} and ${b}${prev.slice(pw.at + pw.text.length)}`, "the place replaced by two places");
       }
     }
-    const pp =/^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:show|give)(?!\s+(?:me\s+)?(?:just|only)\b)(?: me)?|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
+    const pp =/^(?:(?:what|how) about|calculate (?:the )?(?:same )?for|(?:show|give)(?: me)?(?: the)? same (?:chart and table |chart |table |data |thing )?for|do it for|(?:the )?same (?:thing )?for|do|(?:show|give)(?!\s+(?:me\s+)?(?:just|only)\b)(?: me)?|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
     // A bare place ("washington state", "minneapolis"), or a place and year, is read as "what about ..." (P23): the
     // follow-up's words must be nothing but that place (and year).
     const bare = (() => {
@@ -553,7 +565,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       const t = partsOf(`Shoplifting in ${f}`);
       return t.places.length === 1 && t.all.every((p) => ["measure", "place", "period", "filler"].includes(p.concept)) && t.measures.every((m) => m.text === "Shoplifting") ? f : null;
     })();
-    const target = pp ? pp[2] : /^(?:in\s+)?(?:19|20)\d{2}$/i.test(f) ? f : bare;
+    // "now do violent crime", "do it for robbery": a lone crime after a do-lead is the crime branch's (the lead is taken off).
+    const loneCrime = (s: string) => { const c = partsOf(`${ucFirst(s)} in Memphis in 2024`);
+      return c.measures.length === 1 && c.places.length === 1 && c.periods.length <= 1 && !YEAR.test(s) && c.all.every((p) => ["measure", "place", "period", "filler"].includes(p.concept)); };
+    if (pp && !pp[1] && /^do(?: it for)?\s/i.test(f) && loneCrime(pp[2]) && partsOf(`Shoplifting in ${pp[2]}`).places.length === 0) f = pp[2];
+    const target = pp && f === pp[2] ? null : pp ? pp[2] : /^(?:in\s+)?(?:19|20)\d{2}$/i.test(f) ? f : bare;
     if (target !== null) {
       const adding = !!pp?.[1];
       const t = partsOf(`Shoplifting in ${target}`);
@@ -618,6 +634,14 @@ export const deterministicRewriter: FollowUpRewriter = {
         } else q = one ? q.replace(one[0], `${one[1]} ${newYear}`) : `${q.replace(/[?.]\s*$/, "")} in ${newYear}`;
       }
       return ok(q, adding ? (newPlace ? "a place added" : "a year added") : newPlace && newYear ? "the place and year replaced" : newPlace ? "the place replaced" : "the year replaced or added");
+    }
+
+    // A crime and a time grain together ("murders per year", "number homicides by year"): the crime replaced, then the grain set, each by its own rule.
+    const cg = /^(?:the\s+)?(?:number\s+(?:of\s+)?)?(.+?)\s+(?:per|by|each)\s+(year|month)$/i.exec(f);
+    if (cg && loneCrime(cg[1])) {
+      const r1 = deterministicRewriter.rewrite(prev, cg[1], thisYear);
+      const r2 = r1.kind === "rewrite" ? deterministicRewriter.rewrite(r1.question, `by ${cg[2].toLowerCase()}`, thisYear) : null;
+      if (r2 && r2.kind === "rewrite") return ok(r2.question, "the crime replaced and the time grain set");
     }
 
     // A crime in place of the previous one ("now murders instead").
