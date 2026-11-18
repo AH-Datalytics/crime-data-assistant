@@ -9,7 +9,8 @@ export function titleCase(text: string): string {
   return text.split(" ").map((w, i) => {
     if (!w || /\d/.test(w)) return w;
     if (i > 0 && SMALL.has(w.toLowerCase())) return w.toLowerCase();
-    return `${w[0].toUpperCase()}${w.slice(1)}`;
+    // Each part after a slash starts with a capital too: "Drug/Narcotic Violation Offenses".
+    return w.split("/").map((p) => (p ? `${p[0].toUpperCase()}${p.slice(1)}` : p)).join("/");
   }).join(" ");
 }
 

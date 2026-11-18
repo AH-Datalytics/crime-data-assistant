@@ -526,6 +526,7 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   const allowed = (line: string) => (changeRe !== null && changeRe.test(line)) || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
     || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
     || (cols.change === null && new RegExp(`^No change in .+ is given between ${esc(E)} and ${esc(L)}\\.$`).test(line))
+    || (cols.change === null && ((cols.earlier !== null) !== (cols.later !== null)) && new RegExp(`^.+ had ${esc(f((cols.earlier ?? cols.later)!))} .+ in (?:${esc(E)}|${esc(L)}), but the data for (?:${esc(E)}|${esc(L)}) is incomplete, so no change is given\\.$`).test(line))
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
       || new RegExp(`^No data is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
   const text = o.delivered.text;
@@ -740,7 +741,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       ok = o.plan.geography.combine === "combined" && new Set(oris).size === 2 && oris.every(Boolean) && o.delivered.table.rows.length === 1
         && typeof o.delivered.table.rows[0][0] === "number"
         // The headline's number is the table's (Codex 02.5), never any number.
-        && Number((/, combined: ([\d,.]+) /.exec(text[0] ?? "")?.[1] ?? "x").replace(/,/g, "")) === o.delivered.table.rows[0][0];
+        && Number((/ had a combined (?:[^\d]+ rate of )?([\d,.]+) /.exec(text[0] ?? "")?.[1] ?? "x").replace(/,/g, "")) === o.delivered.table.rows[0][0];
     } else if (/^gives no (?:combined total|rate), because not every month|^gives no combined total, because/.test(s)) {
       // Blank, with a reason, never a part-sum.
       ok = o.delivered.table.rows.length === 1 && o.delivered.table.rows[0].every((x) => typeof x === "string" || x === null)

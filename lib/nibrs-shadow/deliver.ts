@@ -629,15 +629,21 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
   const table: ResultTable = { columns: tableCols, rows: [outs.map((o) => cellOf[o].value)] };
   const who = placeSubject(place);
   const months = monthsOf(periods.earlier);
+  // One period known and the other short of months: say what is known and what is not (a missing month is the cause).
+  const knownOnly = cmp.change.value !== null ? null
+    : cmp.earlier.value !== null && cmp.later.value === null && cmp.later.missing.length ? { p: cmp.earlier, words: E, other: L }
+    : cmp.later.value !== null && cmp.earlier.value === null && cmp.earlier.missing.length ? { p: cmp.later, words: L, other: E } : null;
   const text: string[] = cmp.change.value !== null
     ? [changeSentence(who, what, fmt(cmp.earlier.value!), fmt(cmp.later.value!), E, L, signed(cmp.change.value), cmp.pctChange.value)]
-    : [`No change in ${who.text}'s ${what} is given between ${E} and ${L}.`];
+    : knownOnly
+      ? [`${who.text} had ${fmt(knownOnly.p.value!)} ${what} in ${knownOnly.words}, but the data for ${knownOnly.other} is incomplete, so no change is given.`]
+      : [`No change in ${who.text}'s ${what} is given between ${E} and ${L}.`];
   if (months && months === monthsOf(periods.later)) text.push(`Compares the same months of each year: ${months}.`);
   if (cmp.change.value !== null) {
     if (cmp.zeroBase) text.push("The percent change cannot be computed from a zero base.");
   } else {
     for (const [p, words] of [[cmp.earlier, E], [cmp.later, L]] as const)
-      if (p.value !== null) text.push(`${fmt(p.value)} in ${words}.`);
+      if (p.value !== null) { if (!knownOnly) text.push(`${fmt(p.value)} in ${words}.`); }
       else if (p.missing.length) text.push(`No data is known for ${runs(p.missing)}, so the ${words} total is not established and no change is given.`);
   }
   text.push(...readings);
