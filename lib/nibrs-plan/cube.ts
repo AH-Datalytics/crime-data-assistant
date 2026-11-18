@@ -185,9 +185,9 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
     const [owner, name] = a.attribute.dimension.split(".");
     const owned = owner === (a.groupB ? "group_b_arrest" : unit);
     // The engine calls an offender with sequence 00 (no offender known) Unknown in every attribute, whatever its sex or race fields hold (17,517 such
-    // rows in 2024, all New York); the code cube's offender sex and race are the raw fields, so only offender age (which maps 00 to Unknown) is read
-    // from it until the Model maps sequence 00 to blank for sex and race too.
-    const allowed = isCodeCube ? (unit === "offender" ? ["age"] : ["age", "sex", "race"]) : ATTRIBUTES[unit];
+    // rows in 2024, all New York). A code cube built at Model commit 064661b or later maps sequence 00 to blank for offender sex and race too, as it
+    // always did for age, so the three attributes are read from it for every unit. A cube built before that commit must not be pointed at here.
+    const allowed = isCodeCube ? ["age", "sex", "race"] : ATTRIBUTES[unit];
     if (!owned || !allowed?.includes(name)) return null;
     if (name === "age") {
       if (!a.attribute.bins) return null;
