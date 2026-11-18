@@ -58,7 +58,7 @@ function stub(sql: string): unknown[][] {
     const yr = Number(y);
     if (between && (yr < Number(between[1]) || yr > Number(between[2]))) continue;
     if (years && yr !== Number(years[1]) && yr !== Number(years[2])) continue;
-    out.push(years ? [yr, t] : /SELECT ori, year, population /.test(sql) ? [o, yr, p] : [o, yr, t, c, p]);
+    out.push(years ? (/_capita/.test(sql) ? [yr, t, c, p] : [yr, t]) : /SELECT ori, year, population /.test(sql) ? [o, yr, p] : [o, yr, t, c, p]);
   }
   return out;
 }
@@ -113,6 +113,15 @@ const ch = ok({ from: 2022, to: 2023, comparison: { earlier: 2022, later: 2023 }
 assert.deepEqual(ch.delivered.table.rows, [[252, 351, 99, 39.3]]);
 assert.equal(ch.delivered.text[1], "252 in 2022 and 351 in 2023: a change of +99 (+39.3%).");
 assert.match(no({ from: 2021, to: 2023, comparison: { earlier: 2021, later: 2023 } }), /no murders for Memphis, Tennessee in 2021: not available in this data, so there is no change/);
+
+// A change in a rate ("percent change in the violent crime rate from 2024-2025"): the two published rates, the change in
+// points per 100,000 and the percent change on the rates; a blank rate gives no change.
+const rch = ok({ statistic: "rate", from: 2022, to: 2023, comparison: { earlier: 2022, later: 2023, change: true } });
+// "2022 vs 2025" of a rate (no change asked in words) stays the years side by side, as before (runner gate on PR 212).
+assert.deepEqual(ok({ statistic: "rate", from: 2022, to: 2023, byYear: true, comparison: { earlier: 2022, later: 2023 } }).delivered.table.rows, [["2022", 40.3], ["2023", 57]]);
+assert.deepEqual(rch.delivered.table.rows, [[40.3, 57, 16.7, 41.4]]);
+assert.deepEqual(rch.delivered.text.slice(0, 2), ["Memphis, Tennessee: murders per 100,000, 2022 against 2023.", "40.3 in 2022 and 57.0 in 2023: a change of +16.7 (+41.4%)."]);
+assert.match(no({ statistic: "rate", from: 2021, to: 2023, comparison: { earlier: 2021, later: 2023, change: true } }), /no murder rate for Memphis, Tennessee in 2021: not available in this data, so there is no change/);
 
 // Clearance: the published percentage with its counts; from 1960 only; one agency and one year.
 const clr = ok({ statistic: "clearance_rate" });

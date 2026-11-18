@@ -54,7 +54,8 @@ const NOT_PLAIN_SET = new RegExp(String.raw`\b(?:by\s+(?:month|year|quarter|week
 /** The set size of "all cities": larger than any state's or the nation's count of cities of 250,000 or more. */
 export const ALL_CITIES_N = 100000;
 /** A change between two periods (the shadow attaches it as a period_comparison). `matched`: the same months each year. */
-export type Comparison = { earlier: Span; later: Span; matched: boolean };
+/** `change`: the question asks for the change in words ("percent change in ... from 2024 to 2025"), not only two periods side by side ("2022 vs 2025"). */
+export type Comparison = { earlier: Span; later: Span; matched: boolean; change?: true };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
   undefinedTerm: "shooters" | "gun violence" | "gang" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
   /** "The 100 largest US cities", "the 5 biggest Texas cities", "the 20 most populous cities": a set of city agencies by population (Jeff 2026-11-10, ranking decision 1). */
@@ -149,7 +150,7 @@ const PHRASES: [RegExp, string][] = [
   // 2024 to 2023" is a period comparison).
   // Never a time ("year to date", "to the most recent data", "to present": job CW2).
   [/^\s*compare\s+((?:(?!\b(?:from|between|through)\b).)+?)\s+(?:to|with|against)\s+(?:the\s+)?(?!\d|(?:the\s+)?(?:date|most|present|today|now|current|latest|recent|end|last|this|next|previous|early|mid|late|spring|summer|fall|autumn|winter|first|second|third|fourth|beginning|start|q[1-4]|january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)\b)/gi, "$1 and "],
-  [/\bin\s+the\s+state\s+of\s+/gi, "in "],
+  [/\b(in|for)\s+the\s+state\s+of\s+/gi, "$1 "],
   // Jeff 2026-11-11: "cases" is the source's normal count for the crime (victims for crimes against people, offenses
   // otherwise), so the word itself adds nothing.
   [/\b(?:number\s+of\s+)?cases\s+of\s+/gi, ""],
@@ -323,9 +324,9 @@ function readComparison(text: string, currentYear: number, lastMonth?: string): 
       }
     }
   }
-  // "(percent) change in X from 2022 to 2024"
-  if ((m = new RegExp(String.raw`\b(?:percent(?:age)?\s+)?change\s+in\s+(.+?)\s+from\s+(\d{4})\s+(?:to|through)\s+(\d{4})\b`, "i").exec(text)) && Number(m[2]) < Number(m[3]))
-    return { comparison: { earlier: yearSpan(Number(m[2])), later: yearSpan(Number(m[3])), matched: false }, from: m[0], text: text.replace(m[0], lead(`${m[1]} from ${m[2]} to ${m[3]}`)) };
+  // "(percent) change in X from 2022 to 2024", also "from 2024-2025" and "X for Chicago, 2024-2025" (a dash between the years, "from" optional)
+  if ((m = new RegExp(String.raw`\b(?:percent(?:age)?\s+)?change\s+in\s+(.+?)\s+(?:from\s+)?(\d{4})\s*(?:to|through|-|–|—)\s*(\d{4})\b`, "i").exec(text)) && Number(m[2]) < Number(m[3]))
+    return { comparison: { earlier: yearSpan(Number(m[2])), later: yearSpan(Number(m[3])), matched: false, change: true }, from: m[0], text: text.replace(m[0], lead(`${m[1]} from ${m[2]} to ${m[3]}`)) };
   // "X January through June 2024 compared with January through June 2023"
   if ((m = new RegExp(String.raw`\b(?:in\s+|from\s+)?${MON}\s+(?:through|to|-)\s+${MON}\s+(\d{4})\s+${VS}\s+(?:the\s+same\s+months\s+(?:of|in)\s+|${MON}\s+(?:through|to|-)\s+${MON}\s+)?(\d{4})\b`, "i").exec(text))) {
     const [a, b] = [MONTH_NAMES.indexOf(m[1].toLowerCase()) + 1, MONTH_NAMES.indexOf(m[2].toLowerCase()) + 1];
