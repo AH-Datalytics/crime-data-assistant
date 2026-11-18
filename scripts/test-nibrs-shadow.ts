@@ -416,18 +416,18 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   // An agency: Jeff's answer, whole: the sentence and the source; the rate only.
   for (const q of ["Robbery clearance rate in Detroit in 2026", "Robbery clearance rate in Detroit so far this year", "Robbery clearance rate in Detroit in 2026 according to NIBRS"]) {
     const d = clr(q);
-    assert.deepEqual(d.text, ["Detroit, Michigan: 40% of robberies reported in January through September 2026 were cleared.", "Source: NIBRS."], q);
+    assert.deepEqual(d.text, ["Detroit cleared 40% of the robberies reported in January through September 2026.", "Source: NIBRS."], q);
     assert.deepEqual(d.table.rows, [[40]], q);
     assert.deepEqual(d.table.columns.map((c) => c.header), ["Robberies cleared (%)"], q);
   }
-  assert.deepEqual(clr("Murder clearance rate in Houston in 2026").text, ["Houston, Texas: 33.3% of murders reported in January through September 2026 were cleared.", "Source: NIBRS."]);
+  assert.deepEqual(clr("Murder clearance rate in Houston in 2026").text, ["Houston cleared 33.3% of the murders reported in January through September 2026.", "Source: NIBRS."]);
   // A state or the nation: only the Consistent Reporting Agencies, said, with their number; one set for both figures.
-  assert.deepEqual(clr("Murder clearance rate in Texas in 2026").text, ["Texas: 34.6% of murders reported in January through September 2026 were cleared, counting only the 4 Consistent Reporting Agencies that reported every month from January 2026 through September 2026.",
+  assert.deepEqual(clr("Murder clearance rate in Texas in 2026").text, ["Texas cleared 34.6% of the murders reported in January through September 2026, counting only the 4 Consistent Reporting Agencies that reported every month from January 2026 through September 2026.",
     "Source: NIBRS."]);
-  assert.match(clr("Murder clearance rate in the US in 2026").text[0], /^United States: 39\.7% of murders reported in January through September 2026 were cleared, counting only the 106 Consistent Reporting Agencies that reported every month from January 2026 through September 2026\.$/);
+  assert.match(clr("Murder clearance rate in the US in 2026").text[0], /^The United States cleared 39\.7% of the murders reported in January through September 2026, counting only the 106 Consistent Reporting Agencies that reported every month from January 2026 through September 2026\.$/);
   // An agency with a month not reported is out of the set (Houston, March 2026): 3 agencies, 54 of 153.
   CONFLICT = { ori: "TXHPD0000", ym: "2026-03" };
-  assert.match(clr("Murder clearance rate in Texas in 2026").text[0], /^Texas: 35\.3% of murders .* counting only the 3 Consistent Reporting Agencies /);
+  assert.match(clr("Murder clearance rate in Texas in 2026").text[0], /^Texas cleared 35\.3% of the murders .* counting only the 3 Consistent Reporting Agencies /);
   // An agency's month with no report is named and no rate is given.
   assert.match(as(ask("Murder clearance rate in Houston in 2026"), "decline").explanation, /^No clearance rate is given: no data is known for March 2026\./);
   CONFLICT = null;

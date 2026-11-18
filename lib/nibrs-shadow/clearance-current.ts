@@ -18,6 +18,7 @@ import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliverTable, fmt, monthName, periodWords, runs } from "./deliver";
 import { HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
+import { agencySubject } from "./headline";
 import { agencyHeaderSql, universeStates } from "./state-sum";
 import { NOT_YET } from "./wording";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
@@ -94,7 +95,7 @@ export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; 
     }
     if (!c || c.rep < span0) return decline(`No clearance rate is given: no data is known for ${when}.`);
     if (!a.sum) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
-    return deliver(c.sum, a.sum, [`${Where}: ${rateOf(c.sum, a.sum)}% of ${words} reported in ${when} were cleared.`]);
+    return deliver(c.sum, a.sum, [`${agencySubject(place.label, place.ori).text} cleared ${rateOf(c.sum, a.sum)}% of the ${words} reported in ${when}.`]);
   }
 
   // A state or the nation: the Consistent Reporting Agencies, one set for both figures.
@@ -102,7 +103,7 @@ export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; 
   if (!set.length) return decline(`No agency reported crimes in every month ${span}, so there are no Consistent Reporting Agencies for ${Where}.`);
   const den = set.reduce((n, o) => n + gAll.get(o)!.sum, 0), num = set.reduce((n, o) => n + gCleared.get(o)!.sum, 0);
   if (!den) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
-  return deliver(num, den, [`${Where}: ${rateOf(num, den)}% of ${words} reported in ${when} were cleared, counting only the ${fmt(set.length)} Consistent Reporting Agencies that reported every month ${span}.`]);
+  return deliver(num, den, [`${place.kind === "national" ? "The United States" : Where} cleared ${rateOf(num, den)}% of the ${words} reported in ${when}, counting only the ${fmt(set.length)} Consistent Reporting Agencies that reported every month ${span}.`]);
 
   function rateOf(n: number, d: number): string { return String(Math.round((1000 * n) / d) / 10); }
   function deliver(n: number, d: number, lines: string[]): ShadowOutcome {
