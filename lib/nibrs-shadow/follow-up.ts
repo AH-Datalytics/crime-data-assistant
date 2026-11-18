@@ -22,6 +22,7 @@
  *   crime         "now murders instead"                                        -> the crime replaced
  *   columns       "add a column for population", "how many agencies reported" (P72)
  */
+import { readCoverage } from "./coverage";
 import { readQuestion } from "./reading";
 
 /** A rewrite: the standalone question and how sure the rewriter is; or a question back when it is not sure. */
@@ -284,6 +285,15 @@ export const deterministicRewriter: FollowUpRewriter = {
     // would drop the rest, so it is asked about (Codex 7b-04.1).
     // Presentation only: the same data question (P69); the page's chart controls change the chart.
     if (PRESENTATION.some((r) => r.test(fl))) return ok(prev, "presentation only: the data question is unchanged", "presentation");
+
+    // The previous turn was about the data itself (how many agencies reported, which states are missing, where the numbers come from, where a
+    // term is defined): there is no figure to change, so a follow-up is a question of its own. Changing it as a figure ("Carjackings per year" after
+    // "how is domestic violence defined?" -> "how is Carjackings defined by year") would build another question about the data.
+    {
+      const pp = partsOf(prev);
+      if (readCoverage(prev, pp.measures.length > 0, pp.places.some((p) => !/^state:|^national/.test(String(p.value)))))
+        return ok(raw, "the previous answer is about the data itself: this follow-up is a question of its own", "new");
+    }
 
     // A complete question of its own (its own crime, place and period): asked as it is, nothing inherited. Without its
     // own period ("now murders in Nashville instead") it leans on the previous one, so it is not complete.
