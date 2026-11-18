@@ -2917,8 +2917,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const reported = (d: Delivered): Delivered => {
     const p = checked.geography.places[0];
     if (p.kind !== "agency") return d;
-    // After the title: the first line naming the place (a definition may come before it).
-    const at = d.text.findIndex((t) => t.startsWith(p.label)) + 1 || 1;
+    // After the headline (a definition may come before it): the sentence or title that names the place.
+    const hl = d.headline !== undefined ? d.text.indexOf(d.headline) : -1;
+    const at = (hl >= 0 ? hl : d.text.findIndex((t) => t.includes(p.label) || t.startsWith(p.label.split(",")[0]))) + 1 || 1;
     return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]), ...(sheriffNote(deps, [p.ori], ledger0.question) ? [sheriffNote(deps, [p.ori], ledger0.question)] : []), ...d.text.slice(at)] };
   };
   // P71 (Jeff 2026-10-31: "Add up months"): each quarter the sum of its three months; a quarter in which the agency did
