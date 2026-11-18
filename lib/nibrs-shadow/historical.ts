@@ -279,8 +279,31 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     };
   }
 
+  // A change in a rate: the two years' published rates (a blank one computed from the count and population, as in a series),
+  // the change in points per 100,000 and the percent change.
+  if (hq.comparison && hq.statistic === "rate") {
+    if (several) return { kind: "historical-decline", explanation: "This isn't available: a change for more than one agency. Ask for one agency." };
+    const [E, L] = [hq.comparison.earlier, hq.comparison.later];
+    const ori = hq.agencies[0].ori;
+    const two = execute(`SELECT year, ${m.col}_total, ${m.col}_capita, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE ori = ${q(ori)} AND year IN (${E}, ${L})`);
+    const at = (y: number) => { const r = two.find((x) => Number(x[0]) === y); return r ? historicalRate(num(r[2]), num(r[1]), num(r[3])).rate : null; };
+    const e = at(E), l = at(L);
+    if (e === null || l === null) return { kind: "historical-decline", explanation: `Crime Index has no ${m.name} rate for ${where} in ${e === null ? E : L}: not available in this data, so there is no change to give.` };
+    const change = Math.round((l - e) * 10) / 10, pct = e === 0 ? null : pct1(l - e, e);
+    const signed = (n: number) => (n > 0 ? `+${fmtRate(n)}` : n < 0 ? `-${fmtRate(-n)}` : "0");
+    return {
+      kind: "historical", question: hq, period: { from: `${E}-01`, to: `${L}-12` },
+      meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change", denominator: "the agency's population as published by Crime Index, per 100,000" },
+      delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? `${E}, per 100,000` : k === "later" ? `${L}, per 100,000` : k === "change" ? "Change, per 100,000" : "Percent change" })),
+        rows: [[e, l, change, pct]] },
+        text: lines(hq, `${where}: ${m.words} per 100,000, ${E} against ${L}.`, `${fmtRate(e)} in ${E} and ${fmtRate(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+          ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), SRS_SOURCE) },
+      read,
+    };
+  }
+
   const period = { from: `${covered[0]}-01`, to: `${covered[covered.length - 1]}-12` };
-  const rateMeaning = hq.statistic === "rate" ? { denominator: "the agency's population as published by Crime Index, per 100,000" } : {};
+  const rateMeaning =hq.statistic === "rate" ? { denominator: "the agency's population as published by Crime Index, per 100,000" } : {};
   const notes = [...outsideLine, ...(hq.notes ?? [])];
   // Several agencies in one year: a row each, side by side (never combined: the file has no cohort to combine).
   if (several && !hq.byYear && covered.length === 1) {

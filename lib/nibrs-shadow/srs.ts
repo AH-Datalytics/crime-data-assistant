@@ -134,19 +134,22 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${q.statistic === "rate" ? " per 100,000" : ""}`;
 
   // A change (P54): the earlier and later years, the change and percent change (P55: none from a zero base).
-  if (q.comparison && q.statistic === "count") {
+  if (q.comparison) {
     const [E, L] = [q.comparison.earlier, q.comparison.later];
+    const rate = q.statistic === "rate";
     const e = value(rowFor(crime(), q.place, E)), l = value(rowFor(crime(), q.place, L));
-    if (e === null || l === null) return { kind: "srs-decline", explanation: `The data has no ${m.words} for ${where} in ${e === null ? E : L}.` };
-    const change = l - e, pct = e === 0 ? null : pct1(change, e);
-    const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : n < 0 ? `-${fmt(-n)}` : "0");
-    const text = [`${where}: ${m.words}, ${E} against ${L}.`,
-      `${fmt(e)} in ${E} and ${fmt(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+    if (e === null || l === null) return { kind: "srs-decline", explanation: `The data has no ${m.words}${rate ? " rate" : ""} for ${where} in ${e === null ? E : L}.` };
+    // A rate's change is in points per 100,000, to one decimal; its percent change is on the published rates.
+    const change = rate ? Math.round((l - e) * 10) / 10 : l - e, pct = e === 0 ? null : pct1(l - e, e);
+    const shown = (n: number) => (rate ? String(n) : fmt(n));
+    const signed = (n: number) => (n > 0 ? `+${shown(n)}` : n < 0 ? `-${shown(-n)}` : "0");
+    const text = [`${where}: ${m.words}${rate ? " per 100,000" : ""}, ${E} against ${L}.`,
+      `${shown(e)} in ${E} and ${shown(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
       ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), SRS_SOURCE];
     return {
       kind: "srs", question: q, period: { from: `${E}-01`, to: `${L}-12` },
-      meaning: { ...meaningBase, period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change" },
-      delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? String(E) : k === "later" ? String(L) : k === "change" ? "Change" : "Percent change" })),
+      meaning: { ...meaningBase, period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change", ...(rate ? { denominator: "the state's population, per 100,000" } : {}) },
+      delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? `${E}${rate ? ", per 100,000" : ""}` : k === "later" ? `${L}${rate ? ", per 100,000" : ""}` : k === "change" ? `Change${rate ? ", per 100,000" : ""}` : "Percent change" })),
         rows: [[e, l, change, pct]] }, text },
       read: { ...read, uids: [rowFor(crime(), q.place, E)!.uid, rowFor(crime(), q.place, L)!.uid] },
     };

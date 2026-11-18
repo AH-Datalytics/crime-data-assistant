@@ -102,6 +102,12 @@ assert.deepEqual([cmp("Shoplifting in Tulsa in 2024 compared with 2023").text, c
   ["Shoplifting in Tulsa from 2023 to 2024", { earlier: { from: "2023-01", to: "2023-12" }, later: { from: "2024-01", to: "2024-12" }, matched: false }]);
 assert.equal(cmp("Percent change in robberies with a firearm in Tulsa from 2021 to 2025").text, "Robberies with a firearm in Tulsa from 2021 to 2025");
 assert.deepEqual(cmp("Did burglaries go up in Tulsa in 2025?").comparison?.earlier, { from: "2024-01", to: "2024-12" }, "P54: the year before");
+// A dash between the years, with or without "from" ("percent change in violent crime rates from 2024-2025 for Fort Worth", "... for Minneapolis, MN 2024-2025").
+for (const q of ["calculate percent change in violent crime rates from 2024-2025 for Fort Worth, TX", "calculate the percent change in violent crime rates for Minneapolis, MN 2024-2025", "percent change in murders in Chicago 2024–2025"]) {
+  const c = cmp(q);
+  assert.deepEqual([c.comparison?.earlier, c.comparison?.later], [{ from: "2024-01", to: "2024-12" }, { from: "2025-01", to: "2025-12" }], q);
+}
+assert.equal(cmp("percent change in murders in Chicago 2025-2024").comparison, null, "the later year first: not a change");
 assert.deepEqual(cmp("Did burglaries go up in Tulsa in 2025?").forecast, false, "a past year is not a forecast");
 assert.deepEqual(cmp("Is shoplifting in Tulsa up this year compared with last year?").comparison, { earlier: { from: "2025-01", to: "2025-12" }, later: { from: "2026-01", to: "2026-12" }, matched: true });
 assert.deepEqual(cmp("Shoplifting in Tulsa January through June 2024 compared with January through June 2023").comparison,
