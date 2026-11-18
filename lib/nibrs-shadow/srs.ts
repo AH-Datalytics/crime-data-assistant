@@ -15,6 +15,8 @@ import type { ResultTable } from "../nibrs-plan/result";
 import { pct1 } from "../nibrs-plan/transforms";
 import { fmt, periodWords, SRS_SOURCE } from "./deliver";
 import { stateName } from "./places";
+import { changeSentence, countSentence, nationSubject, rateChangeSentence, rateSentence, seriesTitle, stateSubject } from "./headline";
+import { titleCase } from "./titles";
 
 // From the working directory (the repository root): a Next bundle has no source __dirname.
 const DIR = path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/crimeindex");
@@ -108,7 +110,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
         meaning: { source: "historical", places: [placeOf(q.place)], period, measures: [{ name: `${m.name} cleared`, unit: "offense" }], filters: [], groupings: ["year"], statistic: "rate", denominator: `${m.words}, per 100` },
         delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true }, { binding: { kind: "statistic", as: "clearance_rate" }, header: `${m.words[0].toUpperCase()}${m.words.slice(1)} cleared (%)` }],
           rows: rows.map((r) => [String(r.y), rate(r.row)]) },
-          text: [`${where}: the percentage of ${m.words} cleared by year, ${periodWords(period.from, period.to)}.`, ...outsideLine, ...(q.notes ?? []), ...missLine, SRS_SOURCE] },
+          text: [seriesTitle(periodWords(period.from, period.to), `${m.words[0].toUpperCase()}${m.words.slice(1)} Cleared (%)`, "Year", where), ...outsideLine, ...(q.notes ?? []), ...missLine, SRS_SOURCE] },
         read: { file: "historical_clearances_states_nation_1960-2025.csv", column: col, uids: rows.flatMap((r) => (r.row ? [r.row.uid] : [])) },
       };
     }
@@ -119,7 +121,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
       kind: "srs", question: q, period: { from: `${y}-01`, to: `${y}-12` },
       meaning: { source: "historical", places: [placeOf(q.place)], period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: "offense" }], filters: [], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "clearance_rate" }, header: `${m.words[0].toUpperCase()}${m.words.slice(1)} cleared (%)` }], rows: [[v]] },
-        text: [`${where}: ${v}% of ${m.words} were cleared in ${y}.`, SRS_SOURCE] },
+        text: [`${(q.place.kind === "national" ? nationSubject : stateSubject(where)).text} cleared ${v}% of its ${m.words} in ${y}.`, SRS_SOURCE] },
       read: { file: "historical_clearances_states_nation_1960-2025.csv", column: col, uids: [row!.uid] },
     };
   }
@@ -144,8 +146,8 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     const change = rate ? Math.round((l - e) * 10) / 10 : l - e, pct = e === 0 ? null : pct1(l - e, e);
     const shown = (n: number) => (rate ? String(n) : fmt(n));
     const signed = (n: number) => (n > 0 ? `+${shown(n)}` : n < 0 ? `-${shown(-n)}` : "0");
-    const text = [`${where}: ${m.words}${rate ? " per 100,000" : ""}, ${E} against ${L}.`,
-      `${shown(e)} in ${E} and ${shown(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+    const who = q.place.kind === "national" ? nationSubject : stateSubject(where);
+    const text = [rate ? rateChangeSentence(who, m.name, shown(e), shown(l), String(E), String(L), signed(change), pct) : changeSentence(who, m.words, shown(e), shown(l), String(E), String(L), signed(change), pct),
       ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), SRS_SOURCE];
     return {
       kind: "srs", question: q, period: { from: `${E}-01`, to: `${L}-12` },
@@ -158,7 +160,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
 
   const period = { from: `${covered[0]}-01`, to: `${covered[covered.length - 1]}-12` };
   if (q.byYear || covered.length > 1) {
-    const text = [`${where}: ${m.words}${q.statistic === "rate" ? " per 100,000" : ""} by year, ${periodWords(period.from, period.to)}.`, ...missingLine, SRS_SOURCE];
+    const text = [seriesTitle(periodWords(period.from, period.to), q.statistic === "rate" ? titleCase(`${m.name} rate`) : `${m.words[0].toUpperCase()}${m.words.slice(1)}`, "Year", where), ...missingLine, SRS_SOURCE];
     return {
       kind: "srs", question: q, period,
       meaning: { ...meaningBase, period, groupings: ["year"], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's population, per 100,000" } : {}) },
@@ -168,7 +170,8 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   }
   const v = value(rows[0].row);
   if (v === null) return { kind: "srs-decline", explanation: `The data has no ${m.words} for ${where} in ${covered[0]}.` };
-  const text = [q.statistic === "rate" ? `${where}: ${v} ${m.words} per 100,000 in ${covered[0]}.` : `${where}: ${fmt(v)} ${m.words} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
+  const who = q.place.kind === "national" ? nationSubject : stateSubject(where);
+  const text = [q.statistic === "rate" ? rateSentence(who, m.name, String(covered[0]), String(v)) : countSentence(who, fmt(v), m.words, String(covered[0])), ...missingLine, SRS_SOURCE];
   return {
     kind: "srs", question: q, period,
     meaning: { ...meaningBase, period, groupings: [], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's population, per 100,000" } : {}) },
@@ -200,7 +203,8 @@ export function answerSrsSeveral(q: Omit<SrsQuestion, "place">, places: SrsPlace
     ...places.map((p, i) => ({ binding: { kind: "statistic" as const, as: `x.${i}` }, header: `${placeName(p)}: ${header}` }))];
   const rows = covered.map((y) => [String(y), ...places.map((p) => value(p, y))]);
   const missingLine = [...(outside.length ? [`${span}; ${yearsWords(outside[0], outside[outside.length - 1])} ${outside.length > 1 ? "are" : "is"} outside them.`] : []), ...(q.notes ?? [])];
-  const text = [covered.length > 1 ? `${where}: ${header} by year, ${periodWords(period.from, period.to)}.` : `${where}: ${header} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
+  const what = q.statistic === "rate" ? titleCase(`${m.name} rate`) : `${m.words[0].toUpperCase()}${m.words.slice(1)}`;
+  const text = [covered.length > 1 ? seriesTitle(periodWords(period.from, period.to), what, "Year", where) : seriesTitle(String(covered[0]), what, "Place", where), ...missingLine, SRS_SOURCE];
   return {
     kind: "srs", question: { ...q, place: places[0], places }, period,
     meaning: { source: "historical", places: places.map(placeOf), measures: [{ name: m.name, unit: m.unit }], filters: [], period, groupings: ["year"],

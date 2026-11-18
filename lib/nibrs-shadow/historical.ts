@@ -24,6 +24,7 @@ import { stateName } from "./places";
 import { headerStates } from "../nibrs-plan/state-codes";
 import { answerSrsSeveral, type SrsPlace } from "./srs";
 import { titleCase } from "./titles";
+import { agencySubject, changeSentence, countSentence, rateChangeSentence, rateSentence, seriesTitle } from "./headline";
 
 /** Where the Crime Index build is, and the years it holds. */
 export type HistoricalBuild = { root: string; release: string; firstYear: number; lastYear: number; clearanceFirstYear: number };
@@ -189,7 +190,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
           kind: "historical", question: hq, period, meaning: meaningOf(period, ["agency"]),
           delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "clearance_rate" }, header }],
             rows: hq.agencies.map((a) => [a.label, rateOf(a.ori, y)]) },
-            text: lines(hq, `${where}: the percentage of ${m.words} cleared in ${y}.`, ...notes, ...blanks([y]), SRS_SOURCE) },
+            text: lines(hq, seriesTitle(String(y), `${ucFirst(m.words)} Cleared (%)`, "Agency", where), ...notes, ...blanks([y]), SRS_SOURCE) },
           read: { table: "agency_clearances", column: col, release: build.release },
         };
       }
@@ -204,7 +205,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
       return {
         kind: "historical", question: hq, period, meaning: meaningOf(period, ["year", ...(several ? ["agency"] : [])]),
         delivered: { table: { columns, rows: kept.map((y) => [String(y), ...hq.agencies.map((a) => rateOf(a.ori, y))]) },
-          text: lines(hq, `${where}: the percentage of ${m.words} cleared by year, ${yearsWords(kept[0], kept[kept.length - 1])}.`, ...startNote, ...notes, ...blanks(kept), SRS_SOURCE) },
+          text: lines(hq, seriesTitle(kept[0] === kept[kept.length - 1] ? String(kept[0]) : `${kept[0]} to ${kept[kept.length - 1]}`, `${ucFirst(m.words)} Cleared (%)`, "Year", where), ...startNote, ...notes, ...blanks(kept), SRS_SOURCE) },
         read: { table: "agency_clearances", column: col, release: build.release },
       };
     }
@@ -218,7 +219,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
       kind: "historical", question: hq, period: { from: `${y}-01`, to: `${y}-12` },
       meaning: { ...meaningBase, period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: "offense" }], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "clearance_rate" }, header: `${ucFirst(m.words)} cleared (%)` }], rows: [[rate]] },
-        text: lines(hq, `${where}: ${rate}% of ${m.words} were cleared in ${y}.${counts}`, SRS_SOURCE) },
+        text: lines(hq, `${agencySubject(hq.agencies[0].label, hq.agencies[0].ori).text} cleared ${rate}% of its ${m.words} in ${y}${cleared !== null && all !== null ? `: ${fmt(cleared)} of ${fmt(all)}` : ""}.`, SRS_SOURCE) },
       read: { table: "agency_clearances", column: col, release: build.release },
     };
   }
@@ -273,7 +274,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change" },
       delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? String(E) : k === "later" ? String(L) : k === "change" ? "Change" : "Percent change" })),
         rows: [[e, l, change, pct]] },
-        text: lines(hq, `${where}: ${m.words}, ${E} against ${L}.`, `${fmt(e)} in ${E} and ${fmt(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+        text: lines(hq, changeSentence(agencySubject(hq.agencies[0].label, ori), m.words, fmt(e), fmt(l), String(E), String(L), signed(change), pct),
           ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), SRS_SOURCE) },
       read,
     };
@@ -297,7 +298,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change", denominator: "the agency's population as published by Crime Index, per 100,000" },
       delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? `${E}, per 100,000` : k === "later" ? `${L}, per 100,000` : k === "change" ? "Change, per 100,000" : "Percent change" })),
         rows: [[e, l, change, pct]] },
-        text: lines(hq, `${where}: ${m.words} per 100,000, ${E} against ${L}.`, `${fmtRate(e)} in ${E} and ${fmtRate(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+        text: lines(hq, rateChangeSentence(agencySubject(hq.agencies[0].label, ori), m.name, fmtRate(e), fmtRate(l), String(E), String(L), signed(change), pct),
           ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), SRS_SOURCE) },
       read,
     };
@@ -311,7 +312,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const y = covered[0];
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header }];
     const rows = hq.agencies.map((a) => [a.label, value(a.ori, y)]);
-    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} in ${y}.`, ...notes, ...computedLine([y]), ...blankLine([y]), SRS_SOURCE);
+    const text = lines(hq, seriesTitle(String(y), hq.statistic === "rate" ? titleCase(`${m.name} rate`) : ucFirst(m.words), "Agency", where), ...notes, ...computedLine([y]), ...blankLine([y]), SRS_SOURCE);
     return {
       kind: "historical", question: hq, period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["agency"], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
@@ -332,7 +333,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
       ...hq.agencies.map((a, i) => ({ binding: { kind: "statistic" as const, as: several ? `x.${i}` : "x" }, header: several ? `${a.label}: ${header.toLowerCase()}` : header }))];
     const rows = kept.map((y) => [String(y), ...hq.agencies.map((a) => value(a.ori, y))]);
-    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} by year, ${yearsWords(kept[0], kept[kept.length - 1])}.`,
+    const text = lines(hq, seriesTitle(kept[0] === kept[kept.length - 1] ? String(kept[0]) : `${kept[0]} to ${kept[kept.length - 1]}`, hq.statistic === "rate" ? titleCase(`${m.name} rate`) : ucFirst(m.words), "Year", where),
       ...startNote, ...notes, ...computedLine(kept), ...blankLine(kept), SRS_SOURCE);
     return {
       kind: "historical", question: hq, period,
@@ -343,7 +344,8 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   }
   const y = covered[0], v = value(hq.agencies[0].ori, y);
   if (v === null) return { kind: "historical-decline", explanation: `Crime Index has no ${hq.statistic === "rate" ? `${m.name} rate` : m.words} for ${where} in ${y}: not available in this data.` };
-  const text = lines(hq, hq.statistic === "rate" ? `${where}: ${shown(v)} ${m.words} per 100,000 in ${y}.` : `${where}: ${fmt(v)} ${m.words} in ${y}.`, ...notes, ...computedLine([y]), SRS_SOURCE);
+  const who = agencySubject(hq.agencies[0].label, hq.agencies[0].ori);
+  const text = lines(hq, hq.statistic === "rate" ? rateSentence(who, m.name, String(y), shown(v)) : countSentence(who, fmt(v), m.words, String(y)), ...notes, ...computedLine([y]), SRS_SOURCE);
   return {
     kind: "historical", question: hq, period,
     meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: [], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
