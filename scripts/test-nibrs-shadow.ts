@@ -579,7 +579,8 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"])
     assert.equal(as(shadowAnswer(q, hdeps), "clarify").about, "which period", q);
   assert.ok(!/number of/.test(readQuestion("show me the annual number of murders in the us", 2026).text), "read as annual murders, a series by year");
-  assert.equal((ask("why can't you tell me which states are not represented?") as { about?: string }).about, "which place");
+  // A question about the data itself is answered from the release's agency lists (Jeff 2026-11-18, test-nibrs-coverage.ts), no longer asked "which place".
+  assert.equal(shadowAnswer("why can't you tell me which states are not represented?", { ...deps, execute: () => [] }).kind, "coverage");
 }
 // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) in NIBRS and says what it counted; on Crime Index it
 // is the murder count with no disclaimer.
