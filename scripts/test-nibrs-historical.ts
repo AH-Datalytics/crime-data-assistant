@@ -382,6 +382,16 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.ok(!(shadowAnswer(q, base).kind === "historical" && (shadowAnswer(q, base) as { question: { measure: string } }).question.measure === "population"), q);
 }
 
+// P70 (Jeff 2026-11-18, overriding 2026-10-30): a county-wide sum is declined, naming the county's own agency; nothing is summed.
+{
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
+  const dec = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "decline", `${q}: ${JSON.stringify(o).slice(0, 240)}`); return o as Extract<ShadowOutcome, { kind: "decline" }>; };
+  for (const q of ["countywide murders in Cook County Illinois by year", "Murders across all agencies in Kern County, California in 2025", "calculate the countywide percent change in violent crime rates in Cook County, IL from 2024-2025"])
+    assert.match(dec(q).explanation, /^County-wide sums aren't given; the figures for (?:Cook|Kern) County are those of the (?:Cook|Kern) County Sheriff's Office\.$/, q);
+  assert.match(dec("countywide murders in Zzyzx County Nevada").explanation, /^County-wide sums aren't given, and Crime Index has no agency for Zzyzx County Nevada\./);
+}
+
 // Item 1: police staffing for agencies, as published by Crime Index; per 100,000 only (another scale said, never
 // converted); a rate Crime Index leaves blank is the count per 100,000 of its population, said; states and the nation
 // have none; officers and civilians together are asked which.

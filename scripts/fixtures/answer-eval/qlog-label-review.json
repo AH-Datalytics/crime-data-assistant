@@ -1276,12 +1276,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-4a3b1f38eb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Counting incidents and summing all county agencies requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-4a77c0ee3d": {
@@ -1539,12 +1539,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-56485149f3": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "An explicit countywide sum uses all reporting agencies under P70.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-56ce53cbf5": {
@@ -5126,7 +5126,12 @@
 },
 "QL-hist-0fa0037118": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-hist-0fbe5f6538": {
 "status": "reviewed",
@@ -5961,15 +5966,11 @@
 },
 "QL-hist-443272f110": {
 "status": "reviewed",
-"by": "coordinator-2026-11-11",
-"why": "A Part I count by year is Crime Index's under Jeff's D3 and ranking decision 3, and a county-wide figure is the sum of those agency figures (P70, membership from the FBI's agency records, 2017 on); NIBRS also answers it (coordinator correction 2026-11-11, not an owner verdict)",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-44d40ebbd6": {
@@ -6230,12 +6231,12 @@
 }
 },
 "QL-hist-56485149f3": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P70 countywide sums aggregate reporting agencies.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-566fda09f0": {
@@ -7077,7 +7078,12 @@
 },
 "QL-hist-88b97d7ac7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-hist-8917d54ff4": {
 "status": "reviewed",
@@ -7753,7 +7759,12 @@
 },
 "QL-hist-b47c8b9d58": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-hist-b59cfdca3c": {
 "status": "reviewed",
@@ -10304,15 +10315,11 @@
 },
 "QL-nibrs-401595e13b": {
 "status": "reviewed",
-"by": "jeff-2026-11-11-S1",
-"why": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "shr",
-"source_any": [
-"shr",
-"nibrs"
-]
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-nibrs-4040f1f0bf": {
@@ -12903,7 +12910,12 @@
 },
 "QL-nibrs-ae7697a788": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-nibrs-ae7d49ca20": {
 "status": "reviewed",
@@ -18021,12 +18033,12 @@
 }
 },
 "QL-ct-75a35f41a5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Explicit countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-767ac25873": {
@@ -18132,12 +18144,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-97b7cf41a5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-998bcdb673": {
@@ -18242,12 +18254,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-ab5fa41444": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-ad55ef17a4": {
@@ -18401,12 +18413,12 @@
 }
 },
 "QL-ct-d4a7d6e331": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-d5b34c57bc": {
@@ -19158,12 +19170,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-5c550f41a5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-5d2f764c77": {
@@ -19293,12 +19305,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-6c27261815": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-6c79c2976c": {
@@ -19664,12 +19676,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-bd0f4f41a5": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-c136595d3a": {
@@ -20531,7 +20543,12 @@
 },
 "QL-nibrs-68bb961815": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-nibrs-6b86b5ebf2": {
 "status": "reviewed",
@@ -20627,7 +20644,12 @@
 },
 "QL-nibrs-78de0b0030": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-nibrs-7a4746ef1a": {
 "status": "reviewed",
@@ -21009,7 +21031,12 @@
 },
 "QL-nibrs-d5e908947a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "county-wide sums are declined with an offer of the county's agency (P70, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
+}
 },
 "QL-nibrs-d82c131075": {
 "status": "reviewed",

@@ -294,6 +294,9 @@ export function nearestWord(word: string): string | null {
   return at.length === 1 ? at[0] : null;
 }
 
+/** The words of a county-wide request ("countywide", "the whole county", "all agencies in X County"): read as a flag, declined with an offer (P70). */
+export const COUNTYWIDE_RE = /\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:(?:across|for|from|in|of)\s+)?all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\s+(?:[\w.'-]+\s+){1,3}county\b))/i;
+
 /** A comparison asked in one of the forms above: its periods, and the question as a count over the whole span. */
 function readComparison(text: string, currentYear: number, lastMonth?: string): { comparison: Comparison; text: string; from: string } | null {
   let m: RegExpExecArray | null;
@@ -423,7 +426,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // every agency in the county; flagged and the words taken out, so the county is read as usual.
   let countywide = false;
   // "All agencies" only before a county ("all agencies in Kern County"), never a state (Codex rankings-B review 01.1).
-  text = text.replace(/\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:(?:across|for|from|in|of)\s+)?all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\s+(?:[\w.'-]+\s+){1,3}county\b))/i,
+  text = text.replace(COUNTYWIDE_RE,
     (m) => { countywide = true; readings.push({ kind: "phrase", from: m.trim(), to: "(every agency in the county, summed)" }); return " "; });
   // All the cities (Jeff 2026-11-16): "all American cities", "every city in Texas", "all cities in the US", and "major/large/big cities" with no
   // rank word are the cities of 250,000 or more, said. Read as a set of ALL_CITIES_N, so the set's own rules (one crime, a count or a rate, one
