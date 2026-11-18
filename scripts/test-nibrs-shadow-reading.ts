@@ -30,13 +30,6 @@ const sp = read("burglries in Pittsburgh in 2023");
 assert.deepEqual(sp.readings, [{ kind: "spelling", from: "burglries", to: "burglaries" }]);
 assert.equal(read("Robberies in Pittsburgh in 2023").readings.length, 0, "nothing to correct, nothing recorded");
 
-// Vocabulary that adds nothing: "statewide" beside a state, "levels" as the figure, "Louisville metro" as the city.
-assert.equal(read("what was the statewide violent crime rate in Colorado in 2025?").text, "what was violent crime rate in Colorado in 2025?");
-assert.equal(read("Show me the homicide levels for Dallas, Texas in 2024").text, "Show me the homicide for Dallas, Texas in 2024");
-assert.equal(read("Louisville metro murders per year").text, "Louisville murders per year");
-for (const q of ["murders at the state level in Texas in 2024", "the city level of crime in Dallas", "the level of violence in Dallas", "Louisville metro area murders per year"])
-  assert.ok(/\bstate level\b|\bcity level\b|\blevel of\b|\bmetro area\b/.test(read(q).text), `${q}: kept as written`);
-
 // Crime phrases: onto existing measures; motor vehicle theft keeps its own meaning.
 assert.equal(read("thefts from trucks in Tulsa in 2022").text, "theft from motor vehicle in Tulsa in 2022");
 assert.equal(read("auto break-ins in Tulsa in 2022").text, "car break-ins in Tulsa in 2022");

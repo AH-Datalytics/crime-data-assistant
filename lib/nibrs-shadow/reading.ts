@@ -490,14 +490,6 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "U.S." }); return "U.S. "; });
   text = text.replace(/\bamerican(?=\s+(?:cities|city|violent|crime|murder|homicide|property|robber|burglar|theft|assault|police))/gi,
     (m) => { readings.push({ kind: "phrase", from: m, to: "U.S." }); return "U.S."; });
-  // Vocabulary that adds nothing, applied here, not in PHRASES, whose replacement re-reads only the matched words (look-around would fail):
-  // "the statewide violent crime rate in Colorado" (no state named: the place is asked anyway); "the homicide levels for Dallas" ("levels"
-  // is the figure itself, a count; never "at the state level" or "the level of"); "Louisville metro murders" (Louisville Metro is the
-  // city's own police department, named by the city).
-  const dropWord = (re: RegExp, to: string) => { text = text.replace(re, (m, ...g) => { const t = to.replace(/\$(\d)/g, (_x, n) => String(g[Number(n) - 1] ?? "")); readings.push({ kind: "phrase", from: m.trim(), to: t.trim() }); return t; }); };
-  dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
-  dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
-  dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });
