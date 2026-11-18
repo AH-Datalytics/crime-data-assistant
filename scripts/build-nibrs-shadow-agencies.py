@@ -26,6 +26,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--root", required=True)
 ap.add_argument("--names", required=True)
 ap.add_argument("--release", required=True)  # the canonical release id, recorded in the file
+ap.add_argument("--first-year", type=int, default=2017, help="the engine's first year (release.json first_year): an agency with no row since then is not a place (a build that reaches back to 2013 carries ORIs that stopped reporting in 2016, e.g. a second 'Essex County' beside the current one)")
 ap.add_argument("--crosswalk")   # nibrs-model's agency crosswalk release dir (aliases, place names)
 ap.add_argument("--crimeindex")  # the Crime Index build dir (agencies NIBRS does not have)
 a = ap.parse_args()
@@ -35,7 +36,7 @@ rows = duckdb.connect().execute(f"""
   WITH y AS (SELECT ori, u.data_year, trim(u.city) AS city, u.state_abbr AS state, u.agency_indicator AS ind, u.population
              FROM read_parquet('{a.root}/agency/data.parquet'), unnest(by_year) AS t(u))
   SELECT ori, arg_max(city, data_year), arg_max(state, data_year), arg_max(ind, data_year), arg_max(population, data_year), max(data_year)
-  FROM y GROUP BY ori ORDER BY 3, 2, 5 DESC""").fetchall()
+  FROM y GROUP BY ori HAVING max(data_year) >= {a.first_year} ORDER BY 3, 2, 5 DESC""").fetchall()
 names = sqlite3.connect(f"file:{a.names}?mode=ro", uri=True)
 hist = {o: (n, t) for o, n, t in names.execute("SELECT ori, agency, type FROM historical_agency WHERE type IN ('city', 'county')")}
 out = []
