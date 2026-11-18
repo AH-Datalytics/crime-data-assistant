@@ -504,10 +504,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   const cubeCfg = cubeWanted;
-  const cube = cubeCfg && ["offender", "victim", "arrestee"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
+  const cube = cubeCfg && ["offender", "victim", "arrestee", "group_b_arrest"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
     cfg: cubeCfg, kind: m.id.startsWith("offenders.") ? "offenders" : m.id.startsWith("victims.") ? "victims" : "arrests",
     codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? null,
-    allCrimeArrests: m.id === "arrests.all_crime", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
+    allCrimeArrests: m.id === "arrests.all_crime", groupB: units.entity === "group_b_arrest", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
     conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0 }) : null;
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
