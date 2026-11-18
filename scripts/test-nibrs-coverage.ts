@@ -94,6 +94,11 @@ assert.ok(def.delivered.text.some((t) => t.includes(DEFINITIONS_LINK)) && DEFINI
 assert.ok(def.delivered.text.every((t) => t.length < 120), "no written definition");
 for (const q of ["what is the defanition of simple assault", "SRS definition please", "What counts as violent crime here?"]) assert.equal(ask(q).shape, "definitions", q);
 
+// A question about how a definition changed is not a plain definition (QL-hist-9745b45647 and QL-hist-924349745b): it keeps its old reading.
+for (const q of ["any legal change of the definition of robbery or clearance rate historically", "has the definition of violent crime changed over time?", "how has rape been defined historically"])
+  assert.notEqual(shadowAnswer(q, deps).kind, "coverage", q);
+assert.equal(ask("how is robbery defined?").shape, "definitions");
+
 // A follow-up about the data is answered on its own, whatever came before.
 const fu = shadowFollowUp("murders in Houston in 2024", "what states are not represented?", deps);
 assert.equal(fu.kind, "coverage");

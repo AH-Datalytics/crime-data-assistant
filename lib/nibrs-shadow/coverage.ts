@@ -63,7 +63,10 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
     || /\bwhere\s+(?:is|does)\s+(?:this|the)\s+data\s+(?:come\s+from|taken\s+from)/i.test(t))
     return one("sources");
   // Where a term is defined: one plain question about the term, nothing else asked with it.
-  if (DEFINED.test(t) && !hasPlace && (t.match(/\?/g) ?? []).length <= 1 && !/\b(?:and|also)\s+(?:show|give|can|how\s+many)\b|\bcan\s+you\s+show\b/i.test(t) && t.split(/\s+/).length <= 16)
+  // A question about how a definition changed ("any legal change of the definition of robbery historically") is not a plain definition: a link
+  // does not say whether it changed, so it keeps its old reading.
+  const ABOUT_CHANGE = /\b(?:chang\w*|histor\w*|legal(?:ly)?|over\s+time|evolv\w*|used\s+to|revis\w*|updat\w*|amend\w*|ever)\b/i;
+  if (DEFINED.test(t) && !ABOUT_CHANGE.test(t) && !hasPlace && (t.match(/\?/g) ?? []).length <= 1 && !/\b(?:and|also)\s+(?:show|give|can|how\s+many)\b|\bcan\s+you\s+show\b/i.test(t) && t.split(/\s+/).length <= 16)
     return one("definitions");
   if (hasMeasure || hasPlace) return null;
   // Agencies reporting.
