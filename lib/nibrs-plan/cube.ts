@@ -28,11 +28,20 @@ export const CUBE_GROUPS: Record<string, string[]> = {
   violent_crime_fbi6: ["09A", "11A", "11B", "11C", "120", "13A"],
   property_crime: ["200", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240"],
   against_property: ["120", "200", "210", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240", "250", "26A", "26B", "26C", "26D", "26E", "26F", "26G", "270", "280", "290", "510"],
+  // Group cube v2 (Model ce9e942) composites: each is ONE group of its codes, so a victim or offender linked to two of the codes counts once.
+  // They overlap the groups above and each other: cells are never added across groups.
+  homicide: ["09A", "09B"],
+  rape: ["11A", "11B", "11C"],
+  sex_offense: ["11A", "11B", "11C", "11D", "36A", "36B"],
+  assault_offenses: ["13A", "13B", "13C"],
 };
+/** The groups file the Model builds the cube from: its version and the sha256 of crime_groups_v2.json at ce9e942. */
+export const GROUPS_VERSION = "crime_groups_v2";
+export const GROUPS_FILE_SHA256 = "b5cf4cf253bfecc27182dfc7d4788cd6b11a0ad9fdd65a14aa51000f83c58867";
 
 /** unit x group x attribute the cube is asked for (the pilot's matrix: offender age; victim age/sex/race; arrestee age). */
 const ATTRIBUTES: Record<string, string[]> = { offender: ["age"], victim: ["age", "sex", "race"], arrestee: ["age"] };
-const VICTIM_GROUPS = new Set(["person_crimes", "violent_crime_fbi6", "property_crime", "against_property"]);
+const VICTIM_GROUPS = new Set(["person_crimes", "violent_crime_fbi6", "property_crime", "against_property", "homicide", "rape", "sex_offense", "assault_offenses"]);
 
 /** The cube's age bins and the integer ages each holds (NN, NB and BB sit with 1-17, as in the engine's own binning). */
 const CUBE_AGE_BINS: { value: string; from: number; to: number }[] = [
@@ -80,7 +89,7 @@ function readCube(root: string, kind: "group" | "code", releaseRoot: string | un
   // The manifest is written last: a folder without it is an unfinished build.
   const mf = `${root}/manifest.json`;
   if (!fs.existsSync(mf)) return bad(`${label}: no manifest.json (an unfinished build)`);
-  const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups?: Record<string, { list_sha256?: string | null }>;
+  const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups_version?: string; groups_file_sha256?: string; groups?: Record<string, { list_sha256?: string | null }>;
     never_add_across_codes?: unknown; reference_codes?: unknown; years?: Record<string, unknown>; files?: Record<string, unknown> };
   const want = kind === "code" ? CODE_SCHEMA_VERSION : SCHEMA_VERSION;
   if (m.schema_version !== want) return bad(`${label}: schema_version ${m.schema_version} is not ${want}`);
@@ -92,7 +101,9 @@ function readCube(root: string, kind: "group" | "code", releaseRoot: string | un
   if (String(m.source_manifest_sha256 ?? "").toLowerCase() !== releaseSha) return bad(`${label}: built from another release (source_manifest_sha256 ${String(m.source_manifest_sha256).slice(0, 12)} is not the sha256 ${releaseSha.slice(0, 12)} of ${rm})`);
   let codes: string[] | undefined;
   if (kind === "group") {
-    // The group code lists in the cube are the ones this engine counts with.
+    // The groups file and the group code lists in the cube are the ones this engine counts with (v2: the four composite groups are in it).
+    if (m.groups_version !== GROUPS_VERSION) return bad(`${label}: groups_version ${m.groups_version} is not ${GROUPS_VERSION}`);
+    if (String(m.groups_file_sha256 ?? "").toLowerCase() !== GROUPS_FILE_SHA256) return bad(`${label}: groups_file_sha256 is not the engine's crime_groups_v2.json`);
     for (const [g, list] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(list)) return bad(`${label}: the code list of ${g} differs from the engine's`);
   } else {
     // Units are never added across codes: the manifest must say the cube is built that way, and it names the codes it holds.
