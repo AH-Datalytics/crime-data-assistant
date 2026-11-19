@@ -49,13 +49,13 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance } from "./clearance-current";
 import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
@@ -785,8 +785,34 @@ function pruneAsk(x: ShadowOption): ShadowOption | null {
   return !runsNow(c) ? null : c === x.continuation ? x : { ...x, continuation: c };
 }
 
+/**
+ * P147 (Jeff 2026-11-18): a monthly count series with every month blank (NIBRS carjackings for New Orleans, a place that does
+ * not report NIBRS) is not an answer: it is declined in one sentence, with no timeframe. A series with only some places or months
+ * blank keeps its table and its gap sentences.
+ */
+export function allBlankMonthly(o: ShadowOutcome): ShadowOutcome | null {
+  const listed = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
+  if (o.kind !== "answer" && o.kind !== "current") return null;
+  const table = o.delivered.table;
+  const stats = table.columns.map((c, i) => (c.binding.kind === "statistic" ? i : -1)).filter((i) => i >= 0);
+  const monthly = table.columns.some((c) => c.binding.kind === "grouping" && c.binding.dimension === "time.month");
+  if (!monthly || !stats.length || table.rows.length < 2 || !table.rows.every((r) => stats.every((i) => r[i] === null))) return null;
+  if (o.kind === "answer") {
+    if (o.plan.statistics.length !== 1 || o.plan.statistics[0].kind !== "count" || o.plan.measures.length !== 1) return null;
+    // Agencies only: a state's or the nation's month is blank when any agency counted lacks it, and its own notes say so.
+    if (!o.plan.geography.places.length || o.plan.geography.places.some((p) => p.kind !== "agency")) return null;
+    const places = o.plan.geography.places.map((p) => (p.kind === "agency" ? p.label : ""));
+    return decline("outside_release_coverage", `No data is available for ${measureWords(o.plan)} in ${listed(places)}.`);
+  }
+  const q = o.question, hm = HISTORICAL_MEASURE[q.measure];
+  if (!hm || q.statistic === "rate" || q.form !== "months" || q.place.kind !== "agency") return null;
+  return decline("outside_release_coverage", `No data is available for ${hm.words} in ${listed([q.place.label, ...(q.agencies ?? []).map((a) => a.label)])}.`);
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   const o = withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
+  const blank = allBlankMonthly(o);
+  if (blank) return blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
   if (o.kind === "clarify" && typeof o.question === "string") {
     const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);

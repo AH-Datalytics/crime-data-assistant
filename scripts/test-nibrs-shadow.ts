@@ -26,7 +26,18 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
-import { plainMeanings } from "../lib/nibrs-shadow/answer";
+import { allBlankMonthly, plainMeanings } from "../lib/nibrs-shadow/answer";
+// P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
+{
+  const monthCols = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" }, { binding: { kind: "grouping", dimension: "time.month" }, header: "Month" },
+    { binding: { kind: "statistic", as: "x" }, header: "Murders" }];
+  const series = (a: (number | null)[], b: (number | null)[]) => ({ kind: "current", question: { measure: "murder", place: { kind: "agency", label: "Dallas, Texas" }, agencies: [{ label: "New Orleans, Louisiana" }], form: "months", statistic: "count" },
+    delivered: { table: { columns: monthCols, rows: [...a.map((v, i) => ["Dallas", `2025-0${i + 1}`, v]), ...b.map((v, i) => ["New Orleans", `2025-0${i + 1}`, v])] }, text: [] } }) as never;
+  const none = allBlankMonthly(series([null, null], [null, null]));
+  assert.ok(none && none.kind === "decline" && none.explanation === "No data is available for murders in Dallas, Texas and New Orleans, Louisiana.", JSON.stringify(none));
+  assert.equal(allBlankMonthly(series([4, null], [null, null])), null, "some months have figures: the table stays");
+  assert.equal(allBlankMonthly(series([null, null], [3, 3])), null, "one place blank only: the table and its gap sentence stay");
+}
 // P143: phrases with one plain meaning.
 assert.equal(plainMeanings("Baltimore carjackings per month until January 2026 in a bar chart", "2017-01"), "Baltimore carjackings per month from January 2017 through January 2026 in a bar chart");
 assert.equal(plainMeanings("murders in Dallas until January 2026", "2017-01"), "murders in Dallas until January 2026", "no month series, no start: left as it is");
@@ -2406,8 +2417,9 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
   const none = { ...deps, execute: (sql: string) => stub(sql).map((r) => (typeof r[r.length - 1] === "string" && /^(VALUE|UNKNOWN|REPORTED_ZERO|EVIDENCE_CONFLICT)$/.test(String(r[r.length - 1])) ? [...r.slice(0, -2), null, "UNKNOWN"] : r)) } as unknown as ShadowDeps;
   const dec = shadowAnswer("Dallas murders per month in 2024 according to NIBRS", none);
-  assert.ok(dec.kind === "decline" && dec.explanation === "NIBRS has no data from the Dallas Police Department in this period.", JSON.stringify(dec).slice(0, 300));
-  if (dec.kind === "decline") assert.equal(dec.alternative?.label, 'Ask instead: "Dallas murders per month in 2024"');
+  assert.ok(dec.kind === "decline" && /^NIBRS has no data from the Dallas Police Department in this period\./.test(dec.explanation), JSON.stringify(dec).slice(0, 300));
+  // P147: in this stub the Current Trends series the button would lead to has every month blank too, so it is not offered.
+  if (dec.kind === "decline") assert.equal(dec.alternative, null);
 }
 // Rolling 12 months from Homicide Reports (shared helper rolling.ts): a state's firearm murders, with no step left for a
 // year or a window the source can't give.
