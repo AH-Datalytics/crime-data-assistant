@@ -197,7 +197,10 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
     fs.mkdirSync(path.join(cubeRoot, "canonical/cube/data_year=2024"), { recursive: true });
     fs.writeFileSync(path.join(cubeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
     const groups = Object.fromEntries(Object.entries(CUBE_GROUPS).map(([g, c]) => [g, { codes: c, list_sha256: listSha256(c) }]));
-    const write = (m: object) => fs.writeFileSync(path.join(cubeRoot, "manifest.json"), JSON.stringify(m));
+    // cubeFromEnv keys its cache on each manifest's mtime and size: give every write its own, later, modification time so a fast machine cannot repeat one.
+    let tick = Math.floor(Date.now() / 1000);
+    const put = (file: string, m: object) => { fs.writeFileSync(file, JSON.stringify(m)); tick += 2; fs.utimesSync(file, tick, tick); };
+    const write = (m: object) => put(path.join(cubeRoot, "manifest.json"), m);
     const good = { schema_version: "cube-0.1", source_manifest_sha256: sha, groups_version: GROUPS_VERSION, groups_file_sha256: GROUPS_FILE_SHA256, groups, years: { "2024": {}, "2025": {} },
       files: { "canonical/cube/data_year=2024/data.parquet": {}, "canonical/cube/data_year=2025/data.parquet": {} } };
     const env = { NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: cubeRoot };
@@ -248,7 +251,7 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       const codeRoot = path.join(dir, "codecube");
       fs.mkdirSync(path.join(codeRoot, "canonical/cube/data_year=2024"), { recursive: true });
       fs.writeFileSync(path.join(codeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
-      const writeCode = (m: object) => fs.writeFileSync(path.join(codeRoot, "manifest.json"), JSON.stringify(m));
+      const writeCode = (m: object) => put(path.join(codeRoot, "manifest.json"), m);
       const goodCode = { schema_version: "cube-code-0.1", source_manifest_sha256: sha, never_add_across_codes: true, reference_codes: ["09A", "13A"], years: { "2024": {} }, files: { "canonical/cube/data_year=2024/data.parquet": {} } };
       const cenv = { NIBRS_CUBE: "on", NIBRS_CODE_CUBE_ROOT: codeRoot };
       writeCode(goodCode);
