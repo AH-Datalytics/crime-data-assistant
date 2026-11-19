@@ -58,6 +58,27 @@ export type StateSumYear = { year: number; sum: number; agencies: number; partia
  * in the build whatever the answer's span; `missing` agencies have none.
  */
 export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crimeIndexPopulation: Record<number, number>; everyCurrentPopulation: { sum: number; missing: number } };
+/**
+ * The (year, category, sum of every agency, sum of the Consistent Reporting Agencies) rows the category-sum statement gives, from the grid's
+ * (agency, year, category) sums (rows: part, agency, year, n, , , , , category). `headers` (arrests): an arrest counts only in a year in which
+ * the agency has a header in the place (the statement's semi join). The order is the statement's: year, then category, a missing category last.
+ */
+export function categorySumsFromGrid(rows: unknown[][], everySet: string[], headers: Map<number, Set<string>> | null): unknown[][] {
+  const every = new Set(everySet);
+  const sums = new Map<string, { y: number; k: string | null; all: number; ev: number }>();
+  for (const r of rows) {
+    const ori = String(r[1]), y = Number(r[2]), k = r[8] === null ? null : String(r[8]), n = Number(r[3] ?? 0);
+    if (headers && !headers.get(y)?.has(ori)) continue;
+    const key = `${y}|${k}`;
+    const s = sums.get(key) ?? { y, k, all: 0, ev: 0 };
+    s.all += n;
+    if (every.has(ori)) s.ev += n;
+    sums.set(key, s);
+  }
+  return [...sums.values()].sort((a, b) => a.y - b.y || (a.k === b.k ? 0 : a.k === null ? 1 : b.k === null ? -1 : a.k < b.k ? -1 : 1)).map((s) => [s.y, s.k, s.all, s.ev]);
+}
+/** Agency-years (agencies x years) up to which a category sum is read from one grid evaluation instead of two (answerStateSum). */
+const ONCE_LIMIT = 40_000;
 /** Each agency's most recent FBI population in the build (P90). */
 export function currentPopulationSql(root: string, oris: string[]): string {
   return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
@@ -125,12 +146,30 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const monthly = catDims.length
     ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${c.query.sql}) GROUP BY ori, period`
     : c.query.sql;
-  const covRows = deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
+  const covSelect = (from: string) => `SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
       count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
       coalesce(sum(n) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')), 0) AS repsum,
       count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts,
       count(*) FILTER (WHERE n_status = 'VALUE') AS val
-    FROM (${monthly}) GROUP BY ALL`);
+    FROM ${from} GROUP BY ALL`;
+  // Grid once: by category, the grid (the heavy part: every agency-month of the place) is evaluated ONE time, for both the coverage (the
+  // agency-years above) and each agency-year's category sums, which the byCategory view adds up here instead of asking DuckDB to
+  // evaluate the same grid a second time. The sums rows are (agency, year, category): agencies x years x categories, so a very long
+  // national span keeps the two statements (ONCE_LIMIT agency-years, about 40,000: the nation for two years).
+  const once = catDims.length > 0 && oris.length * years.length <= ONCE_LIMIT;
+  let catRows: unknown[][] | null = null;
+  let covRows: unknown[][];
+  if (once) {
+    const both = deps.execute(`WITH g AS MATERIALIZED (${c.query.sql}),
+      m AS (SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM g GROUP BY ori, period),
+      cov AS (${covSelect("m")}),
+      cat AS (SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n FROM g
+        WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL)
+      SELECT 'c' AS part, ori, y, CAST(months AS BIGINT) AS a, CAST(rep AS BIGINT) AS b, CAST(repsum AS BIGINT) AS c, CAST(conflicts AS BIGINT) AS d, CAST(val AS BIGINT) AS e, CAST(NULL AS VARCHAR) AS g0 FROM cov
+      UNION ALL SELECT 's', ori, y, CAST(n AS BIGINT), NULL, NULL, NULL, NULL, g0 FROM cat`);
+    covRows = both.filter((r) => r[0] === "c").map((r) => r.slice(1, 8));
+    catRows = both.filter((r) => r[0] === "s");
+  } else covRows = deps.execute(covSelect(`(${monthly})`));
   for (const r of covRows) {
     const y = Number(r[1]);
     if (yearSet && !yearSet.includes(y)) continue;
@@ -144,6 +183,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // of the set for a span holding it; zero of one crime while other crimes were reported is a VALUE month, not missing.
   const everySet = oris.filter((o) => years.every((y) => inYear.get(y)!.has(o)) && keptYears.some((y) => of(o, y))
     && keptYears.every((y) => { const a = of(o, y); return !a || a.val === a.months; }));
+  const sumsFromGrid = (rows: unknown[][]) => categorySumsFromGrid(rows, everySet, arrests ? inYear : null);
   const byYear: StateSumYear[] = years.map((y) => {
     let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0;
     for (const o of inYear.get(y)!) {
@@ -259,7 +299,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   function byCategory(): ShadowOutcome {
     const g = catDims[0].dimension, count = plan.statistics.find((x) => x.kind === "count")!, share = plan.statistics.find((x) => x.kind === "share");
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
-    const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
+    const sums2 = catRows ? sumsFromGrid(catRows) : deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0) AS n_every
       FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
      ` : ""} WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
