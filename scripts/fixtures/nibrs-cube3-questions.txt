@@ -1,0 +1,28 @@
+# Cube 3 read side: questions for the cell-by-cell precheck (cube against raw, whole answer minus SQL). One per line; every year named is 2024.
+# Group cube v4 (offender, victim and arrestee: sex, race, ethnicity)
+Homicide victims by ethnicity in Texas in 2024
+Homicide victims by sex in Ohio in 2024
+Rape victims by race in Florida in 2024
+Assault offenses victims by ethnicity in the United States in 2024
+Violent crime victims by ethnicity in Chicago in 2024
+Violent crime offenders by sex in Texas in 2024
+Violent crime offenders by race in the United States in 2024
+Violent crime offenders by ethnicity in Ohio in 2024
+Homicide offenders by race in Texas in 2024
+Person crime offenders by sex in Florida in 2024
+Person crime arrests by sex in Texas in 2024
+Violent crime arrests by race in Ohio in 2024
+Violent crime arrests by ethnicity in Texas in 2024
+Arrests by sex in the United States in 2024
+Arrests by race in Texas in 2024
+Arrests by ethnicity in Ohio in 2024
+# Code cube v2 (ethnicity on every unit of a single code)
+Aggravated assault victims by ethnicity in Texas in 2024
+Aggravated assault offenders by ethnicity in Texas in 2024
+Robbery victims by ethnicity in the United States in 2024
+Burglary arrests by ethnicity in Ohio in 2024
+Drug arrests by ethnicity in Texas in 2024
+Murder offenders by ethnicity in the United States in 2024
+# Already served before cube 3 (must stay identical)
+Aggravated assault offenders by sex in Texas in 2024
+Aggravated assault victims by race in the United States in 2024
