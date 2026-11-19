@@ -11333,13 +11333,9 @@
    "question": "Do you have carjacking data for new orleans by month?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",

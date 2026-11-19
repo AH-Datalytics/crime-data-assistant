@@ -2546,7 +2546,12 @@
 },
 "QL-ct-88873ca388": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (NIBRS has no data from this department), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-ct-89988b25dc": {
 "status": "reviewed",
