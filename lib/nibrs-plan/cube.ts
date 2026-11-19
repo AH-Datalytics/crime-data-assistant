@@ -152,7 +152,26 @@ export type CubeAsk = {
   years: number[];
   /** Any condition at all (filter, own condition, clearance, join): the cube holds none. */
   conditioned: boolean;
+  /**
+   * The ONE condition the cube can hold, and the plan has no other: the counted person's age between two years ("juvenile arrests", "offenders
+   * under 18"; the plan's `between`, lo and hi inclusive, NN, NB and BB counting as under one year when lo is 0 or 1). The cube stores each age bin
+   * as its own row, so the answer is those rows summed. `conditioned` is then false.
+   */
+  ageFilter?: { dimension: string; lo: number; hi: number };
 };
+
+/**
+ * The cube age bins an age condition `between lo and hi` keeps, in whole bins, or null when the condition cuts a bin (ages 18 to 21: the cube's bin is
+ * 18 to 24) and so cannot be read from the cube. The "Under 18" bin holds 1 to 17 and NN, NB, BB, exactly the plan's rule for a range starting at 0 or 1
+ * (compile.ts personCond); a range starting at 2 to 17 would drop NN, NB and BB from it, so it is not a whole bin either.
+ */
+export function ageFilterBins(lo: number, hi: number): string[] | null {
+  if (!(Number.isInteger(lo) && Number.isInteger(hi) && lo >= 0 && hi >= lo && hi <= 99)) return null;
+  const start = lo <= 1 ? 0 : CUBE_AGE_BINS.findIndex((b, i) => i > 0 && b.from === lo);
+  const end = CUBE_AGE_BINS.findIndex((b) => b.to === hi);
+  if (start < 0 || end < start) return null;
+  return CUBE_AGE_BINS.slice(start, end + 1).map((b) => b.value);
+}
 
 /**
  * The unit CTE for the cube: columns ori, ym, g0 (when grouped), w (units), wi (incidents); or null when the cube cannot serve the plan.
@@ -192,6 +211,18 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
   let value = "'none'";
   let attrName = "none";
   let merges = false;
+  let inBins = "";
+  if (a.ageFilter) {
+    // One age condition and no second split: the rows of the bins it keeps, summed (a person has one age, so units add across the bins; incidents
+    // never add across attribute values, so several bins are served only as units).
+    if (a.attribute) return null;
+    const [owner, name] = a.ageFilter.dimension.split(".");
+    if (name !== "age" || !(owner === unit || (a.groupB && owner === "group_b_arrest"))) return null;
+    const bins = ageFilterBins(a.ageFilter.lo, a.ageFilter.hi);
+    if (!bins || (bins.length > 1 && a.wantsIncidents)) return null;
+    attrName = "age_bin";
+    inBins = ` AND value IN (${bins.map(q).join(", ")})`;
+  }
   if (a.attribute) {
     const [owner, name] = a.attribute.dimension.split(".");
     const owned = owner === (a.groupB ? "group_b_arrest" : unit);
@@ -218,7 +249,7 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
   const files = a.years.map((y) => q(`${cube.root}/canonical/cube/data_year=${y}/data.parquet`)).join(", ");
   const sql = `SELECT ori, month_key AS ym${a.attribute ? `, ${value} AS g0` : ""}, CAST(SUM(n_distinct_units) AS BIGINT) AS w, CAST(SUM(n_distinct_incidents) AS BIGINT) AS wi
       FROM read_parquet([${files}], hive_partitioning = true)
-      WHERE unit = ${q(unit)} AND ${source} AND ${rows} AND attribute = ${q(attrName)}
+      WHERE unit = ${q(unit)} AND ${source} AND ${rows} AND attribute = ${q(attrName)}${inBins}
       GROUP BY ALL`;
   return { sql };
 }

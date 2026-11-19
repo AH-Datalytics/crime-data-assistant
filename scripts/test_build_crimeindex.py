@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -111,12 +112,12 @@ class CrimeIndexBuild(unittest.TestCase):
         final = ["ori,Agency Name,Murder,Rape,Robbery,Aggravated Assault,Burglary,Theft,Motor Vehicle Theft,Year,Month,State,Type",
                  'TNMPD0000,Memphis,25,10,"1,204",500,300,"2,000",100,2018,3,TN,City', "TNMPD0000,Memphis,-1,,,,,,,2018,4,TN,City",
                  ",No ORI,1,1,1,1,1,1,1,2018,3,TN,City"] + ([final_extra] if final_extra else [])
-        d = os.path.join(self.root, "snapshots", "20261101", "current_crime")
+        d = os.path.join(self.root, "snapshots", "20261119", "current_crime")
         os.makedirs(os.path.join(d, "final"), exist_ok=True)
         for path, ls in ((os.path.join(d, "current_crime_2025-2026.csv"), lines), (os.path.join(d, "final", "082026 - Final.csv"), final)):
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write("\n".join(ls) + "\n")
-        self.files[("20261101", "current_crime")] = [{"file_name": "current_crime_2025-2026.csv", "sha256": digest(os.path.join(d, "current_crime_2025-2026.csv"))}]
+        self.files[("20261119", "current_crime")] =[{"file_name": "current_crime_2025-2026.csv", "sha256": digest(os.path.join(d, "current_crime_2025-2026.csv"))}]
         self.write_manifest()
         with open(self.manifest, encoding="utf-8") as f:
             m = json.load(f)
@@ -136,7 +137,21 @@ class CrimeIndexBuild(unittest.TestCase):
         self.assertEqual(self.q(out, "SELECT month, murder_total, robbery_total, theft_total, rape_total FROM '{out}/current_final.parquet' ORDER BY month"),
                          [(3, 25, 1204, 2000, 10), (4, -1, None, None, None)])
         self.assertEqual(rec["set_aside"]["current_final"]["count"], 1)
-        self.assertEqual(rec["inputs"]["current_crime"]["snapshot"], "20261101")
+        self.assertEqual(rec["inputs"]["current_crime"]["snapshot"], "20261119")
+        # The release is named for its newest input: Current Trends' snapshot is newer than the historical ones.
+        self.assertEqual(rec["release"], "crimeindex-20261119")
+
+    def test_snapshots_from_several_folders(self):
+        """The historical snapshots and a newer current_crime one can sit in different folders (--snapshots takes several)."""
+        self.add_current()
+        a = os.path.join(self.root, "snapshots")
+        split = os.path.join(self.root, "newer")
+        os.makedirs(split)
+        shutil.move(os.path.join(a, "20261119"), os.path.join(split, "20261119"))
+        out = os.path.join(self.root, "out-several")
+        rec = self.b.build(self.manifest, [a, split], out)
+        self.assertEqual(rec["release"], "crimeindex-20261119")
+        self.assertEqual(self.q(out, "SELECT count(*) FROM '{out}/current_final.parquet'"), [(2,)])
 
     def test_current_trends_bad_cell_stops(self):
         self.add_current(final_extra="TNMPD0000,Memphis,1.5,,,,,,,2018,5,TN,City")
