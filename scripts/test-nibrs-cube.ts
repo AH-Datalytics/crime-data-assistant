@@ -244,7 +244,7 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
     fs.writeFileSync(path.join(cubeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
     const groups = Object.fromEntries(Object.entries(CUBE_GROUPS).map(([g, c]) => [g, { codes: c, list_sha256: listSha256(c) }]));
     // cubeFromEnv keys its cache on each manifest's mtime and size: give every write its own, later, modification time so a fast machine cannot repeat one.
-    let tick = Math.floor(Date.now() / 1000);
+    let tick = 1_800_000_000; // a fixed start (no clock read: the timing-gate inventory counts those)
     const put = (file: string, m: object) => { fs.writeFileSync(file, JSON.stringify(m)); tick += 2; fs.utimesSync(file, tick, tick); };
     const write = (m: object) => put(path.join(cubeRoot, "manifest.json"), m);
     const good = { schema_version: "cube-0.1", source_manifest_sha256: sha, groups_version: GROUPS_VERSION, groups_file_sha256: GROUPS_FILE_SHA256, groups, years: { "2024": {}, "2025": {} },
