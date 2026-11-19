@@ -705,6 +705,11 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // Comparison wording (Jeff 2026-11-11): "vs national average" is now read in full, the city beside the United States.
     assert.equal(fillerRewrite("Murder rate in New York City vs national average"), null);
     assert.equal(readQuestion("Murder rate in New York City vs national average", 2026, "2026-09").text, "Murder rate in New York City and the United States");
+    // The question without the unread words (P74) never changes its place or period: "district" names a place smaller than an agency,
+    // and the date after "with an annotation" belongs to the annotation (PR 246 gate, 2026-11-19).
+    const { stripped } = askInsteadChecks;
+    assert.equal(stripped("can I see violent crime rolling over 12 months for the garden district in New Orleans for 2000 to the present?"), null);
+    assert.equal(stripped("national murder trend rolling over 12 months with an annotation in May 2020"), "national murder trend rolling over 12 months");
     // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
     assert.equal(fillerRewrite("Tell me more about crime in Arlington, VA"), null);
     assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");
@@ -2430,6 +2435,21 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 {
   const ctStub = (sql: string): unknown[][] => {
     if (/count\(\*\) FROM read_parquet\('[^']*current_crime/.test(sql)) return [[20]];
+    // A group's published months (the nation, 2025-01 on): the sample-flagged agencies, 3,000 murders a month from 547 agencies of 111 million people.
+    if (/WHERE sample/.test(sql)) {
+      const [, a, b] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
+      const out: unknown[][] = [];
+      for (let y = +a.slice(0, 4), m = +a.slice(5); `${y}-${String(m).padStart(2, "0")}` <= b; m === 12 ? (y++, (m = 1)) : m++) if (y >= 2025) out.push([`${y}-${String(m).padStart(2, "0")}`, 3000, 547, 111272916, 0]);
+      return out;
+    }
+    // A group over a span (the nation): the agencies with a figure in every month of it, 3,000 murders a month from 547 agencies of 111 million people.
+    if (/full_span/.test(sql)) {
+      if (/count\(\*\), coalesce/.test(sql)) return [[547, 111210214]];
+      const [, a, b] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
+      const out: unknown[][] = [];
+      for (let y = +a.slice(0, 4), m = +a.slice(5); `${y}-${String(m).padStart(2, "0")}` <= b; m === 12 ? (y++, (m = 1)) : m++) out.push([`${y}-${String(m).padStart(2, "0")}`, 3000]);
+      return out;
+    }
     if (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql)) {
       const ori = /WHERE ori = '([^']+)'/.exec(sql)![1];
       const [, from, to] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
@@ -2448,6 +2468,58 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(sev.delivered.text.includes("No years were given, so every month in the data is shown: January 2017 through August 2026."), JSON.stringify(sev.delivered.text));
     assert.ok(sev.delivered.text.some((t) => /^No figure is available for August 2026 for Houston, Texas: shown blank, not zero\.$/.test(t)));
     assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
+  }
+  // P154 (Jeff 2026-11-19): rolling totals by month, from Current Trends. No timespan named: the first row is the first January with a full
+  // window; "since 2019": January 2019; "since 2016" (before the data): the first full January and the outside sentence.
+  {
+    const roll = (q: string) => { let r: ShadowOutcome; try { r = shadowAnswer(q, cdeps); } catch (e) { assert.fail(`${q}: ${(e as Error).stack?.split("\n").slice(0, 6).join(" | ")}`); } assert.equal(r.kind, "current", `${q}: ${JSON.stringify(r).slice(0, 300)}`); return r as Extract<ShadowOutcome, { kind: "current" }>; };
+    const r1 = roll("Dallas murders rolling over 12 months");
+    assert.equal(r1.delivered.text[0], "January 2018 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas");
+    assert.deepEqual(r1.delivered.table.rows[0], ["2018-01", 132]);
+    assert.deepEqual(r1.delivered.table.rows[r1.delivered.table.rows.length - 1], ["2026-08", 132]);
+    assert.ok(!r1.delivered.text.some((t) => /Current Trends figures in the data cover/.test(t)), "no note about when Current Trends starts");
+    const r2 = roll("Dallas murders rolling over 12 months since 2019");
+    assert.equal(r2.delivered.text[0], "January 2019 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas");
+    assert.deepEqual(r2.delivered.table.rows[0], ["2019-01", 132]);
+    const r3 = roll("Dallas murders rolling over 12 months since 2016");
+    assert.deepEqual(r3.delivered.table.rows[0], ["2018-01", 132]);
+    assert.ok(r3.delivered.text.includes("Current Trends figures in the data cover January 2017 through August 2026; January 2016 through December 2016 are outside them."), r3.delivered.text.join(" / "));
+    const r4 = roll("Houston murders rolling over 12 months");
+    assert.deepEqual(r4.delivered.table.rows[r4.delivered.table.rows.length - 1], ["2026-08", null], "a window with a month that has no figure is blank");
+    assert.ok(r4.delivered.text.includes("No figure is available for August 2026: every 12-month window containing that month is shown blank, not zero."), r4.delivered.text.join(" / "));
+    const r5 = roll("Dallas and Houston murders rolling over 12 months since 2025");
+    assert.deepEqual(r5.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Rolling 12-month murders"]);
+    assert.equal(r5.delivered.text[0], "January 2025 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas and Houston, Texas");
+    // The nation (Jeff 2026-11-19): the agencies with a figure in every month of the span asked, summed; their number and people said once.
+    const nat = roll("murders rolling over 12 months since 2016 nationally");
+    assert.ok(nat.delivered.text.includes("Current Trends figures in the data cover January 2017 through August 2026; January 2016 through December 2016 are outside them."), nat.delivered.text.join(" / "));
+    assert.ok(nat.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from February 2017 through August 2026."), nat.delivered.text.join(" / "));
+    assert.deepEqual(nat.delivered.table.rows[0], ["2018-01", 36000]);
+    assert.ok(nat.delivered.table.rows.every((r) => r[1] !== null), "no blank rows");
+    // Windows whose whole lookback is inside 2025 on use the published Consistent Reporting Agencies (the flag), said with the published span.
+    const nat3 = roll("murders rolling over 12 months since 2026 nationally");
+    assert.ok(nat3.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026."), nat3.delivered.text.join(" / "));
+    assert.deepEqual(nat3.delivered.table.rows[0], ["2026-01", 36000]);
+    const nat2 = roll("murders rolling over 12 months since 2024 nationally");
+    assert.ok(nat2.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from February 2023 through August 2026."), nat2.delivered.text.join(" / "));
+    assert.deepEqual(nat2.delivered.table.rows[0], ["2024-01", 36000]);
+    // The plain monthly national answer (P155): a span inside the published sample's life (2025-01 on) is the published sample; a span that
+    // reaches before 2025 is the agencies with a figure in every month of it, said with the span.
+    const m18 = roll("murders by month since 2018 nationally");
+    assert.ok(m18.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2018 through August 2026."), m18.delivered.text.join(" / "));
+    assert.deepEqual(m18.delivered.table.rows[0], ["2018-01", 3000]);
+    const m25 = roll("murders by month since 2025 nationally");
+    assert.ok(m25.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026."), m25.delivered.text.join(" / "));
+    // A span wholly before 2025 has no population in the final panel: the people clause is left out, never "roughly 0 people".
+    const noPop = { ...cdeps, execute: (sql: string) => (/coalesce\(sum\(p\.population\), 0\)/.test(sql) ? ctStub(sql).map((r) => [r[0], 0]) : ctStub(sql)) } as unknown as ShadowDeps;
+    const m24 = shadowAnswer("murders by month in 2024 nationally", noPop);
+    assert.equal(m24.kind, "current", JSON.stringify(m24).slice(0, 300));
+    if (m24.kind === "current") {
+      assert.ok(m24.delivered.text.some((t) => /^This counts only the \d+ Consistent Reporting Agencies that reported every month from January 2024 through December 2024\.$/.test(t)), m24.delivered.text.join(" / "));
+      assert.ok(!m24.delivered.text.some((t) => /roughly 0|covering roughly/.test(t)), "no people clause when the population is unknown");
+    }
+    // "the last 12 months" stays one total.
+    assert.equal(shadowAnswer("Dallas murders in the last 12 months", cdeps).kind, "current");
   }
   // P148 (Jeff 2026-11-18): crime by month for one agency is violent and property beside their sum (blank when either is), from Current Trends.
   for (const q of ["Dallas crime per month", "Dallas overall crime per month", "Dallas all crimes by month"]) {

@@ -10578,16 +10578,24 @@
    "question": "National burglary trend by month in 2024",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "national totals before 2025 wait on the cohort rule (Current Trends design note, decision A)"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-audit-2026-11-06",
-    "reviewed_by": "codex-audit-2026-11-06",
-    "notes": "The approved Current Trends design declines national totals before 2025 pending a cohort rule."
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A plain monthly national or state answer uses the same rule as the rolling series (Jeff 2026-11-19): the published flag from 2025 on, the agencies with a figure in every month of the span before 2025."
    }
   },
   {

@@ -2390,12 +2390,16 @@
 },
 "QL-ct-7c12a414fb": {
 "status": "reviewed",
-"by": "codex-audit-2026-11-06",
+"by": "jeff-2026-11-19",
 "expected": {
-"outcome": "decline",
-"reason": "national totals before 2025 wait on the cohort rule (Current Trends design note, decision A)"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
+]
 },
-"why": "The approved Current Trends design declines national totals before 2025 pending a cohort rule."
+"why": "A plain monthly national or state answer uses the same rule as the rolling series (Jeff 2026-11-19): the published flag from 2025 on, the agencies with a figure in every month of the span before 2025."
 },
 "QL-ct-7e0e5f6469": {
 "status": "draft",

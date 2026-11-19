@@ -21,10 +21,14 @@ import type { ResultTable } from "../nibrs-plan/result";
 import type { Meaning } from "../answer-eval/case";
 import { CITY_AS, cityNameSql, citySql, HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
-import { fmt } from "./deliver";
+import { fmt, runs } from "./deliver";
 import { aboutPeople } from "./presentation";
 import { periodTitle, titleCase } from "./titles";
 import { agencySubject, changeSentence, countSentence, nationSubject, rateSentence, seriesTitle, type Subject } from "./headline";
+
+/** The cohort sentence; the people clause only when the population is known (the final panel before 2025 has none, so never "roughly 0 people"). */
+const cohortSentence = (agencies: number, population: number | null | undefined, from: string, to: string): string =>
+  `This counts only the ${fmt(agencies)} Consistent Reporting ${agencies === 1 ? "Agency" : "Agencies"}${population && population > 0 ? `, covering roughly ${aboutPeople(population)} people,` : ""} that reported every month from ${monthWords(from)} through ${monthWords(to)}.`;
 
 /** A place as the subject of a sentence: an agency short ("Detroit"), the nation "The United States", a state or region by its label. */
 const subjectOf = (p: CurrentPlace): Subject => (p.kind === "agency" ? agencySubject(p.label, p.ori) : p.states === null ? nationSubject : { text: p.label });
@@ -101,6 +105,30 @@ export function groupMonths(b: CurrentBuild, states: string[] | null, measure: s
   const out = new Map<Month, GroupMonth>();
   for (const [ym, v, n, pop, blank] of execute(sql)) out.set(String(ym), { value: num(v), agencies: Number(n), population: Number(pop ?? 0), blank: Number(blank) });
   return out;
+}
+
+/**
+ * A group's months over a span, from the agencies that have a figure in EVERY month of it (Jeff 2026-11-19: "the national sample is the
+ * collection of all consistent agencies that reported"): an agency-month's figure is current_final's, else current_crime's (they agree
+ * where both hold it); an agency with a month missing drops out of the span's sample. `states` null for the nation. The
+ * `sample` flag is not used. Returns each month's total, the agencies counted and the people they cover (current_crime's latest population).
+ */
+export function groupSpanMonths(b: CurrentBuild, states: string[] | null, measure: string, from: Month, to: Month, execute: (sql: string) => unknown[][]):
+  { values: Map<Month, number | null>; agencies: number; population: number } {
+  const col = CURRENT_MEASURE[measure];
+  const key = "printf('%04d-%02d', year, month)";
+  const finalExpr = PARTS[col] ? `CASE WHEN ${PARTS[col].map((p) => `${p}_total IS NULL`).join(" OR ")} THEN NULL ELSE ${PARTS[col].map((p) => `${p}_total`).join(" + ")} END` : `${col}_total`;
+  const where = `${states ? `state IN (${states.map(q).join(", ")}) AND ` : ""}${key} BETWEEN ${q(from)} AND ${q(to)}`;
+  const n = months(from, to).length;
+  const cte = `WITH u AS (SELECT ori, ${key} AS ym, ${finalExpr} AS v FROM read_parquet('${b.root}/current_final.parquet') WHERE ${where}
+      UNION ALL SELECT c.ori, ${key.replace(/year/g, "c.year").replace(/month/g, "c.month")} AS ym, c.${col}_total AS v FROM read_parquet('${b.root}/current_crime.parquet') c
+        WHERE ${where.replace(/\byear\b/g, "c.year").replace(/\bmonth\b/g, "c.month").replace(/\bstate\b/g, "c.state")}
+        AND NOT EXISTS (SELECT 1 FROM read_parquet('${b.root}/current_final.parquet') f WHERE f.ori = c.ori AND f.year = c.year AND f.month = c.month)),
+    full_span AS (SELECT ori FROM u WHERE v IS NOT NULL GROUP BY ori HAVING count(*) = ${n})`;
+  const out = new Map<Month, number | null>(months(from, to).map((m) => [m, null]));
+  for (const [ym, v] of execute(`${cte} SELECT ym, sum(v) FROM u WHERE ori IN (SELECT ori FROM full_span) GROUP BY ym`)) out.set(String(ym), num(v));
+  const head = execute(`${cte} SELECT count(*), coalesce(sum(p.population), 0) FROM full_span s LEFT JOIN (SELECT ori, population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ${key} = ${q(to)}) p USING (ori)`)[0] ?? [0, 0];
+  return { values: out, agencies: Number(head[0]), population: Number(head[1] ?? 0) };
 }
 
 /** An agency's current population: its row's in `month`, else its latest earlier row's; null when none is above zero. */
@@ -248,8 +276,12 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   // P96 (Jeff 2026-11-06, the single-month rule dropped): a rate for one month, or month by month, is that month's count
   // per 100,000 of the population, not annualized; a total of several months stays the total's (decision B, P59).
   // The months the data holds: an agency's from the Final panel's first, a group's from current_crime's (decision A).
-  const first = group ? b.firstMonth : b.finalFirstMonth;
+  // A group's months from the Final panel's first too (Jeff 2026-11-19): a span inside the published sample's life (2025-01 on) is the published
+  // Consistent Reporting Agencies; a span reaching before 2025 is the agencies with a figure in every month of it.
+  const first = b.finalFirstMonth;
   const covered = span.filter((m) => m >= first && m <= b.lastMonth);
+  if (group && cq.statistic === "rate" && covered.length && covered[0] < b.firstMonth)
+    return { kind: "current-decline", explanation: `A rate for a state or the nation is given from ${monthWords(b.firstMonth)}, the first month of the published Consistent Reporting Agencies, not before it.` };
   const holds = `Current Trends ${group ? "totals" : "figures"} in the data cover ${spanWords(first, b.lastMonth)}`;
   // A cumulative total needs every one of its months (design note, section 3): never the part the data holds.
   if (!covered.length || (cq.form !== "months" && covered.length !== span.length))
@@ -260,11 +292,19 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const outside = left.length ? [`${holds}; ${spanWords(left[0], left[left.length - 1])} ${left.length > 1 ? "are" : "is"} outside them.`] : [];
   let values: Map<Month, number | null>;
   let coverage: CurrentAnswer["coverage"] = [];
+  let sampleFrom: Month = b.firstMonth, sampleTo: Month = b.lastMonth;
   if (cq.place.kind === "agency") values = agencyMonths(b, cq.place.ori, cq.measure, covered[0], covered[covered.length - 1], execute);
-  else {
+  else if (covered[0] >= b.firstMonth) {
     const g = groupMonths(b, cq.place.states, cq.measure, covered[0], covered[covered.length - 1], execute);
     values = new Map(covered.map((m) => [m, g.get(m)?.value ?? null]));
     coverage = covered.flatMap((m) => { const x = g.get(m); return x ? [{ month: m, ...x }] : []; });
+  } else {
+    // The span reaches before the published sample: the agencies with a figure in every month of it, one set for the whole span.
+    const g = groupSpanMonths(b, cq.place.states, cq.measure, covered[0], covered[covered.length - 1], execute);
+    if (!g.agencies) return { kind: "current-decline", explanation: `No agency has a figure in every month from ${monthWords(covered[0])} through ${monthWords(covered[covered.length - 1])}, so there is no total to give.` };
+    values = g.values;
+    coverage = covered.map((m) => ({ month: m, agencies: g.agencies, population: g.population, blank: 0 }));
+    sampleFrom = covered[0]; sampleTo = covered[covered.length - 1];
   }
   const vals = covered.map((m) => values.get(m) ?? null);
   // Agencies with no figure in a group's month are left out of its total and named (Codex design check 01.2).
@@ -275,7 +315,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const leftOut = same ? [`${fmt(gaps[0].blank)} of ${fmt(gaps[0].agencies)} in every month`] : gaps.map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
   // P90's sentence, in the shared wording: the agencies counted and the people they cover, as of the latest month shown.
   const lastCov = coverage[coverage.length - 1];
-  const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(b.firstMonth)} through ${monthWords(b.lastMonth)}.`] : [];
+  const cohortLine = lastCov ? [cohortSentence(lastCov.agencies, lastCov.population, sampleFrom, sampleTo)] : [];
   const leftOutLine = leftOut.length ? [`Agencies with no ${one} figure are left out of the total: ${leftOut.join(", ")}.`] : [];
   const tables = [...(covered[0] < b.firstMonth ? ["current_final"] : []), ...(covered[covered.length - 1] >= b.firstMonth ? ["current_crime"] : [])];
   const read = { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release };
@@ -527,6 +567,82 @@ function answerCurrentSeveralRate(cq: { measure: string; places: Extract<Current
     question: { measure: cq.measure, place: per[0].a, agencies: per.slice(1).map((x) => x.a), from: cq.from, to: cq.to, form: "months", statistic: "rate" },
     meaning: { source: "rtci", places: per.map((x) => ({ kind: "agency" as const, name: x.a.name, state: x.a.state })), period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: ["agency", "month"], statistic: "rate" },
     delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...noPopLines, ...outside, ...gapLines, "Source: Crime Index."] },
+  };
+}
+
+/** The month `n` months after `m` (negative n: before). */
+export function shiftMonth(m: Month, n: number): Month {
+  const t = Number(m.slice(0, 4)) * 12 + Number(m.slice(5)) - 1 + n;
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+}
+/** The first January whose full `w`-month window Current Trends holds (Jeff 2026-11-19: the beginning of the next first full year). */
+export function firstFullJanuary(first: Month, w: number): Month {
+  const earliest = shiftMonth(first, w - 1);
+  return earliest.endsWith("-01") ? earliest : `${Number(earliest.slice(0, 4)) + 1}-01`;
+}
+
+/**
+ * Rolling totals by month (P154, Jeff 2026-11-19): each month's value is the total of that month and the window - 1 before it, from
+ * Current Trends' months; a window with a month that has no figure is blank, never a shorter sum. One place, a state or the nation,
+ * or several agencies side by side. The first row is `from` (its window may start before it); no note says what a rolling total is.
+ */
+export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace[]; from: Month; to: Month; window: number; outside?: string; agencyLine?: string }, b: CurrentBuild,
+  execute: (sql: string) => unknown[][]): CurrentAnswer | CurrentDecline {
+  const col = CURRENT_MEASURE[cq.measure];
+  if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
+  const w = cq.window;
+  const to = cq.to > b.lastMonth ? b.lastMonth : cq.to;
+  const need = shiftMonth(cq.from, -(w - 1));
+  const holds = `Current Trends figures in the data cover ${spanWords(b.finalFirstMonth, b.lastMonth)}`;
+  if (need < b.finalFirstMonth || to < cq.from) return { kind: "current-decline", explanation: `${holds}, so the ${w}-month windows ending ${spanWords(cq.from, cq.to)} are not all in them.` };
+  const span = months(need, to);
+  const per = cq.places.map((p) => {
+    let values: Map<Month, number | null>;
+    let cov: { agencies: number; population: number; from: Month } | null = null;
+    if (p.kind === "agency") values = agencyMonths(b, p.ori, cq.measure, need, to, execute);
+    else {
+      if (need >= b.firstMonth) {
+        // The windows' whole lookback is inside the published sample's life (2025-01 on): the published Consistent Reporting Agencies
+        // (the `sample` flag), so the figure matches crimeindex.org (Jeff 2026-11-19).
+        const g = groupMonths(b, p.states, cq.measure, need, to, execute);
+        values = new Map(span.map((m) => [m, g.get(m)?.value ?? null]));
+        const last = g.get(to);
+        cov = last ? { agencies: last.agencies, population: last.population, from: b.firstMonth } : null;
+      } else {
+        // A lookback that reaches before 2025: the agencies with a figure in every month of it, summed (Jeff 2026-11-19).
+        const g = groupSpanMonths(b, p.states, cq.measure, need, to, execute);
+        values = g.values;
+        cov = g.agencies ? { agencies: g.agencies, population: g.population, from: need } : null;
+      }
+    }
+    const raw = span.map((m) => values.get(m) ?? null);
+    const rolled = span.map((m, i) => (i < w - 1 || raw.slice(i - w + 1, i + 1).some((v) => v === null) ? null : raw.slice(i - w + 1, i + 1).reduce<number>((s, v) => s + (v as number), 0)));
+    // Only the blank months inside the rows shown: the months before the first row belong to its window and are not listed.
+    const blanks = span.filter((m, i) => raw[i] === null && m >= cq.from);
+    return { p, rolled, blanks, cov };
+  });
+  const shown = span.map((m, i) => ({ m, i })).filter((x) => x.m >= cq.from);
+  const several = per.length > 1;
+  const words = WORDS[col];
+  const hm = HISTORICAL_MEASURE[cq.measure];
+  const names = per.map((x) => x.p.label);
+  const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
+  const header = `Rolling ${w}-month ${words}`;
+  const columns: ResultTable["columns"] = [...(several ? [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Place" }] : []),
+    { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
+  const rows = per.flatMap((x) => shown.map(({ m, i }) => [...(several ? [x.p.kind === "agency" ? x.p.name : x.p.label] : []), m, x.rolled[i]] as (string | number | null)[]));
+  const gapLines = per.flatMap((x) => (x.blanks.length ? [`No figure is available for ${runs(x.blanks)}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.blanks.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
+  const cohortLine = per.flatMap((x) => (x.cov ? [cohortSentence(x.cov.agencies, x.cov.population, x.cov.from, to)] : []));
+  const period = { from: cq.from, to };
+  const first = cq.places[0];
+  const places: Meaning["places"] = per.flatMap((x): Meaning["places"][number][] => (x.p.kind === "agency" ? [{ kind: "agency", name: x.p.name, state: x.p.state }]
+    : x.p.states === null ? [{ kind: "national", name: "United States" }] : x.p.states.map((st) => ({ kind: "state" as const, name: stateName(st), state: st }))));
+  const tables = [...(need < b.firstMonth ? ["current_final"] : []), ...(to >= b.firstMonth ? ["current_crime"] : [])];
+  return {
+    kind: "current", period, coverage: [], read: { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release },
+    question: { measure: cq.measure, place: first, agencies: several && first.kind === "agency" ? cq.places.slice(1).filter((p): p is Extract<CurrentPlace, { kind: "agency" }> => p.kind === "agency") : undefined, from: cq.from, to, form: "months", statistic: "count" },
+    meaning: { source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: several ? ["agency", "month"] : ["month"], statistic: "count" },
+    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), `Rolling ${w}-Month ${ucFirst(words)}`, "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.outside ? [cq.outside] : []), ...cohortLine, ...gapLines, "Source: Crime Index."] },
   };
 }
 

@@ -58,7 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance } from "./clearance-current";
-import { partOneMonthly, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { partOneMonthly, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -115,12 +115,21 @@ export type ShadowOption = {
  * reads all of it as a complete question. Only the reader decides (no data is read); the exact spans are removed; the
  * revised question is shown whole on the button and runs only when chosen (Codex plain-wording design check 2).
  */
+const BELOW_AGENCY_WORD = /\b(?:districts?|neighbou?rhoods?|wards?|beats?|precincts?|zip\s*codes?|subdivisions?|blocks?)\b/i;
+const MONTH_NAMES = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const DATE_AFTER = new RegExp(`^\\s*(?:in|on|at|for|during)?\\s*${MONTH_NAMES}\\.?\\s+(?:\\d{1,2},?\\s+)?(?:19|20)\\d\\d\\b`, "i");
 function askInstead(question: string, parts: Part[], year: number): ShadowOption | null {
   const spans = parts.filter((p) => p.span && p.span[1] > p.span[0] && question.slice(p.span[0], p.span[1]).trim() === p.text.trim()).map((p) => p.span).sort((a, b) => b[0] - a[0]);
   if (!spans.length || spans.length !== parts.length) return null;
+  // Words that name a place smaller than an agency ("garden district") are not filler: without them the question is about another place.
+  if (spans.some(([a, b]) => BELOW_AGENCY_WORD.test(question.slice(a, b)))) return null;
   let t = question;
   // A linking word the unread words ended with stays ("rolling over 12 months in" leaves "in": "murders in Detroit").
-  for (const [a, b] of spans) t = `${t.slice(0, a)} ${/\b(in|for|of|from|during)\s*$/i.exec(question.slice(a, b))?.[1] ?? ""} ${t.slice(b)}`;
+  for (const [a, b] of spans) {
+    // "with an annotation in May 2020": the date belongs to the words cut ("with ..."), so it goes with them (not a period asked).
+    const dated = /^(?:with|plus|including)\b/i.test(question.slice(a, b).trim()) ? DATE_AFTER.exec(question.slice(b)) : null;
+    t = `${t.slice(0, a)} ${/\b(in|for|of|from|during)\s*$/i.exec(question.slice(a, b))?.[1] ?? ""} ${t.slice(b + (dated ? dated[0].length : 0))}`;
+  }
   t = t.replace(/\s+([,?.!])/g, "$1").replace(/,\s*,/g, ",").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
   // A joining word left dangling by the removal goes too ("in 2024 and in 2025" without "in 2025").
   t = t.replace(/\s+(?:and|or)(?=\s*[?.!]?$)/i, "").replace(/\s+(?:and|or)\s+(?:and|or)\s+/gi, " and ")
@@ -688,6 +697,8 @@ export const askInsteadChecks = {
   fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
   peerRewrite: (q: string) => peerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
   fillerRewrite: (q: string) => fillerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
+  /** The P74 question without the unread words, or null when it isn't offered. */
+  stripped: (q: string) => { const l = readQuestion(q, 2026, "2026-09").ledger; return askInstead(l.question, l.parts.filter((p) => p.state === "not-interpreted"), 2026)?.question ?? null; },
 };
 const aboutCrime = (about: string) => /^which kind of crime\b|^which sex offenses\b/i.test(about);
 function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome | null {
@@ -2058,7 +2069,40 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const ctYear = Number(cur.lastMonth.slice(0, 4));
     let form: "months" | "ytd" | "rolling" | "total" | null = null, span: [string, string] | null = null;
     // "the last 12 months" is the 12 months through Current Trends' own latest month, not NIBRS's (the reader's).
-    if ((sp.grain === "rolling" && sp.period.form === "none") || flags(ledger0).last12) { form = "rolling"; span = [cur.lastMonth, cur.lastMonth]; }
+    // P154 (Jeff 2026-11-19): "murders rolling over 12 months" is a series of rolling totals by month (not "the last 12 months", which stays one
+    // total): from the first January with a full window (none named), or from the January of the year named; counts, Current Trends' months.
+    const rollW = sp.window?.months ?? 12;
+    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && sp.statistic === "count" && rollW >= 2
+      && (sp.period.form === "none" || sp.period.form === "since" || sp.period.form === "range" || sp.period.form === "year");
+    if (rollingSeries) {
+      const pf = sp.period;
+      const earliest = firstFullJanuary(cur.finalFirstMonth, rollW);
+      const cap = (m: string) => (m > cur.lastMonth ? cur.lastMonth : m);
+      let from = pf.form === "since" ? `${pf.from}-01` : pf.form === "range" ? `${pf.from}-01` : pf.form === "year" ? `${pf.year}-01` : earliest;
+      const to = pf.form === "range" ? cap(`${pf.to}-12`) : pf.form === "year" ? cap(`${pf.year}-12`) : cur.lastMonth;
+      let outside: string | undefined;
+      if (from < earliest) {
+        const gone = [from, shiftMonth(cur.finalFirstMonth, -1)];
+        outside = `Current Trends figures in the data cover ${monthName(cur.finalFirstMonth)} through ${monthName(cur.lastMonth)}; ${monthName(gone[0])} through ${monthName(gone[1])} ${gone[0] === gone[1] ? "is" : "are"} outside them.`;
+        from = earliest;
+      }
+      const region = flags(ledger0).region;
+      const rp: (CurrentPlace | null)[] = sp.places.map((p) => {
+        if (p.kind === "national") return region ? { kind: "group", states: REGIONS[region].states, label: REGIONS[region].name.replace(/^the/, "The") } : { kind: "group", states: null, label: "The United States" };
+        if (p.kind === "state") return { kind: "group", states: [p.code], label: stateName(p.code) };
+        const a = resolved.get(`${p.agencyKind}:${p.name}:${p.state}`);
+        return a?.kind === "agency" ? { kind: "agency", ori: a.ori, label: a.label, name: p.name, state: p.state } : null;
+      });
+      const several = rp.length > 1;
+      if (rp.every((p): p is CurrentPlace => p !== null) && (!several || rp.every((p) => p.kind === "agency")) && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).column) {
+        const agencyIds = rp.flatMap((p) => (p.kind === "agency" ? [p.ori] : []));
+        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, ...(outside ? { outside } : {}),
+          ...(agencyIds.length ? { agencyLine: reportedBy(agencyIds.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
+        if (r.kind === "current") return r;
+        return decline(/outside them|not all in them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
+    }
+    if ((sp.grain === "rolling" && sp.period.form === "none" && !rollingSeries) || flags(ledger0).last12) { form = "rolling"; span = [cur.lastMonth, cur.lastMonth]; }
     // A rolling window ending in one month named ("rolling 3-month average in July 2026": Codex P94 review 01.1): that
     // window, through that month. A rolling series over a longer span is NIBRS's below, never Current Trends' months.
     else if (sp.grain === "rolling") {
