@@ -404,6 +404,25 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(!early.delivered.text.some((t) => /^No figure is available for /.test(t)), "no blank rows for the years before the source");
     assert.deepEqual(early.delivered.table.rows, [["1985", 15], ["1986", 15], ["1987", 15]]);
     assert.deepEqual(early.period, { from: "1985-01", to: "1987-05" });
+    // P152 (Jeff 2026-11-19): "Homicide Reports" in the words is a source word: the murders come from that series, said in the Source line.
+    for (const q of ["Houston murders per month in 2024 Homicide Reports", "Houston murders per month in 2024 according to Homicide Reports", "Homicide Reports murders per month in Houston in 2024"]) {
+      const hr = shadowAnswer(q, sdeps);
+      assert.equal(hr.kind, "shr", `${q}: ${JSON.stringify(hr).slice(0, 240)}`);
+      if (hr.kind === "shr") {
+        assert.equal(hr.delivered.text[hr.delivered.text.length - 1], "Source: FBI Supplementary Homicide Reports.", q);
+        assert.ok(!hr.delivered.text.some((t) => /\bSHR\b/.test(t)), "never the abbreviation");
+      }
+    }
+    // A question asked back keeps the source words the user wrote (gate, QL-hist-333df04e0a).
+    const askedBack = shadowAnswer("which jurisdictions are included in homicide reports", sdeps);
+    assert.ok(askedBack.kind === "clarify" && askedBack.question === "which jurisdictions are included in homicide reports", JSON.stringify(askedBack).slice(0, 240));
+    // The runner's probes (canon2): by year the Crime Index route must not win over the named source, and another crime is said so before any ask.
+    const byYear = shadowAnswer("Houston murders by year according to Homicide Reports", sdeps);
+    assert.equal(byYear.kind, "shr", JSON.stringify(byYear).slice(0, 240));
+    const noPeriod = shadowAnswer("Homicide Reports robberies in Houston", sdeps);
+    assert.ok(noPeriod.kind === "decline" && noPeriod.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(noPeriod).slice(0, 240));
+    const notMurder = shadowAnswer("Houston robberies per month in 2024 according to Homicide Reports", sdeps);
+    assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
   }
