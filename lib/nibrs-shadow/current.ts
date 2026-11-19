@@ -334,7 +334,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
       delivered: { table: { columns: rateCols, rows: covered.map((m, i) => [m, rates[i]]) },
         text: [covered.length === 1 && rates[0] !== null
           ? rateSentence(subjectOf(cq.place), one, monthWords(covered[0]), rates[0]!.toFixed(1))
-          : seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", where), `${covered.length === 1 ? "That month's" : "Each month's"} own count, not scaled to a full year.`, ...head, ...cohortLine, ...outside,
+          : seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", where), ...head, ...cohortLine, ...outside,
           ...(noRate.length ? [`No rate for ${noRate.join(", ")}: ${group ? "an agency counted had no figure or there was no population" : "no figure or no population"}, shown blank.`] : []), source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
@@ -470,7 +470,7 @@ export function answerCurrentSeveral(cq: { measure: string; places: Extract<Curr
     const blanks = covered.filter((m) => values.get(m) === null || values.get(m) === undefined);
     return blanks.length ? [`No figure is known for ${blanks.map(monthWords).join(", ")} for ${a.label}: shown blank, not zero.`] : [];
   });
-  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" },
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" },
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
   const rows = per.flatMap(({ a, values }) => covered.map((m) => [a.name, m, values.get(m) ?? null] as (string | number | null)[]));
   const period = { from: covered[0], to: covered[covered.length - 1] };
@@ -517,7 +517,7 @@ function answerCurrentSeveralRate(cq: { measure: string; places: Extract<Current
     return blanks.length ? [`No rate is given for ${blanks.map(monthWords).join(", ")} for ${x.a.label}: shown blank, not zero.`] : [];
   });
   const header = `${ucFirst(one)} rate per 100,000`;
-  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" },
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" },
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
   const rows = per.flatMap((x) => covered.map((m) => [x.a.name, m, rateOf(x, m)] as (string | number | null)[]));
   const period = { from: covered[0], to: covered[covered.length - 1] };
