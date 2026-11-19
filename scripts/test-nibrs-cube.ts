@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
-import { ageMapping, cubeFromEnv, cubeUnits, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_VERSION, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
+import { ageFilterBins, ageMapping, cubeFromEnv, cubeUnits, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_VERSION, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
 
@@ -72,6 +72,34 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   const arrests = cubeUnits({ ...base, kind: "arrests", codes: null, allCrimeArrests: true, attribute: { dimension: "arrestee.age", bins: base.attribute!.bins } })!;
   assert.match(arrests.sql, /unit = 'arrestee' AND source IN \('A', 'B'\) AND crime_group = 'all_crime'/);
   assert.equal(cubeUnits({ ...base, kind: "offenders", codes: null, allCrimeArrests: true }), null, "offenders have no all-arrests reading");
+}
+
+// --- Age as a condition ("juvenile arrests", "offenders under 18"): the cube's age rows of the bins the range keeps, summed.
+{
+  assert.deepEqual(ageFilterBins(0, 17), ["Under 18"], "under 18 is one bin (NN, NB and BB are in it, as in the plan's rule for a range starting at 0 or 1)");
+  assert.deepEqual(ageFilterBins(1, 17), ["Under 18"]);
+  assert.deepEqual(ageFilterBins(18, 24), ["18-24"]);
+  assert.deepEqual(ageFilterBins(18, 34), ["18-24", "25-34"]);
+  assert.deepEqual(ageFilterBins(25, 44), ["25-34", "35-44"]);
+  assert.deepEqual(ageFilterBins(65, 99), ["65+"]);
+  assert.equal(ageFilterBins(0, 99)!.length, 7);
+  for (const [lo, hi] of [[18, 21], [17, 24], [2, 17], [19, 24], [18, 25], [30, 40], [0, 100], [5, 3], [-1, 17]]) assert.equal(ageFilterBins(lo, hi), null, `${lo} to ${hi} cuts a cube bin`);
+  const juv: CubeAsk = { ...base, kind: "arrests", allCrimeArrests: true, codes: null, attribute: null, conditioned: false, ageFilter: { dimension: "arrestee.age", lo: 0, hi: 17 } };
+  const s1 = cubeUnits(juv)!;
+  assert.ok(s1, "juvenile arrests are read from the group cube's all-crime age rows");
+  assert.match(s1.sql, /crime_group = 'all_crime' AND attribute = 'age_bin' AND value IN \('Under 18'\)/);
+  assert.doesNotMatch(s1.sql, /AS g0/, "one total, no breakdown");
+  assert.equal(cubeUnits({ ...juv, attribute: { dimension: "arrestee.race" } }), null, "a second split (age and race are never crossed in a cell) stays raw");
+  assert.equal(cubeUnits({ ...juv, attribute: { dimension: "arrestee.age", bins: base.attribute!.bins } }), null, "so does age grouped and filtered at once");
+  assert.equal(cubeUnits({ ...juv, ageFilter: { dimension: "arrestee.age", lo: 18, hi: 21 } }), null, "a range that cuts a bin stays raw");
+  assert.equal(cubeUnits({ ...juv, ageFilter: { dimension: "arrestee.sex", lo: 0, hi: 17 } }), null, "only age");
+  assert.equal(cubeUnits({ ...juv, ageFilter: { dimension: "offender.age", lo: 0, hi: 17 } }), null, "the counted person's own age");
+  assert.equal(cubeUnits({ ...juv, conditioned: true }), null, "any other condition keeps it raw");
+  assert.ok(cubeUnits({ ...juv, wantsIncidents: true }), "incidents beside one bin are exact");
+  assert.equal(cubeUnits({ ...juv, ageFilter: { dimension: "arrestee.age", lo: 18, hi: 34 }, wantsIncidents: true }), null, "incidents never add across bins");
+  assert.match(cubeUnits({ ...juv, ageFilter: { dimension: "arrestee.age", lo: 18, hi: 34 } })!.sql, /value IN \('18-24', '25-34'\)/, "units add across bins");
+  const off = cubeUnits({ ...base, kind: "offenders", conditioned: false, attribute: null, ageFilter: { dimension: "offender.age", lo: 0, hi: 17 } })!;
+  assert.match(off.sql, /unit = 'offender' AND source = 'A' AND crime_group = 'person_crimes' AND attribute = 'age_bin' AND value IN \('Under 18'\)/);
 }
 
 // --- The per-offense-code cube: one code for any unit, several codes only for arrests, Group B by its own rows; the group cube still takes the groups.
@@ -226,14 +254,17 @@ if ((CUBE || CODE_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE_CUBE}/manifest.
     const { duckdbExecutor } = await import("../lib/nibrs-shadow/duckdb");
     const { loadNibrsRelease } = await import("../lib/nibrs-shadow/release");
     const { cubeFromEnv } = await import("../lib/nibrs-plan/cube");
-    const rel = loadNibrsRelease(undefined, ROOT);
+    // NIBRS_CUBE_TEST_RELEASE_FILE: the release.json of another release than the checkout's (a laptop with an older release); NIBRS_CUBE_TEST_YEARS: the built
+    // years (comma separated) when the cubes hold fewer than the release (a stand-in cube of 2024 to 2026).
+    const rel = loadNibrsRelease(process.env.NIBRS_CUBE_TEST_RELEASE_FILE, ROOT);
+    const builtYears = (process.env.NIBRS_CUBE_TEST_YEARS ?? "2017,2018,2019,2020,2021,2022,2023,2024,2025,2026").split(",").map(Number);
     const r = { id: rel.id, firstMonth: rel.firstMonth, lastMonth: rel.lastMonth, asOf: "2026-10-29" };
     const executed: string[] = [];
     const exec = duckdbExecutor(process.env.NIBRS_CUBE_TEST_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
     const execute = (sql: string) => { executed.push(sql); return exec(sql); };
     const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE, NIBRS_CODE_CUBE_ROOT: CODE_CUBE }, ROOT);
     assert.ok(cubeCfg, "the cube folder is readable");
-    const mk = (cube: CubeConfig | null) => ({ places: loadPlaceIndex(), release: r, target: { root: ROOT, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute });
+    const mk = (cube: CubeConfig | null) => ({ places: loadPlaceIndex(), release: r, target: { root: ROOT, builtYears, cube }, execute });
     const questions = (process.env.NIBRS_CUBE_TEST_QUESTIONS ?? "").split("|").filter(Boolean);
     let served = 0;
     for (const q of questions) {

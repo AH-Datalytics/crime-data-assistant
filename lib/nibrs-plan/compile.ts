@@ -511,11 +511,17 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   const cubeCfg = cubeWanted;
+  // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
+  const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
+    ? plan.filters[0] : null;
+  const onlyAgeFilter = af && af.kind === "attribute" && af.dimension.split(".")[1] === "age" && af.op === "between" && af.values?.length === 2
+    ? { dimension: af.dimension, lo: Number(af.values[0]), hi: Number(af.values[1]) } : null;
   const cube = cubeCfg && ["offender", "victim", "arrestee", "group_b_arrest"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
     cfg: cubeCfg, kind: m.id.startsWith("offenders.") ? "offenders" : m.id.startsWith("victims.") ? "victims" : "arrests",
     codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? null,
     allCrimeArrests: m.id === "arrests.all_crime", groupB: units.entity === "group_b_arrest", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
-    conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0 }) : null;
+    conditioned: !onlyAgeFilter && (plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0),
+    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : null;
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
