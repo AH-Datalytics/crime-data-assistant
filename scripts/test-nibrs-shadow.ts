@@ -2101,6 +2101,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const det = shadowFollowUp("Murder victims in Houston by race in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", deps);
   assert.equal(det.rewriteKind, "new");
   assert.ok(det.kind !== "clarify" || !/could not be placed/.test(det.about), "never 'could not be placed' for a question of its own");
+  // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is a question of its own
+  // ("Puerto Rico Crime" asked what it changes); when its first-turn result would be a decline, the question back stays.
+  const own = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime", deps);
+  assert.equal(own.rewriteKind, "new");
+  assert.deepEqual({ ...own, rewrite: undefined, rewriteKind: undefined }, { ...ask("Puerto Rico Crime"), rewrite: undefined, rewriteKind: undefined });
+  const kept = shadowFollowUp("conviction rates for murders in Houston", "how many offenders were sentenced to prison", deps);
+  assert.equal(kept.rewriteKind, "ask", "a first-turn decline keeps the question about the last turn");
+  const pointing = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime again", deps);
+  assert.notEqual(pointing.rewriteKind, "new", "a turn that points back is not a new question");
   // A new question with no period, after one with a period: that period is offered as a button, never assumed.
   const shop = shadowFollowUp("Shoplifting in Memphis in 2023", "Shoplifting in Detroit", deps);
   assert.equal(shop.rewriteKind, "new");
