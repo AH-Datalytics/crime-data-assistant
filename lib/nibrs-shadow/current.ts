@@ -272,8 +272,12 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   // P96 (Jeff 2026-11-06, the single-month rule dropped): a rate for one month, or month by month, is that month's count
   // per 100,000 of the population, not annualized; a total of several months stays the total's (decision B, P59).
   // The months the data holds: an agency's from the Final panel's first, a group's from current_crime's (decision A).
-  const first = group ? b.firstMonth : b.finalFirstMonth;
+  // A group's months from the Final panel's first too (Jeff 2026-11-19): a span inside the published sample's life (2025-01 on) is the published
+  // Consistent Reporting Agencies; a span reaching before 2025 is the agencies with a figure in every month of it.
+  const first = b.finalFirstMonth;
   const covered = span.filter((m) => m >= first && m <= b.lastMonth);
+  if (group && cq.statistic === "rate" && covered.length && covered[0] < b.firstMonth)
+    return { kind: "current-decline", explanation: `A rate for a state or the nation is given from ${monthWords(b.firstMonth)}, the first month of the published Consistent Reporting Agencies, not before it.` };
   const holds = `Current Trends ${group ? "totals" : "figures"} in the data cover ${spanWords(first, b.lastMonth)}`;
   // A cumulative total needs every one of its months (design note, section 3): never the part the data holds.
   if (!covered.length || (cq.form !== "months" && covered.length !== span.length))
@@ -284,11 +288,19 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const outside = left.length ? [`${holds}; ${spanWords(left[0], left[left.length - 1])} ${left.length > 1 ? "are" : "is"} outside them.`] : [];
   let values: Map<Month, number | null>;
   let coverage: CurrentAnswer["coverage"] = [];
+  let sampleFrom: Month = b.firstMonth, sampleTo: Month = b.lastMonth;
   if (cq.place.kind === "agency") values = agencyMonths(b, cq.place.ori, cq.measure, covered[0], covered[covered.length - 1], execute);
-  else {
+  else if (covered[0] >= b.firstMonth) {
     const g = groupMonths(b, cq.place.states, cq.measure, covered[0], covered[covered.length - 1], execute);
     values = new Map(covered.map((m) => [m, g.get(m)?.value ?? null]));
     coverage = covered.flatMap((m) => { const x = g.get(m); return x ? [{ month: m, ...x }] : []; });
+  } else {
+    // The span reaches before the published sample: the agencies with a figure in every month of it, one set for the whole span.
+    const g = groupSpanMonths(b, cq.place.states, cq.measure, covered[0], covered[covered.length - 1], execute);
+    if (!g.agencies) return { kind: "current-decline", explanation: `No agency has a figure in every month from ${monthWords(covered[0])} through ${monthWords(covered[covered.length - 1])}, so there is no total to give.` };
+    values = g.values;
+    coverage = covered.map((m) => ({ month: m, agencies: g.agencies, population: g.population, blank: 0 }));
+    sampleFrom = covered[0]; sampleTo = covered[covered.length - 1];
   }
   const vals = covered.map((m) => values.get(m) ?? null);
   // Agencies with no figure in a group's month are left out of its total and named (Codex design check 01.2).
@@ -299,7 +311,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const leftOut = same ? [`${fmt(gaps[0].blank)} of ${fmt(gaps[0].agencies)} in every month`] : gaps.map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
   // P90's sentence, in the shared wording: the agencies counted and the people they cover, as of the latest month shown.
   const lastCov = coverage[coverage.length - 1];
-  const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(b.firstMonth)} through ${monthWords(b.lastMonth)}.`] : [];
+  const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(sampleFrom)} through ${monthWords(sampleTo)}.`] : [];
   const leftOutLine = leftOut.length ? [`Agencies with no ${one} figure are left out of the total: ${leftOut.join(", ")}.`] : [];
   const tables = [...(covered[0] < b.firstMonth ? ["current_final"] : []), ...(covered[covered.length - 1] >= b.firstMonth ? ["current_crime"] : [])];
   const read = { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release };

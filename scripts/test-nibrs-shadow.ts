@@ -2462,6 +2462,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const nat2 = roll("murders rolling over 12 months since 2024 nationally");
     assert.ok(nat2.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from February 2023 through August 2026."), nat2.delivered.text.join(" / "));
     assert.deepEqual(nat2.delivered.table.rows[0], ["2024-01", 36000]);
+    // The plain monthly national answer (P155): a span inside the published sample's life (2025-01 on) is the published sample; a span that
+    // reaches before 2025 is the agencies with a figure in every month of it, said with the span.
+    const m18 = roll("murders by month since 2018 nationally");
+    assert.ok(m18.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2018 through August 2026."), m18.delivered.text.join(" / "));
+    assert.deepEqual(m18.delivered.table.rows[0], ["2018-01", 3000]);
+    const m25 = roll("murders by month since 2025 nationally");
+    assert.ok(m25.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026."), m25.delivered.text.join(" / "));
     // "the last 12 months" stays one total.
     assert.equal(shadowAnswer("Dallas murders in the last 12 months", cdeps).kind, "current");
   }
