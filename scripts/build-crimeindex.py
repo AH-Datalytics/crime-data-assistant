@@ -51,7 +51,7 @@ COLUMNS = {
 }
 
 # Current Trends: the current_crime snapshot and its Final panel (nibrs-model 8bc9eca's manifest).
-CURRENT = ("current_crime", "20261101")
+CURRENT = ("current_crime", "20261119")
 CURRENT_COLUMNS = [(f"{o}_{k}", "BIGINT") for k in ("total", "ytd", "roll") for o in OFFENSES] + [(f"{o}_change", "DOUBLE") for o in OFFENSES]
 FINAL_COLUMNS = {"murder": "Murder", "rape": "Rape", "robbery": "Robbery", "assault": "Aggravated Assault",
                  "burglary": "Burglary", "theft": "Theft", "motor": "Motor Vehicle Theft"}
@@ -67,12 +67,18 @@ def sha256(path):
     return h.hexdigest()
 
 
+def snapshot_dirs(snapshots_dir):
+    """One snapshots folder or several (the historical snapshots and a newer current_crime one can live in different work folders)."""
+    return [snapshots_dir] if isinstance(snapshots_dir, str) else list(snapshots_dir)
+
+
 def find_file(snapshots_dir, snapshot, dataset, name):
-    """The snapshot's file, in either layout nibrs-model uses (<snapshot>/<dataset>/<file> or <snapshot>/<file>)."""
-    for p in (os.path.join(snapshots_dir, snapshot, dataset, name), os.path.join(snapshots_dir, snapshot, name)):
-        if os.path.isfile(p):
-            return p
-    raise SystemExit(f"missing: {snapshot}/{dataset}/{name} under {snapshots_dir}")
+    """The snapshot's file, in either layout nibrs-model uses (<snapshot>/<dataset>/<file> or <snapshot>/<file>), in the first folder that has it."""
+    for root in snapshot_dirs(snapshots_dir):
+        for p in (os.path.join(root, snapshot, dataset, name), os.path.join(root, snapshot, name)):
+            if os.path.isfile(p):
+                return p
+    raise SystemExit(f"missing: {snapshot}/{dataset}/{name} under {', '.join(snapshot_dirs(snapshots_dir))}")
 
 
 def verified_files(manifest, snapshots_dir):
@@ -107,7 +113,7 @@ def current_files(manifest, snapshots_dir):
     out = {"snapshot": snapshot, "years": entry.get("years")}
     for key, name, sha, path in (("current", rec["file_name"], rec["sha256"], find_file(snapshots_dir, snapshot, dataset, rec["file_name"])),
                                  ("final", entry["final_file"]["source_name"], entry["final_file"]["sha256"],
-                                  os.path.join(snapshots_dir, snapshot, dataset, "final", entry["final_file"]["source_name"]))):
+                                  find_file(snapshots_dir, snapshot, dataset, os.path.join("final", entry["final_file"]["source_name"])))):
         if not os.path.isfile(path):
             raise SystemExit(f"missing: {path}")
         got = sha256(path)
@@ -253,6 +259,8 @@ def build(manifest_path, snapshots_dir, out_dir):
                 raise SystemExit(f"{table}: {dup} place-years appear more than once")
     cur = current_files(manifest, snapshots_dir)
     if cur:
+        # The release is named for its newest input, Current Trends' snapshot included (the historical tables can be older).
+        record["release"] = f"crimeindex-{max([*SNAPSHOTS.values(), cur['snapshot']])}"
         record["inputs"]["current_crime"] = cur
         build_current(con, cur, write, record)
     record["diagnostics"] = diagnostics(con)
@@ -270,7 +278,7 @@ def build(manifest_path, snapshots_dir, out_dir):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--manifest", required=True, help="nibrs-model's manifests/crimeindex-archive.json")
-    ap.add_argument("--snapshots", required=True, help="the folder holding the snapshots (<snapshot>/<dataset>/<file>)")
+    ap.add_argument("--snapshots", required=True, nargs="+", help="the folder(s) holding the snapshots (<snapshot>/<dataset>/<file>); a file is taken from the first folder that has it")
     ap.add_argument("--out", required=True, help="the output folder (outside the repository)")
     a = ap.parse_args(argv)
     # Component-wise and case-folded on Windows (Codex review 01.5): "c:\\users\\..." is the same folder as "C:\\Users\\...".
