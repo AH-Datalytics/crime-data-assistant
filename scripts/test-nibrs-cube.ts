@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
-import { ageFilterBins, ageMapping, cubeFromEnv, cubeUnits, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_VERSION, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
+import { ageFilterBins, ageMapping, cubeFromEnv, cubeUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 import { categorySumsFromGrid } from "../lib/nibrs-shadow/state-sum";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
@@ -150,6 +150,26 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.match(victimSex.sql, /unit = 'victim'[\s\S]*attribute = 'sex'/);
   assert.ok(cubeUnits({ ...one, kind: "offenders", codes: ["13A"], attribute: { dimension: "offender.age", bins } }), "offender age is read from the code cube");
   assert.equal(cubeUnits({ ...base, kind: "offenders", attribute: { dimension: "offender.sex" } }), null, "the group cube does not");
+  // Cube 3: ethnicity needs a code cube built from offense_codes_v2; the group cube v4 adds sex, race and ethnicity to every unit.
+  assert.equal(cubeUnits({ ...one, codes: ["13A"], attribute: { dimension: "victim.ethnicity" } }), null, "a v1 code cube has no ethnicity: raw");
+  const cfgV2 = { ...cfgBoth, code: { ...code, ethnicity: true } };
+  for (const [kind, dim] of [["offenders", "offender.ethnicity"], ["victims", "victim.ethnicity"], ["arrests", "arrestee.ethnicity"]] as const) {
+    const e = cubeUnits({ ...one, cfg: cfgV2, kind, codes: ["13A"], attribute: { dimension: dim } })!;
+    assert.ok(e, `${dim} is read from a code cube v2`);
+    assert.match(e.sql, new RegExp(`attribute = 'ethnicity'`));
+    assert.match(e.sql, /CASE WHEN value = '\(blank\)' THEN 'U' ELSE value END/, "blank ethnicity is U, as in the engine");
+    assert.equal(cubeUnits({ ...one, cfg: cfgV2, kind, codes: ["13A"], attribute: { dimension: dim }, wantsIncidents: true }), null, "(blank) and U merge: incidents stay raw");
+  }
+  const cfgV4 = { ...cfg, groupV4: true };
+  for (const [kind, dim, att] of [["offenders", "offender.sex", "sex"], ["offenders", "offender.race", "race"], ["offenders", "offender.ethnicity", "ethnicity"], ["victims", "victim.ethnicity", "ethnicity"], ["arrests", "arrestee.sex", "sex"], ["arrests", "arrestee.ethnicity", "ethnicity"]] as const) {
+    const g = cubeUnits({ ...base, cfg: cfgV4, kind, attribute: { dimension: dim } })!;
+    assert.ok(g, `${dim} is read from a group cube v4`);
+    assert.match(g.sql, new RegExp(`attribute = '${att}'`));
+  }
+  assert.equal(cubeUnits({ ...base, cfg: cfgV4, kind: "victims", attribute: { dimension: "victim.ethnicity" } })!.sql.includes("crime_group = 'person_crimes'"), true);
+  assert.equal(cubeUnits({ ...base, cfg: cfgV4, kind: "offenders", attribute: { dimension: "offender.relationship" } }), null, "any other attribute stays raw");
+  assert.equal(cubeUnits({ ...base, cfg, kind: "victims", attribute: { dimension: "victim.ethnicity" } }), null, "a v2 group cube has no ethnicity: raw");
+  assert.match(cubeUnits({ ...base, cfg: cfgV4, kind: "arrests", codes: null, allCrimeArrests: true, attribute: { dimension: "arrestee.race" } })!.sql, /crime_group = 'all_crime'[\s\S]*attribute = 'race'|source IN \('A', 'B'\)/, "all-crime arrests by race: Group A and B rows");
   const rape = cubeUnits({ ...one, kind: "arrests", codes: ["11A", "11B"], attribute: { dimension: "arrestee.age", bins } })!;
   assert.ok(rape, "arrests add exactly across codes");
   assert.match(rape.sql, /offense_code IN \('11A', '11B'\)/);
@@ -177,7 +197,10 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
     fs.mkdirSync(path.join(cubeRoot, "canonical/cube/data_year=2024"), { recursive: true });
     fs.writeFileSync(path.join(cubeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
     const groups = Object.fromEntries(Object.entries(CUBE_GROUPS).map(([g, c]) => [g, { codes: c, list_sha256: listSha256(c) }]));
-    const write = (m: object) => fs.writeFileSync(path.join(cubeRoot, "manifest.json"), JSON.stringify(m));
+    // cubeFromEnv keys its cache on each manifest's mtime and size: give every write its own, later, modification time so a fast machine cannot repeat one.
+    let tick = 1_800_000_000; // a fixed start (no clock read: the timing-gate inventory counts those)
+    const put = (file: string, m: object) => { fs.writeFileSync(file, JSON.stringify(m)); tick += 2; fs.utimesSync(file, tick, tick); };
+    const write = (m: object) => put(path.join(cubeRoot, "manifest.json"), m);
     const good = { schema_version: "cube-0.1", source_manifest_sha256: sha, groups_version: GROUPS_VERSION, groups_file_sha256: GROUPS_FILE_SHA256, groups, years: { "2024": {}, "2025": {} },
       files: { "canonical/cube/data_year=2024/data.parquet": {}, "canonical/cube/data_year=2025/data.parquet": {} } };
     const env = { NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: cubeRoot };
@@ -208,11 +231,27 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       assert.equal(cubeFromEnv(env, canonical), null, "no groups file hash");
       write(good);
       assert.equal(cubeFromEnv(env, path.join(dir, "elsewhere", "canonical")), null, "no release manifest to compare with");
+      // Group cube v4 (cube 3): its own file version and hash, and a manifest that lists the four attributes for every unit.
+      const four = ["age_bin", "sex", "race", "ethnicity"];
+      const v4 = { ...good, groups_version: GROUPS_VERSION_V4, groups_file_sha256: GROUPS_FILE_SHA256_V4, unit_attributes: { offender: four, victim: four, arrestee: four } };
+      write(v4);
+      assert.equal(cubeFromEnv(env, canonical)!.groupV4, true, "a v4 group cube is accepted and says so");
+      assert.equal(cubeFromEnv(env, canonical)!.groupV4 && cubeFromEnv({ ...env, NIBRS_CUBE: "shadow" }, canonical)!.groupV4, true);
+      write({ ...v4, groups_file_sha256: GROUPS_FILE_SHA256 });
+      assert.equal(cubeFromEnv(env, canonical), null, "v4 name with the v2 hash");
+      write({ ...v4, groups_version: GROUPS_VERSION });
+      assert.equal(cubeFromEnv(env, canonical), null, "v2 name with the v4 hash");
+      write({ ...v4, unit_attributes: { offender: four, victim: four, arrestee: ["age_bin"] } });
+      assert.equal(cubeFromEnv(env, canonical), null, "a v4 manifest that does not list the attributes");
+      write({ ...v4, unit_attributes: undefined });
+      assert.equal(cubeFromEnv(env, canonical), null, "a v4 manifest with no attribute lists");
+      write(good);
+      assert.equal(cubeFromEnv(env, canonical)!.groupV4, undefined, "the v2 cube does not carry the v4 attributes");
       // The code cube: its own manifest.
       const codeRoot = path.join(dir, "codecube");
       fs.mkdirSync(path.join(codeRoot, "canonical/cube/data_year=2024"), { recursive: true });
       fs.writeFileSync(path.join(codeRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
-      const writeCode = (m: object) => fs.writeFileSync(path.join(codeRoot, "manifest.json"), JSON.stringify(m));
+      const writeCode = (m: object) => put(path.join(codeRoot, "manifest.json"), m);
       const goodCode = { schema_version: "cube-code-0.1", source_manifest_sha256: sha, never_add_across_codes: true, reference_codes: ["09A", "13A"], years: { "2024": {} }, files: { "canonical/cube/data_year=2024/data.parquet": {} } };
       const cenv = { NIBRS_CUBE: "on", NIBRS_CODE_CUBE_ROOT: codeRoot };
       writeCode(goodCode);
@@ -238,6 +277,17 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       assert.deepEqual(cubeFromEnv({ ...env, ...cenv }, canonical)!.code, undefined, "a bad code cube leaves the group cube in use");
       writeCode({ ...goodCode, reference_codes: undefined });
       assert.equal(cubeFromEnv(cenv, canonical), null, "no reference codes named");
+      // Code cube v2 (cube 3): ethnicity only when the file's version, hash and the manifest's own attribute lists all say so.
+      const fourC = ["age_bin", "sex", "race", "ethnicity"];
+      const v2 = { ...goodCode, groups_version: CODE_VERSION_V2, groups_file_sha256: CODE_FILE_SHA256_V2, unit_attributes: { offender: fourC, victim: fourC, arrestee: fourC } };
+      writeCode(goodCode);
+      assert.equal(cubeFromEnv(cenv, canonical)!.code!.ethnicity, undefined, "an unstamped (v1) code cube has no ethnicity");
+      writeCode(v2);
+      assert.equal(cubeFromEnv(cenv, canonical)!.code!.ethnicity, true, "a code cube v2");
+      writeCode({ ...v2, groups_file_sha256: "0".repeat(64) });
+      assert.equal(cubeFromEnv(cenv, canonical)!.code!.ethnicity, undefined, "another file: no ethnicity (age, sex, race still served)");
+      writeCode({ ...v2, unit_attributes: { offender: four, victim: four, arrestee: ["age_bin", "sex", "race"] } });
+      assert.equal(cubeFromEnv(cenv, canonical)!.code!.ethnicity, undefined, "the manifest does not list ethnicity for every unit");
     } finally { console.error = quiet; }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
@@ -278,7 +328,11 @@ if ((CUBE || CODE_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE_CUBE}/manifest.
     const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE, NIBRS_CODE_CUBE_ROOT: CODE_CUBE }, ROOT);
     assert.ok(cubeCfg, "the cube folder is readable");
     const mk = (cube: CubeConfig | null) => ({ places: loadPlaceIndex(), release: r, target: { root: ROOT, builtYears, cube }, execute });
-    const questions = (process.env.NIBRS_CUBE_TEST_QUESTIONS ?? "").split("|").filter(Boolean);
+    // NIBRS_CUBE_TEST_QUESTIONS_FILE: one question per line (blank lines and lines starting with # skipped); added to NIBRS_CUBE_TEST_QUESTIONS.
+    const fromFile = process.env.NIBRS_CUBE_TEST_QUESTIONS_FILE ? fs.readFileSync(process.env.NIBRS_CUBE_TEST_QUESTIONS_FILE, "utf8").split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#")) : [];
+    const questions = [...(process.env.NIBRS_CUBE_TEST_QUESTIONS ?? "").split("|").filter(Boolean), ...fromFile];
+    // NIBRS_CUBE_TEST_MIN_SERVED: how many questions must come from the cube (default 1); the runner sets it to the list's expected count.
+    const minServed = Number(process.env.NIBRS_CUBE_TEST_MIN_SERVED ?? "1");
     let served = 0;
     for (const q of questions) {
       const rawSql = executed.length;
@@ -291,7 +345,8 @@ if ((CUBE || CODE_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE_CUBE}/manifest.
       if (usedCube) served++;
       console.log(`  ${usedCube ? "cube" : "raw "} ${raw.kind}: ${q} (${rawSql >= 0 ? "same" : ""})`);
     }
-    if (questions.length) assert.ok(served > 0, "at least one question was read from the cube");
+    console.log(`  ${served} of ${questions.length} questions read from the cube`);
+    if (questions.length) assert.ok(served >= Math.max(1, minServed), `at least ${Math.max(1, minServed)} question(s) read from the cube (got ${served})`);
   };
   run().then(() => console.log("nibrs cube: cell-by-cell comparison done"), (e) => { console.error(e); process.exit(1); });
 } else console.log("(no release or cube named: the cell-by-cell comparison is skipped)");
