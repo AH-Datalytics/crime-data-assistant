@@ -517,7 +517,7 @@ function answerCurrentSeveralRate(cq: { measure: string; places: Extract<Current
     return blanks.length ? [`No rate is given for ${blanks.map(monthWords).join(", ")} for ${x.a.label}: shown blank, not zero.`] : [];
   });
   const header = `${ucFirst(one)} rate per 100,000`;
-  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" },
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" },
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
   const rows = per.flatMap((x) => covered.map((m) => [x.a.name, m, rateOf(x, m)] as (string | number | null)[]));
   const period = { from: covered[0], to: covered[covered.length - 1] };

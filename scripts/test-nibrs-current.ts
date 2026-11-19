@@ -164,7 +164,7 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const both = answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [dallas, nola], from: "2025-01", to: "2025-03" }, b, rows);
   assert.ok(both.kind === "current", JSON.stringify(both));
   if (both.kind === "current") {
-    assert.deepEqual(both.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murder rate per 100,000"]);
+    assert.deepEqual(both.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Murder rate per 100,000"]);
     assert.deepEqual(both.delivered.table.rows, [["Dallas", "2025-01", 1], ["Dallas", "2025-02", 2], ["Dallas", "2025-03", 3]]);
     assert.deepEqual(both.delivered.text, ["January 2025 to March 2025 Murder Rate by Month, Dallas, Texas", "Crime Index has no population for New Orleans, Louisiana, so no rate is given for it.", "Source: Crime Index."]);
     assert.equal(both.question.statistic, "rate");
