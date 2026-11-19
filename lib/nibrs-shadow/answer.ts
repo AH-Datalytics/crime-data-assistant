@@ -115,12 +115,21 @@ export type ShadowOption = {
  * reads all of it as a complete question. Only the reader decides (no data is read); the exact spans are removed; the
  * revised question is shown whole on the button and runs only when chosen (Codex plain-wording design check 2).
  */
+const BELOW_AGENCY_WORD = /\b(?:districts?|neighbou?rhoods?|wards?|beats?|precincts?|zip\s*codes?|subdivisions?|blocks?)\b/i;
+const MONTH_NAMES = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const DATE_AFTER = new RegExp(`^\\s*(?:in|on|at|for|during)?\\s*${MONTH_NAMES}\\.?\\s+(?:\\d{1,2},?\\s+)?(?:19|20)\\d\\d\\b`, "i");
 function askInstead(question: string, parts: Part[], year: number): ShadowOption | null {
   const spans = parts.filter((p) => p.span && p.span[1] > p.span[0] && question.slice(p.span[0], p.span[1]).trim() === p.text.trim()).map((p) => p.span).sort((a, b) => b[0] - a[0]);
   if (!spans.length || spans.length !== parts.length) return null;
+  // Words that name a place smaller than an agency ("garden district") are not filler: without them the question is about another place.
+  if (spans.some(([a, b]) => BELOW_AGENCY_WORD.test(question.slice(a, b)))) return null;
   let t = question;
   // A linking word the unread words ended with stays ("rolling over 12 months in" leaves "in": "murders in Detroit").
-  for (const [a, b] of spans) t = `${t.slice(0, a)} ${/\b(in|for|of|from|during)\s*$/i.exec(question.slice(a, b))?.[1] ?? ""} ${t.slice(b)}`;
+  for (const [a, b] of spans) {
+    // "with an annotation in May 2020": the date belongs to the words cut ("with ..."), so it goes with them (not a period asked).
+    const dated = /^(?:with|plus|including)\b/i.test(question.slice(a, b).trim()) ? DATE_AFTER.exec(question.slice(b)) : null;
+    t = `${t.slice(0, a)} ${/\b(in|for|of|from|during)\s*$/i.exec(question.slice(a, b))?.[1] ?? ""} ${t.slice(b + (dated ? dated[0].length : 0))}`;
+  }
   t = t.replace(/\s+([,?.!])/g, "$1").replace(/,\s*,/g, ",").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
   // A joining word left dangling by the removal goes too ("in 2024 and in 2025" without "in 2025").
   t = t.replace(/\s+(?:and|or)(?=\s*[?.!]?$)/i, "").replace(/\s+(?:and|or)\s+(?:and|or)\s+/gi, " and ")
@@ -688,6 +697,8 @@ export const askInsteadChecks = {
   fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
   peerRewrite: (q: string) => peerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
   fillerRewrite: (q: string) => fillerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
+  /** The P74 question without the unread words, or null when it isn't offered. */
+  stripped: (q: string) => { const l = readQuestion(q, 2026, "2026-09").ledger; return askInstead(l.question, l.parts.filter((p) => p.state === "not-interpreted"), 2026)?.question ?? null; },
 };
 const aboutCrime = (about: string) => /^which kind of crime\b|^which sex offenses\b/i.test(about);
 function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome | null {

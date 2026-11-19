@@ -672,6 +672,11 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // Comparison wording (Jeff 2026-11-11): "vs national average" is now read in full, the city beside the United States.
     assert.equal(fillerRewrite("Murder rate in New York City vs national average"), null);
     assert.equal(readQuestion("Murder rate in New York City vs national average", 2026, "2026-09").text, "Murder rate in New York City and the United States");
+    // The question without the unread words (P74) never changes its place or period: "district" names a place smaller than an agency,
+    // and the date after "with an annotation" belongs to the annotation (PR 246 gate, 2026-11-19).
+    const { stripped } = askInsteadChecks;
+    assert.equal(stripped("can I see violent crime rolling over 12 months for the garden district in New Orleans for 2000 to the present?"), null);
+    assert.equal(stripped("national murder trend rolling over 12 months with an annotation in May 2020"), "national murder trend rolling over 12 months");
     // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
     assert.equal(fillerRewrite("Tell me more about crime in Arlington, VA"), null);
     assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");
