@@ -45,7 +45,7 @@
  * Measure definitions are an executable draft for the canonical tables, until the shared semantic layer (nibrs-model
  * D7/D8) lands; they are in `unitsSql` below.
  */
-import { cubeFromEnv, cubeUnits, shadowSql, type CubeConfig } from "./cube";
+import { cubeFromEnv, cubeOffenseUnits, cubeUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
 import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
@@ -396,6 +396,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     if (d.join) joins.push(d.join);
   }
   if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
+  const groupingJoins = joins.length; // the grouping's own join (the incident header for an hour or a clearance): the offense cube holds that grouping
 
   // Statistics: a count, and optionally its share within the time grouping.
   const [count, ...rest0] = plan.statistics;
@@ -521,7 +522,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? null,
     allCrimeArrests: m.id === "arrests.all_crime", groupB: units.entity === "group_b_arrest", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
     conditioned: !onlyAgeFilter && (plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0),
-    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : null;
+    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : cubeCfg?.offense && (units.entity === "offense" || units.entity === "incident") && attrDims.length <= 1 && (m.id.startsWith("offenses.") || m.id.startsWith("incidents.")) && !m.id.endsWith(".carjacking") ? cubeOffenseUnits({
+    cfg: cubeCfg, entity: units.entity, codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? [], attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
+    conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > groupingJoins }) : null;
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
