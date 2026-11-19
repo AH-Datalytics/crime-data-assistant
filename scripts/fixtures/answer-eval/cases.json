@@ -28129,6 +28129,67 @@
     "reviewed_by": "coordinator-2026-11-19",
     "notes": "P150 (Jeff 2026-11-19): the all-blank decline names every measure of the table. The exact wording of the measure names comes from the plan's measure words; the runner shows what the engine says."
    }
+  },
+  {
+   "id": "LS-469",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Memphis crime per month in 2025",
+   "policy": [
+    "P01",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "violent crime",
+       "unit": "victim (robbery by offense)"
+      },
+      {
+       "name": "property crime",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-engine2",
+    "reviewed_by": "coordinator-2026-11-19",
+    "notes": "P148 (Jeff 2026-11-18): crime by month for one agency is Current Trends' violent crime and property crime beside their sum, the Part I total (Month, Violent crime, Property crime, Part I crime). A month with no figure for a part is named; the Part I figure is blank when either part is."
+   }
   }
  ]
 }

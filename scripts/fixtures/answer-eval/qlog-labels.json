@@ -7851,12 +7851,9 @@
    "question": "Naperville, IL crime per month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -43139,12 +43136,9 @@
    "question": "How many crimes per month in Holland, Michigan",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -64864,12 +64858,9 @@
    "question": "show monthly crime data for Olathe",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",

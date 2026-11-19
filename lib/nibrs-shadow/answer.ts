@@ -58,7 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance } from "./clearance-current";
-import { answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { partOneMonthly, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -1673,6 +1673,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       { label: "Every year available", continuation: fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins) },
       { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
       { label: "Another year", entry: "which year" }] };
+  }
+  // P148 (Jeff 2026-11-18): "crime", "overall crime" or "all crimes" by month for one place is Current Trends' violent and property
+  // crime beside their sum, the Part I total, not asked and not NIBRS's every offense. Only when both series answer as one agency's months.
+  {
+    const ms = clause0("measure");
+    if (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && clause0("grain").some((g) => g.value === "month") && clause0("place").length === 1
+      && !flags(ledger0).comparison && !flags(ledger0).combined) {
+      const one = (m: string[]) => fromLedger(filledAll(ledger, "measure", [m]), deps, pins);
+      const merged = partOneMonthly(one(["violent_crime", "violent crime"]) as never, one(["property_crime", "property crime"]) as never);
+      if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
+      if (merged) return merged;
+    }
   }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
   const named = clause0("measure").some((p) => p.value !== "unspecified");
