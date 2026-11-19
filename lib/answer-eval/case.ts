@@ -89,7 +89,7 @@ export const Case = z.strictObject({
   /** A button press answering an earlier case's clarifying question. */
   button: z.strictObject({ answers: z.string().regex(/^LS-\d{3}$/), option: z.string().min(1) }).optional(),
   /** Policy rows the expectation depends on (docs/policy/nibrsai-answer-policy.csv). An open row leaves it unscored. */
-  policy: z.array(z.string().regex(/^[PD]\d{2}$/)),
+  policy: z.array(z.string().regex(/^[PD]\d{2,3}$/)),
   expected: Expected.nullable(),
   label: z.strictObject({
     status: z.enum(["unlabeled", "drafted", "reviewed", "unresolved"]),

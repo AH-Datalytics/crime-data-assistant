@@ -3,15 +3,11 @@
 "labels": {
 "QL-ct-00d6ec868c": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-18",
+"why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci",
-"nibrs"
-]
+"outcome": "decline",
+"reason": "Marking a date on a chart isn't available here."
 }
 },
 "QL-ct-00f5989c5c": {
@@ -739,7 +735,12 @@
 },
 "QL-ct-27712b6b3b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "A line at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "Marking a date on a chart isn't available here."
+}
 },
 "QL-ct-277471997c": {
 "status": "draft",
@@ -1700,15 +1701,11 @@
 },
 "QL-ct-6017ec600f": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-18",
+"why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci",
-"nibrs"
-]
+"outcome": "decline",
+"reason": "Marking a date on a chart isn't available here."
 }
 },
 "QL-ct-6046025e64": {
@@ -1759,7 +1756,12 @@
 },
 "QL-ct-62dc86017b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends has no figures for it), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-ct-62e88383c3": {
 "status": "reviewed",
@@ -3570,13 +3572,11 @@
 },
 "QL-ct-c9f8fc224a": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-18",
+"why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
-]
+"outcome": "decline",
+"reason": "Marking a date on a chart isn't available here."
 }
 },
 "QL-ct-ca550d3a77": {
@@ -3730,15 +3730,11 @@
 },
 "QL-ct-d0202d45b2": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-18",
+"why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci",
-"nibrs"
-]
+"outcome": "decline",
+"reason": "Marking a date on a chart isn't available here."
 }
 },
 "QL-ct-d03cd0a320": {
@@ -4422,13 +4418,11 @@
 },
 "QL-ct-f6669e281d": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-18",
+"why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
-]
+"outcome": "decline",
+"reason": "Marking a date on a chart isn't available here."
 }
 },
 "QL-ct-f67ae4ad47": {
@@ -9255,7 +9249,12 @@
 },
 "QL-nibrs-0d2bc02b8a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends has no figures for it), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-0d8d1b2bb0": {
 "status": "reviewed",
@@ -13932,7 +13931,12 @@
 },
 "QL-nibrs-def10146d5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends has no figures for it), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-df21c84f95": {
 "status": "reviewed",

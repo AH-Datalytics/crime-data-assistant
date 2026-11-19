@@ -26,7 +26,7 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
-import { allBlankMonthly, plainMeanings } from "../lib/nibrs-shadow/answer";
+import { allBlankMonthly, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
 {
   const monthCols = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" }, { binding: { kind: "grouping", dimension: "time.month" }, header: "Month" },
@@ -35,6 +35,14 @@ import { allBlankMonthly, plainMeanings } from "../lib/nibrs-shadow/answer";
     delivered: { table: { columns: monthCols, rows: [...a.map((v, i) => ["Dallas", `2025-0${i + 1}`, v]), ...b.map((v, i) => ["New Orleans", `2025-0${i + 1}`, v])] }, text: [] } }) as never;
   const none = allBlankMonthly(series([null, null], [null, null]));
   assert.ok(none && none.kind === "decline" && none.explanation === "No data is available for murders in Dallas, Texas and New Orleans, Louisiana.", JSON.stringify(none));
+  // P150: several measures at once (a NIBRS table with a column each) name them all.
+  const nibrsTwo = (a: (number | null)[], b: (number | null)[]) => ({ kind: "answer", plan: { measures: [{ id: "victims.homicide", unit: "victim" }, { id: "victims.murder", unit: "victim" }], statistics: [{ kind: "count", as: "a" }, { kind: "count", as: "b" }],
+    filters: [], geography: { places: [{ kind: "agency", label: "Oakland, California" }] } },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "a" }, header: "Homicide victims" }, { binding: { kind: "statistic", as: "b" }, header: "Murder victims" }],
+      rows: a.map((v, i) => [`2021-0${i + 1}`, v, b[i]]) }, text: [] } }) as never;
+  const two = allBlankMonthly(nibrsTwo([null, null], [null, null]));
+  assert.ok(two && two.kind === "decline" && /^No data is available for .+ and .+ in Oakland, California\.$/.test(two.explanation), JSON.stringify(two));
+  assert.equal(allBlankMonthly(nibrsTwo([null, null], [1, null])), null, "one column has a figure: the table stays");
   assert.equal(allBlankMonthly(series([4, null], [null, null])), null, "some months have figures: the table stays");
   assert.equal(allBlankMonthly(series([null, null], [3, 3])), null, "one place blank only: the table and its gap sentence stay");
 }
@@ -151,6 +159,12 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P153: a line, an annotation or a marker at a date on a chart is declined with its own sentence.
+for (const q of ["DC violent crime rolling over 12 months with a line at August 2025", "Houston murders per month with an annotation at May 2020",
+  "Give me a chart of the monthly murder counts in Baltimore and Detroit. Add some kind of marker to show August 2025 on the chart."]) {
+  const o = ask(q);
+  assert.ok(o.kind === "decline" && o.explanation === "Marking a date on a chart isn't available here.", `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+}
 
 // Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
 // (cities in two states, a city and a county, a state) is asked about, cities first.
@@ -1137,6 +1151,9 @@ assert.ok(sqls.at(-1)!.includes("substr(a.arrest_date, 1, 6) AS ym"));
 const dui = as(ask("DUI arrests in Detroit in 2023"), "answer");
 assert.deepEqual([dui.plan.measures[0].id, dui.plan.timeBasis], ["group_b_arrests.dui", "arrest_date"]);
 assert.ok(sqls.some((x) => x.includes("group_b_arrest") && x.includes("a.arrest_offense IN ('90D')")), "read from Group B arrests");
+// P149: the internal unit name never reaches a reader ("DUI Group_b_arrest").
+assert.ok(!dui.delivered.text.some((t) => /group_b_arrest/i.test(t)), dui.delivered.text.join(" / "));
+assert.ok(/DUI arrests/i.test(dui.delivered.text[0]), dui.delivered.text[0]);
 // Job AR6: gun possession is a weapon law violation (520), never drug possession; a gun as a weapon stays a condition;
 // a leading "Please" keeps the every-arrest reading.
 for (const q of ["gun possession arrests in Detroit in 2023", "possession of a firearm arrests in Detroit in 2023"])
@@ -2485,6 +2502,21 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     // "the last 12 months" stays one total.
     assert.equal(shadowAnswer("Dallas murders in the last 12 months", cdeps).kind, "current");
   }
+  // P148 (Jeff 2026-11-18): crime by month for one agency is violent and property beside their sum (blank when either is), from Current Trends.
+  for (const q of ["Dallas crime per month", "Dallas overall crime per month", "Dallas all crimes by month"]) {
+    let po: ShadowOutcome;
+    try { po = shadowAnswer(q, cdeps); } catch (e) { assert.fail(`${q}: ${(e as Error).stack?.split("\n").slice(0, 7).join(" | ")}`); }
+    assert.equal(po.kind, "current", `${q}: ${JSON.stringify(po).slice(0, 200)}`);
+    if (po.kind === "current") {
+      assert.deepEqual(po.delivered.table.columns.map((c) => c.header), ["Month", "Violent crime", "Property crime", "Part I crime"], q);
+      assert.deepEqual(po.delivered.table.rows[0], ["2025-01", 11, 11, 22], q);
+      assert.equal(po.delivered.text[0], "January 2025 to August 2026 Crime by Month, Dallas, Texas", q);
+      assert.equal(po.delivered.text[po.delivered.text.length - 1], "Source: Crime Index.");
+    }
+  }
+  const poGap = shadowAnswer("Houston crime per month", cdeps);
+  assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
+    && poGap.delivered.text.includes("No figure is available for August 2026 for Violent crime: shown blank, not zero."), JSON.stringify(poGap).slice(0, 400));
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
   const nib = shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
@@ -2493,6 +2525,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(dec.kind === "decline" && /^NIBRS has no data from the Dallas Police Department in this period\./.test(dec.explanation), JSON.stringify(dec).slice(0, 300));
   // P147: in this stub the Current Trends series the button would lead to has every month blank too, so it is not offered.
   if (dec.kind === "decline") assert.equal(dec.alternative, null);
+  // P151 (Jeff 2026-11-19): when the yearly Crime Index answer has a figure it is offered under the all-blank decline.
+  const blankCt = { kind: "current", period: { from: "2023-01", to: "2023-12" }, question: { measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee" }, form: "months", statistic: "count" },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "x" }, header: "Murders" }], rows: [["2023-01", null], ["2023-02", null]] }, text: [] } } as never;
+  const blankDecl = allBlankMonthly(blankCt)!;
+  const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [], rows: [["2023", v]] }, text: [] } }) as never;
+  // The table opened from the button ends at its last year with a figure; the years after it are named (New Orleans rape: 2017 to 2023).
+  const longYearly = () => ({ kind: "historical", period: { from: "2022-01", to: "2025-12" }, delivered: { table: { columns: [], rows: [["2022", 5], ["2023", 9], ["2024", null], ["2025", null]] }, text: ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Source: Crime Index."] } }) as never;
+  const trimmed = withYearlyOffer(blankDecl, blankCt, deps, longYearly);
+  const opened = trimmed.kind === "decline" ? (trimmed.alternative as { continuation?: { delivered: { table: { rows: unknown[][] }; text: string[] }; period: { to: string } } } | null)?.continuation : undefined;
+  assert.deepEqual(opened?.delivered.table.rows, [["2022", 5], ["2023", 9]]);
+  assert.deepEqual(opened?.delivered.text, ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Crime Index has no murder figures for Memphis, Tennessee from 2024 to 2025, so the chart and table end in 2023.", "Source: Crime Index."]);
+  assert.equal(opened?.period.to, "2023-12");
+  const offered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(351));
+  assert.ok(offered.kind === "decline" && offered.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', JSON.stringify(offered).slice(0, 300));
+  assert.equal(offered.kind === "decline" ? offered.explanation : "", "No data is available for murders in Memphis, Tennessee.");
+  const notOffered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(null));
+  assert.ok(notOffered.kind === "decline" && notOffered.alternative === null, "no figure in the yearly series: no button");
 }
 // Rolling 12 months from Homicide Reports (shared helper rolling.ts): a state's firearm murders, with no step left for a
 // year or a window the source can't give.

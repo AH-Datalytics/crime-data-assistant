@@ -58,7 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance } from "./clearance-current";
-import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { partOneMonthly, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -809,21 +809,54 @@ export function allBlankMonthly(o: ShadowOutcome): ShadowOutcome | null {
   const monthly = table.columns.some((c) => c.binding.kind === "grouping" && c.binding.dimension === "time.month");
   if (!monthly || !stats.length || table.rows.length < 2 || !table.rows.every((r) => stats.every((i) => r[i] === null))) return null;
   if (o.kind === "answer") {
-    if (o.plan.statistics.length !== 1 || o.plan.statistics[0].kind !== "count" || o.plan.measures.length !== 1) return null;
+    if (!o.plan.statistics.length || o.plan.statistics.some((s) => s.kind !== "count") || !o.plan.measures.length) return null;
     // Agencies only: a state's or the nation's month is blank when any agency counted lacks it, and its own notes say so.
     if (!o.plan.geography.places.length || o.plan.geography.places.some((p) => p.kind !== "agency")) return null;
     const places = o.plan.geography.places.map((p) => (p.kind === "agency" ? p.label : ""));
-    return decline("outside_release_coverage", `No data is available for ${measureWords(o.plan)} in ${listed(places)}.`);
+    return decline("outside_release_coverage", `No data is available for ${listed(o.plan.measures.map((m) => measureWords(o.plan, m)).filter((w, i, all) => all.indexOf(w) === i))} in ${listed(places)}.`);
   }
   const q = o.question, hm = HISTORICAL_MEASURE[q.measure];
   if (!hm || q.statistic === "rate" || q.form !== "months" || q.place.kind !== "agency") return null;
   return decline("outside_release_coverage", `No data is available for ${hm.words} in ${listed([q.place.label, ...(q.agencies ?? []).map((a) => a.label)])}.`);
 }
 
+/**
+ * P151 (Jeff 2026-11-19): under the all-blank decline of one agency's Part I crime, the yearly Crime Index answer is offered when it has a
+ * figure ("Ask instead: murders in Oakland in 2021"; by year when the months spanned more than one year).
+ */
+export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: ShadowDeps, run: (question: string) => ShadowOutcome = (q) => shadowAnswer(q, deps)): ShadowOutcome {
+  if (decl.kind !== "decline" || (o.kind !== "answer" && o.kind !== "current")) return decl;
+  let name: string | null = null, label: string | null = null;
+  if (o.kind === "current") { name = o.question.measure; label = o.question.agencies?.length ? null : o.question.place.label; }
+  else if (o.plan.measures.length === 1 && o.plan.geography.places.length === 1 && o.plan.geography.places[0].kind === "agency") {
+    name = o.plan.measures[0].id.replace(/^[a-z_]+\./, ""); label = o.plan.geography.places[0].label;
+  }
+  const hm = name ? HISTORICAL_MEASURE[name] : undefined;
+  if (!hm || !label) return decl;
+  const when = o.period.from.slice(0, 4) === o.period.to.slice(0, 4) ? `in ${o.period.from.slice(0, 4)}` : "by year";
+  const question = `${hm.words} in ${label} ${when}`;
+  let yearly: ShadowOutcome;
+  try { yearly = run(question); } catch { return decl; }
+  if (yearly.kind !== "historical" && yearly.kind !== "srs") return decl;
+  const rows = yearly.delivered.table.rows;
+  if (!rows.flatMap((r) => r.slice(1)).some((c) => typeof c === "number")) return decl;
+  // The table opened from this button ends at its last year with a figure (Jeff 2026-11-19), the years after it named; no trailing blank rows.
+  let last = rows.length - 1;
+  while (last >= 0 && rows[last].slice(1).every((c) => c === null)) last--;
+  let opened: ShadowOutcome = yearly;
+  if (last >= 0 && last < rows.length - 1) {
+    const gone = rows.length - 1 - last, from = String(rows[last + 1][0]), to = String(rows[rows.length - 1][0]);
+    const note = `Crime Index has no ${hm.name} figure${gone > 1 ? "s" : ""} for ${label} ${gone > 1 ? `from ${from} to ${to}` : `in ${to}`}, so the chart and table end in ${rows[last][0]}.`;
+    const text = [yearly.delivered.text[0], note, ...yearly.delivered.text.slice(1)];
+    opened = { ...yearly, period: { from: `${rows[0][0]}-01`, to: `${rows[last][0]}-12` }, delivered: { ...yearly.delivered, table: { ...yearly.delivered.table, rows: rows.slice(0, last + 1) }, text } } as never;
+  }
+  return { ...decl, alternative: { label: `Ask instead: "${question}"`, continuation: opened } };
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   const o = withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
   const blank = allBlankMonthly(o);
-  if (blank) return blank;
+  if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
   if (o.kind === "clarify" && typeof o.question === "string") {
     const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);
@@ -851,9 +884,15 @@ function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
     crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null });
 }
 
+/** P153 (Jeff 2026-11-18): a line, an annotation or a marker at a date on a chart ("with a line at August 2025", "add some kind of marker to show May 2020"). */
+export const CHART_MARKER = new RegExp(String.raw`\b(?:with\s+(?:an?\s+|some\s+)?(?:vertical\s+|dotted\s+|dashed\s+)?(?:line|annotation|marker|label|note|flag)s?\s+(?:at|in|on|for|to\s+show)\b|(?:add|put|draw|mark|show|include)\s+(?:in\s+)?(?:an?\s+|some\s+(?:kind\s+of\s+)?)?(?:vertical\s+|dotted\s+|dashed\s+)?(?:line|annotation|marker|label|flag)s?\b[^.?!]*\b(?:(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}|\d{4})\b|(?:mark|highlight|annotate)\s+(?:the\s+)?(?:month\s+of\s+)?(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4})`, "i");
+export const CHART_MARKER_SENTENCE = "Marking a date on a chart isn't available here.";
+
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
+  // A date marked on a chart is declined with its own sentence, before any place or crime is asked.
+  if (CHART_MARKER.test(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
@@ -1651,6 +1690,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       { label: "Every year available", continuation: fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins) },
       { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
       { label: "Another year", entry: "which year" }] };
+  }
+  // P148 (Jeff 2026-11-18): "crime", "overall crime" or "all crimes" by month for one place is Current Trends' violent and property
+  // crime beside their sum, the Part I total, not asked and not NIBRS's every offense. Only when both series answer as one agency's months.
+  {
+    const ms = clause0("measure");
+    if (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && clause0("grain").some((g) => g.value === "month") && clause0("place").length === 1
+      && !flags(ledger0).comparison && !flags(ledger0).combined) {
+      const one = (m: string[]) => fromLedger(filledAll(ledger, "measure", [m]), deps, pins);
+      const merged = partOneMonthly(one(["violent_crime", "violent crime"]) as never, one(["property_crime", "property crime"]) as never);
+      if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
+      if (merged) return merged;
+    }
   }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
   const named = clause0("measure").some((p) => p.value !== "unspecified");
