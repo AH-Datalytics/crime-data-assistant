@@ -338,7 +338,7 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       const offRoot = path.join(dir, "offcube");
       fs.mkdirSync(path.join(offRoot, "canonical/cube/data_year=2024"), { recursive: true });
       fs.writeFileSync(path.join(offRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
-      const writeOff = (m: object) => fs.writeFileSync(path.join(offRoot, "manifest.json"), JSON.stringify(m));
+      const writeOff = (m: object) => put(path.join(offRoot, "manifest.json"), m);
       const goodOff = { schema_version: "cube-offense-0.1", product: "offense", source_manifest_sha256: sha, groups_version: OFFENSE_VERSION_V1, groups_file_sha256: OFFENSE_FILE_SHA256_V1,
         unit_attributes: { offense: ["incident_hour", "location_type", "clearance_type"] }, counting_contract: "Offenses add across codes.", reference_codes: ["120", "13A"], unlisted_codes: ["9ZZ"],
         years: { "2024": {} }, files: { "canonical/cube/data_year=2024/data.parquet": {} } };
