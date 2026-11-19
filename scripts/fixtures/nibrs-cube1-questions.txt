@@ -1,0 +1,24 @@
+# Cube 1 read side (offense-and-incident cube): questions for the cell-by-cell precheck (cube against raw, whole answer minus SQL). One per line; every year named is 2024.
+# Totals
+Robberies in Texas in 2024
+Burglaries in Ohio in 2024
+Violent crime offenses in Ohio in 2024
+Robbery incidents in Texas in 2024
+# Hour of day (the plan's bands)
+Robberies by time of day in Texas in 2024
+Burglaries by time of day in the United States in 2024
+Aggravated assaults by time of day in Chicago in 2024
+Aggravated assault incidents by time of day in Ohio in 2024
+Rapes by time of day in Florida in 2024
+# Location of the offense
+Robberies by location in Texas in 2024
+Murders by location type in the United States in 2024
+Burglaries by location in Florida in 2024
+Violent crime by location in Ohio in 2024
+# Clearance
+Robberies by clearance type in Texas in 2024
+Aggravated assaults by clearance status in the United States in 2024
+Motor vehicle thefts by clearance method in Ohio in 2024
+Murder incidents by clearance type in the United States in 2024
+Burglary incidents by clearance status in Texas in 2024
+Larceny by hour of the day in Ohio in 2024

@@ -27954,6 +27954,171 @@
     "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04). [Jeff 2026-11-09: gang questions declined for every source (P38).]"
    }
+  },
+  {
+   "id": "LS-465",
+   "group": "designed:all-blank-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "murders per month in 2021 in Oakland",
+   "policy": [
+    "P147"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "No month of 2021 is in the data for Oakland: murder victims in Oakland, California is not in the data, so the monthly series is declined in one sentence, \"No data is available for murder victims in Oakland, California.\"",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-engine2",
+    "reviewed_by": "coordinator-2026-11-19",
+    "notes": "P147 (Jeff 2026-11-18): an all-blank monthly series declines, without the timeframe. P151 offers the yearly Crime Index answer behind an Ask instead button (murders in Oakland, California in 2021); the button is covered by scripts/test-nibrs-shadow.ts, not pinned here."
+   }
+  },
+  {
+   "id": "LS-466",
+   "group": "designed:all-blank-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Monthly Rape data in New Orleans",
+   "policy": [
+    "P147"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "No month is in the data for New Orleans: rapes in New Orleans, Louisiana is not in the data, so the monthly series is declined in one sentence, \"No data is available for rapes in New Orleans, Louisiana.\"",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-engine2",
+    "reviewed_by": "coordinator-2026-11-19",
+    "notes": "P147 (Jeff 2026-11-18). P151: the Ask instead button (rape in New Orleans, Louisiana by year) opens the yearly Crime Index table ending at its last year with a figure (2023), the later years named in a note; covered by scripts/test-nibrs-shadow.ts, not pinned here."
+   }
+  },
+  {
+   "id": "LS-467",
+   "group": "designed:all-blank-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Show me violent crime by month in Lawrence Kansas",
+   "policy": [
+    "P147"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "No month is in the data for Lawrence: violent crimes in Lawrence, Kansas is not in the data, so the monthly series is declined in one sentence, \"No data is available for violent crimes in Lawrence, Kansas.\"",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-engine2",
+    "reviewed_by": "coordinator-2026-11-19",
+    "notes": "P147 (Jeff 2026-11-18). P151: the Ask instead button (violent crime in Lawrence, Kansas by year) opens the yearly Crime Index answer (1958 to 2025); covered by scripts/test-nibrs-shadow.ts, not pinned here."
+   }
+  },
+  {
+   "id": "LS-468",
+   "group": "designed:all-blank-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "homicide victims and murder victims by month in Oakland in 2021",
+   "policy": [
+    "P150"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "No month of 2021 is in the data for Oakland: homicide victims and murder victims in Oakland, California is not in the data, so the monthly series is declined in one sentence naming both measures.",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-engine2",
+    "reviewed_by": "coordinator-2026-11-19",
+    "notes": "P150 (Jeff 2026-11-19): the all-blank decline names every measure of the table. The exact wording of the measure names comes from the plan's measure words; the runner shows what the engine says."
+   }
+  },
+  {
+   "id": "LS-469",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Memphis crime per month in 2025",
+   "policy": [
+    "P01",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "violent crime",
+       "unit": "victim (robbery by offense)"
+      },
+      {
+       "name": "property crime",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-engine2",
+    "reviewed_by": "coordinator-2026-11-19",
+    "notes": "P148 (Jeff 2026-11-18): crime by month for one agency is Current Trends' violent crime and property crime beside their sum, the Part I total (Month, Violent crime, Property crime, Part I crime). A month with no figure for a part is named; the Part I figure is blank when either part is."
+   }
   }
  ]
 }
