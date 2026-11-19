@@ -11,8 +11,8 @@ import { Case, scorable } from "../lib/answer-eval/case";
 const ROOT = path.join(__dirname, "..");
 const file = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/answer-eval/cases.json"), "utf8"));
 const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-policy.csv"), "utf8");
-const policyIds = new Set([...policyCsv.matchAll(/^﻿?([PD]\d{2}),/gm)].map((m) => m[1]));
-const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2}),.*Needs Jeff/gm)].map((m) => m[1]));
+const policyIds = new Set([...policyCsv.matchAll(/^﻿?([PD]\d{2,3}),/gm)].map((m) => m[1]));
+const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2,3}),.*Needs Jeff/gm)].map((m) => m[1]));
 
 const cases: Case[] = file.cases.map((c: unknown, i: number) => {
   const r = Case.safeParse(c);
