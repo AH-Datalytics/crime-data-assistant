@@ -175,8 +175,11 @@ for (const q of ["homicide in philadelphia by months since 2015", "Houston carja
   "Show me the homicide rate in Macon Georgia over 5 years", "Show me the number of murders in Nashville going back to 1935", "fatal shootings in Chicago by year since 2020"])
   assert.deepEqual(unreadOf(q), [], q);
 assert.match(readQuestion("fatal shootings in Houston since 2015", 2026).text, /^firearm murders in Houston/);
-// Jeff's example: only the pure filler "me the" is left, so the rest is answered as asked.
-assert.deepEqual(unreadOf("plot me the number of assaults in Glassboro NJ from 2010 to 2024"), ["me the"]);
+// Jeff's example: only the pure filler "me the" is left, so the rest is answered as asked (P142: filler runs are filler, nothing is left unread).
+assert.deepEqual(unreadOf("plot me the number of assaults in Glassboro NJ from 2010 to 2024"), []);
+// P142 (months group): filler runs between parts do not stop a question being read.
+for (const q of ["Give me violent crime metrics in DC per month", "give me murders per month in the national sample", "Do you have carjacking data for new orleans by month?"])
+  assert.deepEqual(unreadOf(q), [], q);
 
 // Arrests (2026-11-11): every arrest with no crime named, an age range on the counted person, "cases", Group B names.
 const rq = (q: string) => readQuestion(q, 2026, "2026-09");
