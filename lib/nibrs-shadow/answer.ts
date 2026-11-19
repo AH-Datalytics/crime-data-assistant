@@ -33,7 +33,7 @@
 import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
-import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, type Flags } from "./reading";
+import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
 import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
@@ -850,6 +850,9 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   if (o.kind === "clarify" && typeof o.question === "string") {
     const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);
     if (restored !== o.question) return { ...o, question: restored };
+    // The source words ("in homicide reports") go back in too: the question asked back is the user's, with its source named.
+    const squash = (t: string) => t.replace(/[?.!\s]+$/, "").replace(/\s+/g, " ").trim();
+    if (SHR_WORDS.test(question) && squash(question.replace(SHR_WORDS, "")) === squash(o.question)) return { ...o, question: squash(question) };
   }
   return o;
 }

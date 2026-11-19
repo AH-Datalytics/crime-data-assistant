@@ -407,6 +407,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
         assert.ok(!hr.delivered.text.some((t) => /\bSHR\b/.test(t)), "never the abbreviation");
       }
     }
+    // A question asked back keeps the source words the user wrote (gate, QL-hist-333df04e0a).
+    const askedBack = shadowAnswer("which jurisdictions are included in homicide reports", sdeps);
+    assert.ok(askedBack.kind === "clarify" && askedBack.question === "which jurisdictions are included in homicide reports", JSON.stringify(askedBack).slice(0, 240));
     // The runner's probes (canon2): by year the Crime Index route must not win over the named source, and another crime is said so before any ask.
     const byYear = shadowAnswer("Houston murders by year according to Homicide Reports", sdeps);
     assert.equal(byYear.kind, "shr", JSON.stringify(byYear).slice(0, 240));
