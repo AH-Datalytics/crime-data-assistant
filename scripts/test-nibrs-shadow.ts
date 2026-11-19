@@ -1140,6 +1140,9 @@ assert.ok(sqls.at(-1)!.includes("substr(a.arrest_date, 1, 6) AS ym"));
 const dui = as(ask("DUI arrests in Detroit in 2023"), "answer");
 assert.deepEqual([dui.plan.measures[0].id, dui.plan.timeBasis], ["group_b_arrests.dui", "arrest_date"]);
 assert.ok(sqls.some((x) => x.includes("group_b_arrest") && x.includes("a.arrest_offense IN ('90D')")), "read from Group B arrests");
+// P149: the internal unit name never reaches a reader ("DUI Group_b_arrest").
+assert.ok(!dui.delivered.text.some((t) => /group_b_arrest/i.test(t)), dui.delivered.text.join(" / "));
+assert.ok(/DUI arrests/i.test(dui.delivered.text[0]), dui.delivered.text[0]);
 // Job AR6: gun possession is a weapon law violation (520), never drug possession; a gun as a weapon stays a condition;
 // a leading "Please" keeps the every-arrest reading.
 for (const q of ["gun possession arrests in Detroit in 2023", "possession of a firearm arrests in Detroit in 2023"])
