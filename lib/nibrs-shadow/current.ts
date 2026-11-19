@@ -18,6 +18,7 @@ import { carriesTo } from "./population-carry";
 import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
+import { truncatedTieSentence } from "../nibrs-plan/transforms";
 import type { Meaning } from "../answer-eval/case";
 import { CITY_AS, cityNameSql, citySql, HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
@@ -424,7 +425,7 @@ export function currentEntries(b: CurrentBuild, historicalRoot: string, rq: Curr
   return { entries, months: ms.length };
 }
 export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, historicalRoot: string, execute: (sql: string) => unknown[][],
-  rank: <T extends { name: string; value: number | null; known: boolean }>(xs: T[], dir: "top" | "bottom", limit: number | null) => { ranked: T[]; leftOut: T[]; tie: { position: number; names: string[]; shown: number } | null }): CurrentAnswer | CurrentDecline {
+  rank: <T extends { name: string; value: number | null; known: boolean }>(xs: T[], dir: "top" | "bottom", limit: number | null) => { ranked: T[]; leftOut: T[]; tie: { position: number; names: string[]; shown: number; value: number; total: number; truncated: boolean } | null }): CurrentAnswer | CurrentDecline {
   const col = CURRENT_MEASURE[rq.measure];
   if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
   if (rq.from < b.firstMonth || rq.to > b.lastMonth) return { kind: "current-decline", explanation: `Current Trends covers ${spanWords(b.firstMonth, b.lastMonth)}.` };
@@ -446,7 +447,8 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes (the sample note, ties, who is left out), then the source.
     lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${titleCase(where.replace(/^the /i, ""))}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}`;
     extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.`);
-    if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
+    if (r.tie?.truncated) extra.push(truncatedTieSentence(r.tie, rate));
+    else if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
   } else {
     // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
     const sorted = entries.filter((e) => e.population !== null).sort((x, y) => (y.population! - x.population!) || x.name.localeCompare(y.name));
