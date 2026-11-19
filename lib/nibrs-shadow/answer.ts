@@ -2776,12 +2776,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // doesn't record: shrQuestionOf leaves those, and any code SHR records differently, on this path).
   // Any person's detail selected, offenders' included (Codex SHR-A review 01.6).
   const detailSelectedAny = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim));
-  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny)
+  // P152 (Jeff 2026-11-19): "Homicide Reports" in the words asks for that source: murders and homicides only, said plainly otherwise.
+  if (flags(ledger0).shrAsked && !plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id)))
+    return decline("unsupported_capability", "Homicide Reports hold murders and homicides only.");
+  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny || flags(ledger0).shrAsked)
     && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
   if (!stateMode && murderDetail) {
     const s = plan.geography.places.length > 1 ? shrSeveral(plan, deps, ledger0) : shrOutcome(plan, deps, ledger0);
     if (s) return s;
+    if (flags(ledger0).shrAsked) {
+      const where = plan.geography.places.map((p) => (p.kind === "agency" ? p.label : "")).filter(Boolean);
+      return decline("outside_release_coverage", `No data is available for ${measureWords(plan)}${where.length ? ` in ${where.length > 2 ? `${where.slice(0, -1).join(", ")} and ${where[where.length - 1]}` : where.join(" and ")}` : ""} from Homicide Reports.`);
+    }
   }
   // With a release, a state or national detail SHR can't answer as asked (a location beside it, a rate) goes on to
   // NIBRS's own path (Codex SHR-A review 01.8); without one, it is routed, as before.
