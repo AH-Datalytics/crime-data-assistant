@@ -516,6 +516,7 @@ function recordNibrsPhraseFiller(ledger: RequestLedger): void {
   }
 }
 
+const MULTI_WORD_FILLER = /^(?:you|have|has|had|me|the|a|an|do|does|did|i|can|could|see|show|give|get|find|list|please|metrics|sample|in|for|is|are|was|were|there)$/i;
 function recordNibrsFiller(ledger: RequestLedger): void {
   recordNibrsPhraseFiller(ledger);
   recordBetweenFiller(ledger);
@@ -529,6 +530,8 @@ function recordNibrsFiller(ledger: RequestLedger): void {
   }
   for (const run of runs) {
     if (!run.every((piece) => NIBRS_FILLER.test(piece.text))) continue;
+    // A run of several words is only linking words: "where a firearm was stolen" keeps its "where" (it restricts), as before.
+    if (run.length > 1 && !run.every((piece) => MULTI_WORD_FILLER.test(piece.text))) continue;
     // "do you have shootings data" (no place) asks about the data itself; "do you have carjacking data for New Orleans by month" asks for figures.
     if (/^you have$/i.test(run.map((piece) => piece.text).join(" ")) && !ledger.parts.some((p) => p.concept === "place")) continue;
     const start = run[0].span[0], end = run[run.length - 1].span[1];
