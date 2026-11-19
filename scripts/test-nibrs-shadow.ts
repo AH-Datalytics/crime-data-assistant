@@ -2427,7 +2427,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   }
   const poGap = shadowAnswer("Houston crime per month", cdeps);
   assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
-    && poGap.delivered.text.includes("No figure is known for August 2026 for Violent crime: shown blank, not zero.".replace("known", "available")), JSON.stringify(poGap).slice(0, 400));
+    && poGap.delivered.text.includes("No figure is available for August 2026 for Violent crime: shown blank, not zero."), JSON.stringify(poGap).slice(0, 400));
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
   const nib = shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
