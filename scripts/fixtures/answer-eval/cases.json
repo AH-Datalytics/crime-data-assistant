@@ -7659,73 +7659,37 @@
     "P22"
    ],
    "expected": {
-    "action": "clarify",
-    "about": "which years",
-    "options": [
-     {
-      "label": "Last 10 complete years",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Houston Police Department",
-         "state": "TX"
-        }
-       ],
-       "period": {
-        "rule": "last 10 complete years"
-       },
-       "measures": [
-        {
-         "name": "theft from motor vehicle",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month",
-        "clearance status"
-       ],
-       "statistic": "count"
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Houston Police Department",
+       "state": "TX"
       }
+     ],
+     "period": {
+      "rule": "every year available"
      },
-     {
-      "label": "Every year available",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Houston Police Department",
-         "state": "TX"
-        }
-       ],
-       "period": {
-        "rule": "every year available"
-       },
-       "measures": [
-        {
-         "name": "theft from motor vehicle",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month",
-        "clearance status"
-       ],
-       "statistic": "count"
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
       }
-     },
-     {
-      "label": "Another range",
-      "leads_to": "clarify",
-      "meaning": null,
-      "next_about": "which range of years"
-     }
+     ],
+     "filters": [],
+     "groupings": [
+      "month",
+      "clearance status"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months shown (every month in the data)"
     ]
    },
    "label": {
@@ -13581,71 +13545,36 @@
     "P22"
    ],
    "expected": {
-    "action": "clarify",
-    "about": "which range of years",
-    "options": [
-     {
-      "label": "The last 10 complete years",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Memphis Police Department",
-         "state": "TN"
-        }
-       ],
-       "period": {
-        "rule": "last 10 complete years"
-       },
-       "measures": [
-        {
-         "name": "carjacking",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month"
-       ],
-       "statistic": "count"
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
       }
+     ],
+     "period": {
+      "rule": "every year available"
      },
-     {
-      "label": "Every year available",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Memphis Police Department",
-         "state": "TN"
-        }
-       ],
-       "period": {
-        "rule": "every year in the data"
-       },
-       "measures": [
-        {
-         "name": "carjacking",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month"
-       ],
-       "statistic": "count"
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
       }
-     },
-     {
-      "label": "Another range",
-      "leads_to": "clarify",
-      "meaning": null,
-      "next_about": "which range of years"
-     }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months shown (every month in the data)"
     ]
    },
    "label": {
@@ -20066,13 +19995,13 @@
      "filters": [],
      "groupings": [],
      "statistic": "rate",
-     "denominator": "the state's residents, per 100,000"
+     "denominator": "the state's population, per 100,000"
     },
     "values": {
      "status": "pending_build"
     },
     "statements": [
-     "gives the rate per 100,000 residents",
+     "gives the rate per 100,000 people",
      "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
