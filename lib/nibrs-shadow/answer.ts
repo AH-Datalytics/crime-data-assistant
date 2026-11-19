@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -501,6 +501,24 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 /** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
 const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
 /**
+ * P143: phrases with one plain meaning, said again in the words the reader knows. "until January 2026" (a month series with no
+ * start) runs from the data's first month through that month, inclusive; "raw numbers, not rates" asks for counts; a state
+ * name run into "crime" ("coloradocrime") is two words.
+ */
+const MONTH_WORD = "(?:january|february|march|april|may|june|july|august|september|october|november|december)";
+export function plainMeanings(q: string, firstMonth: string): string {
+  let out = q;
+  const until = new RegExp(String.raw`\b(?:until|up\s+to)\s+(${MONTH_WORD}\s+\d{4})\b`, "i").exec(out);
+  if (until && (out.match(/\b(?:19|20)\d\d\b/g) ?? []).length === 1 && /\b(?:per|by|each)\s+months?\b|\bmonthly\b/i.test(out)
+    && !/\b(?:since|from|starting|beginning|between|back\s+to|through|thru)\b/i.test(out))
+    out = out.replace(until[0], `from ${monthName(firstMonth)} through ${until[1]}`);
+  out = out.replace(/\b(?:the\s+)?raw\s+(?:numbers?|counts?|figures?)\s*,?\s*(?:and\s+)?not\s+(?:the\s+)?(?:rates?|per\s+capita)\b/gi, "counts")
+    .replace(/\b(numbers?|counts?)\s*,?\s*not\s+(?:the\s+)?rates?\b/gi, "$1");
+  const states = Object.values(STATE_NAMES).map((n) => n.toLowerCase().replace(/\s+/g, "\\s*")).join("|");
+  return out.replace(new RegExp(String.raw`\b(${states})(crimes?)\b`, "gi"), "$1 $2");
+}
+
+/**
  * P141: "LA" and "SF" as a city when listed with other cities ("Chicago vs. LA, NYC, Houston"). Not when the list is of
  * states ("CA, LA, TX") or the token qualifies a city ("Baton Rouge, LA"; "Baton Rouge, LA and Houston, TX").
  */
@@ -810,6 +828,9 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
     return withNextStep(decline("not_recorded_in_nibrs", UNDEFINED_TERM.gang), ledger, deps, question);
   }
+  // P143 (Jeff 2026-11-18): "until January 2026" is through January 2026; "raw numbers, not rates" is counts; "coloradocrime" is "colorado crime".
+  const plain = plainMeanings(question, deps.release.firstMonth);
+  if (plain !== question) return shadowAnswer(plain, deps);
   // P141 (Jeff 2026-11-18): "LA" and "SF" listed with other cities are the cities, not asked and never the state.
   const listed = listedNicknames(question);
   if (listed !== question) return shadowAnswer(listed, deps);

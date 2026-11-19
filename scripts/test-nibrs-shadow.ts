@@ -26,6 +26,13 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
+import { plainMeanings } from "../lib/nibrs-shadow/answer";
+// P143: phrases with one plain meaning.
+assert.equal(plainMeanings("Baltimore carjackings per month until January 2026 in a bar chart", "2017-01"), "Baltimore carjackings per month from January 2017 through January 2026 in a bar chart");
+assert.equal(plainMeanings("murders in Dallas until January 2026", "2017-01"), "murders in Dallas until January 2026", "no month series, no start: left as it is");
+assert.equal(plainMeanings("Baltimore murders per month since 2020 until January 2026", "2017-01"), "Baltimore murders per month since 2020 until January 2026", "a start is named: left as it is");
+assert.equal(plainMeanings("Can I get the raw numbers, not rates, for New Orleans homicides, monthly", "2017-01"), "Can I get counts, for New Orleans homicides, monthly");
+assert.equal(plainMeanings("denver coloradocrime data for the last three years by month", "2017-01"), "denver colorado crime data for the last three years by month");
 assert.equal(titleCase("drug/narcotic violation offenses"), "Drug/Narcotic Violation Offenses");
 
 const places = loadPlaceIndex();
