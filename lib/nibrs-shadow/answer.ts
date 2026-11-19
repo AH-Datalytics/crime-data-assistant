@@ -840,9 +840,15 @@ function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
     crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null });
 }
 
+/** P153 (Jeff 2026-11-18): a line, an annotation or a marker at a date on a chart ("with a line at August 2025", "add some kind of marker to show May 2020"). */
+export const CHART_MARKER = new RegExp(String.raw`\b(?:with\s+(?:an?\s+|some\s+)?(?:vertical\s+|dotted\s+|dashed\s+)?(?:line|annotation|marker|label|note|flag)s?\s+(?:at|in|on|for|to\s+show)\b|(?:add|put|draw|mark|show|include)\s+(?:in\s+)?(?:an?\s+|some\s+(?:kind\s+of\s+)?)?(?:vertical\s+|dotted\s+|dashed\s+)?(?:line|annotation|marker|label|flag)s?\b[^.?!]*\b(?:(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}|\d{4})\b|(?:mark|highlight|annotate)\s+(?:the\s+)?(?:month\s+of\s+)?(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4})`, "i");
+export const CHART_MARKER_SENTENCE = "Marking a date on a chart isn't available here.";
+
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
+  // A date marked on a chart is declined with its own sentence, before any place or crime is asked.
+  if (CHART_MARKER.test(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
