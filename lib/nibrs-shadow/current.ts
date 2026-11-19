@@ -342,7 +342,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
     delivered: { table: { columns, rows: covered.map((m, i) => [m, vals[i]]) },
       text: [seriesTitle(spanTitle(period.from, period.to), ucFirst(words), "Month", where), ...head, ...cohortLine, ...outside, ...leftOutLine,
-        ...(blanks.length ? [`No figure is known for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
+        ...(blanks.length ? [`No figure is available for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
 }
 
 /* ------------------------------------------- rankings and sets (2026) ------------------------------------------ */
@@ -468,7 +468,7 @@ export function answerCurrentSeveral(cq: { measure: string; places: Extract<Curr
   const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
   const gapLines = per.flatMap(({ a, values }) => {
     const blanks = covered.filter((m) => values.get(m) === null || values.get(m) === undefined);
-    return blanks.length ? [`No figure is known for ${blanks.map(monthWords).join(", ")} for ${a.label}: shown blank, not zero.`] : [];
+    return blanks.length ? [`No figure is available for ${blanks.map(monthWords).join(", ")} for ${a.label}: shown blank, not zero.`] : [];
   });
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" },
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
