@@ -18,9 +18,9 @@ const SCHEMA_VERSION = "cube-0.1";
 const CODE_SCHEMA_VERSION = "cube-code-0.1";
 
 /** The per-offense-code cube (a separate product, schema cube-code-0.1): the codes its manifest lists and the file years it holds. */
-export type CodeCube = { root: string; years: number[]; codes: Set<string> };
+export type CodeCube = { root: string; years: number[]; codes: Set<string>; /** Built from offense_codes_v2.json (Model, cube 3): every unit also has ethnicity. */ ethnicity?: boolean };
 /** `root` and `years` are the crime-group cube (empty when only the code cube is set); `code` is the per-offense-code cube. */
-export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow"; code?: CodeCube };
+export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow"; code?: CodeCube; /** The group cube is crime_groups_v4 (Model, cube 3): offender, victim and arrestee carry age, sex, race and ethnicity. */ groupV4?: boolean };
 
 /** The groups the cube holds, by the offense-code list the plan's measure carries (the same lists the Model pins by hash). */
 export const CUBE_GROUPS: Record<string, string[]> = {
@@ -38,9 +38,16 @@ export const CUBE_GROUPS: Record<string, string[]> = {
 /** The groups file the Model builds the cube from: its version and the sha256 of crime_groups_v2.json at ce9e942. */
 export const GROUPS_VERSION = "crime_groups_v2";
 export const GROUPS_FILE_SHA256 = "b5cf4cf253bfecc27182dfc7d4788cd6b11a0ad9fdd65a14aa51000f83c58867";
+/** Group cube v4 (cube 3): the same nine groups, more attributes (offender, victim, arrestee: age, sex, race, ethnicity); built only through nibrs_model.cube_products. */
+export const GROUPS_VERSION_V4 = "crime_groups_v4";
+export const GROUPS_FILE_SHA256_V4 = "0e8b27788f49dcf86412bbe1b9e9177bd072914d48a4a32a26acd5b4e68822b9";
+/** Code cube v2 (cube 3): the 85 v1 codes unchanged, ethnicity added for every unit. */
+export const CODE_VERSION_V2 = "offense_codes_v2";
+export const CODE_FILE_SHA256_V2 = "446dc02c016fe8acecbda6d1cc623327afbf6b7e5fee9ffdca9e8bfc594b7a03";
 
 /** unit x group x attribute the cube is asked for (the pilot's matrix: offender age; victim age/sex/race; arrestee age). */
 const ATTRIBUTES: Record<string, string[]> = { offender: ["age"], victim: ["age", "sex", "race"], arrestee: ["age"] };
+const ATTRIBUTES_V4: Record<string, string[]> = { offender: ["age", "sex", "race", "ethnicity"], victim: ["age", "sex", "race", "ethnicity"], arrestee: ["age", "sex", "race", "ethnicity"] };
 const VICTIM_GROUPS = new Set(["person_crimes", "violent_crime_fbi6", "property_crime", "against_property", "homicide", "rape", "sex_offense", "assault_offenses"]);
 
 /** The cube's age bins and the integer ages each holds (NN, NB and BB sit with 1-17, as in the engine's own binning). */
@@ -78,18 +85,18 @@ export function cubeFromEnv(env: Record<string, string | undefined> = process.en
     const bad = (why: string) => { warnOnce(`${key}:${why}`, why); return null; };
     const group = groupRoot ? readCube(groupRoot, "group", releaseRoot, bad) : null;
     const code = codeRoot ? readCube(codeRoot, "code", releaseRoot, bad) : null;
-    if (group || code) cfg = { root: group?.root ?? "", years: group?.years ?? [], mode, ...(code ? { code: { root: code.root, years: code.years, codes: new Set(code.codes ?? []) } } : {}) };
+    if (group || code) cfg = { root: group?.root ?? "", years: group?.years ?? [], mode, ...(group?.v4 ? { groupV4: true } : {}), ...(code ? { code: { root: code.root, years: code.years, codes: new Set(code.codes ?? []), ...(code.v2 ? { ethnicity: true } : {}) } } : {}) };
   } catch (e) { warnOnce(key, e instanceof Error ? e.message : String(e)); }
   cached = { key, cfg };
   return cfg;
 }
 
-function readCube(root: string, kind: "group" | "code", releaseRoot: string | undefined, bad: (why: string) => null): { root: string; years: number[]; codes?: string[] } | null {
+function readCube(root: string, kind: "group" | "code", releaseRoot: string | undefined, bad: (why: string) => null): { root: string; years: number[]; codes?: string[]; v4?: boolean; v2?: boolean } | null {
   const label = kind === "code" ? "code cube" : "cube";
   // The manifest is written last: a folder without it is an unfinished build.
   const mf = `${root}/manifest.json`;
   if (!fs.existsSync(mf)) return bad(`${label}: no manifest.json (an unfinished build)`);
-  const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups_version?: string; groups_file_sha256?: string; groups?: Record<string, { list_sha256?: string | null }>;
+  const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups_version?: string; groups_file_sha256?: string; unit_attributes?: Record<string, unknown>; groups?: Record<string, { list_sha256?: string | null }>;
     never_add_across_codes?: unknown; reference_codes?: unknown; years?: Record<string, unknown>; files?: Record<string, unknown> };
   const want = kind === "code" ? CODE_SCHEMA_VERSION : SCHEMA_VERSION;
   if (m.schema_version !== want) return bad(`${label}: schema_version ${m.schema_version} is not ${want}`);
@@ -100,10 +107,15 @@ function readCube(root: string, kind: "group" | "code", releaseRoot: string | un
   const releaseSha = createHash("sha256").update(fs.readFileSync(rm)).digest("hex");
   if (String(m.source_manifest_sha256 ?? "").toLowerCase() !== releaseSha) return bad(`${label}: built from another release (source_manifest_sha256 ${String(m.source_manifest_sha256).slice(0, 12)} is not the sha256 ${releaseSha.slice(0, 12)} of ${rm})`);
   let codes: string[] | undefined;
+  let v4 = false, v2 = false;
+  // A file that adds attributes must say so itself: every unit lists age_bin, sex, race and ethnicity in the manifest's unit_attributes.
+  const listsAll = () => ["offender", "victim", "arrestee"].every((u) => { const l = m.unit_attributes?.[u]; return Array.isArray(l) && ["age_bin", "sex", "race", "ethnicity"].every((a) => l.includes(a)); });
   if (kind === "group") {
     // The groups file and the group code lists in the cube are the ones this engine counts with (v2: the four composite groups are in it).
-    if (m.groups_version !== GROUPS_VERSION) return bad(`${label}: groups_version ${m.groups_version} is not ${GROUPS_VERSION}`);
-    if (String(m.groups_file_sha256 ?? "").toLowerCase() !== GROUPS_FILE_SHA256) return bad(`${label}: groups_file_sha256 is not the engine's crime_groups_v2.json`);
+    v4 = m.groups_version === GROUPS_VERSION_V4;
+    if (m.groups_version !== GROUPS_VERSION && !v4) return bad(`${label}: groups_version ${m.groups_version} is not ${GROUPS_VERSION} or ${GROUPS_VERSION_V4}`);
+    if (String(m.groups_file_sha256 ?? "").toLowerCase() !== (v4 ? GROUPS_FILE_SHA256_V4 : GROUPS_FILE_SHA256)) return bad(`${label}: groups_file_sha256 is not the engine's ${v4 ? "crime_groups_v4" : "crime_groups_v2"}.json`);
+    if (v4 && !listsAll()) return bad(`${label}: the v4 manifest does not list age_bin, sex, race and ethnicity for every unit`);
     for (const [g, list] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(list)) return bad(`${label}: the code list of ${g} differs from the engine's`);
   } else {
     // Units are never added across codes: the manifest must say the cube is built that way, and it names the codes it holds.
@@ -112,12 +124,14 @@ function readCube(root: string, kind: "group" | "code", releaseRoot: string | un
     if (!(rule === true || (typeof rule === "string" && rule.trim() !== ""))) return bad(`${label}: the manifest does not carry never_add_across_codes`);
     if (!Array.isArray(m.reference_codes) || !m.reference_codes.every((c) => typeof c === "string")) return bad(`${label}: the manifest names no reference_codes`);
     codes = m.reference_codes as string[];
+    // Code cube v2 (ethnicity on every unit) is recognised by its file: version, sha256 and the manifest's own attribute lists. Older code cubes carry no stamp and keep age, sex, race.
+    v2 = m.groups_version === CODE_VERSION_V2 && String(m.groups_file_sha256 ?? "").toLowerCase() === CODE_FILE_SHA256_V2 && listsAll();
   }
   // File keys as the manifest writes them, with either slash.
   const listed = new Set(Object.keys(m.files ?? {}).map((k) => k.replace(/\\/g, "/")));
   const years = Object.keys(m.years ?? {}).map(Number).filter((y) => Number.isInteger(y) && listed.has(`canonical/cube/data_year=${y}/data.parquet`)
     && fs.existsSync(`${root}/canonical/cube/data_year=${y}/data.parquet`)).sort((a, b) => a - b);
-  return years.length ? { root, years, ...(codes ? { codes } : {}) } : bad(`${label}: no data year of the manifest has its file`);
+  return years.length ? { root, years, ...(codes ? { codes } : {}), ...(v4 ? { v4 } : {}), ...(v2 ? { v2 } : {}) } : bad(`${label}: no data year of the manifest has its file`);
 }
 
 /** The plan's age bins as a map from each cube age value to the plan's label; null when the plan's bins cut across a cube bin. */
@@ -229,7 +243,7 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
     // The engine calls an offender with sequence 00 (no offender known) Unknown in every attribute, whatever its sex or race fields hold (17,517 such
     // rows in 2024, all New York). A code cube built at Model commit 064661b or later maps sequence 00 to blank for offender sex and race too, as it
     // always did for age, so the three attributes are read from it for every unit. A cube built before that commit must not be pointed at here.
-    const allowed = isCodeCube ? ["age", "sex", "race"] : ATTRIBUTES[unit];
+    const allowed = isCodeCube ? (a.cfg.code?.ethnicity ? ["age", "sex", "race", "ethnicity"] : ["age", "sex", "race"]) : (a.cfg.groupV4 ? ATTRIBUTES_V4[unit] : ATTRIBUTES[unit]);
     if (!owned || !allowed?.includes(name)) return null;
     if (name === "age") {
       if (!a.attribute.bins) return null;
@@ -239,7 +253,7 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
       attrName = "age_bin";
       value = `CASE value ${Object.entries(m.map).map(([k, v]) => `WHEN ${q(k)} THEN ${q(v)}`).join(" ")} ELSE 'Outside the groups' END`;
     } else {
-      // The engine calls a missing or blank sex or race "U"; the cube keeps the raw codes and calls them "(blank)".
+      // The engine calls a missing or blank sex, race or ethnicity "U"; the cube keeps the raw codes and calls them "(blank)".
       attrName = name;
       value = `CASE WHEN value = '(blank)' THEN 'U' ELSE value END`;
       merges = true; // "(blank)" and a real "U" become one category
