@@ -1,0 +1,18 @@
+# Weapon cube read side: questions for the cell-by-cell precheck (cube against raw, whole answer minus SQL). One per line; every year named is 2024.
+# A weapon grouping (each weapon its own category; the share's denominator is the distinct offenses)
+Robberies by weapon in Texas in 2024
+Robberies by weapon in Chicago in 2024
+Robbery incidents by weapon in Texas in 2024
+Violent crime by weapon in Ohio in 2024
+Burglaries by weapon in Texas in 2024
+Murders by weapon in Houston in 2024
+Aggravated assaults by weapon in Ohio in 2024
+# One weapon cell: the firearm filter, one weapon code
+Robberies with a firearm in Texas in 2024
+Robberies involving a firearm in Ohio in 2024
+Murders involving a firearm in the United States in 2024
+Aggravated assaults with a firearm in Chicago in 2024
+Firearm robberies in Texas in 2024
+Murders with a knife in Texas in 2024
+Violent crime with a firearm in Texas in 2024
+Aggravated assault incidents with a firearm in Ohio in 2024

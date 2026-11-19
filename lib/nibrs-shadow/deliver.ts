@@ -46,7 +46,7 @@ export function periodWords(from: string, to: string): string {
   return `${monthName(from)} through ${monthName(to)}`;
 }
 
-const UNIT_PLURAL: Record<string, string> = { offense: "offenses", incident: "incidents", victim: "victims", offender: "offenders", arrest: "arrests", arrestee: "arrests" };
+const UNIT_PLURAL: Record<string, string> = { offense: "offenses", incident: "incidents", victim: "victims", offender: "offenders", arrest: "arrests", arrestee: "arrests", group_b_arrest: "arrests" };
 const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic violation", drug_equipment: "drug equipment violation" };
 /**
  * A filter on weapons or relationships, in words ("with a firearm", "by a stranger", "with a weapon recorded as
