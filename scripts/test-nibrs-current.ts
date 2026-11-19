@@ -141,7 +141,7 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
     assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Motor vehicle thefts"]);
     assert.deepEqual(sev.delivered.table.rows, [["Dallas", "2025-01", 7], ["Dallas", "2025-02", 8], ["Dallas", "2025-03", 9], ["New Orleans", "2025-01", null], ["New Orleans", "2025-02", null], ["New Orleans", "2025-03", null]]);
     assert.equal(sev.delivered.text[0], "January 2025 to March 2025 Motor Vehicle Thefts by Month, Dallas, Texas and New Orleans, Louisiana");
-    assert.ok(sev.delivered.text.includes("No figure is known for January 2025, February 2025, March 2025 for New Orleans, Louisiana: shown blank, not zero."), JSON.stringify(sev.delivered.text));
+    assert.ok(sev.delivered.text.includes("No figure is available for January 2025, February 2025, March 2025 for New Orleans, Louisiana: shown blank, not zero."), JSON.stringify(sev.delivered.text));
     assert.ok(!sev.delivered.text.some((t) => /Dallas, Texas: shown blank/.test(t)));
     assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
     assert.equal(sev.question.agencies?.length, 1, "the first is the place, the rest the agencies");

@@ -428,7 +428,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const leftOutRoll = opts.rolling.leftOut ?? [];
     if (leftOutRoll.length) text.push(`No crimes were reported in ${leftOutWords(leftOutRoll)}, so no rolling ${opts.rolling.average ? "average" : "total"} is given for any window containing ${leftOutRoll.length === 1 ? "it" : "them"}.`);
     if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
-      text.push(`No data is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter ${opts.rolling.average ? "average" : "total"}.`);
+      text.push(`No data is available for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter ${opts.rolling.average ? "average" : "total"}.`);
   } else if (!cats.length && opts.quarters) {
     // P71: each quarter the sum of its three months; an incomplete quarter is marked, never shown as a whole quarter.
     text.push(seriesTitle(when, what, "Quarter", agency));
@@ -438,12 +438,12 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     text.push(seriesTitle(when, what, by, agency));
     if (leadingGap.length) {
       const start = String(rows[0][ip]);
-      text.push(`No data is known for ${runs(leadingGap)}, so the chart and table start at ${start.length === 7 ? monthName(start) : start}.`);
+      text.push(`No data is available for ${runs(leadingGap)}, so the chart and table start at ${start.length === 7 ? monthName(start) : start}.`);
     }
     const missing = rows.filter((r) => statusOf(r) === "UNKNOWN").map((r) => String(r[ip]));
     // Only what the status establishes: an unknown month has no known report; a year is known only when all its months are.
     // (A month with crimes reported and none of these is a known 0, P51.)
-    if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No data is known for ${runs(missing)}: shown blank, not zero.`);
+    if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is available: shown blank, not zero.` : `No data is available for ${runs(missing)}: shown blank, not zero.`);
     // One agency's zero-report months (Jeff 2026-11-16): not reported: blank in a chart, left out of a year's total, a year with none blank.
     const zero = rows.filter((r) => statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
     if (time === "time.year") {
@@ -575,7 +575,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
     text.push(seriesTitle(when, list, time === "time.month" ? "month" : "year", agency));
     // As for one measure (the same sentence): the periods without reporting evidence.
     const missing = rows.filter((r) => stats.some((s) => String(r[at(`${s.as}_status`)]) === "UNKNOWN")).map((r) => String(r[ip]));
-    if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No data is known for ${runs(missing)}: shown blank, not zero.`);
+    if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is available: shown blank, not zero.` : `No data is available for ${runs(missing)}: shown blank, not zero.`);
     // One agency's zero-report months (Jeff 2026-11-16), as for one measure.
     const first = stats[0] ? `${stats[0].as}_status` : "";
     const zero = rows.filter((r) => String(r[at(first)]) === "NOT_REPORTED").map((r) => String(r[ip]));
@@ -644,7 +644,7 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
   } else {
     for (const [p, words] of [[cmp.earlier, E], [cmp.later, L]] as const)
       if (p.value !== null) { if (!knownOnly) text.push(`${fmt(p.value)} in ${words}.`); }
-      else if (p.missing.length) text.push(`No data is known for ${runs(p.missing)}, so the ${words} total is not established and no change is given.`);
+      else if (p.missing.length) text.push(`No data is available for ${runs(p.missing)}, so the ${words} total is not established and no change is given.`);
   }
   text.push(...readings);
   text.push(...shownStatements(statements));

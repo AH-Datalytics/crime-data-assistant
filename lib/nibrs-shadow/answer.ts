@@ -1417,14 +1417,14 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   // Lines every year says alike (the source, who reported) stay; a line that differs by year is that year's own.
   const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
   // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
-  const why = results.filter((r) => blank.includes(r.y)).flatMap((r) => ((r.o as Partial<Delivering>).delivered?.text ?? []).filter((t) => /^No (?:data|figure) is known for/.test(t)));
+  const why = results.filter((r) => blank.includes(r.y)).flatMap((r) => ((r.o as Partial<Delivering>).delivered?.text ?? []).filter((t) => /^No (?:data|figure) is available for/.test(t)));
   // The blank years as runs ("1935 to 1984 and 2024"), so fifty years before the source starts are one phrase, not a list.
   const runsOf = (ys: number[]) => {
     const out: string[] = [];
     for (let i = 0; i < ys.length;) { let j = i; while (j + 1 < ys.length && ys[j + 1] === ys[j] + 1) j++; out.push(j > i ? `${ys[i]} to ${ys[j]}` : `${ys[i]}`); i = j + 1; }
     return out.length > 2 ? `${out.slice(0, -1).join(", ")} and ${out[out.length - 1]}` : out.join(" and ");
   };
-  const noFigure = blank.length ? `No figure is known for ${runsOf(blank)}: shown blank, not zero.` : null;
+  const noFigure = blank.length ? `No figure is available for ${runsOf(blank)}: shown blank, not zero.` : null;
   const text = [title, `Each year counts the same months: January through ${month}.`, ...(!pv ? [`No years were given, so every year in the data is shown: ${y0} through ${years[1]}.`] : []),
     ...(before.length ? [`Homicide Reports here start in ${y0}, so ${before[0].y} through ${y0 - 1} aren't included.`] : []),
     ...(noFigure ? [noFigure] : []), ...why.filter((t) => !common.includes(t)), ...common];
