@@ -798,7 +798,7 @@ for (const q of ["murders in King County Sheriff's Office, Washington in 2024", 
   assert.doesNotMatch(o.explanation ?? "", /not for one month or month by month|whole years, not single months/);
   if (o.delivered) {
     assert.match(o.delivered.table.columns[1].header, / per 100,000 for the month$/);
-    assert.ok(o.delivered.text.some((t) => /not scaled to a full year/.test(t)));
+    assert.ok(!o.delivered.text.some((t) => /not scaled to a full year/.test(t)), "P145: a rate needs no note saying what it is");
     assert.doesNotMatch(o.delivered.text.join(" "), /\bresidents?\b/i, "never \"residents\" in what a user reads");
   }
   const d = as(ask("murder clearance rate by month in Chicago in 2024"), "decline");
@@ -2395,7 +2395,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
   assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
   if (sev.kind === "current") {
-    assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murders"]);
+    assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Murders"]);
     assert.equal(sev.delivered.table.rows.length, 2 * 116, "every month of 2017-01 to 2026-08 for each");
     assert.ok(sev.delivered.text.includes("No years were given, so every month in the data is shown: January 2017 through August 2026."), JSON.stringify(sev.delivered.text));
     assert.ok(sev.delivered.text.some((t) => /^No figure is known for August 2026 for Houston, Texas: shown blank, not zero\.$/.test(t)));
