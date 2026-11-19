@@ -10,6 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
 import { ageFilterBins, ageMapping, cubeFromEnv, cubeUnits, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_VERSION, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
+import { categorySumsFromGrid } from "../lib/nibrs-shadow/state-sum";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
 
@@ -42,6 +43,18 @@ console.log("nibrs cube: the cube serves exactly its cell families; every other 
   const odd = [...big.slice(0, -1), "A,B"];
   assert.match(oriRows(odd), /^unnest\(\['ZZ/, "an ORI that would break the split keeps the list literal");
   assert.match(oriRows([...big.slice(0, -1), "O'N"]), /'O''N'/, "a quote is escaped in the list literal");
+}
+
+// --- Grid once: the category sums read from the grid's (agency, year, category) rows.
+{
+  const row = (ori: string, y: number, n: number, k: string | null) => ["s", ori, y, n, null, null, null, null, k];
+  const rows = [row("A1", 2024, 5, "Under 18"), row("A2", 2024, 7, "Under 18"), row("A1", 2024, 2, null), row("A2", 2023, 4, "Unknown"), row("A1", 2023, 1, "Unknown"), row("A3", 2024, 9, "65+")];
+  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], null), [[2023, "Unknown", 5, 1], [2024, "65+", 9, 0], [2024, "Under 18", 12, 5], [2024, null, 2, 2]],
+    "summed over agencies and over the Consistent Reporting Agencies; ordered by year, then category, a missing category last");
+  const headers = new Map<number, Set<string>>([[2023, new Set(["A1"])], [2024, new Set(["A1", "A3"])]]);
+  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], headers), [[2023, "Unknown", 1, 1], [2024, "65+", 9, 0], [2024, "Under 18", 5, 5], [2024, null, 2, 2]],
+    "an arrest counts only in a year in which its agency has a header in the place");
+  assert.deepEqual(categorySumsFromGrid([], [], null), []);
 }
 
 // --- Eligibility.
