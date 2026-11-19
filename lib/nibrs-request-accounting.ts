@@ -498,7 +498,7 @@ function recordWhich(ledger: RequestLedger): void {
 }
 
 /** NIBRS filler beyond the shared between-filler words: verbs and articles that never restrict. */
-const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use|metrics|sample)$/i;
+const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use|metrics)$/i;
 
 /**
  * Stage 3b (GC-089, plan r1.3): conversational phrases that never restrict, recorded as context before the word filler:
@@ -516,7 +516,7 @@ function recordNibrsPhraseFiller(ledger: RequestLedger): void {
   }
 }
 
-const MULTI_WORD_FILLER = /^(?:you|have|has|had|me|the|a|an|do|does|did|i|can|could|see|show|give|get|find|list|please|metrics|sample|in|for|is|are|was|were|there)$/i;
+const MULTI_WORD_FILLER = /^(?:you|have|has|had|me|the|a|an|do|does|did|i|can|could|see|show|give|get|find|list|please|metrics|in|for|is|are|was|were|there)$/i;
 function recordNibrsFiller(ledger: RequestLedger): void {
   recordNibrsPhraseFiller(ledger);
   recordBetweenFiller(ledger);

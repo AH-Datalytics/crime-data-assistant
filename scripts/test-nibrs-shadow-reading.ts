@@ -178,7 +178,9 @@ assert.match(readQuestion("fatal shootings in Houston since 2015", 2026).text, /
 // Jeff's example: only the pure filler "me the" is left, so the rest is answered as asked (P142: filler runs are filler, nothing is left unread).
 assert.deepEqual(unreadOf("plot me the number of assaults in Glassboro NJ from 2010 to 2024"), []);
 // P142 (months group): filler runs between parts do not stop a question being read.
-for (const q of ["Give me violent crime metrics in DC per month", "give me murders per month in the national sample", "Do you have carjacking data for new orleans by month?"])
+// "sample" is not filler (the national figure is not a sample): it stays unread.
+assert.deepEqual(unreadOf("give me murders per month in the national sample"), ["sample"]);
+for (const q of ["Give me violent crime metrics in DC per month", "Do you have carjacking data for new orleans by month?"])
   assert.deepEqual(unreadOf(q), [], q);
 
 // Arrests (2026-11-11): every arrest with no crime named, an age range on the counted person, "cases", Group B names.
