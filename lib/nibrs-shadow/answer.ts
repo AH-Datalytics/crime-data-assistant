@@ -809,10 +809,43 @@ export function allBlankMonthly(o: ShadowOutcome): ShadowOutcome | null {
   return decline("outside_release_coverage", `No data is available for ${hm.words} in ${listed([q.place.label, ...(q.agencies ?? []).map((a) => a.label)])}.`);
 }
 
+/**
+ * P151 (Jeff 2026-11-19): under the all-blank decline of one agency's Part I crime, the yearly Crime Index answer is offered when it has a
+ * figure ("Ask instead: murders in Oakland in 2021"; by year when the months spanned more than one year).
+ */
+export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: ShadowDeps, run: (question: string) => ShadowOutcome = (q) => shadowAnswer(q, deps)): ShadowOutcome {
+  if (decl.kind !== "decline" || (o.kind !== "answer" && o.kind !== "current")) return decl;
+  let name: string | null = null, label: string | null = null;
+  if (o.kind === "current") { name = o.question.measure; label = o.question.agencies?.length ? null : o.question.place.label; }
+  else if (o.plan.measures.length === 1 && o.plan.geography.places.length === 1 && o.plan.geography.places[0].kind === "agency") {
+    name = o.plan.measures[0].id.replace(/^[a-z_]+\./, ""); label = o.plan.geography.places[0].label;
+  }
+  const hm = name ? HISTORICAL_MEASURE[name] : undefined;
+  if (!hm || !label) return decl;
+  const when = o.period.from.slice(0, 4) === o.period.to.slice(0, 4) ? `in ${o.period.from.slice(0, 4)}` : "by year";
+  const question = `${hm.words} in ${label} ${when}`;
+  let yearly: ShadowOutcome;
+  try { yearly = run(question); } catch { return decl; }
+  if (yearly.kind !== "historical" && yearly.kind !== "srs") return decl;
+  const rows = yearly.delivered.table.rows;
+  if (!rows.flatMap((r) => r.slice(1)).some((c) => typeof c === "number")) return decl;
+  // The table opened from this button ends at its last year with a figure (Jeff 2026-11-19), the years after it named; no trailing blank rows.
+  let last = rows.length - 1;
+  while (last >= 0 && rows[last].slice(1).every((c) => c === null)) last--;
+  let opened: ShadowOutcome = yearly;
+  if (last >= 0 && last < rows.length - 1) {
+    const gone = rows.length - 1 - last, from = String(rows[last + 1][0]), to = String(rows[rows.length - 1][0]);
+    const note = `Crime Index has no ${hm.name} figure${gone > 1 ? "s" : ""} for ${label} ${gone > 1 ? `from ${from} to ${to}` : `in ${to}`}, so the chart and table end in ${rows[last][0]}.`;
+    const text = [yearly.delivered.text[0], note, ...yearly.delivered.text.slice(1)];
+    opened = { ...yearly, period: { from: `${rows[0][0]}-01`, to: `${rows[last][0]}-12` }, delivered: { ...yearly.delivered, table: { ...yearly.delivered.table, rows: rows.slice(0, last + 1) }, text } } as never;
+  }
+  return { ...decl, alternative: { label: `Ask instead: "${question}"`, continuation: opened } };
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   const o = withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
   const blank = allBlankMonthly(o);
-  if (blank) return blank;
+  if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
   if (o.kind === "clarify" && typeof o.question === "string") {
     const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);
