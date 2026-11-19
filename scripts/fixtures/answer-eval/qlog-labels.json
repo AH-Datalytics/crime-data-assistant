@@ -9937,17 +9937,9 @@
    "question": "Monthly Rape data in New Orleans",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -50828,13 +50820,9 @@
    "question": "San Francisco vehicle burglaries per month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -60086,17 +60074,9 @@
    "question": "Show me violent crime by month in Lawrence Kansas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -69828,17 +69808,9 @@
    "question": "murders per month in 2021 in Oakland",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -80090,17 +80062,9 @@
    "question": "murders per month in 2021 in Oakland",
    "previous": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -101253,13 +101217,9 @@
    "question": "How many vehicle burglaries per month in San Francisco in 2023?",
    "previous": "Compare to San Francisco",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
@@ -105014,17 +104974,9 @@
    "question": "murders per month in 2021 in Oakland",
    "previous": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",

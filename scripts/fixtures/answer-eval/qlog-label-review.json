@@ -2239,7 +2239,12 @@
 },
 "QL-ct-7368879410": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends and NIBRS blank), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-ct-73bb5a8285": {
 "status": "draft",
@@ -10869,7 +10874,12 @@
 },
 "QL-nibrs-542a1e9ec7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (NIBRS has no data from this department), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-5445e3c9e2": {
 "status": "reviewed",
@@ -12858,7 +12868,12 @@
 },
 "QL-nibrs-ab4e2c2c0e": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends and NIBRS blank), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-ab4eb05d0d": {
 "status": "reviewed",
@@ -14970,7 +14985,12 @@
 },
 "QL-shr-27c5d5fa97": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends and NIBRS blank), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-shr-28f48072f9": {
 "status": "reviewed",
@@ -17472,7 +17492,12 @@
 },
 "QL-ct-0c9ba27c5d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends and NIBRS blank), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-ct-0dddb2a05c": {
 "status": "reviewed",
@@ -20761,7 +20786,12 @@
 },
 "QL-nibrs-918e256d4c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (NIBRS has no data from this department), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-92f486cebb": {
 "status": "reviewed",
@@ -21271,7 +21301,12 @@
 },
 "QL-shr-0c9ba27c5d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends and NIBRS blank), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-shr-0cfc8f473d": {
 "status": "reviewed",
