@@ -2394,6 +2394,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 {
   const ctStub = (sql: string): unknown[][] => {
     if (/count\(\*\) FROM read_parquet\('[^']*current_crime/.test(sql)) return [[20]];
+    // A group's published months (the nation, 2025-01 on): the sample-flagged agencies, 3,000 murders a month from 547 agencies of 111 million people.
+    if (/WHERE sample/.test(sql)) {
+      const [, a, b] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
+      const out: unknown[][] = [];
+      for (let y = +a.slice(0, 4), m = +a.slice(5); `${y}-${String(m).padStart(2, "0")}` <= b; m === 12 ? (y++, (m = 1)) : m++) if (y >= 2025) out.push([`${y}-${String(m).padStart(2, "0")}`, 3000, 547, 111272916, 0]);
+      return out;
+    }
     // A group over a span (the nation): the agencies with a figure in every month of it, 3,000 murders a month from 547 agencies of 111 million people.
     if (/full_span/.test(sql)) {
       if (/count\(\*\), coalesce/.test(sql)) return [[547, 111210214]];
@@ -2448,6 +2455,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(nat.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from February 2017 through August 2026."), nat.delivered.text.join(" / "));
     assert.deepEqual(nat.delivered.table.rows[0], ["2018-01", 36000]);
     assert.ok(nat.delivered.table.rows.every((r) => r[1] !== null), "no blank rows");
+    // Windows whose whole lookback is inside 2025 on use the published Consistent Reporting Agencies (the flag), said with the published span.
+    const nat3 = roll("murders rolling over 12 months since 2026 nationally");
+    assert.ok(nat3.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026."), nat3.delivered.text.join(" / "));
+    assert.deepEqual(nat3.delivered.table.rows[0], ["2026-01", 36000]);
     const nat2 = roll("murders rolling over 12 months since 2024 nationally");
     assert.ok(nat2.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from February 2023 through August 2026."), nat2.delivered.text.join(" / "));
     assert.deepEqual(nat2.delivered.table.rows[0], ["2024-01", 36000]);

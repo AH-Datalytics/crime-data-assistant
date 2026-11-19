@@ -582,13 +582,22 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
   const span = months(need, to);
   const per = cq.places.map((p) => {
     let values: Map<Month, number | null>;
-    let cov: { agencies: number; population: number } | null = null;
+    let cov: { agencies: number; population: number; from: Month } | null = null;
     if (p.kind === "agency") values = agencyMonths(b, p.ori, cq.measure, need, to, execute);
     else {
-      // The agencies with a figure in every month the series needs, summed (Jeff 2026-11-19); not the `sample` flag's 2025-on cohort.
-      const g = groupSpanMonths(b, p.states, cq.measure, need, to, execute);
-      values = g.values;
-      cov = g.agencies ? { agencies: g.agencies, population: g.population } : null;
+      if (need >= b.firstMonth) {
+        // The windows' whole lookback is inside the published sample's life (2025-01 on): the published Consistent Reporting Agencies
+        // (the `sample` flag), so the figure matches crimeindex.org (Jeff 2026-11-19).
+        const g = groupMonths(b, p.states, cq.measure, need, to, execute);
+        values = new Map(span.map((m) => [m, g.get(m)?.value ?? null]));
+        const last = g.get(to);
+        cov = last ? { agencies: last.agencies, population: last.population, from: b.firstMonth } : null;
+      } else {
+        // A lookback that reaches before 2025: the agencies with a figure in every month of it, summed (Jeff 2026-11-19).
+        const g = groupSpanMonths(b, p.states, cq.measure, need, to, execute);
+        values = g.values;
+        cov = g.agencies ? { agencies: g.agencies, population: g.population, from: need } : null;
+      }
     }
     const raw = span.map((m) => values.get(m) ?? null);
     const rolled = span.map((m, i) => (i < w - 1 || raw.slice(i - w + 1, i + 1).some((v) => v === null) ? null : raw.slice(i - w + 1, i + 1).reduce<number>((s, v) => s + (v as number), 0)));
@@ -607,7 +616,7 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
   const rows = per.flatMap((x) => shown.map(({ m, i }) => [...(several ? [x.p.kind === "agency" ? x.p.name : x.p.label] : []), m, x.rolled[i]] as (string | number | null)[]));
   const gapLines = per.flatMap((x) => (x.blanks.length ? [`No figure is available for ${runs(x.blanks)}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.blanks.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
-  const cohortLine = per.flatMap((x) => (x.cov ? [`This counts only the ${fmt(x.cov.agencies)} Consistent Reporting ${x.cov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(x.cov.population)} people, that reported every month from ${monthWords(need)} through ${monthWords(to)}.`] : []));
+  const cohortLine = per.flatMap((x) => (x.cov ? [`This counts only the ${fmt(x.cov.agencies)} Consistent Reporting ${x.cov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(x.cov.population)} people, that reported every month from ${monthWords(x.cov.from)} through ${monthWords(to)}.`] : []));
   const period = { from: cq.from, to };
   const first = cq.places[0];
   const places: Meaning["places"] = per.flatMap((x): Meaning["places"][number][] => (x.p.kind === "agency" ? [{ kind: "agency", name: x.p.name, state: x.p.state }]
