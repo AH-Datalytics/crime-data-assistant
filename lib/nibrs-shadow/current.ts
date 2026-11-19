@@ -529,3 +529,37 @@ function answerCurrentSeveralRate(cq: { measure: string; places: Extract<Current
     delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...noPopLines, ...outside, ...gapLines, "Source: Crime Index."] },
   };
 }
+
+/**
+ * P148 (Jeff 2026-11-18): "crime", "overall crime", "all crimes" or "Part 1 crimes" by month for one agency, from Current Trends: the
+ * violent and the property series side by side with their sum, the Part I total (blank when either part is). Built from the two
+ * answers the same question gets for violent and for property crime (one agency, counts), so the period, the place and every
+ * blank month are theirs; null when either is not such an answer.
+ */
+export function partOneMonthly(v: CurrentAnswer | { kind: string }, p: CurrentAnswer | { kind: string }): CurrentAnswer | { kind: "none"; label: string } | null {
+  if (v.kind !== "current" || p.kind !== "current") return null;
+  const a = v as CurrentAnswer, b = p as CurrentAnswer;
+  const ok = (x: CurrentAnswer) => x.question.form === "months" && x.question.statistic !== "rate" && x.question.place.kind === "agency" && !x.question.agencies?.length
+    && x.delivered.table.columns.length === 2 && x.delivered.table.columns[0].binding.kind === "grouping";
+  if (!ok(a) || !ok(b) || a.delivered.table.rows.length !== b.delivered.table.rows.length || a.question.place.kind !== "agency" || b.question.place.kind !== "agency" || a.question.place.ori !== b.question.place.ori) return null;
+  const rowsA = a.delivered.table.rows, rowsB = b.delivered.table.rows;
+  if (rowsA.some((r, i) => r[0] !== rowsB[i][0])) return null;
+  const num = (x: unknown) => (typeof x === "number" ? x : null);
+  const rows = rowsA.map((r, i) => {
+    const vv = num(r[1]), pp = num(rowsB[i][1]);
+    return [r[0], vv, pp, vv !== null && pp !== null ? vv + pp : null] as (string | number | null)[];
+  });
+  const label = a.question.place.label;
+  if (rows.every((r) => r[1] === null && r[2] === null)) return { kind: "none", label };
+  const gap = (col: number, name: string) => {
+    const blanks = rows.filter((r) => r[col] === null).map((r) => monthWords(String(r[0])));
+    return blanks.length ? [`No figure is available for ${blanks.join(", ")} for ${name}: shown blank, not zero.`] : [];
+  };
+  const isGap = (t: string) => /^No figure is available for /.test(t);
+  const shared = [...a.delivered.text.slice(1), ...b.delivered.text.slice(1)].filter((t, i, all) => !isGap(t) && t !== "Source: Crime Index." && all.indexOf(t) === i);
+  const title = a.delivered.text[0].replace(/ Violent Crimes? by Month/i, " Crime by Month");
+  const columns: ResultTable["columns"] = [a.delivered.table.columns[0],
+    { binding: { kind: "statistic", as: "violent" }, header: "Violent crime" }, { binding: { kind: "statistic", as: "property" }, header: "Property crime" },
+    { binding: { kind: "statistic", as: "part_one" }, header: "Part I crime" }];
+  return { ...a, meaning: { ...a.meaning, measures: [...a.meaning.measures, ...b.meaning.measures], groupings: ["month"] }, delivered: { table: { columns, rows }, text: [title, ...shared, ...gap(1, "Violent crime"), ...gap(2, "Property crime"), "Source: Crime Index."] } };
+}

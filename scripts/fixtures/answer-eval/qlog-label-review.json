@@ -1756,7 +1756,12 @@
 },
 "QL-ct-62dc86017b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends has no figures for it), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-ct-62e88383c3": {
 "status": "reviewed",
@@ -9240,7 +9245,12 @@
 },
 "QL-nibrs-0d2bc02b8a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends has no figures for it), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-0d8d1b2bb0": {
 "status": "reviewed",
@@ -13917,7 +13927,12 @@
 },
 "QL-nibrs-def10146d5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-18",
+"why": "no month has data for this place (Current Trends has no figures for it), so the monthly series is declined in one sentence (P147, Jeff 2026-11-18)",
+"expected": {
+"outcome": "decline",
+"reason": "every month is blank for this place, so the monthly series is declined in one sentence (P147)"
+}
 },
 "QL-nibrs-df21c84f95": {
 "status": "reviewed",
