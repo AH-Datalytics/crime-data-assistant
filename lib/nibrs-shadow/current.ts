@@ -644,6 +644,8 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     meaning: { source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: several ? ["agency", "month"] : ["month"], statistic: "count" },
     delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), `Rolling ${w}-Month ${ucFirst(words)}`, "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.outside ? [cq.outside] : []), ...cohortLine, ...gapLines, "Source: Crime Index."] },
   };
+}
+
 /**
  * P148 (Jeff 2026-11-18): "crime", "overall crime", "all crimes" or "Part 1 crimes" by month for one agency, from Current Trends: the
  * violent and the property series side by side with their sum, the Part I total (blank when either part is). Built from the two
