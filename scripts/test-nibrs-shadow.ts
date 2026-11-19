@@ -407,6 +407,11 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
         assert.ok(!hr.delivered.text.some((t) => /\bSHR\b/.test(t)), "never the abbreviation");
       }
     }
+    // The runner's probes (canon2): by year the Crime Index route must not win over the named source, and another crime is said so before any ask.
+    const byYear = shadowAnswer("Houston murders by year according to Homicide Reports", sdeps);
+    assert.equal(byYear.kind, "shr", JSON.stringify(byYear).slice(0, 240));
+    const noPeriod = shadowAnswer("Homicide Reports robberies in Houston", sdeps);
+    assert.ok(noPeriod.kind === "decline" && noPeriod.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(noPeriod).slice(0, 240));
     const notMurder = shadowAnswer("Houston robberies per month in 2024 according to Homicide Reports", sdeps);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
