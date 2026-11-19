@@ -2393,6 +2393,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // Crime Index offered.
 {
   const ctStub = (sql: string): unknown[][] => {
+    if (/count\(\*\) FROM read_parquet\('[^']*current_crime/.test(sql)) return [[20]];
     if (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql)) {
       const ori = /WHERE ori = '([^']+)'/.exec(sql)![1];
       const [, from, to] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
@@ -2411,6 +2412,30 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(sev.delivered.text.includes("No years were given, so every month in the data is shown: January 2017 through August 2026."), JSON.stringify(sev.delivered.text));
     assert.ok(sev.delivered.text.some((t) => /^No figure is available for August 2026 for Houston, Texas: shown blank, not zero\.$/.test(t)));
     assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
+  }
+  // P154 (Jeff 2026-11-19): rolling totals by month, from Current Trends. No timespan named: the first row is the first January with a full
+  // window; "since 2019": January 2019; "since 2016" (before the data): the first full January and the outside sentence.
+  {
+    const roll = (q: string) => { let r: ShadowOutcome; try { r = shadowAnswer(q, cdeps); } catch (e) { assert.fail(`${q}: ${(e as Error).stack?.split("\n").slice(0, 6).join(" | ")}`); } assert.equal(r.kind, "current", `${q}: ${JSON.stringify(r).slice(0, 300)}`); return r as Extract<ShadowOutcome, { kind: "current" }>; };
+    const r1 = roll("Dallas murders rolling over 12 months");
+    assert.equal(r1.delivered.text[0], "January 2018 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas");
+    assert.deepEqual(r1.delivered.table.rows[0], ["2018-01", 132]);
+    assert.deepEqual(r1.delivered.table.rows[r1.delivered.table.rows.length - 1], ["2026-08", 132]);
+    assert.ok(!r1.delivered.text.some((t) => /Current Trends figures in the data cover/.test(t)), "no note about when Current Trends starts");
+    const r2 = roll("Dallas murders rolling over 12 months since 2019");
+    assert.equal(r2.delivered.text[0], "January 2019 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas");
+    assert.deepEqual(r2.delivered.table.rows[0], ["2019-01", 132]);
+    const r3 = roll("Dallas murders rolling over 12 months since 2016");
+    assert.deepEqual(r3.delivered.table.rows[0], ["2018-01", 132]);
+    assert.ok(r3.delivered.text.includes("Current Trends figures in the data cover January 2017 through August 2026; January 2016 through December 2016 are outside them."), r3.delivered.text.join(" / "));
+    const r4 = roll("Houston murders rolling over 12 months");
+    assert.deepEqual(r4.delivered.table.rows[r4.delivered.table.rows.length - 1], ["2026-08", null], "a window with a month that has no figure is blank");
+    assert.ok(r4.delivered.text.includes("No figure is available for August 2026: every 12-month window containing that month is shown blank, not zero."), r4.delivered.text.join(" / "));
+    const r5 = roll("Dallas and Houston murders rolling over 12 months since 2025");
+    assert.deepEqual(r5.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Rolling 12-month murders"]);
+    assert.equal(r5.delivered.text[0], "January 2025 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas and Houston, Texas");
+    // "the last 12 months" stays one total.
+    assert.equal(shadowAnswer("Dallas murders in the last 12 months", cdeps).kind, "current");
   }
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
   const nib = shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
