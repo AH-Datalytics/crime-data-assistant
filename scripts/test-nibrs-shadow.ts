@@ -26,7 +26,7 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
-import { allBlankMonthly, plainMeanings } from "../lib/nibrs-shadow/answer";
+import { allBlankMonthly, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
 {
   const monthCols = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" }, { binding: { kind: "grouping", dimension: "time.month" }, header: "Month" },
@@ -2428,6 +2428,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(dec.kind === "decline" && /^NIBRS has no data from the Dallas Police Department in this period\./.test(dec.explanation), JSON.stringify(dec).slice(0, 300));
   // P147: in this stub the Current Trends series the button would lead to has every month blank too, so it is not offered.
   if (dec.kind === "decline") assert.equal(dec.alternative, null);
+  // P151 (Jeff 2026-11-19): when the yearly Crime Index answer has a figure it is offered under the all-blank decline.
+  const blankCt = { kind: "current", period: { from: "2023-01", to: "2023-12" }, question: { measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee" }, form: "months", statistic: "count" },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "x" }, header: "Murders" }], rows: [["2023-01", null], ["2023-02", null]] }, text: [] } } as never;
+  const blankDecl = allBlankMonthly(blankCt)!;
+  const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [], rows: [["2023", v]] }, text: [] } }) as never;
+  const offered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(351));
+  assert.ok(offered.kind === "decline" && offered.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', JSON.stringify(offered).slice(0, 300));
+  assert.equal(offered.kind === "decline" ? offered.explanation : "", "No data is available for murders in Memphis, Tennessee.");
+  const notOffered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(null));
+  assert.ok(notOffered.kind === "decline" && notOffered.alternative === null, "no figure in the yearly series: no button");
 }
 // Rolling 12 months from Homicide Reports (shared helper rolling.ts): a state's firearm murders, with no step left for a
 // year or a window the source can't give.

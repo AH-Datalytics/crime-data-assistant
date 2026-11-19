@@ -809,10 +809,33 @@ export function allBlankMonthly(o: ShadowOutcome): ShadowOutcome | null {
   return decline("outside_release_coverage", `No data is available for ${hm.words} in ${listed([q.place.label, ...(q.agencies ?? []).map((a) => a.label)])}.`);
 }
 
+/**
+ * P151 (Jeff 2026-11-19): under the all-blank decline of one agency's Part I crime, the yearly Crime Index answer is offered when it has a
+ * figure ("Ask instead: murders in Oakland in 2021"; by year when the months spanned more than one year).
+ */
+export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: ShadowDeps, run: (question: string) => ShadowOutcome = (q) => shadowAnswer(q, deps)): ShadowOutcome {
+  if (decl.kind !== "decline" || (o.kind !== "answer" && o.kind !== "current")) return decl;
+  let name: string | null = null, label: string | null = null;
+  if (o.kind === "current") { name = o.question.measure; label = o.question.agencies?.length ? null : o.question.place.label; }
+  else if (o.plan.measures.length === 1 && o.plan.geography.places.length === 1 && o.plan.geography.places[0].kind === "agency") {
+    name = o.plan.measures[0].id.replace(/^[a-z_]+\./, ""); label = o.plan.geography.places[0].label;
+  }
+  const hm = name ? HISTORICAL_MEASURE[name] : undefined;
+  if (!hm || !label) return decl;
+  const when = o.period.from.slice(0, 4) === o.period.to.slice(0, 4) ? `in ${o.period.from.slice(0, 4)}` : "by year";
+  const question = `${hm.words} in ${label} ${when}`;
+  let yearly: ShadowOutcome;
+  try { yearly = run(question); } catch { return decl; }
+  if (yearly.kind !== "historical" && yearly.kind !== "srs") return decl;
+  const cells = yearly.delivered.table.rows.flatMap((r) => r.slice(1));
+  if (!cells.some((c) => typeof c === "number")) return decl;
+  return { ...decl, alternative: { label: `Ask instead: "${question}"`, question, role: "other_source", targetSource: "historical" } };
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   const o = withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
   const blank = allBlankMonthly(o);
-  if (blank) return blank;
+  if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
   if (o.kind === "clarify" && typeof o.question === "string") {
     const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);
