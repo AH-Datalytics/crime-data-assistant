@@ -45,7 +45,7 @@
  * Measure definitions are an executable draft for the canonical tables, until the shared semantic layer (nibrs-model
  * D7/D8) lands; they are in `unitsSql` below.
  */
-import { cubeFromEnv, cubeUnits, shadowSql, type CubeConfig } from "./cube";
+import { cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
 import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
@@ -396,6 +396,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     if (d.join) joins.push(d.join);
   }
   if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
+  const groupingJoins = joins.length; // the grouping's own join (the incident header for an hour or a clearance): the offense cube holds that grouping
 
   // Statistics: a count, and optionally its share within the time grouping.
   const [count, ...rest0] = plan.statistics;
@@ -516,12 +517,22 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     ? plan.filters[0] : null;
   const onlyAgeFilter = af && af.kind === "attribute" && af.dimension.split(".")[1] === "age" && af.op === "between" && af.values?.length === 2
     ? { dimension: af.dimension, lo: Number(af.values[0]), hi: Number(af.values[1]) } : null;
-  const cube = cubeCfg && ["offender", "victim", "arrestee", "group_b_arrest"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
+  const cube: { sql: string; totalSql?: string } | null = cubeCfg && ["offender", "victim", "arrestee", "group_b_arrest"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
     cfg: cubeCfg, kind: m.id.startsWith("offenders.") ? "offenders" : m.id.startsWith("victims.") ? "victims" : "arrests",
     codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? null,
     allCrimeArrests: m.id === "arrests.all_crime", groupB: units.entity === "group_b_arrest", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
     conditioned: !onlyAgeFilter && (plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0),
-    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : null;
+    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : cubeCfg?.offense && (units.entity === "offense" || units.entity === "incident") && attrDims.length <= 1 && (m.id.startsWith("offenses.") || m.id.startsWith("incidents.")) && !m.id.endsWith(".carjacking") ? cubeOffenseUnits({
+    cfg: cubeCfg, entity: units.entity, codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? [], attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
+    conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > groupingJoins }) : cubeCfg?.weapon && units.entity === "offense" && attrDims.length <= 1 && m.id.startsWith("offenses.") && !m.id.endsWith(".carjacking") ? (() => {
+    // The weapon cube holds ONE weapon cell per question: the weapon grouping, or the plan's one weapon filter ("firearm", one weapon code), nothing else.
+    const wf = plan.filters.length === 1 ? plan.filters[0] : null;
+    const weaponFilter = wf && wf.kind === "exists" && !wf.negate && wf.entity === "offense_weapon" && wf.scope === "offense" && wf.where.length === 1 && wf.where[0].kind === "attribute"
+      && wf.where[0].dimension === "offense_weapon.weapon" && wf.where[0].op === "in" && wf.where[0].values?.length ? wf.where[0].values.map(String) : null;
+    const grouping = attrDims.length === 1 && attrDims[0].dimension === "offense_weapon.weapon";
+    return cubeWeaponUnits({ cfg: cubeCfg, codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? [], grouping, weaponFilter, wantsIncidents: !!inc, years,
+      conditioned: (plan.filters.length > (weaponFilter ? 1 : 0)) || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > (weaponFilter ? 1 : 0) || clearanceConds.length > 0 || ownConds.length > 0
+        || (attrDims.length === 1 && !grouping) || (!!weaponFilter && grouping) }); })() : null;
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
@@ -557,12 +568,14 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     ...(bigGrid ? [`${GRID} AS (SELECT ${oriRows(grid!)} AS ori)`] : []),
     `units AS (${cube ? cube.sql : units.sql})`,
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
+    // Overlapping categories (a weapon grouping from the cube): the month's total counts each offense once, from the cube's own total rows.
+    ...(cube?.totalSql ? [`totals AS (${cube.totalSql})`, `scoped_t AS (SELECT * FROM totals u WHERE ${inScope})`] : []),
     // Every month of the period, so a month with no rows still gets a status.
     `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? (bigGrid ? ` CROSS JOIN ${GRID} a` : ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a`) : ""} WHERE TRUE${inYears("ym")})`,
     `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
-    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
+    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, ${nUnits} AS n, ${nIncidents} AS ni FROM ${cube?.totalSql ? "scoped_t" : "scoped"} u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
     `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den, coalesce(t.ni, 0) AS deni,
       CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN ${
         // Arrests (Jeff 2026-11-12, "Yes, count them"): a month's status describes its crime reports, not its arrests; an

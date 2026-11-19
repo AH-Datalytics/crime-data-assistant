@@ -69,13 +69,17 @@ const g = groupMonths(b, ["TN"], "rape", "2026-08", "2026-08", stub([["2026-08",
 assert.deepEqual(g.get("2026-08"), { value: 120, agencies: 18, population: 2500000, blank: 1 });
 assert.ok(sqls[1].includes("WHERE sample AND state IN ('TN')"));
 
-// answerCurrent with a stub: a group before 2025 is not answered (decision A); a cumulative total needs every month.
+// answerCurrent with a stub: a group before 2025 is the agencies with a figure in every month of the span (P155, Jeff 2026-11-19); none: declined;
+// a rate before 2025 is declined; a cumulative total needs every month.
 const nation = { kind: "group" as const, states: null, label: "The United States" };
 const early = answerCurrent({ measure: "murder", place: nation, from: "2024-01", to: "2024-06", form: "months" }, b, stub([]));
 assert.equal(early.kind, "current-decline");
-assert.match((early as { explanation: string }).explanation, /^Current Trends totals in the data cover January 2025 through August 2026, so January 2024 through June 2024 are outside them\.$/);
+assert.match((early as { explanation: string }).explanation, /^No agency has a figure in every month from January 2024 through June 2024, so there is no total to give\.$/);
+const earlyRate = answerCurrent({ measure: "murder", place: nation, from: "2024-01", to: "2024-06", form: "months", statistic: "rate" }, b, stub([]));
+assert.equal(earlyRate.kind, "current-decline");
+assert.match((earlyRate as { explanation: string }).explanation, /^A rate for a state or the nation is given from January 2025, the first month of the published Consistent Reporting Agencies, not before it\.$/);
 const ytdOut = answerCurrent({ measure: "murder", place: nation, from: "2024-12", to: "2025-02", form: "rolling" }, b, stub([]));
-assert.equal(ytdOut.kind, "current-decline", "a rolling 12 reaching before the group's first month is never the part held");
+assert.equal(ytdOut.kind, "current-decline", "a rolling 12 reaching before the group's first month with no agency complete over it is never the part held");
 
 // The same agencies left out every month is said once (redesign test, 2026-11-04).
 {

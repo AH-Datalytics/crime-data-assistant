@@ -72,6 +72,8 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   circumstance: string[] | null;
   /** "According to NIBRS": the source asked for in words is used and labelled (P01). */
   nibrsAsked: boolean;
+  /** "Homicide Reports" in the words: murders from the Homicide Reports series (P152). */
+  shrAsked: boolean;
   /** "Only agencies that reported every month": P61's consistent-reporters view. */
   consistent: boolean;
   /** Murders by a Homicide Report detail (the victim-offender relationship): Homicide Reports' (P53). */
@@ -368,7 +370,8 @@ function readComparison(text: string, currentYear: number, lastMonth?: string): 
  * answer contract to give the all-agencies question. */
 /** "according to NIBRS": the source asked for in words (P01). */
 export const NIBRS_WORDS = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
-export const CONSISTENT_WORDS = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
+export const SHR_WORDS = /,?\s*\b(?:(?:according\s+to|from|in|per|using|with)\s+)?(?:the\s+)?(?:FBI\s+)?(?:Supplementary\s+)?(?:Homicide\s+Reports?|SHR)\b/i;
+export const CONSISTENT_WORDS =/,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
 
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
   const readings: Reading[] = [];
@@ -585,6 +588,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const NIBRS_ASKED = NIBRS_WORDS;
   const nibrsAsked = NIBRS_ASKED.test(own);
   if (nibrsAsked) text = text.replace(NIBRS_ASKED, "");
+  // P152 (Jeff 2026-11-19): "Homicide Reports" in words is a source word like "according to NIBRS": murders from the Homicide Reports series.
+  const shrAsked = SHR_WORDS.test(own) && !nibrsAsked;
+  if (shrAsked) text = text.replace(SHR_WORDS, "");
   const CONSISTENT = CONSISTENT_WORDS;
   const consistent = CONSISTENT.test(own);
   if (consistent) text = text.replace(CONSISTENT, "");
@@ -643,8 +649,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, allCities, largestSet, topAsLargest, countywide, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
-  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, allCities, largestSet, topAsLargest, countywide, region, circumstance, nibrsAsked, shrAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || shrAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 
