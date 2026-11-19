@@ -17,6 +17,7 @@ import fs from "node:fs";
 const SCHEMA_VERSION = "cube-0.1";
 const CODE_SCHEMA_VERSION = "cube-code-0.1";
 const OFFENSE_SCHEMA_VERSION = "cube-offense-0.1";
+const WEAPON_SCHEMA_VERSION = "cube-weapon-0.1";
 
 /** The per-offense-code cube (a separate product, schema cube-code-0.1): the codes its manifest lists and the file years it holds. */
 export type CodeCube = { root: string; years: number[]; codes: Set<string>; /** Built from offense_codes_v2.json (Model, cube 3): every unit also has ethnicity. */ ethnicity?: boolean };
@@ -25,8 +26,10 @@ export type CodeCube = { root: string; years: number[]; codes: Set<string>; /** 
  * the attributes it holds (incident_hour, location_type, clearance_type) come from its manifest, and `codes` are every code it was built for.
  */
 export type OffenseCube = { root: string; years: number[]; codes: Set<string>; attributes: string[] };
+/** The weapon cube (schema cube-weapon-0.1): the same cell shape as the offense cube, with the attributes weapon (an offense is in the cell of EACH of its weapon codes) and firearm (Y or N). */
+export type WeaponCube = OffenseCube;
 /** `root` and `years` are the crime-group cube (empty when only the code cube is set); `code` is the per-offense-code cube. */
-export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow"; code?: CodeCube; /** The offense-and-incident cube (cube 1). */ offense?: OffenseCube; /** The group cube is crime_groups_v4 (Model, cube 3): offender, victim and arrestee carry age, sex, race and ethnicity. */ groupV4?: boolean };
+export type CubeConfig = { root: string; years: number[]; /** on: answers read the cube; shadow: raw answers, the cube run beside them and compared (local and runner only). */ mode?: "on" | "shadow"; code?: CodeCube; /** The offense-and-incident cube (cube 1). */ offense?: OffenseCube; /** The weapon cube. */ weapon?: WeaponCube; /** The group cube is crime_groups_v4 (Model, cube 3): offender, victim and arrestee carry age, sex, race and ethnicity. */ groupV4?: boolean };
 
 /** The groups the cube holds, by the offense-code list the plan's measure carries (the same lists the Model pins by hash). */
 export const CUBE_GROUPS: Record<string, string[]> = {
@@ -54,6 +57,10 @@ export const CODE_FILE_SHA256_V2 = "446dc02c016fe8acecbda6d1cc623327afbf6b7e5fee
 export const OFFENSE_VERSION_V1 = "offense_incident_v1";
 export const OFFENSE_FILE_SHA256_V1 = "4eae648cdd1a4d7a0728c4dc01d85779a37cd986a524a45600d2ca19c608e74a";
 const OFFENSE_ATTRIBUTES_V1 = ["incident_hour", "location_type", "clearance_type"];
+/** Weapon cube v1: the file the Model builds it from (weapons from the canonical offense_weapon table). */
+export const WEAPON_VERSION_V1 = "offense_weapon_v1";
+export const WEAPON_FILE_SHA256_V1 = "c72d8aeb4fb2a7716f23c592b4e04aa004909a10ffa3aeea5fcdaf70de06660e";
+const WEAPON_ATTRIBUTES_V1 = ["weapon", "firearm"];
 
 /** unit x group x attribute the cube is asked for (the pilot's matrix: offender age; victim age/sex/race; arrestee age). */
 const ATTRIBUTES: Record<string, string[]> = { offender: ["age"], victim: ["age", "sex", "race"], arrestee: ["age"] };
@@ -84,11 +91,11 @@ export const listSha256 = (codes: string[]): string => createHash("sha256").upda
 export function cubeFromEnv(env: Record<string, string | undefined> = process.env, releaseRoot?: string): CubeConfig | null {
   const mode = env.NIBRS_CUBE === "on" || env.NIBRS_CUBE === "shadow" ? env.NIBRS_CUBE : null;
   const clean = (r: string | undefined) => (r ? r.replace(/\\/g, "/").replace(/\/+$/, "") : undefined);
-  const groupRoot = clean(env.NIBRS_CUBE_ROOT), codeRoot = clean(env.NIBRS_CODE_CUBE_ROOT), offenseRoot = clean(env.NIBRS_OFFENSE_CUBE_ROOT);
-  if (!mode || (!groupRoot && !codeRoot && !offenseRoot)) return null;
+  const groupRoot = clean(env.NIBRS_CUBE_ROOT), codeRoot = clean(env.NIBRS_CODE_CUBE_ROOT), offenseRoot = clean(env.NIBRS_OFFENSE_CUBE_ROOT), weaponRoot = clean(env.NIBRS_WEAPON_CUBE_ROOT);
+  if (!mode || (!groupRoot && !codeRoot && !offenseRoot && !weaponRoot)) return null;
   // The manifests' own stamps are part of the key: a rebuilt cube is noticed, and nothing else is read twice.
   const stamp = (r: string | undefined) => { if (!r) return "-"; try { const st = fs.statSync(`${r}/manifest.json`); return `${st.mtimeMs}:${st.size}`; } catch { return "none"; } };
-  const key = `${mode}:${groupRoot}:${stamp(groupRoot)}:${codeRoot}:${stamp(codeRoot)}:${offenseRoot}:${stamp(offenseRoot)}:${releaseRoot ?? ""}`;
+  const key = `${mode}:${groupRoot}:${stamp(groupRoot)}:${codeRoot}:${stamp(codeRoot)}:${offenseRoot}:${stamp(offenseRoot)}:${weaponRoot}:${stamp(weaponRoot)}:${releaseRoot ?? ""}`;
   if (cached && cached.key === key) return cached.cfg;
   let cfg: CubeConfig | null = null;
   try {
@@ -96,21 +103,23 @@ export function cubeFromEnv(env: Record<string, string | undefined> = process.en
     const group = groupRoot ? readCube(groupRoot, "group", releaseRoot, bad) : null;
     const code = codeRoot ? readCube(codeRoot, "code", releaseRoot, bad) : null;
     const offense = offenseRoot ? readCube(offenseRoot, "offense", releaseRoot, bad) : null;
-    if (group || code || offense) cfg = { root: group?.root ?? "", years: group?.years ?? [], mode, ...(group?.v4 ? { groupV4: true } : {}), ...(code ? { code: { root: code.root, years: code.years, codes: new Set(code.codes ?? []), ...(code.v2 ? { ethnicity: true } : {}) } } : {}),
-      ...(offense ? { offense: { root: offense.root, years: offense.years, codes: new Set(offense.codes ?? []), attributes: offense.attributes ?? [] } } : {}) };
+    const weapon = weaponRoot ? readCube(weaponRoot, "weapon", releaseRoot, bad) : null;
+    if (group || code || offense || weapon) cfg = { root: group?.root ?? "", years: group?.years ?? [], mode, ...(group?.v4 ? { groupV4: true } : {}), ...(code ? { code: { root: code.root, years: code.years, codes: new Set(code.codes ?? []), ...(code.v2 ? { ethnicity: true } : {}) } } : {}),
+      ...(offense ? { offense: { root: offense.root, years: offense.years, codes: new Set(offense.codes ?? []), attributes: offense.attributes ?? [] } } : {}),
+      ...(weapon ? { weapon: { root: weapon.root, years: weapon.years, codes: new Set(weapon.codes ?? []), attributes: weapon.attributes ?? [] } } : {}) };
   } catch (e) { warnOnce(key, e instanceof Error ? e.message : String(e)); }
   cached = { key, cfg };
   return cfg;
 }
 
-function readCube(root: string, kind: "group" | "code" | "offense", releaseRoot: string | undefined, bad: (why: string) => null): { root: string; years: number[]; codes?: string[]; attributes?: string[]; v4?: boolean; v2?: boolean } | null {
-  const label = kind === "code" ? "code cube" : kind === "offense" ? "offense cube" : "cube";
+function readCube(root: string, kind: "group" | "code" | "offense" | "weapon", releaseRoot: string | undefined, bad: (why: string) => null): { root: string; years: number[]; codes?: string[]; attributes?: string[]; v4?: boolean; v2?: boolean } | null {
+  const label = kind === "code" ? "code cube" : kind === "offense" ? "offense cube" : kind === "weapon" ? "weapon cube" : "cube";
   // The manifest is written last: a folder without it is an unfinished build.
   const mf = `${root}/manifest.json`;
   if (!fs.existsSync(mf)) return bad(`${label}: no manifest.json (an unfinished build)`);
   const m = JSON.parse(fs.readFileSync(mf, "utf8")) as { schema_version?: string; source_manifest_sha256?: string; groups_version?: string; groups_file_sha256?: string; unit_attributes?: Record<string, unknown>; groups?: Record<string, { list_sha256?: string | null }>;
     never_add_across_codes?: unknown; reference_codes?: unknown; unlisted_codes?: unknown; product?: string; counting_contract?: unknown; years?: Record<string, unknown>; files?: Record<string, unknown> };
-  const want = kind === "code" ? CODE_SCHEMA_VERSION : kind === "offense" ? OFFENSE_SCHEMA_VERSION : SCHEMA_VERSION;
+  const want = kind === "code" ? CODE_SCHEMA_VERSION : kind === "offense" ? OFFENSE_SCHEMA_VERSION : kind === "weapon" ? WEAPON_SCHEMA_VERSION : SCHEMA_VERSION;
   if (m.schema_version !== want) return bad(`${label}: schema_version ${m.schema_version} is not ${want}`);
   // Built from this very release: the cube records the sha256 of the release's own manifest.json.
   if (!releaseRoot) return bad(`${label}: the release being read is not known`);
@@ -130,6 +139,18 @@ function readCube(root: string, kind: "group" | "code" | "offense", releaseRoot:
     if (String(m.groups_file_sha256 ?? "").toLowerCase() !== (v4 ? GROUPS_FILE_SHA256_V4 : GROUPS_FILE_SHA256)) return bad(`${label}: groups_file_sha256 is not the engine's ${v4 ? "crime_groups_v4" : "crime_groups_v2"}.json`);
     if (v4 && !listsAll()) return bad(`${label}: the v4 manifest does not list age_bin, sex, race and ethnicity for every unit`);
     for (const [g, list] of Object.entries(CUBE_GROUPS)) if (String(m.groups?.[g]?.list_sha256 ?? "").toLowerCase() !== listSha256(list)) return bad(`${label}: the code list of ${g} differs from the engine's`);
+  } else if (kind === "weapon") {
+    // The weapon cube: its own schema, file hash, product stamp, the weapon and firearm attributes, the counting contract, and the codes it was built for.
+    if (m.product !== "weapon") return bad(`${label}: the manifest is not a weapon product`);
+    if (m.groups_version !== WEAPON_VERSION_V1) return bad(`${label}: groups_version ${m.groups_version} is not ${WEAPON_VERSION_V1}`);
+    if (String(m.groups_file_sha256 ?? "").toLowerCase() !== WEAPON_FILE_SHA256_V1) return bad(`${label}: groups_file_sha256 is not the engine's offense_weapon_v1.json`);
+    const ua = (m.unit_attributes as Record<string, unknown> | undefined)?.offense;
+    if (!Array.isArray(ua) || !WEAPON_ATTRIBUTES_V1.every((a) => ua.includes(a))) return bad(`${label}: the manifest does not list ${WEAPON_ATTRIBUTES_V1.join(", ")} for the offense unit`);
+    if (!(typeof m.counting_contract === "string" && m.counting_contract.trim() !== "")) return bad(`${label}: the manifest does not carry its counting_contract`);
+    if (!Array.isArray(m.reference_codes) || !m.reference_codes.every((c) => typeof c === "string")) return bad(`${label}: the manifest names no reference_codes`);
+    const extra = Array.isArray(m.unlisted_codes) && m.unlisted_codes.every((c) => typeof c === "string") ? (m.unlisted_codes as string[]) : [];
+    codes = [...(m.reference_codes as string[]), ...extra];
+    attributes = ua.map(String);
   } else if (kind === "offense") {
     // Cube 1: the file's version and hash, the product stamp, the attributes the manifest lists for the offense unit, and the codes it was built for (listed or found in the release).
     if (m.product !== "offense") return bad(`${label}: the manifest is not an offense product`);
@@ -353,6 +374,62 @@ export function cubeOffenseUnits(a: OffenseAsk): { sql: string } | null {
       WHERE unit = 'offense' AND source = 'A' AND ${rows} AND attribute = ${q(attrName)}
       GROUP BY ALL`;
   return { sql };
+}
+
+/**
+ * Offenses with a weapon, from the weapon cube. The cube holds, per (ori, month, offense code), the offenses and distinct incidents by `weapon` (the trimmed code of each of the
+ * offense's weapon rows; an offense with two codes is in both cells, no weapon is "(blank)") and by `firearm` (Y when any code is 11 to 15, else N). Weapon values never add, so
+ * a count is served only as ONE cell: the plan's weapon grouping (each value its own category, categories overlap) or a weapon filter that is exactly one cell (the firearm list,
+ * or one two-character code). Offenses add across codes within a cell; incidents only for one code. Any other condition, a second split, or a filter with several weapon values
+ * that is not the firearm list stays raw.
+ */
+export type WeaponAsk = {
+  cfg: CubeConfig;
+  codes: string[];
+  /** The plan groups by the offense's weapon (offense_weapon.weapon, each value counted). */
+  grouping: boolean;
+  /** The plan's one condition: the offense has a weapon among these values (from-spec's weapon filter: "firearm" is the ten values 11, 11A ... 15, 15A). */
+  weaponFilter: string[] | null;
+  wantsIncidents: boolean;
+  years: number[];
+  /** Any other condition, a grouping other than the weapon, or a second one. */
+  conditioned: boolean;
+};
+const FIREARM_VALUES = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
+export function cubeWeaponUnits(a: WeaponAsk): { sql: string; totalSql?: string } | null {
+  const cube = a.cfg.weapon;
+  if (!cube || a.conditioned || !a.codes.length) return null;
+  if (!a.codes.every((c) => cube.codes.has(c))) return null;
+  if (!a.years.length || !a.years.every((y) => cube.years.includes(y))) return null;
+  if (a.wantsIncidents && a.codes.length !== 1) return null; // distinct incidents never add across codes
+  if (a.grouping === !!a.weaponFilter) return null; // exactly one of: the weapon grouping, the weapon filter
+  let attrName = "weapon", cond = "", g0 = "";
+  if (a.grouping) {
+    if (!cube.attributes.includes("weapon")) return null;
+    g0 = ", CASE WHEN value = '(blank)' THEN NULL ELSE value END AS g0";
+  } else {
+    const vals = [...new Set(a.weaponFilter!)];
+    if (vals.length === FIREARM_VALUES.length && FIREARM_VALUES.every((v) => vals.includes(v))) {
+      if (!cube.attributes.includes("firearm")) return null;
+      attrName = "firearm"; cond = " AND value = 'Y'";
+    } else if (vals.length === 1 && /^[0-9A-Za-z]{2}$/.test(vals[0]) && cube.attributes.includes("weapon")) {
+      cond = ` AND value = ${q(vals[0])}`; // one two-character code, whatever its automatic flag (the raw statement tests the weapon column alone)
+    } else return null;
+  }
+  const files = a.years.map((y) => q(`${cube.root}/canonical/cube/data_year=${y}/data.parquet`)).join(", ");
+  const rows = a.codes.length === 1 ? `offense_code = ${q(a.codes[0])}` : `offense_code IN (${a.codes.map(q).join(", ")})`;
+  const sql = `SELECT ori, month_key AS ym${g0}, CAST(SUM(n_distinct_units) AS BIGINT) AS w, ${a.codes.length === 1 ? "CAST(SUM(n_distinct_incidents) AS BIGINT)" : "CAST(NULL AS BIGINT)"} AS wi
+      FROM read_parquet([${files}], hive_partitioning = true)
+      WHERE unit = 'offense' AND source = 'A' AND ${rows} AND attribute = ${q(attrName)}${cond}
+      GROUP BY ALL`;
+  // A weapon grouping overlaps (an offense with two weapons is in two categories): the month's own total and every share's denominator is the DISTINCT offenses, which is the cube's
+  // "none" row of the same codes, not the sum of the categories.
+  if (!a.grouping) return { sql };
+  const totalSql = `SELECT ori, month_key AS ym, CAST(SUM(n_distinct_units) AS BIGINT) AS w, ${a.codes.length === 1 ? "CAST(SUM(n_distinct_incidents) AS BIGINT)" : "CAST(NULL AS BIGINT)"} AS wi
+      FROM read_parquet([${files}], hive_partitioning = true)
+      WHERE unit = 'offense' AND source = 'A' AND ${rows} AND attribute = 'none'
+      GROUP BY ALL`;
+  return { sql, totalSql };
 }
 
 /**
