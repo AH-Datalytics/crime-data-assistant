@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -501,6 +501,24 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 /** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
 const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
 /**
+ * P143: phrases with one plain meaning, said again in the words the reader knows. "until January 2026" (a month series with no
+ * start) runs from the data's first month through that month, inclusive; "raw numbers, not rates" asks for counts; a state
+ * name run into "crime" ("coloradocrime") is two words.
+ */
+const MONTH_WORD = "(?:january|february|march|april|may|june|july|august|september|october|november|december)";
+export function plainMeanings(q: string, firstMonth: string): string {
+  let out = q;
+  const until = new RegExp(String.raw`\b(?:until|up\s+to)\s+(${MONTH_WORD}\s+\d{4})\b`, "i").exec(out);
+  if (until && (out.match(/\b(?:19|20)\d\d\b/g) ?? []).length === 1 && /\b(?:per|by|each)\s+months?\b|\bmonthly\b/i.test(out)
+    && !/\b(?:since|from|starting|beginning|between|back\s+to|through|thru)\b/i.test(out))
+    out = out.replace(until[0], `from ${monthName(firstMonth)} through ${until[1]}`);
+  out = out.replace(/\b(?:the\s+)?raw\s+(?:numbers?|counts?|figures?)\s*,?\s*(?:and\s+)?not\s+(?:the\s+)?(?:rates?|per\s+capita)\b/gi, "counts")
+    .replace(/\b(numbers?|counts?)\s*,?\s*not\s+(?:the\s+)?rates?\b/gi, "$1");
+  const states = Object.values(STATE_NAMES).map((n) => n.toLowerCase().replace(/\s+/g, "\\s*")).join("|");
+  return out.replace(new RegExp(String.raw`\b(${states})(crimes?)\b`, "gi"), "$1 $2");
+}
+
+/**
  * P141: "LA" and "SF" as a city when listed with other cities ("Chicago vs. LA, NYC, Houston"). Not when the list is of
  * states ("CA, LA, TX") or the token qualifies a city ("Baton Rouge, LA"; "Baton Rouge, LA and Houston, TX").
  */
@@ -810,6 +828,9 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
     return withNextStep(decline("not_recorded_in_nibrs", UNDEFINED_TERM.gang), ledger, deps, question);
   }
+  // P143 (Jeff 2026-11-18): "until January 2026" is through January 2026; "raw numbers, not rates" is counts; "coloradocrime" is "colorado crime".
+  const plain = plainMeanings(question, deps.release.firstMonth);
+  if (plain !== question) return shadowAnswer(plain, deps);
   // P141 (Jeff 2026-11-18): "LA" and "SF" listed with other cities are the cities, not asked and never the state.
   const listed = listedNicknames(question);
   if (listed !== question) return shadowAnswer(listed, deps);
@@ -1396,14 +1417,14 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   // Lines every year says alike (the source, who reported) stay; a line that differs by year is that year's own.
   const common = firstOut.delivered.text.slice(1).filter((t) => results.every((r) => (r.o as Partial<Delivering>).delivered === undefined || (r.o as Delivering).delivered.text.includes(t)));
   // A blank year says why in the engine's own words (the month with no report); otherwise that it has no figure.
-  const why = results.filter((r) => blank.includes(r.y)).flatMap((r) => ((r.o as Partial<Delivering>).delivered?.text ?? []).filter((t) => /^No (?:data|figure) is known for/.test(t)));
+  const why = results.filter((r) => blank.includes(r.y)).flatMap((r) => ((r.o as Partial<Delivering>).delivered?.text ?? []).filter((t) => /^No (?:data|figure) is available for/.test(t)));
   // The blank years as runs ("1935 to 1984 and 2024"), so fifty years before the source starts are one phrase, not a list.
   const runsOf = (ys: number[]) => {
     const out: string[] = [];
     for (let i = 0; i < ys.length;) { let j = i; while (j + 1 < ys.length && ys[j + 1] === ys[j] + 1) j++; out.push(j > i ? `${ys[i]} to ${ys[j]}` : `${ys[i]}`); i = j + 1; }
     return out.length > 2 ? `${out.slice(0, -1).join(", ")} and ${out[out.length - 1]}` : out.join(" and ");
   };
-  const noFigure = blank.length ? `No figure is known for ${runsOf(blank)}: shown blank, not zero.` : null;
+  const noFigure = blank.length ? `No figure is available for ${runsOf(blank)}: shown blank, not zero.` : null;
   const text = [title, `Each year counts the same months: January through ${month}.`, ...(!pv ? [`No years were given, so every year in the data is shown: ${y0} through ${years[1]}.`] : []),
     ...(before.length ? [`Homicide Reports here start in ${y0}, so ${before[0].y} through ${y0 - 1} aren't included.`] : []),
     ...(noFigure ? [noFigure] : []), ...why.filter((t) => !common.includes(t)), ...common];
@@ -1959,13 +1980,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Several named agencies by month (Jeff 2026-11-15: Crime Index by default, one source for the whole table): one table from
     // Current Trends, an agency with no figure blank, never another source for part of it. No years named: every month it holds.
     if (sp.places.length > 1) {
-      const ok = sp.places.every((p) => p.kind === "agency") && sp.grain === "month" && sp.statistic === "count" && !flags(ledger0).combined && !flags(ledger0).comparison
+      const ok = sp.places.every((p) => p.kind === "agency") && sp.grain === "month" && (sp.statistic === "count" || sp.statistic === "rate") && !flags(ledger0).combined && !flags(ledger0).comparison
         && !flags(ledger0).region && !flags(ledger0).column && !clause0("combine").length;
       const every = sp.period.form === "none";
       if (ok && (span || every)) {
         const list = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : undefined));
         if (list.every((a) => a?.kind === "agency")) {
-          const r = answerCurrentSeveral({ measure: sp.measures[0], from: every ? cur.finalFirstMonth : span![0], to: every ? cur.lastMonth : span![1],
+          const r = answerCurrentSeveral({ measure: sp.measures[0], statistic: sp.statistic === "rate" ? "rate" : "count", from: every ? cur.finalFirstMonth : span![0], to: every ? cur.lastMonth : span![1],
             places: list.map((a, i) => { const pp = sp.places[i] as Extract<typeof sp.places[number], { kind: "agency" }>; const ag = a as Extract<NonNullable<typeof a>, { kind: "agency" }>;
               return { kind: "agency" as const, ori: ag.ori, label: ag.label, name: pp.name, state: pp.state }; }),
             agencyLine: reportedBy(list.map((a) => agencyName(deps.places, (a as { ori: string }).ori))).replace(/^Reported by /, "Figures for ") }, cur, deps.execute);

@@ -138,10 +138,10 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const sev = answerCurrentSeveral({ measure: "motor_vehicle_theft", places: [dallas, nola], from: "2025-01", to: "2025-03" }, b, two);
   assert.ok(sev.kind === "current", JSON.stringify(sev));
   if (sev.kind === "current") {
-    assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Motor vehicle thefts"]);
+    assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Motor vehicle thefts"]);
     assert.deepEqual(sev.delivered.table.rows, [["Dallas", "2025-01", 7], ["Dallas", "2025-02", 8], ["Dallas", "2025-03", 9], ["New Orleans", "2025-01", null], ["New Orleans", "2025-02", null], ["New Orleans", "2025-03", null]]);
     assert.equal(sev.delivered.text[0], "January 2025 to March 2025 Motor Vehicle Thefts by Month, Dallas, Texas and New Orleans, Louisiana");
-    assert.ok(sev.delivered.text.includes("No figure is known for January 2025, February 2025, March 2025 for New Orleans, Louisiana: shown blank, not zero."), JSON.stringify(sev.delivered.text));
+    assert.ok(sev.delivered.text.includes("No figure is available for January 2025, February 2025, March 2025 for New Orleans, Louisiana: shown blank, not zero."), JSON.stringify(sev.delivered.text));
     assert.ok(!sev.delivered.text.some((t) => /Dallas, Texas: shown blank/.test(t)));
     assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
     assert.equal(sev.question.agencies?.length, 1, "the first is the place, the rest the agencies");
@@ -150,5 +150,27 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const out = answerCurrentSeveral({ measure: "murder", places: [dallas, nola], from: "2026-07", to: "2026-10" }, b, two);
   assert.ok(out.kind === "current" && out.delivered.text.some((t) => /September 2026 through October 2026 are outside them/.test(t)), JSON.stringify(out));
   assert.equal(answerCurrentSeveral({ measure: "murder", places: [dallas, nola], from: "2026-09", to: "2026-10" }, b, two).kind, "current-decline");
+}
+// Several named agencies by month as a rate (P144, Jeff 2026-11-18): a row for each place and month, no notes beyond the exceptions; a place
+// with no population is left out with a sentence; no place with one declines; a sixth place asks to name fewer.
+{
+  const dallas = { kind: "agency" as const, ori: "TXDPD0000", label: "Dallas, Texas", name: "Dallas", state: "TX" };
+  const nola = { kind: "agency" as const, ori: "LANPD0000", label: "New Orleans, Louisiana", name: "New Orleans", state: "LA" };
+  const rows = (sql: string): unknown[][] => {
+    const pop = /population/.test(sql) && /FROM read_parquet/.test(sql) && !/AS n\b/.test(sql) && /population > 0/.test(sql);
+    if (pop) return sql.includes("'TXDPD0000'") ? (/current_crime/.test(sql) ? [["2025-01", 600000], ["2025-02", 600000], ["2025-03", 600000]] : [[2025, 600000], [2024, 600000]]) : [];
+    return sql.includes("'TXDPD0000'") ? [["2025-01", 6], ["2025-02", 12], ["2025-03", 18]] : sql.includes("'LANPD0000'") ? [["2025-01", 3], ["2025-02", 3], ["2025-03", 3]] : [];
+  };
+  const both = answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [dallas, nola], from: "2025-01", to: "2025-03" }, b, rows);
+  assert.ok(both.kind === "current", JSON.stringify(both));
+  if (both.kind === "current") {
+    assert.deepEqual(both.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Murder rate per 100,000"]);
+    assert.deepEqual(both.delivered.table.rows, [["Dallas", "2025-01", 1], ["Dallas", "2025-02", 2], ["Dallas", "2025-03", 3]]);
+    assert.deepEqual(both.delivered.text, ["January 2025 to March 2025 Murder Rate by Month, Dallas, Texas", "Crime Index has no population for New Orleans, Louisiana, so no rate is given for it.", "Source: Crime Index."]);
+    assert.equal(both.question.statistic, "rate");
+  }
+  assert.equal(answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [nola, nola], from: "2025-01", to: "2025-03" }, b, rows).kind, "current-decline", "no place has a population");
+  const six = answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [dallas, dallas, dallas, dallas, dallas, dallas], from: "2025-01", to: "2025-03" }, b, rows);
+  assert.ok(six.kind === "current-decline" && /Name up to 5 places/.test(six.explanation), JSON.stringify(six));
 }
 console.log("nibrs current: agency months, consistent group sums, cumulative totals never complete over unknown months");
