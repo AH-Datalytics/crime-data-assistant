@@ -798,11 +798,11 @@ export function allBlankMonthly(o: ShadowOutcome): ShadowOutcome | null {
   const monthly = table.columns.some((c) => c.binding.kind === "grouping" && c.binding.dimension === "time.month");
   if (!monthly || !stats.length || table.rows.length < 2 || !table.rows.every((r) => stats.every((i) => r[i] === null))) return null;
   if (o.kind === "answer") {
-    if (o.plan.statistics.length !== 1 || o.plan.statistics[0].kind !== "count" || o.plan.measures.length !== 1) return null;
+    if (!o.plan.statistics.length || o.plan.statistics.some((s) => s.kind !== "count") || !o.plan.measures.length) return null;
     // Agencies only: a state's or the nation's month is blank when any agency counted lacks it, and its own notes say so.
     if (!o.plan.geography.places.length || o.plan.geography.places.some((p) => p.kind !== "agency")) return null;
     const places = o.plan.geography.places.map((p) => (p.kind === "agency" ? p.label : ""));
-    return decline("outside_release_coverage", `No data is available for ${measureWords(o.plan)} in ${listed(places)}.`);
+    return decline("outside_release_coverage", `No data is available for ${listed(o.plan.measures.map((m) => measureWords(o.plan, m)).filter((w, i, all) => all.indexOf(w) === i))} in ${listed(places)}.`);
   }
   const q = o.question, hm = HISTORICAL_MEASURE[q.measure];
   if (!hm || q.statistic === "rate" || q.form !== "months" || q.place.kind !== "agency") return null;
