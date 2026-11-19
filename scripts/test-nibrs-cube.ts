@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
-import { ageFilterBins, ageMapping, cubeFromEnv, cubeOffenseUnits, cubeUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
+import { ageFilterBins, ageMapping, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, WEAPON_FILE_SHA256_V1, WEAPON_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 import { categorySumsFromGrid } from "../lib/nibrs-shadow/state-sum";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
@@ -231,6 +231,38 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeOffenseUnits({ ...ask, cfg: { ...cfgO, offense: { ...offense, attributes: ["incident_hour"] } }, attribute: { dimension: "offense.clearance_type" } }), null, "an attribute the manifest does not list");
 }
 
+// --- The weapon cube: offenses of one or more codes with a weapon, always from ONE weapon cell (weapon values never add).
+{
+  const weapon = { root: "/wpn", years: [2024, 2025], codes: new Set(["09A", "120", "13A", "13B"]), attributes: ["weapon", "firearm"] };
+  const cfgW: CubeConfig = { root: "", years: [], mode: "on", weapon };
+  const ask = { cfg: cfgW, codes: ["09A"], grouping: true, weaponFilter: null, wantsIncidents: false, years: [2024], conditioned: false };
+  const grp = cubeWeaponUnits(ask)!;
+  assert.match(grp.sql, /unit = 'offense' AND source = 'A' AND offense_code = '09A' AND attribute = 'weapon'/);
+  assert.match(grp.sql, /CASE WHEN value = '\(blank\)' THEN NULL ELSE value END AS g0/, "no weapon is a missing category, as the raw statement has it");
+  assert.match(grp.totalSql!, /attribute = 'none'/, "overlapping categories: the month's total (every share's denominator) is the distinct offenses, the none row");
+  assert.equal(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["13"] })!.totalSql, undefined, "a one-cell filter needs no separate total");
+  assert.equal(cubeWeaponUnits({ ...ask, cfg: { ...cfgW, weapon: undefined } }), null, "no weapon cube: raw");
+  assert.equal(cubeWeaponUnits({ ...ask, conditioned: true }), null, "any other condition stays raw");
+  assert.equal(cubeWeaponUnits({ ...ask, codes: ["999"] }), null);
+  assert.equal(cubeWeaponUnits({ ...ask, years: [2023] }), null);
+  assert.equal(cubeWeaponUnits({ ...ask, grouping: false }), null, "neither the grouping nor a filter: the offense cube's total, not this one");
+  assert.equal(cubeWeaponUnits({ ...ask, weaponFilter: ["11"] }), null, "both a grouping and a filter: raw");
+  // Offenses add across codes within a weapon cell; incidents only for one code.
+  assert.match(cubeWeaponUnits({ ...ask, codes: ["13A", "13B"] })!.sql, /offense_code IN \('13A', '13B'\)[\s\S]*CAST\(NULL AS BIGINT\) AS wi|CAST\(NULL AS BIGINT\) AS wi/);
+  assert.equal(cubeWeaponUnits({ ...ask, codes: ["13A", "13B"], wantsIncidents: true }), null, "incidents of two codes: raw");
+  assert.match(cubeWeaponUnits({ ...ask, wantsIncidents: true })!.sql, /CAST\(SUM\(n_distinct_incidents\) AS BIGINT\) AS wi/);
+  // The firearm filter is the Y cell, and one two-character code is its weapon cell; any other list of weapons is not one cell.
+  const firearm = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
+  const fy = cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: firearm })!;
+  assert.match(fy.sql, /attribute = 'firearm' AND value = 'Y'/);
+  assert.ok(!/g0/.test(fy.sql), "a filter is one cell: no category column");
+  assert.match(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["13"] })!.sql, /attribute = 'weapon' AND value = '13'/);
+  assert.equal(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["11", "12"] }), null, "two weapons are two cells and never add");
+  assert.equal(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["11", "12", "13", "14", "15"] }), null, "the firearm list is all ten values, flag or not");
+  assert.equal(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["11A"] }), null, "an automatic firearm is not a cell of the cube");
+  assert.equal(cubeWeaponUnits({ ...ask, cfg: { ...cfgW, weapon: { ...weapon, attributes: ["weapon"] } }, grouping: false, weaponFilter: firearm }), null, "no firearm attribute listed");
+}
+
 // --- The manifest check: a cube is used only when it was built from this release, with the engine's group lists, and its file is there.
 {
   assert.equal(listSha256(CUBE_GROUPS.person_crimes), "e0da932813fb580e2fa05215a6ce59d977c7915830f3f0cdfb3cc12db4bb87ee", "the Model's recorded hash of the person_crimes list");
@@ -348,6 +380,26 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       assert.deepEqual(off.years, [2024]);
       assert.ok(off.codes.has("120") && off.codes.has("9ZZ") && !off.codes.has("13B"), "the listed codes and the unlisted codes the build found");
       assert.deepEqual(off.attributes, ["incident_hour", "location_type", "clearance_type"]);
+      // The weapon cube (its own schema, file hash and product stamp).
+      const wRoot = path.join(dir, "wpncube");
+      fs.mkdirSync(path.join(wRoot, "canonical/cube/data_year=2024"), { recursive: true });
+      fs.writeFileSync(path.join(wRoot, "canonical/cube/data_year=2024/data.parquet"), "x");
+      const writeW = (m: object) => put(path.join(wRoot, "manifest.json"), m);
+      const goodW = { schema_version: "cube-weapon-0.1", product: "weapon", source_manifest_sha256: sha, groups_version: WEAPON_VERSION_V1, groups_file_sha256: WEAPON_FILE_SHA256_V1,
+        unit_attributes: { offense: ["weapon", "firearm"] }, counting_contract: "Offenses never add across weapon values.", reference_codes: ["09A", "13A"], unlisted_codes: [],
+        years: { "2024": {} }, files: { "canonical/cube/data_year=2024/data.parquet": {} } };
+      const wenv = { NIBRS_CUBE: "on", NIBRS_WEAPON_CUBE_ROOT: wRoot };
+      writeW(goodW);
+      const wp = cubeFromEnv(wenv, canonical)!.weapon!;
+      assert.deepEqual([wp.years, wp.attributes], [[2024], ["weapon", "firearm"]]);
+      assert.ok(wp.codes.has("09A") && !wp.codes.has("120"));
+      for (const [bad, why] of [[{ product: "offense" }, "another product"], [{ groups_file_sha256: OFFENSE_FILE_SHA256_V1 }, "the offense cube's file"], [{ schema_version: "cube-offense-0.1" }, "another schema"],
+        [{ source_manifest_sha256: "0".repeat(64) }, "another release"], [{ counting_contract: undefined }, "no counting contract"], [{ unit_attributes: { offense: ["weapon"] } }, "firearm missing"]] as const) {
+        writeW({ ...goodW, ...bad });
+        assert.equal(cubeFromEnv(wenv, canonical), null, `the weapon cube is left out: ${why}`);
+      }
+      writeOff(goodOff);
+      assert.equal(cubeFromEnv({ ...oenv, NIBRS_WEAPON_CUBE_ROOT: wRoot }, canonical)!.weapon, undefined, "a bad weapon cube leaves the offense cube in use");
       for (const [bad, why] of [[{ product: "weapon" }, "another product"], [{ groups_file_sha256: "0".repeat(64) }, "another groups file (the weapon cube's)"], [{ groups_version: "x" }, "another version"],
         [{ schema_version: "cube-code-0.1" }, "another schema"], [{ source_manifest_sha256: "0".repeat(64) }, "another release"], [{ counting_contract: undefined }, "no counting contract"],
         [{ unit_attributes: { offense: ["incident_hour"] } }, "attributes missing"], [{ reference_codes: undefined }, "no codes"]] as const) {
@@ -375,8 +427,8 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
 }
 
 // --- Cell by cell against the raw statements, where a release and a cube exist.
-const CUBE = process.env.NIBRS_CUBE_TEST_CUBE, CODE_CUBE = process.env.NIBRS_CUBE_TEST_CODE_CUBE, OFFENSE_CUBE = process.env.NIBRS_CUBE_TEST_OFFENSE_CUBE, ROOT = process.env.NIBRS_CUBE_TEST_ROOT;
-if ((CUBE || CODE_CUBE || OFFENSE_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE_CUBE ?? OFFENSE_CUBE}/manifest.json`)) {
+const CUBE = process.env.NIBRS_CUBE_TEST_CUBE, CODE_CUBE = process.env.NIBRS_CUBE_TEST_CODE_CUBE, OFFENSE_CUBE = process.env.NIBRS_CUBE_TEST_OFFENSE_CUBE, WEAPON_CUBE = process.env.NIBRS_CUBE_TEST_WEAPON_CUBE, ROOT = process.env.NIBRS_CUBE_TEST_ROOT;
+if ((CUBE || CODE_CUBE || OFFENSE_CUBE || WEAPON_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE_CUBE ?? OFFENSE_CUBE ?? WEAPON_CUBE}/manifest.json`)) {
   const run = async () => {
     const { shadowAnswer } = await import("../lib/nibrs-shadow/answer");
     const { loadPlaceIndex } = await import("../lib/nibrs-shadow/places");
@@ -391,7 +443,7 @@ if ((CUBE || CODE_CUBE || OFFENSE_CUBE) && ROOT && fs.existsSync(`${CUBE ?? CODE
     const executed: string[] = [];
     const exec = duckdbExecutor(process.env.NIBRS_CUBE_TEST_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
     const execute = (sql: string) => { executed.push(sql); return exec(sql); };
-    const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE, NIBRS_CODE_CUBE_ROOT: CODE_CUBE, NIBRS_OFFENSE_CUBE_ROOT: OFFENSE_CUBE }, ROOT);
+    const cubeCfg = cubeFromEnv({ NIBRS_CUBE: "on", NIBRS_CUBE_ROOT: CUBE, NIBRS_CODE_CUBE_ROOT: CODE_CUBE, NIBRS_OFFENSE_CUBE_ROOT: OFFENSE_CUBE, NIBRS_WEAPON_CUBE_ROOT: WEAPON_CUBE }, ROOT);
     assert.ok(cubeCfg, "the cube folder is readable");
     const mk = (cube: CubeConfig | null) => ({ places: loadPlaceIndex(), release: r, target: { root: ROOT, builtYears, cube }, execute });
     // NIBRS_CUBE_TEST_QUESTIONS_FILE: one question per line (blank lines and lines starting with # skipped); added to NIBRS_CUBE_TEST_QUESTIONS.
