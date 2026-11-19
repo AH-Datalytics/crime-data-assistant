@@ -425,6 +425,31 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P160 to P162 (Jeff 2026-11-19): a victim's or offender's detail as a noun phrase, a share of a sex, and no period for a breakdown.
+    const dstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      const m = /data_year \* 100 \+ r\.offense_month BETWEEN (\d{6}) AND (\d{6})/.exec(sql);
+      if (m && /AS k0/.test(sql)) {
+        const ys = range(Math.floor(Number(m[1]) / 100), Math.floor(Number(m[2]) / 100));
+        const byYear = /r\.data_year AS k0/.test(sql);
+        const code = /shr_offender p/.test(sql) ? "B" : /p\.sex/.test(sql) ? "M" : "B";
+        return byYear ? ys.flatMap((y) => [[y, code, 6], [y, "W", 4]]) : [[code, 6], ["W", 4]];
+      }
+      return [];
+    };
+    const ddeps = { ...sdeps, execute: dstub } as ShadowDeps;
+    for (const q of ["murder victim race in Houston since 2010", "Houston murder victims by race since 2010", "What's the racial breakdown of murder victims in Houston since 2010?", "homicide offender race in Houston since 2010"]) {
+      const o = as(shadowAnswer(q, ddeps), "shr");
+      assert.ok(o.delivered.table.columns.some((c) => c.header === "Victim's race" || c.header === "Offender's race"), `${q}: ${JSON.stringify(o.delivered.table.columns)}`);
+      assert.ok(["White", "Black"].includes(String(o.delivered.table.rows[0][0])) && !o.delivered.text.some((t) => /No years were given/.test(t)), `${q}: ${JSON.stringify(o.delivered.table.rows[0])}`);
+    }
+    const circ = as(shadowAnswer("Break down homicide circumstances in Houston in 2023", ddeps), "shr");
+    assert.ok(circ.delivered.table.columns.some((c) => c.header === "Circumstance"), JSON.stringify(circ.delivered.table.columns));
+    const every = as(shadowAnswer("Houston murder victim race", ddeps), "shr");
+    assert.equal(every.delivered.table.rows[0][0], "1985");
+    assert.ok(every.delivered.text.includes("No years were given, so every year in the data is shown: 1985 through 2026."), JSON.stringify(every.delivered.text));
+    const share = as(shadowAnswer("What percentage of murder victims in Houston were male in 2023?", ddeps), "shr");
+    assert.ok(share.delivered.table.columns.some((c) => c.header === "Share (%)") && share.delivered.table.columns.some((c) => c.header === "Victim's sex"), JSON.stringify(share.delivered.table.columns));
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {

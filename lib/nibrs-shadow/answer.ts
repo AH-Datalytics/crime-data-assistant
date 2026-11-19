@@ -1240,7 +1240,13 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   // No period named: the period is asked, as on NIBRS's path, never a default year answered (job SA1: "firearm murders
   // in Philadelphia" is labelled to ask which period).
   // Not so when Homicide Reports is named and a series by year or month is asked: it runs over every year the source holds (P152).
-  const everyYear = plan.defaults.some((d) => d.path === "period") && flags(ledger0).shrAsked && plan.groupings.some((g) => g.dimension === "time.year" || g.dimension === "time.month");
+  const everyYear0 = plan.defaults.some((d) => d.path === "period") && flags(ledger0).shrAsked && plan.groupings.some((g) => g.dimension === "time.year" || g.dimension === "time.month");
+  // P161 (Jeff 2026-11-19): a victim's or offender's detail broken down with no period ("Murder victim race in Houston") is every year by
+  // year from Homicide Reports' first year, with the sentence that no years were given.
+  const detailEveryYear = !everyYear0 && plan.defaults.some((d) => d.path === "period") && !plan.groupings.some((g) => g.dimension.startsWith("time."))
+    && plan.groupings.length === 1 && /^(?:victim|offender)\./.test(plan.groupings[0].dimension);
+  if (detailEveryYear) plan = { ...plan, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }, ...plan.groupings] };
+  const everyYear = everyYear0 || detailEveryYear;
   if (plan.defaults.some((d) => d.path === "period") && !everyYear) return null;
   let period: { from: string; to: string };
   if (everyYear) period = { from: `${SHR_FIRST_YEAR}-01`, to: deps.shr.latestMonth };
@@ -1257,6 +1263,8 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const sq = shrQuestionOf(plan, period, deps.shr, { compare });
   if ("why" in sq) return null;
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  if (a.kind === "shr" && detailEveryYear)
+    return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 /**
