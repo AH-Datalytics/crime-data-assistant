@@ -21,7 +21,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import type { Meaning } from "../answer-eval/case";
 import { CITY_AS, cityNameSql, citySql, HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
-import { fmt } from "./deliver";
+import { fmt, runs } from "./deliver";
 import { aboutPeople } from "./presentation";
 import { periodTitle, titleCase } from "./titles";
 import { agencySubject, changeSentence, countSentence, nationSubject, rateSentence, seriesTitle, type Subject } from "./headline";
@@ -568,7 +568,8 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     }
     const raw = span.map((m) => values.get(m) ?? null);
     const rolled = span.map((m, i) => (i < w - 1 || raw.slice(i - w + 1, i + 1).some((v) => v === null) ? null : raw.slice(i - w + 1, i + 1).reduce<number>((s, v) => s + (v as number), 0)));
-    const blanks = span.filter((_, i) => raw[i] === null);
+    // Only the blank months inside the rows shown: the months before the first row belong to its window and are not listed.
+    const blanks = span.filter((m, i) => raw[i] === null && m >= cq.from);
     return { p, rolled, blanks, cov };
   });
   const shown = span.map((m, i) => ({ m, i })).filter((x) => x.m >= cq.from);
@@ -581,7 +582,7 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
   const columns: ResultTable["columns"] = [...(several ? [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Place" }] : []),
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
   const rows = per.flatMap((x) => shown.map(({ m, i }) => [...(several ? [x.p.kind === "agency" ? x.p.name : x.p.label] : []), m, x.rolled[i]] as (string | number | null)[]));
-  const gapLines = per.flatMap((x) => (x.blanks.length ? [`No figure is available for ${x.blanks.map(monthWords).join(", ")}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.blanks.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
+  const gapLines = per.flatMap((x) => (x.blanks.length ? [`No figure is available for ${runs(x.blanks)}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.blanks.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
   const cohortLine = per.flatMap((x) => (x.cov ? [`This counts only the ${fmt(x.cov.agencies)} Consistent Reporting ${x.cov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(x.cov.population)} people, that reported every month from ${monthWords(b.firstMonth)} through ${monthWords(b.lastMonth)}.`] : []));
   const period = { from: cq.from, to };
   const first = cq.places[0];

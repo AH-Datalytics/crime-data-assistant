@@ -2394,6 +2394,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 {
   const ctStub = (sql: string): unknown[][] => {
     if (/count\(\*\) FROM read_parquet\('[^']*current_crime/.test(sql)) return [[20]];
+    // A group's months (the nation): 3,000 a month from 547 agencies, only from the first month Current Trends holds a group's total (2025-01).
+    if (/WHERE sample/.test(sql)) {
+      const [, a, b] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
+      const out: unknown[][] = [];
+      for (let y = +a.slice(0, 4), m = +a.slice(5); `${y}-${String(m).padStart(2, "0")}` <= b; m === 12 ? (y++, (m = 1)) : m++) if (y >= 2025) out.push([`${y}-${String(m).padStart(2, "0")}`, 3000, 547, 111272916, 0]);
+      return out;
+    }
     if (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql)) {
       const ori = /WHERE ori = '([^']+)'/.exec(sql)![1];
       const [, from, to] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql)!;
@@ -2434,6 +2441,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const r5 = roll("Dallas and Houston murders rolling over 12 months since 2025");
     assert.deepEqual(r5.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Rolling 12-month murders"]);
     assert.equal(r5.delivered.text[0], "January 2025 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas and Houston, Texas");
+    // The nation: only the blank months among the rows shown are named, as one range, and a span before the data says so.
+    const nat = roll("murders rolling over 12 months nationally since 2016");
+    assert.ok(nat.delivered.text.includes("Current Trends figures in the data cover January 2017 through August 2026; January 2016 through December 2016 are outside them."), nat.delivered.text.join(" / "));
+    assert.ok(nat.delivered.text.some((t) => /^No figure is available for January 2018 to December 2024: every 12-month window/.test(t)), nat.delivered.text.join(" / "));
     // "the last 12 months" stays one total.
     assert.equal(shadowAnswer("Dallas murders in the last 12 months", cdeps).kind, "current");
   }
