@@ -26,6 +26,10 @@ import { aboutPeople } from "./presentation";
 import { periodTitle, titleCase } from "./titles";
 import { agencySubject, changeSentence, countSentence, nationSubject, rateSentence, seriesTitle, type Subject } from "./headline";
 
+/** The cohort sentence; the people clause only when the population is known (the final panel before 2025 has none, so never "roughly 0 people"). */
+const cohortSentence = (agencies: number, population: number | null | undefined, from: string, to: string): string =>
+  `This counts only the ${fmt(agencies)} Consistent Reporting ${agencies === 1 ? "Agency" : "Agencies"}${population && population > 0 ? `, covering roughly ${aboutPeople(population)} people,` : ""} that reported every month from ${monthWords(from)} through ${monthWords(to)}.`;
+
 /** A place as the subject of a sentence: an agency short ("Detroit"), the nation "The United States", a state or region by its label. */
 const subjectOf = (p: CurrentPlace): Subject => (p.kind === "agency" ? agencySubject(p.label, p.ori) : p.states === null ? nationSubject : { text: p.label });
 /** The months of a series in a title: "2025" for whole January-to-December, else "January 2025 to September 2026". */
@@ -311,7 +315,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const leftOut = same ? [`${fmt(gaps[0].blank)} of ${fmt(gaps[0].agencies)} in every month`] : gaps.map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
   // P90's sentence, in the shared wording: the agencies counted and the people they cover, as of the latest month shown.
   const lastCov = coverage[coverage.length - 1];
-  const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(sampleFrom)} through ${monthWords(sampleTo)}.`] : [];
+  const cohortLine = lastCov ? [cohortSentence(lastCov.agencies, lastCov.population, sampleFrom, sampleTo)] : [];
   const leftOutLine = leftOut.length ? [`Agencies with no ${one} figure are left out of the total: ${leftOut.join(", ")}.`] : [];
   const tables = [...(covered[0] < b.firstMonth ? ["current_final"] : []), ...(covered[covered.length - 1] >= b.firstMonth ? ["current_crime"] : [])];
   const read = { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release };
@@ -628,7 +632,7 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
   const rows = per.flatMap((x) => shown.map(({ m, i }) => [...(several ? [x.p.kind === "agency" ? x.p.name : x.p.label] : []), m, x.rolled[i]] as (string | number | null)[]));
   const gapLines = per.flatMap((x) => (x.blanks.length ? [`No figure is available for ${runs(x.blanks)}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.blanks.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
-  const cohortLine = per.flatMap((x) => (x.cov ? [`This counts only the ${fmt(x.cov.agencies)} Consistent Reporting ${x.cov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(x.cov.population)} people, that reported every month from ${monthWords(x.cov.from)} through ${monthWords(to)}.`] : []));
+  const cohortLine = per.flatMap((x) => (x.cov ? [cohortSentence(x.cov.agencies, x.cov.population, x.cov.from, to)] : []));
   const period = { from: cq.from, to };
   const first = cq.places[0];
   const places: Meaning["places"] = per.flatMap((x): Meaning["places"][number][] => (x.p.kind === "agency" ? [{ kind: "agency", name: x.p.name, state: x.p.state }]

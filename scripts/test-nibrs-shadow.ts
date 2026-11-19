@@ -2469,6 +2469,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(m18.delivered.table.rows[0], ["2018-01", 3000]);
     const m25 = roll("murders by month since 2025 nationally");
     assert.ok(m25.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026."), m25.delivered.text.join(" / "));
+    // A span wholly before 2025 has no population in the final panel: the people clause is left out, never "roughly 0 people".
+    const noPop = { ...cdeps, execute: (sql: string) => (/coalesce\(sum\(p\.population\), 0\)/.test(sql) ? ctStub(sql).map((r) => [r[0], 0]) : ctStub(sql)) } as unknown as ShadowDeps;
+    const m24 = shadowAnswer("murders by month in 2024 nationally", noPop);
+    assert.equal(m24.kind, "current", JSON.stringify(m24).slice(0, 300));
+    if (m24.kind === "current") {
+      assert.ok(m24.delivered.text.some((t) => /^This counts only the \d+ Consistent Reporting Agencies that reported every month from January 2024 through December 2024\.$/.test(t)), m24.delivered.text.join(" / "));
+      assert.ok(!m24.delivered.text.some((t) => /roughly 0|covering roughly/.test(t)), "no people clause when the population is unknown");
+    }
     // "the last 12 months" stays one total.
     assert.equal(shadowAnswer("Dallas murders in the last 12 months", cdeps).kind, "current");
   }
