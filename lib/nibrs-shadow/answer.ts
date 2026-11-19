@@ -1980,13 +1980,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Several named agencies by month (Jeff 2026-11-15: Crime Index by default, one source for the whole table): one table from
     // Current Trends, an agency with no figure blank, never another source for part of it. No years named: every month it holds.
     if (sp.places.length > 1) {
-      const ok = sp.places.every((p) => p.kind === "agency") && sp.grain === "month" && sp.statistic === "count" && !flags(ledger0).combined && !flags(ledger0).comparison
+      const ok = sp.places.every((p) => p.kind === "agency") && sp.grain === "month" && (sp.statistic === "count" || sp.statistic === "rate") && !flags(ledger0).combined && !flags(ledger0).comparison
         && !flags(ledger0).region && !flags(ledger0).column && !clause0("combine").length;
       const every = sp.period.form === "none";
       if (ok && (span || every)) {
         const list = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : undefined));
         if (list.every((a) => a?.kind === "agency")) {
-          const r = answerCurrentSeveral({ measure: sp.measures[0], from: every ? cur.finalFirstMonth : span![0], to: every ? cur.lastMonth : span![1],
+          const r = answerCurrentSeveral({ measure: sp.measures[0], statistic: sp.statistic === "rate" ? "rate" : "count", from: every ? cur.finalFirstMonth : span![0], to: every ? cur.lastMonth : span![1],
             places: list.map((a, i) => { const pp = sp.places[i] as Extract<typeof sp.places[number], { kind: "agency" }>; const ag = a as Extract<NonNullable<typeof a>, { kind: "agency" }>;
               return { kind: "agency" as const, ori: ag.ori, label: ag.label, name: pp.name, state: pp.state }; }),
             agencyLine: reportedBy(list.map((a) => agencyName(deps.places, (a as { ori: string }).ori))).replace(/^Reported by /, "Figures for ") }, cur, deps.execute);
