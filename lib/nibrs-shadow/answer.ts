@@ -828,10 +828,12 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
   try { yearly = run(question); } catch { return decl; }
   if (yearly.kind !== "historical" && yearly.kind !== "srs") return decl;
   const rows = yearly.delivered.table.rows;
-  if (!rows.flatMap((r) => r.slice(1)).some((c) => typeof c === "number")) return decl;
+  // One year asked gives a one-cell row with no Year column ([[127]]); several years give Year first.
+  const dated = yearly.delivered.table.columns.length > 1;
+  if (!rows.flatMap((r) => (dated ? r.slice(1) : r)).some((c) => typeof c === "number")) return decl;
   // The table opened from this button ends at its last year with a figure (Jeff 2026-11-19), the years after it named; no trailing blank rows.
   let last = rows.length - 1;
-  while (last >= 0 && rows[last].slice(1).every((c) => c === null)) last--;
+  while (dated && last >= 0 && rows[last].slice(1).every((c) => c === null)) last--;
   let opened: ShadowOutcome = yearly;
   if (last >= 0 && last < rows.length - 1) {
     const gone = rows.length - 1 - last, from = String(rows[last + 1][0]), to = String(rows[rows.length - 1][0]);
