@@ -2433,6 +2433,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "x" }, header: "Murders" }], rows: [["2023-01", null], ["2023-02", null]] }, text: [] } } as never;
   const blankDecl = allBlankMonthly(blankCt)!;
   const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [], rows: [["2023", v]] }, text: [] } }) as never;
+  // The table opened from the button ends at its last year with a figure; the years after it are named (New Orleans rape: 2017 to 2023).
+  const longYearly = () => ({ kind: "historical", period: { from: "2022-01", to: "2025-12" }, delivered: { table: { columns: [], rows: [["2022", 5], ["2023", 9], ["2024", null], ["2025", null]] }, text: ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Source: Crime Index."] } }) as never;
+  const trimmed = withYearlyOffer(blankDecl, blankCt, deps, longYearly);
+  const opened = trimmed.kind === "decline" ? (trimmed.alternative as { continuation?: { delivered: { table: { rows: unknown[][] }; text: string[] }; period: { to: string } } } | null)?.continuation : undefined;
+  assert.deepEqual(opened?.delivered.table.rows, [["2022", 5], ["2023", 9]]);
+  assert.deepEqual(opened?.delivered.text, ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Crime Index has no murder figures for Memphis, Tennessee from 2024 to 2025, so the chart and table end in 2023.", "Source: Crime Index."]);
+  assert.equal(opened?.period.to, "2023-12");
   const offered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(351));
   assert.ok(offered.kind === "decline" && offered.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', JSON.stringify(offered).slice(0, 300));
   assert.equal(offered.kind === "decline" ? offered.explanation : "", "No data is available for murders in Memphis, Tennessee.");

@@ -102,11 +102,6 @@ const series = ok({ from: 2021, to: 2023, byYear: true });
 assert.deepEqual(series.delivered.table.rows, [["2022", 252], ["2023", 351]]);
 assert.ok(series.delivered.text.includes("Crime Index has no murder figure for Memphis, Tennessee in 2021, so the chart and table start in 2022."), series.delivered.text.join(" / "));
 assert.deepEqual(series.period, { from: "2022-01", to: "2023-12" });
-// P151 (Jeff 2026-11-19): and it ends at its last year with a figure, the years after it named, no trailing blank rows.
-const trailing = ok({ from: 2022, to: 2025, byYear: true });
-assert.deepEqual(trailing.delivered.table.rows, [["2022", 252], ["2023", 351]]);
-assert.ok(trailing.delivered.text.includes("Crime Index has no murder figures for Memphis, Tennessee from 2024 to 2025, so the chart and table end in 2023."), trailing.delivered.text.join(" / "));
-assert.deepEqual(trailing.period, { from: "2022-01", to: "2023-12" });
 
 // P76: the build's years; outside them named, never "doesn't exist"; part of a span outside: the rest answered.
 assert.match(no({ from: 1925, to: 1925 }), /cover 1930 through 2025, so 1925 is outside them/);
