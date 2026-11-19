@@ -35,6 +35,14 @@ import { allBlankMonthly, plainMeanings } from "../lib/nibrs-shadow/answer";
     delivered: { table: { columns: monthCols, rows: [...a.map((v, i) => ["Dallas", `2025-0${i + 1}`, v]), ...b.map((v, i) => ["New Orleans", `2025-0${i + 1}`, v])] }, text: [] } }) as never;
   const none = allBlankMonthly(series([null, null], [null, null]));
   assert.ok(none && none.kind === "decline" && none.explanation === "No data is available for murders in Dallas, Texas and New Orleans, Louisiana.", JSON.stringify(none));
+  // P150: several measures at once (a NIBRS table with a column each) name them all.
+  const nibrsTwo = (a: (number | null)[], b: (number | null)[]) => ({ kind: "answer", plan: { measures: [{ id: "victims.homicide", unit: "victim" }, { id: "victims.murder", unit: "victim" }], statistics: [{ kind: "count", as: "a" }, { kind: "count", as: "b" }],
+    filters: [], geography: { places: [{ kind: "agency", label: "Oakland, California" }] } },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "a" }, header: "Homicide victims" }, { binding: { kind: "statistic", as: "b" }, header: "Murder victims" }],
+      rows: a.map((v, i) => [`2021-0${i + 1}`, v, b[i]]) }, text: [] } }) as never;
+  const two = allBlankMonthly(nibrsTwo([null, null], [null, null]));
+  assert.ok(two && two.kind === "decline" && /^No data is available for .+ and .+ in Oakland, California\.$/.test(two.explanation), JSON.stringify(two));
+  assert.equal(allBlankMonthly(nibrsTwo([null, null], [1, null])), null, "one column has a figure: the table stays");
   assert.equal(allBlankMonthly(series([4, null], [null, null])), null, "some months have figures: the table stays");
   assert.equal(allBlankMonthly(series([null, null], [3, 3])), null, "one place blank only: the table and its gap sentence stay");
 }
