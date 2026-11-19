@@ -18416,6 +18416,7 @@
      "status": "pending_build"
     },
     "statements": [
+     "says the data for January through October 2026 is incomplete, so no change is given (P140)",
      "names September 2026 as having no data",
      "makes no change claim: the 2026 months are not all established",
      "names the agency (Seattle Police Department)",
@@ -18603,7 +18604,7 @@
     },
     "statements": [
      "defines each point as the sum of the 12 months ending that month",
-     "shows the windows ending November 2025 through September 2026 as missing (each contains November or December 2025), never zero or a shorter-window total",
+     "shows every window containing November or December 2025 (those ending November 2025 through December 2026) as missing, never zero or a shorter-window total",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names its source at the end"
@@ -19113,7 +19114,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "gives no rate, because not every month of 2025 is available",
+     "says no rate is given for Greensboro in 2025, because not every month is available",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names its source at the end"
@@ -19186,7 +19187,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "shows 20 agencies (D05)",
+     "shows the 20 agencies asked for, plus the agencies tied at the 20th value when they add no more than 20 (D05, P17)",
      "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "adds no other eligibility filter",
@@ -19342,7 +19343,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "says large means 250,000 residents or more",
+     "names the 250,000-resident cutoff for large (in the title or a note)",
      "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "names its source at the end"
@@ -19548,7 +19549,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "gives no combined total, because Greensboro's 2025 total is not established",
+     "says no combined total is given for Greensboro and Raleigh in 2025, because not every month is available for every agency counted",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names the agency (Raleigh Police Department)",
@@ -19754,7 +19755,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "gives no rate, because not every month of 2025 is available for every agency counted",
+     "says no combined rate is given for Greensboro and Raleigh in 2025, because not every month is available for every agency counted",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names the agency (Raleigh Police Department)",
