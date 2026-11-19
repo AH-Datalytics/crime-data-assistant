@@ -11,17 +11,9 @@
    "question": "DC violent crime rolling over 12 months with a line at August 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Marking a date on a chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -3384,12 +3376,9 @@
    "question": "Great. Now add a vertical line for August 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Marking a date on a chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -7587,17 +7576,9 @@
    "question": "national murder trend rolling over 12 months with an annotation in May 2020",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Marking a date on a chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -16080,12 +16061,9 @@
    "question": "Give me a chart of the monthly murder rates in Baltimore, Washington DC and Detroit. Add some kind of marker to show August 2025 on the chart.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which Baltimore"
-    ],
-    "about": "which Baltimore"
+    "reason": "Marking a date on a chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -16627,17 +16605,9 @@
    "question": "Houston murders per month with an annotation at May 2020",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Marking a date on a chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -19591,12 +19561,9 @@
    "question": "Give me a chart of the monthly murder counts in Baltimore, Washington DC and Detroit. Add some kind of marker to show August 2025 on the chart.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which Baltimore"
-    ],
-    "about": "which Baltimore"
+    "reason": "Marking a date on a chart isn't available here."
    },
    "label": {
     "status": "reviewed",

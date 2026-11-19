@@ -159,6 +159,12 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P153: a line, an annotation or a marker at a date on a chart is declined with its own sentence.
+for (const q of ["DC violent crime rolling over 12 months with a line at August 2025", "Houston murders per month with an annotation at May 2020",
+  "Give me a chart of the monthly murder counts in Baltimore and Detroit. Add some kind of marker to show August 2025 on the chart."]) {
+  const o = ask(q);
+  assert.ok(o.kind === "decline" && o.explanation === "Marking a date on a chart isn't available here.", `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+}
 
 // Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
 // (cities in two states, a city and a county, a state) is asked about, cities first.
