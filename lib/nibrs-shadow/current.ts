@@ -334,7 +334,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
       delivered: { table: { columns: rateCols, rows: covered.map((m, i) => [m, rates[i]]) },
         text: [covered.length === 1 && rates[0] !== null
           ? rateSentence(subjectOf(cq.place), one, monthWords(covered[0]), rates[0]!.toFixed(1))
-          : seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", where), `${covered.length === 1 ? "That month's" : "Each month's"} own count, not scaled to a full year.`, ...head, ...cohortLine, ...outside,
+          : seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", where), ...head, ...cohortLine, ...outside,
           ...(noRate.length ? [`No rate for ${noRate.join(", ")}: ${group ? "an agency counted had no figure or there was no population" : "no figure or no population"}, shown blank.`] : []), source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
@@ -342,7 +342,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
     delivered: { table: { columns, rows: covered.map((m, i) => [m, vals[i]]) },
       text: [seriesTitle(spanTitle(period.from, period.to), ucFirst(words), "Month", where), ...head, ...cohortLine, ...outside, ...leftOutLine,
-        ...(blanks.length ? [`No figure is known for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
+        ...(blanks.length ? [`No figure is available for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
 }
 
 /* ------------------------------------------- rankings and sets (2026) ------------------------------------------ */
@@ -451,10 +451,11 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
  * and one source line for the whole table): a row for each agency and month, each agency's months in order. An agency
  * with no figure for a month is blank there, never 0, and a line says which months.
  */
-export function answerCurrentSeveral(cq: { measure: string; places: Extract<CurrentPlace, { kind: "agency" }>[]; from: Month; to: Month; agencyLine?: string }, b: CurrentBuild,
+export function answerCurrentSeveral(cq: { measure: string; places: Extract<CurrentPlace, { kind: "agency" }>[]; from: Month; to: Month; agencyLine?: string; statistic?: "count" | "rate" }, b: CurrentBuild,
   execute: (sql: string) => unknown[][]): CurrentAnswer | CurrentDecline {
   const col = CURRENT_MEASURE[cq.measure];
   if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
+  if (cq.statistic === "rate") return answerCurrentSeveralRate(cq, col, b, execute);
   const span = months(cq.from, cq.to);
   const covered = span.filter((m) => m >= b.finalFirstMonth && m <= b.lastMonth);
   const holds = `Current Trends figures in the data cover ${spanWords(b.finalFirstMonth, b.lastMonth)}`;
@@ -467,9 +468,9 @@ export function answerCurrentSeveral(cq: { measure: string; places: Extract<Curr
   const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
   const gapLines = per.flatMap(({ a, values }) => {
     const blanks = covered.filter((m) => values.get(m) === null || values.get(m) === undefined);
-    return blanks.length ? [`No figure is known for ${blanks.map(monthWords).join(", ")} for ${a.label}: shown blank, not zero.`] : [];
+    return blanks.length ? [`No figure is available for ${blanks.map(monthWords).join(", ")} for ${a.label}: shown blank, not zero.`] : [];
   });
-  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" },
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" },
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
   const rows = per.flatMap(({ a, values }) => covered.map((m) => [a.name, m, values.get(m) ?? null] as (string | number | null)[]));
   const period = { from: covered[0], to: covered[covered.length - 1] };
@@ -480,5 +481,51 @@ export function answerCurrentSeveral(cq: { measure: string; places: Extract<Curr
     question: { measure: cq.measure, place: first, agencies: cq.places.slice(1), from: cq.from, to: cq.to, form: "months", statistic: "count" },
     meaning: { source: "rtci", places: cq.places.map((a) => ({ kind: "agency" as const, name: a.name, state: a.state })), period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: ["agency", "month"], statistic: "count" },
     delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), ucFirst(words), "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...outside, ...gapLines, "Source: Crime Index."] },
+  };
+}
+
+/** The most places one monthly-rate answer holds (Jeff 2026-11-18, through the coordinator: a sixth asks to name fewer). */
+export const SEVERAL_RATE_LIMIT = 5;
+
+/**
+ * Several named agencies by month as a rate (P144): each place's month count per 100,000 of that month's population, one row for
+ * each place and month, never scaled to a full year. No notes beyond the exceptions (Jeff 2026-11-18: "a rate is self
+ * explanatory"): a month with no figure or no population is blank and named; a place with no population at all is left out
+ * with a sentence, and the answer declines only when no place has one.
+ */
+function answerCurrentSeveralRate(cq: { measure: string; places: Extract<CurrentPlace, { kind: "agency" }>[]; from: Month; to: Month; agencyLine?: string }, col: string,
+  b: CurrentBuild, execute: (sql: string) => unknown[][]): CurrentAnswer | CurrentDecline {
+  if (cq.places.length > SEVERAL_RATE_LIMIT) return { kind: "current-decline", explanation: `Name up to ${SEVERAL_RATE_LIMIT} places for a monthly rate.` };
+  const span = months(cq.from, cq.to);
+  const covered = span.filter((m) => m >= b.finalFirstMonth && m <= b.lastMonth);
+  const holds = `Current Trends figures in the data cover ${spanWords(b.finalFirstMonth, b.lastMonth)}`;
+  if (!covered.length) return { kind: "current-decline", explanation: `${holds}, so ${spanWords(span[0], span[span.length - 1])} ${span.length > 1 ? "are" : "is"} outside them.` };
+  const one = SINGULAR[col];
+  const left = span.filter((m) => !covered.includes(m));
+  const outside = left.length ? [`${holds}; ${spanWords(left[0], left[left.length - 1])} ${left.length > 1 ? "are" : "is"} outside them.`] : [];
+  const all = cq.places.map((a) => ({ a, values: agencyMonths(b, a.ori, cq.measure, covered[0], covered[covered.length - 1], execute),
+    pops: agencyMonthPopulations(b, a.ori, covered, execute) }));
+  const noPop = all.filter((x) => covered.every((m) => x.pops.get(m) == null));
+  const per = all.filter((x) => !noPop.includes(x));
+  if (!per.length) return { kind: "current-decline", explanation: `Crime Index has no population for ${noPop.map((x) => x.a.label).join(" or ")}, so no rate is given.` };
+  const noPopLines = noPop.map((x) => `Crime Index has no population for ${x.a.label}, so no rate is given for it.`);
+  const names = per.map((x) => x.a.label);
+  const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
+  const rateOf = (x: typeof per[number], m: Month) => currentRate(x.values.get(m) ?? null, x.pops.get(m) ?? null, 1);
+  const gapLines = per.flatMap((x) => {
+    const blanks = covered.filter((m) => rateOf(x, m) === null);
+    return blanks.length ? [`No rate is given for ${blanks.map(monthWords).join(", ")} for ${x.a.label}: shown blank, not zero.`] : [];
+  });
+  const header = `${ucFirst(one)} rate per 100,000`;
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" },
+    { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
+  const rows = per.flatMap((x) => covered.map((m) => [x.a.name, m, rateOf(x, m)] as (string | number | null)[]));
+  const period = { from: covered[0], to: covered[covered.length - 1] };
+  const hm = HISTORICAL_MEASURE[cq.measure];
+  return {
+    kind: "current", period, coverage: [], read: { tables: ["current_final", "current_crime"], table: "current_final + current_crime", column: `${col}_total`, release: b.release },
+    question: { measure: cq.measure, place: per[0].a, agencies: per.slice(1).map((x) => x.a), from: cq.from, to: cq.to, form: "months", statistic: "rate" },
+    meaning: { source: "rtci", places: per.map((x) => ({ kind: "agency" as const, name: x.a.name, state: x.a.state })), period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: ["agency", "month"], statistic: "rate" },
+    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), titleCase(`${one} rate`), "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...noPopLines, ...outside, ...gapLines, "Source: Crime Index."] },
   };
 }

@@ -81,7 +81,7 @@ NEW = [
     group_case("Violent crime in Tennessee in August 2026", state("TN"), "violent crime", "2026-08", "2026-08", "V175", "tn", "violent_total", ["month"]),
     group_case("Property crime in Texas in August 2026", state("TX"), "property crime", "2026-08", "2026-08", "V175", "tx", "property_total", ["month"]),
     group_case("Rapes in Alabama in August 2026", state("AL"), "rape", "2026-08", "2026-08", "V175", "al", "rape_total", ["month"],
-               ["says no figure is known for August 2026 (never zero)"]),
+               ["says no figure is available for August 2026 (never zero)"]),
     # Routing (design note section 4): a Part I crime by month at a Current Trends agency is Current Trends'; NIBRS named
     # in words is NIBRS (P01).
     agency_case("Memphis murders by month in 2025", "rtci", "2025-01", "2025-12", ["month"], ["P01", "D04"]),

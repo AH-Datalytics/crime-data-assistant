@@ -481,8 +481,8 @@ function monthsReported(text: string[]): Set<string> {
   const out = new Set<string>();
   const idx = (ym: string) => Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1;
   const ymOf = (k: number) => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
-  for (const t of text.filter((x) => /^No data is known for /.test(x))) {
-    const list = /^No data is known for (.+?)(?:[:,] |$)/.exec(t)?.[1] ?? "";
+  for (const t of text.filter((x) => /^No data is available for /.test(x))) {
+    const list = /^No data is available for (.+?)(?:[:,] |$)/.exec(t)?.[1] ?? "";
     for (const part of list.split(/,\s*/)) {
       const ends = part.split(/\s+to\s+/).map(monthsNamed).map((x) => x[0]).filter(Boolean);
       if (ends.length === 2) for (let k = idx(ends[0]); k <= idx(ends[1]); k++) out.add(ymOf(k));
@@ -528,7 +528,7 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
     || (cols.change === null && new RegExp(`^No change in .+ is given between ${esc(E)} and ${esc(L)}\\.$`).test(line))
     || (cols.change === null && ((cols.earlier !== null) !== (cols.later !== null)) && new RegExp(`^.+ had ${esc(f((cols.earlier ?? cols.later)!))} .+ in (?:${esc(E)}|${esc(L)}), but the data for (?:${esc(E)}|${esc(L)}) is incomplete, so no change is given\\.$`).test(line))
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
-      || new RegExp(`^No data is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
+      || new RegExp(`^No data is available for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
   const text = o.delivered.text;
   return text.every(allowed) && (changeLine === null || text.some((l) => changeLine.test(l))) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
 }
@@ -615,7 +615,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       ok = o.plan.groupings.some((g) => g.dimension === "time.quarter")
         && o.delivered.table.rows.every((r) => { const [y, qn] = String(r[0]).split("-"); return (r[1] === null) === inc.includes(`${qn} ${y}`); });
     } else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
-    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No data is known for|Not every month of|were recorded for|does not establish|shown blank, not zero: reporting for|Shown blank, not zero, because reporting/.test(all);
+    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No data is available for|Not every month of|were recorded for|does not establish|shown blank, not zero: reporting for|Shown blank, not zero, because reporting/.test(all);
     else if (s === "names the months covered") ok = all.includes(periodWords(o.period.from, o.period.to));
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
     else if (/^says a unit with several categories counts once in each/.test(s)) ok = carries(o, "categories_overlap");
@@ -745,7 +745,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     } else if (/^gives no (?:combined total|rate), because not every month|^gives no combined total, because/.test(s)) {
       // Blank, with a reason, never a part-sum.
       ok = o.delivered.table.rows.length === 1 && o.delivered.table.rows[0].every((x) => typeof x === "string" || x === null)
-        && o.delivered.evidence.every((x) => x.status !== "VALUE") && /no (?:total|rate) is given .*because not every month is known/.test(text[0] ?? "");
+        && o.delivered.evidence.every((x) => x.status !== "VALUE") && /no (?:total|rate) is given .*because not every month is available/.test(text[0] ?? "");
     } else if (s === "gives the rate per 100,000 residents and names the population and its year") {
       const y = o.period.to.slice(0, 4);
       ok = rateHeader(o) && text.some((t) => new RegExp(`the FBI's ${y} population of the agency: .+ [\\d,]+\\.$`).test(t));
@@ -1271,7 +1271,7 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     else if (/^names the agencies with no figure, left out of the total \((\d+) of (\d+)\)$/.test(s)) {
       const [, n, of] = /\((\d+) of (\d+)\)/.exec(s)!;
       ok = new RegExp(`left out of the total: .*\\(${n} of ${of}\\)`).test(all);
-    } else if (/^says no figure is known for (.+) \(never zero\)$/.test(s)) ok = all.includes(`No figure is known for ${/for (.+) \(never/.exec(s)![1]}: shown blank, not zero.`) && rows.every((r) => r[r.length - 1] === null);
+    } else if (/^says no figure is available for (.+) \(never zero\)$/.test(s)) ok = all.includes(`No figure is available for ${/for (.+) \(never/.exec(s)![1]}: shown blank, not zero.`) && rows.every((r) => r[r.length - 1] === null);
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: all.slice(0, 200), kind: "material" });
   }
