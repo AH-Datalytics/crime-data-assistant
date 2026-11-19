@@ -561,5 +561,5 @@ export function partOneMonthly(v: CurrentAnswer | { kind: string }, p: CurrentAn
   const columns: ResultTable["columns"] = [a.delivered.table.columns[0],
     { binding: { kind: "statistic", as: "violent" }, header: "Violent crime" }, { binding: { kind: "statistic", as: "property" }, header: "Property crime" },
     { binding: { kind: "statistic", as: "part_one" }, header: "Part I crime" }];
-  return { ...a, delivered: { table: { columns, rows }, text: [title, ...shared, ...gap(1, "Violent crime"), ...gap(2, "Property crime"), "Source: Crime Index."] } };
+  return { ...a, meaning: { ...a.meaning, measures: [...a.meaning.measures, ...b.meaning.measures], groupings: ["month"] }, delivered: { table: { columns, rows }, text: [title, ...shared, ...gap(1, "Violent crime"), ...gap(2, "Property crime"), "Source: Crime Index."] } };
 }
