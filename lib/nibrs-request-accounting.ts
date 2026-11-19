@@ -498,7 +498,7 @@ function recordWhich(ledger: RequestLedger): void {
 }
 
 /** NIBRS filler beyond the shared between-filler words: verbs and articles that never restrict. */
-const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use)$/i;
+const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use|metrics)$/i;
 
 /**
  * Stage 3b (GC-089, plan r1.3): conversational phrases that never restrict, recorded as context before the word filler:
@@ -516,16 +516,28 @@ function recordNibrsPhraseFiller(ledger: RequestLedger): void {
   }
 }
 
+const MULTI_WORD_FILLER = /^(?:you|have|has|had|me|the|a|an|do|does|did|i|can|could|see|show|give|get|find|list|please|metrics|in|for|is|are|was|were|there)$/i;
 function recordNibrsFiller(ledger: RequestLedger): void {
   recordNibrsPhraseFiller(ledger);
   recordBetweenFiller(ledger);
   const q = ledger.question;
   const recorded = [...ledger.parts].sort((a, b) => a.span[0] - b.span[0]);
+  // A run of consecutive residue words ("you have", "metrics in") is filler when every word is and the run's two edges touch recorded parts.
+  const runs: { text: string; span: Span }[][] = [];
   for (const piece of ledger.residue()) {
-    if (!NIBRS_FILLER.test(piece.text)) continue;
-    const before = /^\s*$/.test(q.slice(0, piece.span[0])) || recorded.some((p) => p.span[1] <= piece.span[0] && /^[\s,]*$/.test(q.slice(p.span[1], piece.span[0])));
-    const after = recorded.some((p) => p.span[0] >= piece.span[1] && /^[\s,]*$/.test(q.slice(piece.span[1], p.span[0]))) || /^[\s?.!]*$/.test(q.slice(piece.span[1]));
-    if (before && after) ledger.record({ concept: "filler", span: piece.span, rule: "nibrs-filler", state: "context" });
+    const run = runs[runs.length - 1];
+    if (run && /^\s*$/.test(q.slice(run[run.length - 1].span[1], piece.span[0]))) run.push(piece); else runs.push([piece]);
+  }
+  for (const run of runs) {
+    if (!run.every((piece) => NIBRS_FILLER.test(piece.text))) continue;
+    // A run of several words is only linking words: "where a firearm was stolen" keeps its "where" (it restricts), as before.
+    if (run.length > 1 && !run.every((piece) => MULTI_WORD_FILLER.test(piece.text))) continue;
+    // "do you have shootings data" (no place) asks about the data itself; "do you have carjacking data for New Orleans by month" asks for figures.
+    if (/^you have$/i.test(run.map((piece) => piece.text).join(" ")) && !ledger.parts.some((p) => p.concept === "place")) continue;
+    const start = run[0].span[0], end = run[run.length - 1].span[1];
+    const before = /^\s*$/.test(q.slice(0, start)) || recorded.some((p) => p.span[1] <= start && /^[\s,]*$/.test(q.slice(p.span[1], start)));
+    const after = recorded.some((p) => p.span[0] >= end && /^[\s,]*$/.test(q.slice(end, p.span[0]))) || /^[\s?.!]*$/.test(q.slice(end));
+    if (before && after) for (const piece of run) ledger.record({ concept: "filler", span: piece.span, rule: "nibrs-filler", state: "context" });
   }
 }
 

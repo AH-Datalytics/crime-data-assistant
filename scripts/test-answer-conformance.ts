@@ -395,7 +395,7 @@ check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before ===
   const rows = o.kind === "answer" ? o.delivered.table.rows : [];
   const p = presentationOf(o, places) as Presentation;
   check(rows[0]?.[0] === "2024-03" && rows.length === 10, `the leading gap is left out: ${JSON.stringify(rows.slice(0, 2))}`);
-  check(notesOf(p).includes("No data is known for January 2024 to February 2024, so the chart and table start at March 2024."), `the leading-gap note: ${notesOf(p).join(" / ")}`);
+  check(notesOf(p).includes("No data is available for January 2024 to February 2024, so the chart and table start at March 2024."), `the leading-gap note: ${notesOf(p).join(" / ")}`);
 }
 // P90: the people a consistent view covers, in round words.
 for (const [n, want] of [[4_123_456, "4.1 million"], [12_345_678, "12 million"], [853_000, "850,000"], [331_000_000, "330 million"], [1_960, "2,000"], [1_049_000, "1 million"]] as const)
