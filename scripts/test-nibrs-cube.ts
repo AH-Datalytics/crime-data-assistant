@@ -8,6 +8,7 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
+import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
 import { ageMapping, cubeFromEnv, cubeUnits, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_VERSION, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
@@ -27,6 +28,20 @@ console.log("nibrs cube: the cube serves exactly its cell families; every other 
   assert.equal(ageMapping([{ label: "Under 18", from: 0, to: 17 }, { label: "18 and over", from: 18, to: 99 }]), null, "age 0 is outside the cube's bins");
   const partial = ageMapping([{ label: "Under 18", from: 1, to: 17 }, { label: "18-24", from: 18, to: 24 }])!;
   assert.equal(partial.map["35-44"], "Outside the groups", "a cube bin no plan bin covers reads as Outside the groups, as the raw binning does");
+}
+
+// --- ORI sets in statements: a national set is one split string, a state's stays the plain list DuckDB can prune raw tables with.
+{
+  const small = ["TX0010000", "TX0020000", "NY0030000"];
+  assert.equal(oriRows(small), "unnest(['TX0010000', 'TX0020000', 'NY0030000'])", "a short set is the plain list, as before");
+  assert.equal(oriIn("ori", small), "ori IN ('TX0010000', 'TX0020000', 'NY0030000')", "and its IN is the plain list: the raw tables are pruned by it");
+  const big = Array.from({ length: BIG_LIST + 1 }, (_, i) => `ZZ${String(i).padStart(7, "0")}`);
+  assert.equal(oriRows(big), `unnest(string_split('${big.join(",")}', ','))`, "a national set is one string split inside DuckDB");
+  assert.equal(oriIn("u.ori", big), `u.ori IN (SELECT unnest(string_split('${big.join(",")}', ',')))`);
+  assert.ok(oriRows(big).length < big.map((o) => `'${o}'`).join(", ").length, "and smaller than the list");
+  const odd = [...big.slice(0, -1), "A,B"];
+  assert.match(oriRows(odd), /^unnest\(\['ZZ/, "an ORI that would break the split keeps the list literal");
+  assert.match(oriRows([...big.slice(0, -1), "O'N"]), /'O''N'/, "a quote is escaped in the list literal");
 }
 
 // --- Eligibility.

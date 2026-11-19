@@ -46,6 +46,7 @@
  * D7/D8) lands; they are in `unitsSql` below.
  */
 import { cubeFromEnv, cubeUnits, shadowSql, type CubeConfig } from "./cube";
+import { BIG_LIST, oriRows } from "./ori-rows";
 import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
 import { clearanceDims, peopleFacts, type AnswerStatement } from "./result";
@@ -364,7 +365,13 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   } else if (plan.groupings[0]?.dimension !== "time.month" || plan.groupings.slice(1).some((g) => g.dimension.startsWith("time.")) || plan.groupings.length > 2 || plan.statistics.length !== 1)
     // A monthly grid of one count, by at most one category (coordinator 2026-11-04: a state or national sum by category).
     return no("v0 compiles several agencies as a monthly grid of one count, by at most one category");
-  const oriIs = (col: string) => (grid ? `${col} IN (${list(grid)})` : `${col} = ${q((place as { ori: string }).ori)}`);
+  // A national grid (about 17,000 agencies) names them once, in the first CTE (GRID), and every other use reads that CTE: the list is about
+  // 230 KB, and four copies made a statement of 1 MB that DuckDB spent more than a second parsing. A state's grid (under BIG_LIST agencies) stays an
+  // inline list: `ori IN ('..', ..)` lets DuckDB skip row groups of the raw tables outside the state, `IN (SELECT ..)` does not (Texas raw: 1 s and
+  // 380 MB inline, 4 s and 2.4 GB through the CTE), and a short list costs nothing to parse.
+  const GRID = "grid_agencies";
+  const bigGrid = !!grid && grid.length > BIG_LIST;
+  const oriIs = (col: string) => (grid ? (bigGrid ? `${col} IN (SELECT ori FROM ${GRID})` : `${col} IN (${list(grid)})`) : `${col} = ${q((place as { ori: string }).ori)}`);
   if (plan.groupings.some((g) => g.absent !== "show")) return no("v0 shows every category");
 
   // Groupings: at most one time grouping, first; then attributes of the counted entity.
@@ -541,10 +548,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // In grid mode every month and status is per agency (O: the ori column and join key).
   const O = grid ? "ori, " : "";
   const parts = [
+    ...(bigGrid ? [`${GRID} AS (SELECT ${oriRows(grid!)} AS ori)`] : []),
     `units AS (${cube ? cube.sql : units.sql})`,
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
     // Every month of the period, so a month with no rows still gets a status.
-    `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a` : ""} WHERE TRUE${inYears("ym")})`,
+    `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? (bigGrid ? ` CROSS JOIN ${GRID} a` : ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a`) : ""} WHERE TRUE${inYears("ym")})`,
     `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.

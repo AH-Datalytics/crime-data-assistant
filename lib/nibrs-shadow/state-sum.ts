@@ -17,6 +17,7 @@
 import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan, NO_CATEGORY } from "../nibrs-plan/compile";
+import { oriIn, oriRows } from "../nibrs-plan/ori-rows";
 import { rate } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliver as deliverRows, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
@@ -61,7 +62,7 @@ export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crime
 export function currentPopulationSql(root: string, oris: string[]): string {
   return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
     FROM read_parquet('${root.replace(/'/g, "''")}/agency/data.parquet'), unnest(by_year) AS t(u)
-    WHERE ori IN (${list(oris)}) AND u.population IS NOT NULL GROUP BY ori`;
+    WHERE ${oriIn("ori", oris)} AND u.population IS NOT NULL GROUP BY ori`;
 }
 
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
@@ -259,7 +260,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const g = catDims[0].dimension, count = plan.statistics.find((x) => x.kind === "count")!, share = plan.statistics.find((x) => x.kind === "share");
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
     const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
-        coalesce(sum(n) FILTER (WHERE ori IN (SELECT unnest([${list(everySet.length ? everySet : [""])}]))), 0) AS n_every
+        coalesce(sum(n) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0) AS n_every
       FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
      ` : ""} WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
     const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2]]);
