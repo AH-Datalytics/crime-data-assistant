@@ -15205,11 +15205,13 @@
 "QL-shr-395acf3f23": {
 "status": "draft",
 "by": "codex-second-1",
-"why": "Missouri and Minnesota have qualifying counties.",
+"why": "P28: the agencies named St. Louis County are Missouri's (population 400,341) and Minnesota's (56,832); the 100,000 floor leaves Missouri's, used without asking. PROPOSED 2026-11-20, pending Jeff.",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which St Louis County"
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
 ]
 }
 },

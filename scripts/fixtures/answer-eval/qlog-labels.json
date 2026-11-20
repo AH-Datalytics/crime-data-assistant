@@ -70520,19 +70520,24 @@
    "question": "What is the total number of gun homicides in St. Louis County 2026 year-to-date?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which St Louis County"
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
     ],
-    "about": "which St Louis County"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Missouri and Minnesota have qualifying counties."
+    "notes": "P28: the agencies named St. Louis County are Missouri's (population 400,341) and Minnesota's (56,832); the 100,000 floor leaves Missouri's, used without asking. PROPOSED 2026-11-20, pending Jeff."
    }
   },
   {
