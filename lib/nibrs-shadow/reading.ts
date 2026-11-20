@@ -572,6 +572,13 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     composite = weapon;
     return to;
   });
+  // A year named beside the to-date word is that one period ("Memphis ... 2026 year-to-date", "YTD 2026", "year to date for 2026"): read once, never as
+  // the named year plus the current year ("I can answer for one period at a time").
+  text = text.replace(/\b(?:((?:19|20)\d{2})\s+(?:year[-\s]to[-\s]date|ytd)|(?:year[-\s]to[-\s]date|ytd)\s+(?:(?:of|for|in)\s+)?((?:19|20)\d{2}))\b/gi, (m, a, b) => {
+    const to = `in ${a ?? b}`;
+    readings.push({ kind: "period", from: m, to });
+    return to;
+  });
   text = text.replace(YTD, (m, y) => {
     const to = `in ${y ?? currentYear}`;
     readings.push({ kind: "period", from: m, to });
