@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
+import { cubeServesMeasure } from "../lib/nibrs-plan/compile";
 import { ageFilterBins, ageMapping, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, WEAPON_FILE_SHA256_V1, WEAPON_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 import { categorySumsFromGrid } from "../lib/nibrs-shadow/state-sum";
 
@@ -261,6 +262,13 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["11", "12", "13", "14", "15"] }), null, "the firearm list is all ten values, flag or not");
   assert.equal(cubeWeaponUnits({ ...ask, grouping: false, weaponFilter: ["11A"] }), null, "an automatic firearm is not a cell of the cube");
   assert.equal(cubeWeaponUnits({ ...ask, cfg: { ...cfgW, weapon: { ...weapon, attributes: ["weapon"] } }, grouping: false, weaponFilter: firearm }), null, "no firearm attribute listed");
+}
+
+// --- Which measures a cube may serve: only a measure that is exactly the units of its offense codes. A measure with more in its own statement is never read from the row of
+// the group that shares its code list (domestic violence, P82, shares person_crimes' fourteen codes: the runner found 2 to 2.8 times the right count when it was routed there).
+{
+  for (const id of ["victims.person_crimes", "victims.murder", "offenses.robbery", "incidents.burglary", "arrests.all_crime", "arrests.drug_crimes", "offenders.aggravated_assault", "group_b_arrests.dui"]) assert.ok(cubeServesMeasure(id), `${id} is a plain-codes measure`);
+  for (const id of ["victims.domestic_violence", "offenses.domestic_violence", "arrests.domestic_violence", "incidents.domestic_violence", "offenses.carjacking", "incidents.carjacking", "victims.hate_crime", "victims.some_new_measure", "victims", "victims.justifiable_homicide", "offenders.justifiable_homicide"]) assert.ok(!cubeServesMeasure(id), `${id} is never read from a cube`);
 }
 
 // --- The manifest check: a cube is used only when it was built from this release, with the engine's group lists, and its file is there.
