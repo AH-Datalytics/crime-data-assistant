@@ -530,7 +530,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
-  const cubeCfg = cubeWanted;
+  // Domestic violence (P82) is a victim-level condition no cube cell holds: its 14 crimes are the person_crimes group's, so a cube read would count every person-crime victim
+  // (the runner found Memphis at 38,037 instead of 15,333). Never the cube, whatever the unit asked: the raw statement.
+  const cubeCfg = /\.domestic_violence$/.test(m.id) ? null : cubeWanted;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;
