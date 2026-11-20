@@ -131,7 +131,7 @@ const FILTERS: Rule[] = [
   { concept: "fentanyl", pattern: R(String.raw`\bfentanyl\b`), state: "not-recorded", explanation: FENTANYL },
   // domestic violence categories
   { concept: "filter", value: () => "dv:intimate_partner", pattern: R(String.raw`\bintimate[-\s]partners?(?:\s+violence)?\b|\bipv\b`) },
-  { concept: "filter", value: () => "dv:family", pattern: R(String.raw`\bfamily\s+violence\b`) },
+  { concept: "filter", value: () => "dv:family", pattern: R(String.raw`\bfamily\s+violence\b|\bby\s+(?:family|household)\s+members?\b`) },
   // bias motivations
   { concept: "filter", value: () => "bias:21", pattern: R(String.raw`\banti[-\s]?(?:jewish|semitic)\b|\bantisemitic\b`) },
   { concept: "filter", value: () => "bias:12", pattern: R(String.raw`\banti[-\s]?black\b`) },
