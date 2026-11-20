@@ -20,7 +20,7 @@ export type EngineRequest = {
 };
 
 export type EngineFailKind = "busy" | "timeout" | "unavailable" | "bad_request" | "error";
-export type EngineOk = { ok: true; response: unknown; ms: number; release: string };
+export type EngineOk = { ok: true; response: unknown; ms: number; release: string; /** The statement an answer ran (for the query log only, never shown); null for a question, a decline or a button step. */ sql?: string | null };
 export type EngineFail = { ok: false; kind: EngineFailKind; message: string };
 export type EngineResult = EngineOk | EngineFail;
 
