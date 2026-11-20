@@ -160,6 +160,42 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P170 (P82, Jeff 2026-11-19): domestic violence is the victims of the P82 crimes with an intimate partner or a family or household relationship to any offender, for one agency first.
+{
+  const dv = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(dv.plan.measures[0].id, "victims.domestic_violence");
+  assert.ok(dv.delivered.text.some((t) => /^Domestic violence counts each victim of murder or manslaughter, a sex offense, assault, kidnapping, incest, statutory rape or human trafficking whose offender/.test(t)), JSON.stringify(dv.delivered.text));
+  const n0 = sqls.length;
+  as(ask("Domestic violence in Houston in 2024"), "answer");
+  const dvSql = sqls.slice(n0).find((s) => /o9\.offense_code = vo\.connected_offense/.test(s)) ?? "";
+  assert.ok(/vo\.connected_offense IN \('09A', '09B', '11A', '11B', '11C', '11D', '13A', '13B', '13C', '100', '36A', '36B', '64A', '64B'\)/.test(dvSql), "the 14 P82 crimes");
+  assert.ok(/r9\.offender_relationship IN \('SE', 'CS', 'BG', 'XS', 'XR', 'HR', 'CH', 'PA', 'SB', 'OF', 'SC', 'SP', 'GP', 'GC', 'IL', 'CF', 'BE', 'SS', 'FP', 'FC', 'CO'\)/.test(dvSql), "any pair to any offender, intimate partner or family or household");
+  const ipv = as(ask("intimate partner violence in Houston in 2024"), "answer") as unknown as { plan: { filters: { kind: string }[] } };
+  assert.ok(ipv.plan.filters.length >= 1, "intimate partner is the partner relationships beside the domestic definition");
+  as(ask("family violence in Houston in 2024"), "answer");
+  // An offender's occupation is not recorded: "police involved" is never dropped (QL-nibrs-846998f783 expects a decline).
+  const police = ask("how many police involved domestic violence victims were reported in Houston in 2024?");
+  assert.ok(police.kind === "decline" && /police involved/.test(police.explanation), JSON.stringify(police).slice(0, 300));
+  // Not built yet: other units, and a state, the nation or several places (never the crimes alone).
+  // 3d: offenses and arrests, the unit asked, each with its own definition sentence.
+  const n2 = sqls.length;
+  const off = as(ask("domestic violence offenses in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(off.plan.measures[0].id, "offenses.domestic_violence");
+  assert.ok(off.delivered.text.includes("Offenses are the offenses of those crimes in incidents that had a domestic violence victim."), JSON.stringify(off.delivered.text));
+  const arr = as(ask("domestic violence arrests in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(arr.plan.measures[0].id, "arrests.domestic_violence");
+  assert.ok(arr.delivered.text.includes("Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders."), JSON.stringify(arr.delivered.text));
+  assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
+  for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
+    assert.equal(ask(q).kind, "decline", q);
+  // 3b: the incidents with at least one domestic violence victim (the same P82 victim membership, each incident once).
+  const n1 = sqls.length;
+  const inc = as(ask("How have domestic violence incidents trended in Houston since 2019"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(inc.plan.measures[0].id, "incidents.domestic_violence");
+  assert.ok(inc.delivered.text.includes("An incident is counted once when at least one of its victims is counted as a domestic violence victim."), JSON.stringify(inc.delivered.text));
+  const incSql = sqls.slice(n1).find((s) => /o9\.offense_code = vo\.connected_offense/.test(s)) ?? "";
+  assert.ok(/r9\.offender_relationship IN \('SE'/.test(incSql) && /SELECT DISTINCT o\.data_year, o\.ori, o\.incident_num, NULL AS sub/.test(incSql), "distinct incidents from the qualifying victims");
+}
 // P153: a line, an annotation or a marker at a date on a chart is declined with its own sentence.
 for (const q of ["DC violent crime rolling over 12 months with a line at August 2025", "Houston murders per month with an annotation at May 2020",
   "Give me a chart of the monthly murder counts in Baltimore and Detroit. Add some kind of marker to show August 2025 on the chart."]) {
