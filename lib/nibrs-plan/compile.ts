@@ -266,12 +266,22 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   if (!m || !codes) return { error: `measure "${measureId}" has no executable definition in v0` };
   if (codes.some((c) => GROUP_B.has(c))) return { error: `"${measureId}" is a Group B offense: Group B arrests are not offense segments` };
   // P82 defines domestic violence by victim only; its offenses, incidents and arrests (the unit asked) are not built yet, never answered as the crimes alone.
-  if (m[2] === "domestic_violence" && m[1] !== "victims") return { error: `"${measureId}" has no executable definition in v0 (domestic violence is built by victim only)` };
+  if (m[2] === "domestic_violence" && m[1] !== "victims" && m[1] !== "incidents") return { error: `"${measureId}" has no executable definition in v0 (domestic violence is built by victim and by incident only)` };
   const kind = m[1];
   if (kind === "offenses" && unit === "offense") {
     // An offense segment's identity includes its occurrence key (a code repeated within an incident).
     return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
       FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+  }
+  if (kind === "incidents" && unit === "incident" && m[2] === "domestic_violence") {
+    // 3b: the distinct incidents with at least one P82 domestic violence victim (the victims' membership, each incident once).
+    return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("victim")} o JOIN ${read("victim_offense")} vo
+        ON vo.data_year = o.data_year AND vo.ori = o.ori AND vo.incident_num = o.incident_num
+       AND vo.victim_seq = o.victim_seq AND vo.key_occurrence = o.key_occurrence ${joins}
+      WHERE vo.connected_offense IN (${list(codes)})
+        AND EXISTS (SELECT 1 FROM ${read("offense")} o9 WHERE ${sameIncident("o9", "o")} AND o9.offense_code = vo.connected_offense)
+        AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "o")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))${incidentFilter("o")}` };
   }
   if (kind === "incidents" && unit === "incident") {
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}

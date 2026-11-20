@@ -173,8 +173,15 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   assert.ok(ipv.plan.filters.length >= 1, "intimate partner is the partner relationships beside the domestic definition");
   as(ask("family violence in Houston in 2024"), "answer");
   // Not built yet: other units, and a state, the nation or several places (never the crimes alone).
-  for (const q of ["domestic violence offenses in Houston in 2024", "domestic violence incidents in Houston in 2024", "domestic violence arrests in Houston in 2024", "Domestic violence in Texas in 2024", "domestic violence nationally in 2024"])
+  for (const q of ["domestic violence offenses in Houston in 2024", "domestic violence arrests in Houston in 2024", "Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence incidents in Texas in 2024"])
     assert.equal(ask(q).kind, "decline", q);
+  // 3b: the incidents with at least one domestic violence victim (the same P82 victim membership, each incident once).
+  const n1 = sqls.length;
+  const inc = as(ask("How have domestic violence incidents trended in Houston since 2019"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(inc.plan.measures[0].id, "incidents.domestic_violence");
+  assert.ok(inc.delivered.text.includes("An incident is counted once when at least one of its victims is counted as a domestic violence victim."), JSON.stringify(inc.delivered.text));
+  const incSql = sqls.slice(n1).find((s) => /o9\.offense_code = vo\.connected_offense/.test(s)) ?? "";
+  assert.ok(/r9\.offender_relationship IN \('SE'/.test(incSql) && /SELECT DISTINCT o\.data_year, o\.ori, o\.incident_num, NULL AS sub/.test(incSql), "distinct incidents from the qualifying victims");
 }
 // P153: a line, an annotation or a marker at a date on a chart is declined with its own sentence.
 for (const q of ["DC violent crime rolling over 12 months with a line at August 2025", "Houston murders per month with an annotation at May 2020",
