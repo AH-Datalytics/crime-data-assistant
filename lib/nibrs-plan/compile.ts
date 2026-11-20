@@ -274,17 +274,20 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
   }
   // 3d: an incident that has a P82 domestic violence victim (the victims' membership), for the offenses and the arrests the unit asked names.
-  const dvIncident = (a: string) => `EXISTS (SELECT 1 FROM ${read("victim")} dv JOIN ${read("victim_offense")} dvo
+  // The incidents with a P82 victim, once, as a derived table joined on the incident key: a join lets DuckDB carry the agency and year conditions into it (the correlated EXISTS
+  // it replaces was read over every year of every agency: 70 s for offenses and 320-410 s for arrests of ONE agency, the runner's timing).
+  const dvJoin = (a: string) => `JOIN (SELECT DISTINCT dv.data_year, dv.ori, dv.incident_num FROM ${read("victim")} dv JOIN ${read("victim_offense")} dvo
         ON dvo.data_year = dv.data_year AND dvo.ori = dv.ori AND dvo.incident_num = dv.incident_num AND dvo.victim_seq = dv.victim_seq AND dvo.key_occurrence = dv.key_occurrence
-      WHERE ${sameIncident("dv", a)} AND dvo.connected_offense IN (${list(codes)})
+      WHERE dvo.connected_offense IN (${list(codes)})
         AND EXISTS (SELECT 1 FROM ${read("offense")} o9 WHERE ${sameIncident("o9", "dv")} AND o9.offense_code = dvo.connected_offense)
-        AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "dv")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)})))`;
+        AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "dv")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))) dvq
+      ON dvq.data_year = ${a}.data_year AND dvq.ori = ${a}.ori AND dvq.incident_num = ${a}.incident_num`;
   if (kind === "offenses" && unit === "offense" && m[2] === "domestic_violence")
     return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)}) AND ${dvIncident("o")}${incidentFilter("o")}` };
+      FROM ${read("offense")} o ${dvJoin("o")} ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
   if (kind === "arrests" && (unit === "arrest" || unit === "arrestee") && m[2] === "domestic_violence")
     return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M' AND ${dvIncident("a")}${incidentFilter("a")}` };
+      FROM ${read("arrestee")} a ${dvJoin("a")} ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${incidentFilter("a")}` };
   if (kind === "incidents" && unit === "incident" && m[2] === "domestic_violence") {
     // 3b: the distinct incidents with at least one P82 domestic violence victim (the victims' membership, each incident once).
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
