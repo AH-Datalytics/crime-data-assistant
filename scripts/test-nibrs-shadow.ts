@@ -1475,6 +1475,11 @@ for (const q of ["YTD 2026 compared to 2025 shoplifting in Detroit", "Shopliftin
   assert.equal(o.delivered.text[0], "Detroit had 63 shoplifting offenses in January through September 2026, but the data for January through September 2024 is incomplete, so no change is given.");
   assert.ok(o.delivered.text.includes("No data is available for March 2024, so the January through September 2024 total is not established and no change is given."));
 }
+// A year named beside the to-date word is one period, not a second one ("gun homicides in Memphis 2026 year-to-date" was declined).
+for (const q of ["Shoplifting in Detroit 2025 year-to-date", "Shoplifting in Detroit YTD 2025", "Shoplifting in Detroit year to date for 2025", "Shoplifting in Detroit in 2025 YTD"]) {
+  const o = ask(q);
+  assert.ok(o.kind !== "decline" || !/one period at a time/.test(o.explanation), `${q}: ${o.kind === "decline" ? o.explanation : o.kind}`);
+}
 // Not changed: no to-date word keeps today's reading; one year to date alone is not a comparison.
 assert.equal(as(ask("Is shoplifting in Detroit up this year compared with last year?"), "answer").delivered.text.includes("Compares the same months of each year: January through September."), true);
 // "Compared with" and "percent change" read; a change with a NIBRS filter is a comparison too.
