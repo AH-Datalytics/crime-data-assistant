@@ -229,6 +229,21 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P160 (Jeff 2026-11-19): a person's detail written as a noun phrase is that breakdown: "murder victim race in Houston" is
+  // "murder victims by race in Houston", "homicide offender race" is "homicide offenders by race"; "victim demographics by
+  // race" is "victims by race"; "the racial breakdown of murder victims" is "murder victims by race"; "homicide circumstances"
+  // is "homicides by circumstance". Never after "by" ("by victim race" is read by the people reader below).
+  [/(?<!\bby\s+(?:the\s+)?)\b(victim|offender)s?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b(?!\s+(?:and|or|\/)\s+(?:race|sex|gender|ethnicity|age)\b)/gi, "$1s by $2"],
+  [/\b(victim|offender)s?\s+(?:demographics|demographic\s+breakdown)\s+by\s+(race|sex|gender|ethnicity|age)\b/gi, "$1s by $2"],
+  [/\b(?:the\s+)?racial\s+(?:breakdown|makeup|composition|distribution)\s+of\s+((?:[a-z]+\s+){0,3}?(?:victims|offenders))\b/gi, "$1 by race"],
+  [/\b(murder|homicide|killing)s?\s+circumstances?\b/gi, "$1s by circumstance"],
+  // P162 (Jeff 2026-11-19): "what percentage of murder victims were female" is the victims by sex with each sex's share; the table
+  // carries the asked share and the other. "...are in each race" is the same by race.
+  [/\b(?:what\s+|how\s+much\s+)?(?:percentage|percent|share|proportion)\s+of\s+((?:[a-z]+\s+){0,2}?(?:murder|homicide)\s+(?:victims|offenders))\s+in\s+((?:[a-z.'-]+\s+){1,3}?)(?:were|are|was|is|have\s+been)\s+(?:male|female|men|women|males|females)\b/gi, "share of $1 by sex in $2"],
+  [/\b(?:what\s+|how\s+much\s+)?(?:percentage|percent|share|proportion)\s+of\s+((?:[a-z]+\s+){0,2}?(?:murder|homicide)\s+(?:victims|offenders))\s+(?:were|are|was|is|have\s+been)\s+(?:male|female|men|women|males|females)\b/gi, "share of $1 by sex"],
+  [/\b(?:what\s+)?(?:percentage|percent|share|proportion)\s+of\s+((?:[a-z]+\s+){0,2}?(?:murder|homicide)\s+(?:victims|offenders))\s+(?:are|were)\s+in\s+each\s+(race|sex|age\s+group|ethnicity)\b/gi, "share of $1 by $2"],
+  // "What race are offenders in NYC murders in 2024?": the offenders' race for the murders.
+  [/\bwhat\s+(race|sex|gender|ethnicity|age)\s+(?:are|were)\s+(?:the\s+)?(offenders|victims)\s+(?:in|of|for)\s+(.+?)\s+(murder|homicide)s\b/gi, "$4 $2 by $1 in $3"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];
