@@ -317,6 +317,13 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
   }
   return null;
 }
+/**
+ * The measures a cube may serve: those whose definition in `unitsSql` is exactly the units of their offense codes (the measures of MEASURE_CODES, D19's two drug measures, and every
+ * arrest: "all_crime"). The cube is keyed by code list, so a measure with an extra condition inside its own statement (carjacking's stolen vehicle, domestic violence's
+ * relationship and incident rules) would be read as the plain group that shares its codes: a wrong count, not a slow one. A measure is added here only with its own cube check.
+ */
+const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES), "drug_equipment", "drug_crimes", "all_crime"]);
+export const cubeServesMeasure = (id: string): boolean => CUBE_PLAIN_MEASURES.has(id.split(".")[1] ?? "");
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
 
@@ -511,20 +518,23 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
-  const cubeCfg = cubeWanted;
+  // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
+  // (carjacking, domestic violence, any later one) is never answered from the cube row of the group whose code list it happens to share.
+  const cubeCfg = cubeWanted && cubeServesMeasure(m.id) ? cubeWanted : null;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;
   const onlyAgeFilter = af && af.kind === "attribute" && af.dimension.split(".")[1] === "age" && af.op === "between" && af.values?.length === 2
     ? { dimension: af.dimension, lo: Number(af.values[0]), hi: Number(af.values[1]) } : null;
+  // The offense cube is asked first and the weapon cube second: with both set, a weapon question (which the offense cube does not hold) is still the weapon cube's.
   const cube: { sql: string; totalSql?: string } | null = cubeCfg && ["offender", "victim", "arrestee", "group_b_arrest"].includes(units.entity) && attrDims.length <= 1 ? cubeUnits({
     cfg: cubeCfg, kind: m.id.startsWith("offenders.") ? "offenders" : m.id.startsWith("victims.") ? "victims" : "arrests",
     codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? null,
     allCrimeArrests: m.id === "arrests.all_crime", groupB: units.entity === "group_b_arrest", attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
     conditioned: !onlyAgeFilter && (plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > 0),
-    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : cubeCfg?.offense && (units.entity === "offense" || units.entity === "incident") && attrDims.length <= 1 && (m.id.startsWith("offenses.") || m.id.startsWith("incidents.")) && !m.id.endsWith(".carjacking") ? cubeOffenseUnits({
+    ...(onlyAgeFilter ? { ageFilter: onlyAgeFilter } : {}) }) : ((cubeCfg?.offense && (units.entity === "offense" || units.entity === "incident") && attrDims.length <= 1 && (m.id.startsWith("offenses.") || m.id.startsWith("incidents.")) && !m.id.endsWith(".carjacking") ? cubeOffenseUnits({
     cfg: cubeCfg, entity: units.entity, codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? [], attribute: attrDims[0] ? { dimension: attrDims[0].dimension, bins: attrDims[0].bins } : null, wantsIncidents: !!inc, years,
-    conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > groupingJoins }) : cubeCfg?.weapon && units.entity === "offense" && attrDims.length <= 1 && m.id.startsWith("offenses.") && !m.id.endsWith(".carjacking") ? (() => {
+    conditioned: plan.filters.length > 0 || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > 0 || clearanceConds.length > 0 || ownConds.length > 0 || joins.length > groupingJoins }) : null) ?? (cubeCfg?.weapon && units.entity === "offense" && attrDims.length <= 1 && m.id.startsWith("offenses.") && !m.id.endsWith(".carjacking") ? (() => {
     // The weapon cube holds ONE weapon cell per question: the weapon grouping, or the plan's one weapon filter ("firearm", one weapon code), nothing else.
     const wf = plan.filters.length === 1 ? plan.filters[0] : null;
     const weaponFilter = wf && wf.kind === "exists" && !wf.negate && wf.entity === "offense_weapon" && wf.scope === "offense" && wf.where.length === 1 && wf.where[0].kind === "attribute"
@@ -532,7 +542,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     const grouping = attrDims.length === 1 && attrDims[0].dimension === "offense_weapon.weapon";
     return cubeWeaponUnits({ cfg: cubeCfg, codes: MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? [], grouping, weaponFilter, wantsIncidents: !!inc, years,
       conditioned: (plan.filters.length > (weaponFilter ? 1 : 0)) || !!m.filters?.length || incidentConds.length > 0 || unitConds.length > (weaponFilter ? 1 : 0) || clearanceConds.length > 0 || ownConds.length > 0
-        || (attrDims.length === 1 && !grouping) || (!!weaponFilter && grouping) }); })() : null;
+        || (attrDims.length === 1 && !grouping) || (!!weaponFilter && grouping) }); })() : null));
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
   if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
