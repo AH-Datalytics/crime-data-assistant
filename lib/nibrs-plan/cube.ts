@@ -91,15 +91,20 @@ export const listSha256 = (codes: string[]): string => createHash("sha256").upda
 export function cubeFromEnv(env: Record<string, string | undefined> = process.env, releaseRoot?: string): CubeConfig | null {
   const mode = env.NIBRS_CUBE === "on" || env.NIBRS_CUBE === "shadow" ? env.NIBRS_CUBE : null;
   const clean = (r: string | undefined) => (r ? r.replace(/\\/g, "/").replace(/\/+$/, "") : undefined);
-  const groupRoot = clean(env.NIBRS_CUBE_ROOT), codeRoot = clean(env.NIBRS_CODE_CUBE_ROOT), offenseRoot = clean(env.NIBRS_OFFENSE_CUBE_ROOT), weaponRoot = clean(env.NIBRS_WEAPON_CUBE_ROOT);
-  if (!mode || (!groupRoot && !codeRoot && !offenseRoot && !weaponRoot)) return null;
+  const setFile = clean(env.NIBRS_CUBE_SET), setSha = (env.NIBRS_CUBE_SET_SHA256 ?? "").trim().toLowerCase();
+  const explicit = { group: clean(env.NIBRS_CUBE_ROOT), code: clean(env.NIBRS_CODE_CUBE_ROOT), offense: clean(env.NIBRS_OFFENSE_CUBE_ROOT), weapon: clean(env.NIBRS_WEAPON_CUBE_ROOT) };
+  if (!mode || (!explicit.group && !explicit.code && !explicit.offense && !explicit.weapon && !setFile)) return null;
   // The manifests' own stamps are part of the key: a rebuilt cube is noticed, and nothing else is read twice.
   const stamp = (r: string | undefined) => { if (!r) return "-"; try { const st = fs.statSync(`${r}/manifest.json`); return `${st.mtimeMs}:${st.size}`; } catch { return "none"; } };
-  const key = `${mode}:${groupRoot}:${stamp(groupRoot)}:${codeRoot}:${stamp(codeRoot)}:${offenseRoot}:${stamp(offenseRoot)}:${weaponRoot}:${stamp(weaponRoot)}:${releaseRoot ?? ""}`;
+  const fileStamp = (f: string | undefined) => { if (!f) return "-"; try { const st = fs.statSync(f); return `${st.mtimeMs}:${st.size}`; } catch { return "none"; } };
+  const key = `${mode}:${explicit.group}:${stamp(explicit.group)}:${explicit.code}:${stamp(explicit.code)}:${explicit.offense}:${stamp(explicit.offense)}:${explicit.weapon}:${stamp(explicit.weapon)}:${setFile}:${fileStamp(setFile)}:${setSha}:${releaseRoot ?? ""}`;
   if (cached && cached.key === key) return cached.cfg;
   let cfg: CubeConfig | null = null;
   try {
     const bad = (why: string) => { warnOnce(`${key}:${why}`, why); return null; };
+    // A cube SET (the Model's monthly wrapper): one pinned manifest names every product's folder; an explicit root variable overrides its product.
+    const set = setFile ? readCubeSet(setFile, setSha, releaseRoot, bad) : null;
+    const groupRoot = explicit.group ?? set?.group, codeRoot = explicit.code ?? set?.code, offenseRoot = explicit.offense ?? set?.offense, weaponRoot = explicit.weapon ?? set?.weapon;
     const group = groupRoot ? readCube(groupRoot, "group", releaseRoot, bad) : null;
     const code = codeRoot ? readCube(codeRoot, "code", releaseRoot, bad) : null;
     const offense = offenseRoot ? readCube(offenseRoot, "offense", releaseRoot, bad) : null;
@@ -110,6 +115,56 @@ export function cubeFromEnv(env: Record<string, string | undefined> = process.en
   } catch (e) { warnOnce(key, e instanceof Error ? e.message : String(e)); }
   cached = { key, cfg };
   return cfg;
+}
+
+/** The product keys of a cube set and what the engine pins for each: the schema and the groups file the product must have been built from. */
+const SET_PRODUCTS: Record<string, { key: "group" | "code" | "offense" | "weapon"; schema: string; groupsSha: string }> = {
+  "group-v4": { key: "group", schema: SCHEMA_VERSION, groupsSha: GROUPS_FILE_SHA256_V4 },
+  "code-v2": { key: "code", schema: CODE_SCHEMA_VERSION, groupsSha: CODE_FILE_SHA256_V2 },
+  "offense-v1": { key: "offense", schema: OFFENSE_SCHEMA_VERSION, groupsSha: OFFENSE_FILE_SHA256_V1 },
+  "weapon-v1": { key: "weapon", schema: WEAPON_SCHEMA_VERSION, groupsSha: WEAPON_FILE_SHA256_V1 },
+};
+const sha256File = (f: string) => createHash("sha256").update(fs.readFileSync(f)).digest("hex");
+
+/**
+ * A cube set (the Model's monthly wrapper, cube-set-<release id>-<attempt>.json): pinned by the sha256 of the set manifest file (NIBRS_CUBE_SET_SHA256), refused unless its READY file
+ * (the same name with .READY.json) carries that hash and the set's release id, and the set says complete with no required product missing. Each product it lists is used only when
+ * its folder (relative to the set file, never outside it) holds a manifest.json with the sha256 the set records, status ready, and the schema and groups file the engine pins for that
+ * product key; a product that fails, or is absent, is left out with a one-line warning and its questions use the raw statements. A product key the engine does not know is ignored.
+ * The set also records the release manifest it was built from: that must be the release being read. Each product's own manifest is then checked by readCube as for a single cube.
+ */
+function readCubeSet(file: string, expectedSha: string, releaseRoot: string | undefined, bad: (why: string) => null): Partial<Record<"group" | "code" | "offense" | "weapon", string>> | null {
+  const label = "cube set";
+  if (!/^[0-9a-f]{64}$/.test(expectedSha)) return bad(`${label}: NIBRS_CUBE_SET needs NIBRS_CUBE_SET_SHA256, the sha256 of the set manifest`);
+  if (!fs.existsSync(file)) return bad(`${label}: ${file} does not exist`);
+  if (sha256File(file) !== expectedSha) return bad(`${label}: ${file} is not the pinned set (its sha256 is not NIBRS_CUBE_SET_SHA256)`);
+  const m = JSON.parse(fs.readFileSync(file, "utf8")) as { set_version?: number; release_id?: string; release_manifest_sha256?: string; complete?: boolean; required_missing?: unknown;
+    products?: Record<string, { folder?: string; manifest_sha256?: string; schema_version?: string; groups_file_sha256?: string; status?: string }> };
+  if (m.set_version !== 1) return bad(`${label}: set_version ${m.set_version} is not 1`);
+  if (m.complete !== true || !Array.isArray(m.required_missing) || m.required_missing.length) return bad(`${label}: the set is not complete`);
+  const ready = file.replace(/\.json$/, ".READY.json");
+  if (!fs.existsSync(ready)) return bad(`${label}: no READY file (${ready}): the set was never finished`);
+  const r = JSON.parse(fs.readFileSync(ready, "utf8")) as { status?: string; set_manifest_sha256?: string; release_id?: string };
+  if (r.status !== "ready" || String(r.set_manifest_sha256 ?? "").toLowerCase() !== expectedSha || r.release_id !== m.release_id) return bad(`${label}: the READY file does not match the set manifest`);
+  if (!releaseRoot) return bad(`${label}: the release being read is not known`);
+  const rm = `${releaseRoot.replace(/\\/g, "/").replace(/\/+$/, "")}/../manifest.json`;
+  if (!fs.existsSync(rm)) return bad(`${label}: the release's manifest.json is not at ${rm}`);
+  if (String(m.release_manifest_sha256 ?? "").toLowerCase() !== sha256File(rm)) return bad(`${label}: built from another release than the one being read`);
+  const dir = file.replace(/\\/g, "/").replace(/\/[^/]*$/, "");
+  const out: Partial<Record<"group" | "code" | "offense" | "weapon", string>> = {};
+  for (const [name, spec] of Object.entries(SET_PRODUCTS)) {
+    const p = m.products?.[name];
+    if (!p) { bad(`${label}: product ${name} is not in the set: its questions use the raw statements`); continue; }
+    const why = (x: string) => bad(`${label}: product ${name} left out: ${x}`);
+    if (p.status !== "ready") { why(`status ${p.status}`); continue; }
+    if (typeof p.folder !== "string" || !p.folder || /^([a-zA-Z]:|[\\/])/.test(p.folder) || p.folder.split(/[\\/]/).includes("..")) { why("its folder is not a relative path inside the set's folder"); continue; }
+    const root = `${dir}/${p.folder.replace(/\\/g, "/")}`.replace(/\/+$/, "");
+    if (!fs.existsSync(`${root}/manifest.json`)) { why("no manifest.json in its folder"); continue; }
+    if (sha256File(`${root}/manifest.json`) !== String(p.manifest_sha256 ?? "").toLowerCase()) { why("its manifest.json is not the one the set records"); continue; }
+    if (p.schema_version !== spec.schema || String(p.groups_file_sha256 ?? "").toLowerCase() !== spec.groupsSha) { why("not built from the schema and groups file the engine pins"); continue; }
+    out[spec.key] = root;
+  }
+  return out;
 }
 
 function readCube(root: string, kind: "group" | "code" | "offense" | "weapon", releaseRoot: string | undefined, bad: (why: string) => null): { root: string; years: number[]; codes?: string[]; attributes?: string[]; v4?: boolean; v2?: boolean } | null {
