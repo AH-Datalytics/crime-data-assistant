@@ -96,6 +96,8 @@ export type ShrQuestion = {
   /** Months inclusive ("1985-01".."2024-12"), already cut to 1985 and the release's latest month. */
   from: string; to: string; grain: "total" | "year" | "month";
   filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
+  /** P164 (Jeff 2026-11-19): a second breakdown of the same person ("race and sex of the victims"): the first down the side, this one across. Counts only; no share. */
+  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] };
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
   /** Several agencies (shrSeveral in answer.ts): `place` is the first, these the others. */
@@ -271,8 +273,8 @@ function condition(f: ShrFilter, a: string): string {
   return f.ages ? `${col} BETWEEN ${f.ages[0]} AND ${f.ages[1]}` : `${col} IN (${f.codes!.map(q).join(", ")})`;
 }
 /** The category of a person's or record's detail, in SQL: SHR's code, or the age bin; a victim past 11 is Unknown. */
-function categorySql(sq: ShrQuestion, a: string): string {
-  const b = sq.breakdown!;
+function categorySql(sq: ShrQuestion, a: string, which: 1 | 2 = 1): string {
+  const b = (which === 1 ? sq.breakdown : sq.breakdown2)!;
   const col = RECORD_DIMS.has(b.dim) ? `r.${DIM_COLUMN[b.dim]}` : `CASE WHEN ${a}.in_record THEN ${a}.${DIM_COLUMN[b.dim]} END`;
   if (b.groups) return `CASE ${b.groups.map((g, i) => `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`).join(" ")} END`;
   if (!b.bins) return col;
@@ -294,7 +296,7 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
       const fs = theirs.filter((f, i) => (f.group ?? `solo${i}`) === g);
       return `EXISTS (SELECT 1 FROM ${table(build, other)} o WHERE o.data_year = r.data_year AND o.source_line_no = r.source_line_no AND ${fs.map((f) => condition(f, "o")).join(" AND ")})`;
     })];
-  const keys = [...(sq.grain !== "total" ? ["r.data_year"] : []), ...(sq.grain === "month" ? ["r.offense_month"] : []), ...(sq.breakdown ? [categorySql(sq, "p")] : [])];
+  const keys = [...(sq.grain !== "total" ? ["r.data_year"] : []), ...(sq.grain === "month" ? ["r.offense_month"] : []), ...(sq.breakdown ? [categorySql(sq, "p")] : []), ...(sq.breakdown2 ? [categorySql(sq, "p", 2)] : [])];
   return `SELECT ${[...keys.map((k, i) => `${k} AS k${i}`), "count(*) AS n"].join(", ")} FROM ${table(build, person)} p JOIN ${table(build, "shr_record")} r USING (data_year, source_line_no) `
     + `WHERE ${where.join(" AND ")}${keys.length ? ` GROUP BY ${keys.map((_, i) => `k${i}`).join(", ")}` : ""}`;
 }
@@ -332,11 +334,10 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
       out.push({ key: [String(Math.floor(v / 100)), String(v % 100)], label: `${Math.floor(v / 100)}-${String(v % 100).padStart(2, "0")}`, year: Math.floor(v / 100) }); return out; })();
   // A total over several years is blank if any year in it is (no total over a gap).
   const blankPeriod = (p: typeof periods[number]) => (sq.grain === "total" ? Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some((y) => !counted(y)) : !counted(p.year));
-  const cats: { code: string; label: string }[] = !sq.breakdown ? [] : (() => {
-    const b = sq.breakdown;
+  const catsOf = (b: NonNullable<ShrQuestion["breakdown"]>, pos: number): { code: string; label: string }[] => {
     if (b.groups) return b.groups.map((g, i) => ({ code: String(i), label: g.label }));
     if (b.bins) return [...b.bins.map(([lo, hi], i) => ({ code: String(i), label: hi >= 120 ? `${lo} and older` : `${lo} to ${hi}` })), { code: "", label: "Unknown" }];
-    const seen = new Set(got.map((r) => (r[nk - 1] === null ? "" : String(r[nk - 1]))));
+    const seen = new Set(got.map((r) => (r[pos] === null ? "" : String(r[pos]))));
     const labels = DIM_LABELS[b.dim] ?? {};
     const known = (c: string) => c in labels && labels[c] !== "Unknown";
     // No rows at all (a filing year with none, or a proper 0): every category of the list, each 0 (S3; Codex 01.10).
@@ -344,8 +345,18 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
       : Object.keys(labels).filter((c) => known(c) && (seen.has(c) || got.length === 0));
     const other = [...seen].filter((c) => !codes.includes(c));
     return [...codes.map((c) => ({ code: c, label: labels[c] ?? c })), ...(other.length || got.length === 0 ? [{ code: "", label: "Unknown" }] : [])];
-  })();
-  const valueOf = (p: typeof periods[number], cat: string | null) => {
+  };
+  const cats = sq.breakdown ? catsOf(sq.breakdown, sq.breakdown2 ? nk - 2 : nk - 1) : [];
+  const cats2 = sq.breakdown2 ? catsOf(sq.breakdown2, nk - 1) : [];
+  /** The count of one cell of a two-way table: "Unknown" gathers a blank code and codes outside the lists, as in the one-way table. */
+  const valueOf2 = (p: typeof periods[number], c1: string, c2: string) => {
+    if (blankPeriod(p)) return null;
+    const fits = (b: NonNullable<ShrQuestion["breakdown2"]>, list: typeof cats, cat: string, part: string) =>
+      b.bins || cat !== "" ? part === cat : !list.some((c) => c.code !== "" && c.code === part);
+    return [...cell.entries()].filter(([k]) => { const parts = k.split("|"); const i = p.key.length;
+      return parts.slice(0, i).join("|") === p.key.join("|") && fits(sq.breakdown!, cats, c1, parts[i] ?? "") && fits(sq.breakdown2!, cats2, c2, parts[i + 1] ?? ""); }).reduce((s, [, v]) => s + v, 0);
+  };
+  const valueOf =(p: typeof periods[number], cat: string | null) => {
     if (blankPeriod(p)) return null;
     if (cat === null) return [...cell.entries()].filter(([k]) => k.split("|").slice(0, p.key.length).join("|") === p.key.join("|")).reduce((s, [, v]) => s + v, 0);
     // "Unknown" gathers a blank code and codes outside SHR's lists (NS, X, NN, P...).
@@ -363,7 +374,12 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     : sq.grain === "month" ? [{ binding: { kind: "grouping" as const, dimension: "time.month" }, header: "Month" }] : [];
   const rows: (string | number | null)[][] = [];
   const columns: ResultTable["columns"] = [...timeCols];
-  if (sq.breakdown) {
+  if (sq.breakdown && sq.breakdown2) {
+    // The first breakdown down the side, the second across (a column for each of its categories).
+    columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
+    for (const c2 of cats2) columns.push({ binding: { kind: "statistic", as: `count_${c2.code || "unknown"}` }, header: c2.label });
+    for (const p of periods) for (const c of cats) rows.push([...(p.label ? [p.label] : []), c.label, ...cats2.map((c2) => valueOf2(p, c.code, c2.code))]);
+  } else if (sq.breakdown) {
     columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
     columns.push({ binding: { kind: "statistic", as: "count" }, header: ucFirst(unitWords) });
     if (sq.share) columns.push({ binding: { kind: "statistic", as: "share" }, header: "Share (%)" });
@@ -383,7 +399,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   // One figure (no breakdown, no year or month): a sentence. Anything with a table or chart: a title that reads the question back.
   const lone = !sq.breakdown && sq.grain !== "year" && sq.grain !== "month" && rows.length === 1 && typeof rows[0][rows[0].length - 1] === "number" ? (rows[0][rows[0].length - 1] as number) : null;
   const subject = sq.place.kind === "agency" ? agencySubject(sq.place.label, sq.place.ori).text : where;
-  const groupBy = [sq.grain === "year" ? "year" : sq.grain === "month" ? "month" : null, sq.breakdown ? DIM_WORDS[sq.breakdown.dim] : null].filter(Boolean).join(" and ");
+  const groupBy = [sq.grain === "year" ? "year" : sq.grain === "month" ? "month" : null, sq.breakdown ? DIM_WORDS[sq.breakdown.dim] : null, sq.breakdown2 ? DIM_WORDS[sq.breakdown2.dim] : null].filter(Boolean).join(" and ");
   const text = [lone !== null ? (sq.rate ? `${subject} had ${lone} ${what} per 100,000 people in ${span}.` : `${subject} had ${fmt(lone)} ${what} in ${span}.`)
       : seriesTitle(span, `${what}${sq.rate ? " per 100,000 people" : ""}`, groupBy || "Period", where),
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
@@ -418,7 +434,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   return {
     kind: "shr", question: sq, period,
     meaning: { source: "shr", places: [sq.place], filters: sq.filters.map(filterWords), measures: [{ name: sq.measure, unit: sq.unit === "victims" ? "victim" : "offender" }],
-      period, groupings: [...(sq.grain !== "total" ? [sq.grain] : []), ...(sq.breakdown ? [sq.breakdown.dim] : [])], statistic: "count",
+      period, groupings: [...(sq.grain !== "total" ? [sq.grain] : []), ...(sq.breakdown ? [sq.breakdown.dim] : []), ...(sq.breakdown2 ? [sq.breakdown2.dim] : [])], statistic: "count",
       ...(sq.rate ? { denominator: "the Crime Index population of the agencies that reported, per 100,000" } : {}) },
     delivered: { table: { columns, rows }, text },
     read: { table: `${sq.unit === "victims" ? "shr_victim" : "shr_offender"} + shr_record`, release: build.release },

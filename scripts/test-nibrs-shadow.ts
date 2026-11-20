@@ -425,6 +425,22 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P164 (Jeff 2026-11-19): two details of the same people are one table, the first down the side and the second across.
+    const wstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (!/FROM read_parquet\('\/shr\/canonical\/shr_(?:victim|offender)/.test(sql)) return [];
+      const two = /AS k1/.test(sql);
+      return two ? [["B", "M", 5], ["B", "F", 2], ["W", "M", 3]] : [["B", 7], ["W", 3]];
+    };
+    const wdeps = { ...sdeps, execute: wstub } as ShadowDeps;
+    for (const q of ["Houston murder victims by race and sex in 2023", "Houston murder victims by race and gender in 2023", "Houston murder victim race and gender in 2023"]) {
+      const o = as(shadowAnswer(q, wdeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Victim's race", "Male", "Female"], q);
+      assert.deepEqual(o.delivered.table.rows, [["White", 3, 0], ["Black", 5, 2]], q);
+      assert.equal(o.delivered.text[0], "2023 Murder Victims by The Victims' Race and the Victims' Sex, Houston, Texas");
+    }
+    // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
+    assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {

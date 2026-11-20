@@ -63,7 +63,7 @@ import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnsw
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
-import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
+import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -868,7 +868,37 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   return o;
 }
 /** The answer before dead buttons are dropped: for a caller that repairs a button's continuation first (the kind of assault). */
+/**
+ * P164 (Jeff 2026-11-19): "murder victims by race and sex" (also "victim race and gender", "victim age and sex") is one table of Homicide
+ * Reports, the first detail down the side and the second across. Each detail alone is read as usual (the reader gives one breakdown per
+ * answer); the two single answers must both reach Homicide Reports for the same place, period and conditions, and then the two-way
+ * question is asked of the release. Anything else is left to the usual path (which declines a second breakdown).
+ */
+const TWO_DIM = String.raw`(race|sex|gender|ethnicity|age)`;
+const TWO_WAY = new RegExp(String.raw`\bby\s+(?:the\s+)?${TWO_DIM}(?:\s+groups?)?\s*(?:,|and|&|\/)\s*(?:and\s+)?${TWO_DIM}(?:\s+groups?)?\b(?:\s+breakdown)?`, "i");
+const TWO_NOUN = new RegExp(String.raw`\b(victim|offender)s?(?:'s|s')?\s+${TWO_DIM}\s+(?:and|&|\/)\s+${TWO_DIM}\b(?:\s+breakdown)?`, "i");
+function shrTwoWay(question: string, deps: ShadowDeps): ShadowOutcome | null {
+  if (!deps.shr || deps.checkingOffer) return null;
+  const q = question.replace(TWO_NOUN, (_m, who: string, a: string, b: string) => `${who}s by ${a} and ${b}`);
+  const m = TWO_WAY.exec(q);
+  if (!m) return null;
+  const attr = (w: string) => (/^gender$/i.test(w) ? "sex" : w.toLowerCase());
+  const [a, b] = [attr(m[1]), attr(m[2])];
+  if (a === b) return null;
+  const one = (x: string) => shadowAnswer(q.replace(m[0], ` by ${x} `).replace(/\s+/g, " ").replace(/\s+([?.!,])/g, "$1").trim(), { ...deps, checkingOffer: true });
+  const [o1, o2] = [one(a), one(b)];
+  if (o1.kind !== "shr" || o2.kind !== "shr") return null;
+  const [s1, s2] = [o1.question, o2.question];
+  const person = (d: string | undefined) => !!d && /^(?:victim|offender)\./.test(d);
+  if (!s1.breakdown || !s2.breakdown || !person(s1.breakdown.dim) || !person(s2.breakdown.dim) || s1.breakdown.dim === s2.breakdown.dim || s1.unit !== s2.unit) return null;
+  const { breakdown2: _b2, ...rest } = s1;
+  const sq: ShrQuestion = { ...rest, share: false, breakdown2: { dim: s2.breakdown.dim, ...(s2.breakdown.bins ? { bins: s2.breakdown.bins } : {}) } };
+  const r = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  return r.kind === "shr" ? r : null;
+}
 function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): ShadowOutcome {
+  const two = deps.rewritten ? null : shrTwoWay(question, deps);
+  if (two) return two;
   const os = deps.rewritten ? null : otherStates(question, deps);
   if (os) return os;
   const o = answerAsked(question, deps);
