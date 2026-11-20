@@ -70844,19 +70844,24 @@
    "question": "homicide offender race in Texas",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
    }
   },
   {
@@ -77983,19 +77988,24 @@
    "question": "murder victim race in Philadelphia",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
    }
   },
   {
@@ -104878,19 +104888,24 @@
    "question": "murder victim race in Philadelphia",
    "previous": "domestic homicides in California since 1980",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
    }
   },
   {
@@ -105505,19 +105520,24 @@
    "question": "murder victim race in Philadelphia",
    "previous": "firearm murders in Philadelphia",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
    }
   },
   {
@@ -106037,19 +106057,24 @@
    "question": "homicide offender race in Texas",
    "previous": "domestic homicides in Texas since 2000",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
    }
   },
   {
