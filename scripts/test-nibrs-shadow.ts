@@ -172,6 +172,9 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   const ipv = as(ask("intimate partner violence in Houston in 2024"), "answer") as unknown as { plan: { filters: { kind: string }[] } };
   assert.ok(ipv.plan.filters.length >= 1, "intimate partner is the partner relationships beside the domestic definition");
   as(ask("family violence in Houston in 2024"), "answer");
+  // An offender's occupation is not recorded: "police involved" is never dropped (QL-nibrs-846998f783 expects a decline).
+  const police = ask("how many police involved domestic violence victims were reported in Houston in 2024?");
+  assert.ok(police.kind === "decline" && /police involved/.test(police.explanation), JSON.stringify(police).slice(0, 300));
   // Not built yet: other units, and a state, the nation or several places (never the crimes alone).
   for (const q of ["domestic violence offenses in Houston in 2024", "domestic violence incidents in Houston in 2024", "domestic violence arrests in Houston in 2024", "Domestic violence in Texas in 2024", "domestic violence nationally in 2024"])
     assert.equal(ask(q).kind, "decline", q);
