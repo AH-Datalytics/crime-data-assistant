@@ -425,6 +425,19 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P165 (Jeff 2026-11-19): the share of murders that involved a firearm is the murders by weapon with each share, and one sentence for the firearms together.
+    const gstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (!/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) return [];
+      return /AS k0/.test(sql) ? [["12", 6], ["11", 2], ["20", 2]] : [[10]];
+    };
+    const gdeps = { ...sdeps, execute: gstub } as ShadowDeps;
+    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "what weapons were used in murders in Houston in 2023"]) {
+      const o = as(shadowAnswer(q, gdeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder victims", "Share (%)"], q);
+      assert.ok(/ by Weapon, Houston, Texas$/.test(o.delivered.text[0]), o.delivered.text[0]);
+      if (!/weapons were used/.test(q)) assert.equal(o.delivered.text[1], "Firearms (handguns, rifles, shotguns, other guns and firearms of a type not stated) are 80% of the murder victims.", q);
+    }
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {
