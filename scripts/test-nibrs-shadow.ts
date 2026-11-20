@@ -2611,9 +2611,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const blankCt = { kind: "current", period: { from: "2023-01", to: "2023-12" }, question: { measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee" }, form: "months", statistic: "count" },
     delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "x" }, header: "Murders" }], rows: [["2023-01", null], ["2023-02", null]] }, text: [] } } as never;
   const blankDecl = allBlankMonthly(blankCt)!;
-  const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [], rows: [["2023", v]] }, text: [] } }) as never;
+  const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [{ header: "Year" }, { header: "Murders" }], rows: [["2023", v]] }, text: [] } }) as never;
+  // One year asked: a one-cell row with no Year column (Oakland murders 2021: [[127]]).
+  const oneYear = () => ({ kind: "historical", delivered: { table: { columns: [{ header: "Murders" }], rows: [[127]] }, text: [] } }) as never;
   // The table opened from the button ends at its last year with a figure; the years after it are named (New Orleans rape: 2017 to 2023).
-  const longYearly = () => ({ kind: "historical", period: { from: "2022-01", to: "2025-12" }, delivered: { table: { columns: [], rows: [["2022", 5], ["2023", 9], ["2024", null], ["2025", null]] }, text: ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Source: Crime Index."] } }) as never;
+  const longYearly = () => ({ kind: "historical", period: { from: "2022-01", to: "2025-12" }, delivered: { table: { columns: [{ header: "Year" }, { header: "Murders" }], rows: [["2022", 5], ["2023", 9], ["2024", null], ["2025", null]] }, text: ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Source: Crime Index."] } }) as never;
   const trimmed = withYearlyOffer(blankDecl, blankCt, deps, longYearly);
   const opened = trimmed.kind === "decline" ? (trimmed.alternative as { continuation?: { delivered: { table: { rows: unknown[][] }; text: string[] }; period: { to: string } } } | null)?.continuation : undefined;
   assert.deepEqual(opened?.delivered.table.rows, [["2022", 5], ["2023", 9]]);
@@ -2622,6 +2624,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const offered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(351));
   assert.ok(offered.kind === "decline" && offered.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', JSON.stringify(offered).slice(0, 300));
   assert.equal(offered.kind === "decline" ? offered.explanation : "", "No data is available for murders in Memphis, Tennessee.");
+  const single = withYearlyOffer(blankDecl, blankCt, deps, oneYear);
+  assert.ok(single.kind === "decline" && single.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', "one-cell yearly answer is offered");
   const notOffered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(null));
   assert.ok(notOffered.kind === "decline" && notOffered.alternative === null, "no figure in the yearly series: no button");
 }
