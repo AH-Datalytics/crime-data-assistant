@@ -15277,7 +15277,16 @@
 },
 "QL-shr-400d52eea7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-42a195a98e": {
 "status": "reviewed",
@@ -17052,7 +17061,16 @@
 },
 "QL-shr-d35d9eaade": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-d37e1afda6": {
 "status": "reviewed",
@@ -21343,7 +21361,16 @@
 },
 "QL-shr-0b297d35d9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-0c9ba27c5d": {
 "status": "reviewed",
@@ -21435,7 +21462,16 @@
 },
 "QL-shr-26e06d35d9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-26e06ea89c": {
 "status": "reviewed",
@@ -21526,7 +21562,16 @@
 },
 "QL-shr-3afd6400d5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"expected": {
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
+}
 },
 "QL-shr-400d5cda3d": {
 "status": "reviewed",
