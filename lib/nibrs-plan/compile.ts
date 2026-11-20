@@ -322,7 +322,9 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
  * arrest: "all_crime"). The cube is keyed by code list, so a measure with an extra condition inside its own statement (carjacking's stolen vehicle, domestic violence's
  * relationship and incident rules) would be read as the plain group that shares its codes: a wrong count, not a slow one. A measure is added here only with its own cube check.
  */
-const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES), "drug_equipment", "drug_crimes", "all_crime"]);
+// A plain measure that has not had its cell-by-cell cube check yet stays on raw statements (justifiable homicide, 09C: expected to equal the code cube's 09C row, never compared).
+const CUBE_NOT_CHECKED = new Set(["justifiable_homicide"]);
+const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES).filter((k) => !CUBE_NOT_CHECKED.has(k)), "drug_equipment", "drug_crimes", "all_crime"]);
 export const cubeServesMeasure = (id: string): boolean => CUBE_PLAIN_MEASURES.has(id.split(".")[1] ?? "");
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };

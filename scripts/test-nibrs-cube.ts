@@ -268,7 +268,7 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
 // the group that shares its code list (domestic violence, P82, shares person_crimes' fourteen codes: the runner found 2 to 2.8 times the right count when it was routed there).
 {
   for (const id of ["victims.person_crimes", "victims.murder", "offenses.robbery", "incidents.burglary", "arrests.all_crime", "arrests.drug_crimes", "offenders.aggravated_assault", "group_b_arrests.dui"]) assert.ok(cubeServesMeasure(id), `${id} is a plain-codes measure`);
-  for (const id of ["victims.domestic_violence", "offenses.domestic_violence", "arrests.domestic_violence", "incidents.domestic_violence", "offenses.carjacking", "incidents.carjacking", "victims.hate_crime", "victims.some_new_measure", "victims"]) assert.ok(!cubeServesMeasure(id), `${id} is never read from a cube`);
+  for (const id of ["victims.domestic_violence", "offenses.domestic_violence", "arrests.domestic_violence", "incidents.domestic_violence", "offenses.carjacking", "incidents.carjacking", "victims.hate_crime", "victims.some_new_measure", "victims", "victims.justifiable_homicide", "offenders.justifiable_homicide"]) assert.ok(!cubeServesMeasure(id), `${id} is never read from a cube`);
 }
 
 // --- The manifest check: a cube is used only when it was built from this release, with the engine's group lists, and its file is there.
