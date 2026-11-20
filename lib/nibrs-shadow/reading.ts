@@ -229,6 +229,12 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
+  // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|were\s+committed\s+(?:with|using)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
+  [/\s+analysis\s+for\s+/gi, " in "],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];

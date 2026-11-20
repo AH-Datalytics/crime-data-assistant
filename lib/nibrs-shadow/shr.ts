@@ -388,6 +388,12 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
       : seriesTitle(span, `${what}${sq.rate ? " per 100,000 people" : ""}`, groupBy || "Period", where),
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
     "Counts are the homicides agencies reported to the FBI, each victim counted."];
+  // P165: the weapons of one period with their shares also say the firearms together (handgun, rifle, shotgun, other gun, type not stated).
+  if (sq.breakdown?.dim === "weapon" && sq.share && sq.grain === "total" && lone === null && !blankPeriod(periods[0])) {
+    const total = valueOf(periods[0], null);
+    const guns = cats.filter((c) => ["11", "12", "13", "14", "15"].includes(c.code)).reduce((s, c) => s + (valueOf(periods[0], c.code) ?? 0), 0);
+    if (total) text.splice(1, 0, `Firearms (handguns, rifles, shotguns, other guns and firearms of a type not stated) are ${Math.round((guns * 1000) / total) / 10}% of the ${what}.`);
+  }
   if (sq.askedFrom) text.push(`Homicide Reports here start in 1985, so ${sq.askedFrom} through 1984 aren't included.`);
   text.push(sq.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
     : sq.measure === "homicide" ? "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out."
