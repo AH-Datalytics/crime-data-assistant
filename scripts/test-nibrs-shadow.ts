@@ -425,6 +425,26 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P169 (Jeff 2026-11-19): domestic homicides are the murders whose victim was an intimate partner or a family or household member; the answer
+    // names the relationships Homicide Reports do not record.
+    const rsql: string[] = [];
+    const rstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) { rsql.push(sql); return /AS k0/.test(sql) ? [["2023", 4]] : [[7]]; }
+      return [];
+    };
+    const rdeps = { ...sdeps, execute: rstub } as ShadowDeps;
+    for (const q of ["domestic murders in Houston in 2023", "domestic violence murders in Houston in 2023", "domestic homicides in Houston in 2023"]) {
+      const o = as(shadowAnswer(q, rdeps), "shr");
+      assert.ok(/where the victim was an intimate partner or a family member of the offender/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
+      assert.ok(o.delivered.text.includes("Homicide Reports do not record a child of a boyfriend or girlfriend, a babysittee, a foster parent, a foster child or a cohabitant, so those relationships are not counted."), JSON.stringify(o.delivered.text));
+      assert.ok(o.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."), JSON.stringify(o.delivered.text));
+    }
+    const relSql = rsql.find((s) => /r\.relationship IN \(/.test(s)) ?? "";
+    assert.ok(/r\.relationship IN \('OF', 'HU', 'WI', 'CH', 'CW', 'BF', 'GF', 'XH', 'XW', 'HO', 'SO', 'DA', 'MO', 'FA', 'BR', 'SI', 'SS', 'SD', 'SF', 'SM', 'IL'\)/.test(relSql), relSql);
+    const ipv = as(shadowAnswer("intimate partner homicides in Houston in 2023", rdeps), "shr");
+    assert.ok(/where the victim was an intimate partner of the offender/.test(ipv.delivered.text[0]), ipv.delivered.text[0]);
+    assert.ok(!ipv.delivered.text.some((t) => /a babysittee/.test(t)), "an intimate-partner question names no family relationship");
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {
