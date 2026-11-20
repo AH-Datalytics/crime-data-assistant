@@ -216,7 +216,7 @@ assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024])
   const askPlan = (id: string, unit: "victim" | "incident" | "offense" | "arrest") => ({ ...X.H2, timeBasis: unit === "arrest" ? "arrest_date" as const : X.H2.timeBasis, measures: [{ id, unit, as: "m" }], statistics: [{ kind: "count" as const, as: "count", measure: "m" }] });
   const sqlOf = (id: string, unit: "victim" | "incident" | "offense" | "arrest") => { const r = compilePlan(askPlan(id, unit), year(2025), tc); return r.kind === "query" ? r.query.sql : `unsupported: ${(r as { reason?: string }).reason ?? r.kind}`; };
   assert.ok(sqlOf("victims.person_crimes", "victim").includes("/cubes/"), "control: a person-crimes victim count reads the cube");
-  for (const [id, unit] of [["victims.domestic_violence", "victim"]] as const) {
+  for (const [id, unit] of [["victims.domestic_violence", "victim"], ["incidents.domestic_violence", "incident"]] as const) {
     const sql = sqlOf(id, unit);
     assert.ok(!sql.startsWith("unsupported"), `${id}: ${sql}`);
     assert.ok(!sql.includes("/cubes/"), `${id} must never read a cube`);
