@@ -7,7 +7,7 @@
 "why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
 "outcome": "decline",
-"reason": "Marking a date on a chart isn't available here."
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
 }
 },
 "QL-ct-00f5989c5c": {
@@ -739,7 +739,7 @@
 "why": "A line at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18)",
 "expected": {
 "outcome": "decline",
-"reason": "Marking a date on a chart isn't available here."
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
 }
 },
 "QL-ct-277471997c": {
@@ -1705,7 +1705,7 @@
 "why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
 "outcome": "decline",
-"reason": "Marking a date on a chart isn't available here."
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
 }
 },
 "QL-ct-6046025e64": {
@@ -3576,7 +3576,7 @@
 "why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
 "outcome": "decline",
-"reason": "Marking a date on a chart isn't available here."
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
 }
 },
 "QL-ct-ca550d3a77": {
@@ -3734,7 +3734,7 @@
 "why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
 "outcome": "decline",
-"reason": "Marking a date on a chart isn't available here."
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
 }
 },
 "QL-ct-d03cd0a320": {
@@ -4422,7 +4422,7 @@
 "why": "A line, annotation or marker at a date on a chart is declined with the plain sentence (P153, Jeff 2026-11-18; supersedes the 2026-11-09 chart-plus-styling answer)",
 "expected": {
 "outcome": "decline",
-"reason": "Marking a date on a chart isn't available here."
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
 }
 },
 "QL-ct-f67ae4ad47": {
@@ -6316,7 +6316,12 @@
 },
 "QL-hist-5aaf80d9e8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-hist-5abb1259d6": {
 "status": "reviewed",
@@ -14653,7 +14658,12 @@
 },
 "QL-shr-0c808347cd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-shr-0c9baffc48": {
 "status": "reviewed",
@@ -17343,15 +17353,13 @@
 "by": "codex-second-1"
 },
 "QL-shr-f493f3140e": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "This is a chart adjustment, not advice.",
+"status": "reviewed",
+"by": "jeff-2026-11-19",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-shr-f4d840900b": {
 "status": "reviewed",
@@ -17757,7 +17765,12 @@
 },
 "QL-ct-3190b22821": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-ct-324e08a0f7": {
 "status": "reviewed",
@@ -18103,7 +18116,12 @@
 },
 "QL-ct-7a7d5d78a4": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-ct-8175f237ff": {
 "status": "reviewed",
@@ -18604,7 +18622,12 @@
 },
 "QL-ct-eae798a9bd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-ct-edf3d54d8d": {
 "status": "reviewed",
@@ -18664,7 +18687,12 @@
 },
 "QL-ct-f71801135d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-ct-f71804baa4": {
 "status": "reviewed",
@@ -19800,7 +19828,12 @@
 },
 "QL-hist-c70d2fda83": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-19",
+"expected": {
+"outcome": "decline",
+"reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
+},
+"why": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
 },
 "QL-hist-c777a0ee40": {
 "status": "reviewed",

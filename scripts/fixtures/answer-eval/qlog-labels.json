@@ -13,7 +13,7 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Marking a date on a chart isn't available here."
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
@@ -3378,7 +3378,7 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Marking a date on a chart isn't available here."
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
@@ -7578,7 +7578,7 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Marking a date on a chart isn't available here."
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
@@ -16071,7 +16071,7 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Marking a date on a chart isn't available here."
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
@@ -16615,7 +16615,7 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Marking a date on a chart isn't available here."
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
@@ -19571,7 +19571,7 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Marking a date on a chart isn't available here."
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
@@ -28584,19 +28584,16 @@
    "question": "flip the X and Y axis",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -68276,19 +68273,16 @@
    "question": "max at 80% min at 60% for the y-axis",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -79061,19 +79055,16 @@
    "question": "max of the y-axis should be 80%",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R03>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is a chart adjustment, not advice."
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -81502,20 +81493,16 @@
    "question": "add labels",
    "previous": "New Orleans murder rate per year since 2017",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -83501,20 +83488,16 @@
    "question": "show linear regression line for this data",
    "previous": "show me violent crime numbers in wilimington nc since 2018",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -86339,24 +86322,16 @@
    "question": "create a bar chart",
    "previous": "violent crime in cincinnati by month from 2018 to 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the same data, shown another way",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "F2",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "presentation only"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -86771,20 +86746,16 @@
    "question": "Label the columns on the chart",
    "previous": "Top 10 auto theft rates in 2025",
    "expected": {
-    "outcome": "answer",
+    "outcome": "decline",
     "source": null,
-    "answer": "the same data, shown another way",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "F2",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "presentation only"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
@@ -94029,20 +94000,16 @@
    "question": "can you make the chart where the left Y-Axis maps property crime and the Y-axis on the left side tracks violent crime",
    "previous": "Using UCR data only, give me a graph that tracks the U.S. Violent and Property crime rate from 1990 to 2024.",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "jeff-2026-11-19",
+    "notes": "A request to change a chart is declined with one sentence, whatever the change (Jeff 2026-11-19)."
    }
   },
   {
