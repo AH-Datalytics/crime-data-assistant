@@ -20,7 +20,10 @@ export type EngineRequest = {
 };
 
 export type EngineFailKind = "busy" | "timeout" | "unavailable" | "bad_request" | "error";
-export type EngineOk = { ok: true; response: unknown; ms: number; release: string; /** The statement an answer ran (for the query log only, never shown); null for a question, a decline or a button step. */ sql?: string | null };
+export type EngineOk = { ok: true; response: unknown; ms: number; release: string; /** The statement an answer ran (for the query log only, never shown); null for a question, a decline or a button step. */ sql?: string | null;
+  /** The whole question this reply answered or asked about (follow-ups #2): the question itself, or for a typed follow-up its rewritten question (the
+   * previous one when it could not be read). The page sends it back as `previous`, so a follow-up to a follow-up has a whole question to change. */
+  asked?: string };
 export type EngineFail = { ok: false; kind: EngineFailKind; message: string };
 export type EngineResult = EngineOk | EngineFail;
 

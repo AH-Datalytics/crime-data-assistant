@@ -62,7 +62,8 @@ function TypewriterText({ text, animate }: { text: string; animate: boolean }) {
   return <>{renderInlineMarkdown(displayed)}</>;
 }
 
-interface HistoryEntry { role: "user" | "assistant"; content: string; sql?: string; source?: RegistrySourceId; }
+/** `asked` (engine replies only): the whole question the engine answered or asked about, sent back as the next follow-up's `previous`. */
+interface HistoryEntry { role: "user" | "assistant"; content: string; sql?: string; source?: RegistrySourceId; asked?: string; }
 
 interface Exchange {
   question: string;
@@ -221,8 +222,11 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
         })();
         const body: Record<string, unknown> = { question, history, pageToken: getPageToken(), routingMode, sessionId };
         if (useEngine) {
-          // The engine takes the question, the button path and, for a typed follow-up, the question before it (the last NIBRS question in this conversation).
-          const lastNibrs = [...history].reverse().find((h) => h.role === "user" && h.source === "nibrs")?.content;
+          // The engine takes the question, the button path and, for a typed follow-up, the question before it: the whole question the engine
+          // last answered or asked about (follow-ups #2: a follow-up to a follow-up changes that, not the bare "show rates instead"), else the
+          // typed text. Only when the last question was a NIBRS one: after another tab's question, a NIBRS question is a first question.
+          const lastUser = [...history].reverse().find((h) => h.role === "user");
+          const lastNibrs = lastUser?.source === "nibrs" ? (lastUser.asked || lastUser.content) : undefined;
           delete body.history;
           if (engineStep) { body.path = engineStep.path; if (engineStep.previous) body.previous = engineStep.previous; }
           else if (lastNibrs) body.previous = lastNibrs;
@@ -270,7 +274,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
         setExchanges(prev => { const u = [...prev, newExchange]; setActiveExchangeIdx(u.length - 1); setAnimateIdx(u.length - 1); return u; });
         setHistory(prev => [
           ...prev,
-          { role: "user" as const, content: question, source: tab },
+          { role: "user" as const, content: question, source: tab, ...(finalResponse?.engine?.asked ? { asked: finalResponse.engine.asked } : {}) },
           { role: "assistant" as const, content: finalSql ? `${finalExplanation}\n[SQL: ${finalSql}]` : finalExplanation, sql: finalSql || undefined, source: tab },
         ].slice(-12));
       } catch (err) {
