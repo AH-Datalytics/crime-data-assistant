@@ -24,6 +24,8 @@ import GettingStarted from "./GettingStarted";
 import ExplainerContent from "./ExplainerContent";
 import QueryGuidance from "./QueryGuidance";
 import QueryPlanChips from "./QueryPlanChips";
+import EngineButtons from "./EngineButtons";
+import type { EngineMeta } from "@/lib/types";
 
 /** Render inline markdown: **bold** and [text](url) links */
 function renderInlineMarkdown(text: string) {
@@ -148,6 +150,13 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   const [guidanceAttention, setGuidanceAttention] = useState(0);
   const [showChart, setShowChart] = useState(true);
   const [showTable, setShowTable] = useState(true);
+  // Engine switch, stage 1: only a browser holding the owner's private cookie sends the NIBRS tab to the new engine (the route answers 404 to everyone else, and this stays false).
+  const [enginePrivate, setEnginePrivate] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/engine-private").then((r) => (r.ok ? r.json() : null)).then((d) => { if (live && d?.enabled === true) setEnginePrivate(true); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
   const chartRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
 
@@ -180,7 +189,9 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       tab: "current" | "historical" | "nibrs" | "shr" | "hate_crime",
       reason?: string,
       routingConfidence: RoutingConfidence | null = null,
-      routingMode: RoutingMode = "manual"
+      routingMode: RoutingMode = "manual",
+      /** An engine button step: the path of button labels from the engine's own question, and the question it followed up. */
+      engineStep: { path: string[]; previous?: string } | null = null
     ) => {
       if (!question || loading) return;
       const geoClarification = getBlockingGeoClarification(question);
@@ -197,7 +208,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       setLastQuestion(question);
       setShowDisambiguation(false);
 
-      const route = tab === "nibrs" ? "/api/nibrs-query" : tab === "shr" ? "/api/shr-query" : tab === "hate_crime" ? "/api/hc-query" : "/api/query";
+      const useEngine = tab === "nibrs" && enginePrivate;
+      const route = useEngine ? "/api/engine-query" : tab === "nibrs" ? "/api/nibrs-query" : tab === "shr" ? "/api/shr-query" : tab === "hate_crime" ? "/api/hc-query" : "/api/query";
       const mode = tab === "historical" ? "historical" : "current";
 
       try {
@@ -208,6 +220,13 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
           try { return sessionStorage.getItem("cda-session") || null; } catch { return null; }
         })();
         const body: Record<string, unknown> = { question, history, pageToken: getPageToken(), routingMode, sessionId };
+        if (useEngine) {
+          // The engine takes the question, the button path and, for a typed follow-up, the question before it (the last NIBRS question in this conversation).
+          const lastNibrs = [...history].reverse().find((h) => h.role === "user" && h.source === "nibrs")?.content;
+          delete body.history;
+          if (engineStep) { body.path = engineStep.path; if (engineStep.previous) body.previous = engineStep.previous; }
+          else if (lastNibrs) body.previous = lastNibrs;
+        }
         if (reason) body.routingReason = reason;
         if (routingConfidence) body.routingConfidence = routingConfidence;
         if (tab === "current" || tab === "historical") { body.mode = mode; }
@@ -258,8 +277,15 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
         setError(`Connection error: ${err instanceof Error ? err.message : "Network error"}`);
       } finally { if (timerRef.current) clearInterval(timerRef.current); setLoading(false); }
     },
-    [loading, history, error]
+    [loading, history, error, enginePrivate]
   );
+
+  const onEngineButton = useCallback((b: EngineMeta["buttons"][number]) => {
+    const e = response?.engine;
+    if (!e) return;
+    if (b.kind === "question" && b.question) { void submitQuestion(b.question, "nibrs", "Engine offer", null, "follow_up"); return; }
+    void submitQuestion(e.question, "nibrs", "Engine button", null, "follow_up", { path: b.path, ...(e.previous ? { previous: e.previous } : {}) });
+  }, [response, submitQuestion]);
 
   const handleAsk = useCallback((question: string) => {
     const q = question.trim();
@@ -689,6 +715,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                 <div className="text-[13px] sm:text-[14px] text-[var(--foreground)] leading-relaxed">
                   {renderInlineMarkdown(explanation)}
                 </div>
+                {response?.engine && <EngineButtons meta={response.engine} accentColor={accentColor} onPick={onEngineButton} />}
               </div>
             )}
 
@@ -809,6 +836,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     </div>
                   )}
                 </div>
+
+                {response?.engine && <div className="shrink-0"><EngineButtons meta={response.engine} accentColor={accentColor} onPick={onEngineButton} /></div>}
 
                 {/* Disclaimer */}
                 <p className="text-[10px] text-center text-[var(--muted-light)] mt-3 shrink-0">
