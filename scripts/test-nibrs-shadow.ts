@@ -74,6 +74,26 @@ function stub0(sql: string): unknown[][] {
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
   if (sql.includes("agency/data.parquet")) return popRows(sql);
+  // P171: a state's clearance by type, read once (state-sum.ts, "grid once"): each agency-year's coverage row ('c') and its sums by type ('s'):
+  // half the year's units cleared by arrest (one incident fewer than units), the rest not cleared.
+  if (/g AS MATERIALIZED/.test(sql) && /cleared_exceptionally/.test(sql)) {
+    const by = new Map<string, number[]>(), oris = new Map<string, string>();
+    for (const [ori, ym, n, st] of gridRows(sql) as [string, string, number | null, string][]) {
+      const k = `${ori}|${ym.slice(0, 4)}`, rep = st === "VALUE" || st === "REPORTED_ZERO";
+      const a = by.get(k) ?? by.set(k, [Number(ym.slice(0, 4)), 0, 0, 0, 0, 0]).get(k)!;
+      oris.set(k, ori);
+      a[1]++; if (rep) { a[2]++; a[3] += n ?? 0; } if (st === "EVIDENCE_CONFLICT") a[4]++; if (st === "VALUE") a[5]++;
+    }
+    const out: unknown[][] = [];
+    for (const [k, a] of by) {
+      out.push(["c", oris.get(k), a[0], a[1], a[2], a[3], a[4], a[5], null, null]);
+      // Half by arrest, one in twelve under each exceptional type A to E (the stub's Smallville has none of C), the rest not cleared.
+      const arrest = Math.floor(a[3] / 2), ex = Math.floor(a[3] / 12), none = a[3] - arrest - 5 * ex;
+      const cats: [string, number][] = [["arrest", arrest], ["A", ex], ["B", ex], ["C", ex], ["D", ex], ["E", ex], ["none", none]];
+      for (const [c, n] of cats) out.push(["s", oris.get(k), a[0], n, null, null, null, null, c, Math.max(n - 1, 0)]);
+    }
+    return out;
+  }
   // A state sum's grid summed by agency and year (state-sum.ts): the stub sums its own monthly grid the same way.
   if (/repsum/.test(sql)) {
     const by = new Map<string, unknown[]>();
@@ -2873,6 +2893,39 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: decline }]), live).kind, "clarify");
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "A state", entry: "which state" }]), live).kind, "clarify");
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: answerOf(["2024"]) }]), { ...deps, noDefaults: true }).kind, "clarify");
+}
+// P190 (Jeff 2026-11-21, reader class): small words and slips read as the question they are, never "I didn't understand".
+{
+  const readerDecline = (q: string) => { const o = ask(q); return o.kind === "decline" && o.reason === "reader"; };
+  for (const q of ["how many murders ocurred in Memphis in 2024", "how many murders occurredin Memphis in 2024", "how mnay murders in Memphis in 2024", "murders in Memphis for year 2024",
+    "Houston retail theft in 2024", "Houston larceny from auto in 2024", "Houston murders sincce 2020 by year"])
+    assert.ok(!readerDecline(q), q);
+  // A sentence that merely holds a similar word keeps its own handling: "occurred in" still reads as "in" and nothing else.
+  assert.deepEqual(ask("how many murders occurred in Memphis in 2024").kind, ask("how many murders in Memphis in 2024").kind);
+  assert.deepEqual(ask("Houston retail theft in 2024").kind, ask("Houston shoplifting in 2024").kind);
+}
+// P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
+{
+  const tx = as(ask("Texas murder clearance by type in 2025"), "answer");
+  assert.ok(tx.stateSum && tx.plan.statistics.some((s) => s.kind === "incidents"), "the reporting agencies' sum, with incidents");
+  const rows = tx.delivered.table.rows.map((r) => [r[0], r[1], r[2]]);
+  // Houston 9 + Dallas 7 + Austin 5 + Smallville 5 a month for 12 months = 312 units, half cleared by arrest; the incidents are one fewer per agency and type.
+  assert.deepEqual(rows.map((r) => r[1] === undefined ? r[0] : r.slice(0, 3)).flat().filter((x) => typeof x === "number").slice(0, 4).length > 0, true, JSON.stringify(tx.delivered.table));
+  // Jeff 2026-11-21: one row for arrest, each exceptional type A to E and not cleared, named as one agency's answer names them (no codes).
+  const names = tx.delivered.table.rows.map((r) => String(r[0]));
+  assert.deepEqual([...names].sort(), ["Cleared by arrest", "Exceptional: death of the offender", "Exceptional: in custody of another jurisdiction", "Exceptional: juvenile, no custody",
+    "Exceptional: prosecution declined", "Exceptional: victim refused to cooperate", "Uncleared"].sort(), JSON.stringify(names));
+  assert.ok(names.every((n) => !/^Code |^[A-E]$/.test(n)));
+  const byName = (n: string) => tx.delivered.table.rows.find((r) => r[0] === n)!;
+  // Houston 108 + Dallas 84 + Austin 60 + Smallville 60 = 312 units; arrest 54 + 42 + 30 + 30 = 156, each exceptional type 9 + 7 + 5 + 5 = 26; the rest 26; incidents one fewer per agency.
+  assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
+  assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
+  assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
+  // The nation is the same sum over every state (the runner timed it: 4.3 s); a clearance rate for a state keeps its own decline.
+  const us = as(ask("murder clearance by type in the United States in 2025"), "answer");
+  assert.ok(us.stateSum && us.delivered.table.rows.length >= 2, "the nation by clearance type");
+  assert.ok(/United States/.test(us.delivered.text[0]), us.delivered.text[0]);
+  assert.equal(ask("Texas murder clearance rate in 2025").kind, "decline");
 }
 // P159 (Jeff 2026-11-21): a title is PLACE, OFFENSE, PERIOD, TIMEFRAME.
 {

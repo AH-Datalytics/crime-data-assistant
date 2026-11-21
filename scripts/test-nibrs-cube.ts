@@ -48,12 +48,12 @@ console.log("nibrs cube: the cube serves exactly its cell families; every other 
 
 // --- Grid once: the category sums read from the grid's (agency, year, category) rows.
 {
-  const row = (ori: string, y: number, n: number, k: string | null) => ["s", ori, y, n, null, null, null, null, k];
+  const row = (ori: string, y: number, n: number, k: string | null) => ["s", ori, y, n, null, null, null, null, k, n - 1];
   const rows = [row("A1", 2024, 5, "Under 18"), row("A2", 2024, 7, "Under 18"), row("A1", 2024, 2, null), row("A2", 2023, 4, "Unknown"), row("A1", 2023, 1, "Unknown"), row("A3", 2024, 9, "65+")];
-  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], null), [[2023, "Unknown", 5, 1], [2024, "65+", 9, 0], [2024, "Under 18", 12, 5], [2024, null, 2, 2]],
-    "summed over agencies and over the Consistent Reporting Agencies; ordered by year, then category, a missing category last");
+  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], null), [[2023, "Unknown", 5, 1, 3, 0], [2024, "65+", 9, 0, 8, 0], [2024, "Under 18", 12, 5, 10, 4], [2024, null, 2, 2, 1, 1]],
+    "summed over agencies and over the Consistent Reporting Agencies, with their incidents beside; ordered by year, then category, a missing category last");
   const headers = new Map<number, Set<string>>([[2023, new Set(["A1"])], [2024, new Set(["A1", "A3"])]]);
-  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], headers), [[2023, "Unknown", 1, 1], [2024, "65+", 9, 0], [2024, "Under 18", 5, 5], [2024, null, 2, 2]],
+  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], headers), [[2023, "Unknown", 1, 1, 0, 0], [2024, "65+", 9, 0, 8, 0], [2024, "Under 18", 5, 5, 4, 4], [2024, null, 2, 2, 1, 1]],
     "an arrest counts only in a year in which its agency has a header in the place");
   assert.deepEqual(categorySumsFromGrid([], [], null), []);
 }
