@@ -25223,57 +25223,19 @@
    "question": "make it a bar chart",
    "rewrite": "simple assault victims in Detroit by month in 2023",
    "policy": [
-    "P69",
-    "D18",
-    "D30",
-    "P01",
-    "P16"
+    "P157",
+    "P69"
    ],
    "expected": {
-    "action": "answer",
-    "meaning": {
-     "source": "nibrs",
-     "places": [
-      {
-       "kind": "agency",
-       "name": "Detroit Police Department",
-       "state": "MI"
-      }
-     ],
-     "period": {
-      "from": "2023-01",
-      "to": "2023-12"
-     },
-     "measures": [
-      {
-       "name": "simple assault",
-       "unit": "victim"
-      }
-     ],
-     "filters": [],
-     "groupings": [
-      "month"
-     ],
-     "statistic": "count"
-    },
-    "values": {
-     "status": "pending_build",
-     "source": "the same cells as LS-227 (the rewrite is LS-227's question)"
-    },
-    "statements": [
-     "shows the rewritten question above the answer, as the question answered (P69)",
-     "names the agency (Detroit Police Department)",
-     "names any months with no data as missing, not zero",
-     "names its source at the end",
-     "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
-     "Changes the existing chart to bars using the existing result; makes no data-engine request."
-    ]
+    "action": "decline",
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading.",
+    "alternative": null
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
-    "notes": "Rewrite is LS-227's question. Guidance: P69: presentation never reaches the data engine. HELD as drafted (provisional, never scored), Codex 7b-01: presentation behavior, outside engine scoring; the unchanged rewrite is the retained data question's caption, not a question resubmitted."
+    "notes": "P157 (Jeff 2026-11-19): a request to change a chart (here the chart type) is declined with one sentence; it no longer returns the previous answer. Was HELD as drafted under P69 (presentation outside engine scoring); still provisional, never scored."
    }
   },
   {
