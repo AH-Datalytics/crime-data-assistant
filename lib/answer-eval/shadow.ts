@@ -460,7 +460,7 @@ const LABEL_REASON: [RegExp, string][] = [
   [/not a term the data defines|non-fatal shootings/i, "not_recorded_in_nibrs"],
   [/cannot predict|predict/i, "forecast"], [/is not in the data/i, "outside_release_coverage"], [/cause/i, "explanation_requested"],
   // Increment 5: no state clearance rate (P18); years outside the historical file (D04, P14).
-  [/no state clearance rate/i, "not_recorded_in_nibrs"], [/figures in the data cover \d{4} through \d{4}|outside them/i, "outside_release_coverage"],
+  [/no state clearance rate|state clearance rate for several years|clearance rate for every state/i, "not_recorded_in_nibrs"], [/figures in the data cover \d{4} through \d{4}|outside them/i, "outside_release_coverage"],
 ];
 const reasonClass = (s: string) => LABEL_REASON.find(([re]) => re.test(s))?.[1] ?? null;
 /** The answered plan as a meaning; a set of years keeps its years (through the answer's end when clipped). */

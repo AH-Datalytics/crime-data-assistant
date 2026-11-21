@@ -743,14 +743,16 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   }
   for (const q of ["safest city in the us", "safest city in 2023", "most dangerous city in 2024"])
     assert.ok(declined(q).explanation.startsWith("There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate."), q);
-  for (const q of ["clearance rates by state", "What is the homicide clearance rate in Kansas?"]) {
-    const d = declined(q);
-    assert.equal(d.reason, "not_recorded_in_nibrs", q);
-    assert.match(d.explanation, /^There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states/, q);
+  // P172 (Jeff 2026-11-21, reversing P18): one state's clearance rate is answered; every state at once is not, and says what to ask.
+  {
+    const d = declined("clearance rates by state");
+    assert.equal(d.reason, "not_recorded_in_nibrs");
+    assert.match(d.explanation, /^A clearance rate for every state at once isn't available\./);
+    assert.equal((ask("What is the homicide clearance rate in Kansas?") as { about?: string }).about, "which period", "a state's clearance rate with no year asks the year");
   }
   // Not changed: a number asked with a trailing "why" is answered and the why declined; a state's NIBRS-only clearance rate keeps its own sentence.
   assert.notEqual((ask("murders in Houston in 2024 and why?") as { reason?: string }).reason, "explanation_requested");
-  assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /no state clearance rate.*not decided/);
+  assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /state clearance rate for a NIBRS-only offense.*not decided/);
   const placed = (q: string) => { const o = ask(q) as { kind: string; about?: string }; assert.ok(!(o.kind === "clarify" && /^which (?:place|LA)/.test(o.about ?? "")), `${q}: the place is read, not asked`); return o; };
   for (const q of ["us homicide trend from 1950 to 2024", "murders in the us in 2024", "American violent crime since 2018", "show me the annual number of murders in the U.S.", "murders in the U.S in 2024",
     "SF aggravated assault in 2025", "What is SFPD rape clearance rate in 2024?", "San fran agg assaults since 2018", "Sf murders in 2024"]) placed(q);
@@ -1791,8 +1793,24 @@ const span = srs("Robberies in Texas by year from 1955 to 1965");
 assert.deepEqual(span.delivered.table.rows.map((x) => x[0]), ["1960", "1961", "1962", "1963", "1964", "1965"]);
 assert.ok(span.delivered.text.includes("State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them."));
 assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_release_coverage");
-assert.equal(as(ask("Aggravated assault clearance rate in Ohio in 2023"), "decline").reason, "not_recorded_in_nibrs", "P18");
-assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /no state clearance rate.*not decided/);
+// P172 (Jeff 2026-11-21, reversing P18): a completed year's clearance rate for a state is the reporting agencies' cleared offenses over their offenses.
+{
+  const tx = as(ask("Murder clearance rate in Texas in 2025"), "answer");
+  assert.equal(tx.delivered.text[0], "Texas cleared 34.6% of the murders reported in 2025, summed over the 4 agencies that reported.");
+  assert.ok(tx.delivered.text.includes("Includes all agencies.") && tx.delivered.text.at(-1) === "Source: NIBRS.", JSON.stringify(tx.delivered.text));
+  assert.equal(as(ask("Aggravated assault clearance rate in Ohio in 2023"), "answer").delivered.text.length > 0, true);
+  // Several years: one row a year, each the single-year figure; years before NIBRS's first are said, not answered.
+  for (const q of ["What is the murder clearance rate in Texas by year from 2023 to 2025?", "Show the murder clearance rate in Texas since 2023"]) {
+    const by = as(ask(q), "answer");
+    assert.deepEqual(by.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], q);
+    // (2024 is 34.5: the stub's Austin did not report June 2024, so its other months are summed without it.)
+    assert.deepEqual(by.delivered.table.rows.map((r) => r[1]), [34.6, 34.5, 34.6], JSON.stringify(by.delivered.table.rows));
+    assert.ok(/^2023 to 2025 Murders Cleared \(%\) by Year, Texas$/.test(by.delivered.text[0]), by.delivered.text[0]);
+  }
+  const early = as(ask("Show the burglary clearance rate in Texas since 2000"), "answer");
+  assert.ok(early.delivered.text.includes("NIBRS state figures start in 2017; 2000 through 2016 are outside them."), JSON.stringify(early.delivered.text));
+}
+assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /state clearance rate for a NIBRS-only offense.*not decided/);
 // Routes (P53): the current year to Current Trends, murders by relationship to Homicide Reports; named, not run.
 assert.deepEqual([ask("Robberies in Texas this year").kind, (ask("Robberies in Texas this year") as { source: string }).source], ["route", "rtci"]);
 assert.equal((ask("Murders in the US by victim-offender relationship in 2023") as { source?: string }).source, "shr");
@@ -2805,10 +2823,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
   assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
   assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
-  // The nation is the same sum over every state (the runner timed it: 4.3 s); a clearance rate for a state keeps its own decline.
+  // The nation is the same sum over every state (the runner timed it: 4.3 s); a state's clearance rate is answered (P172).
   const us = as(ask("murder clearance by type in the United States in 2025"), "answer");
   assert.ok(us.stateSum && us.delivered.table.rows.length >= 2, "the nation by clearance type");
   assert.ok(/United States/.test(us.delivered.text[0]), us.delivered.text[0]);
-  assert.equal(ask("Texas murder clearance rate in 2025").kind, "decline");
+  assert.equal(ask("Texas murder clearance rate in 2025").kind, "answer");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
