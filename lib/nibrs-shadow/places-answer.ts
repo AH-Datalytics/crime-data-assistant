@@ -17,7 +17,7 @@
 import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
-import { combineMonths, rankAgencies, rate, rollup, type Cell, type MonthCell } from "../nibrs-plan/transforms";
+import { combineMonths, rankAgencies, rate, rollup, truncatedTieSentence, type Cell, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { agencyName, reportedBy, stateName } from "./places";
 import { deliverMonthly, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
@@ -131,7 +131,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     lines.push(`Only agencies with data for ${full} are ranked, and ties are ordered by agency name.`);
     // A tie at the cut shows every place tied, said plainly (coordinator 2026-11-06: "Arlington and Amarillo tie for
     // 10th, so 11 places are shown").
-    if (tie) {
+    if (tie?.truncated) lines.push(truncatedTieSentence(tie, isRate));
+    else if (tie) {
       const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
       const names = tie.names.length > 2 ? `${tie.names.slice(0, -1).join(", ")} and ${tie.names[tie.names.length - 1]}` : tie.names.join(" and ");
       lines.push(`${names} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
