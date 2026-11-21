@@ -2789,8 +2789,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
   assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
   assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
-  // The nation stays declined until its timing is known; a clearance rate for a state keeps its own decline.
-  assert.equal(ask("murder clearance by type in the United States in 2025").kind, "decline");
+  // The nation is the same sum over every state (the runner timed it: 4.3 s); a clearance rate for a state keeps its own decline.
+  const us = as(ask("murder clearance by type in the United States in 2025"), "answer");
+  assert.ok(us.stateSum && us.delivered.table.rows.length >= 2, "the nation by clearance type");
+  assert.ok(/United States/.test(us.delivered.text[0]), us.delivered.text[0]);
   assert.equal(ask("Texas murder clearance rate in 2025").kind, "decline");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

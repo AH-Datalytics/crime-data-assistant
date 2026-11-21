@@ -929,7 +929,7 @@ ROWS = [
     ("P171",
      "\"Texas murder clearance by type in 2025\", \"Ohio rape clearance by type in 2024\", \"How were Florida's burglaries cleared in 2023\"",
      "Declined (\"This isn't available: clearance for a state, the nation or several agencies, for several crimes, or as a change or rolling windows\").",
-     "Clearance by type for a state is the reporting agencies' sum, as for one agency (P64, P66, P67): the crime's offenses cleared by arrest, cleared by exceptional means (A to E, or as one group) and not cleared, with the incidents beside each count, summed over the agencies that reported (each year's reporting agencies), with the Consistent Reporting Agencies as the button. A clearance rate for a state keeps P18's decline (the FBI publishes none). The nation, several crimes and a change stay declined.",
+     "Clearance by type for a state is the reporting agencies' sum, as for one agency (P64, P66, P67): the crime's offenses cleared by arrest, cleared by exceptional means (A to E, or as one group) and not cleared, with the incidents beside each count, summed over the agencies that reported (each year's reporting agencies), with the Consistent Reporting Agencies as the button. A clearance rate for a state keeps P18's decline (the FBI publishes none). The nation is the same sum over every state. Several crimes and a change stay declined.",
      "The table of clearance types with their offense counts and incidents, the title, the agencies line, the date-of-file note, then the Source line.",
      "Jeff 2026-11-21 (through the coordinator): build state clearance by type; the same P66 rule as one agency plus the reporting-agencies line.",
      "Decided 2026-11-21 (Jeff, through the coordinator)",
