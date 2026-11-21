@@ -2547,6 +2547,15 @@
       "note": "The web side of the engine switch's stage 1: the private flag (a keyed cookie, never the key; no key configured means no flag), the client of the engine service against a loopback service with a fake worker (unreachable, unreadable and too-slow services are reported as unavailable, never as a fallback), and the route logic with fakes (private flag first, rate limit, page token, session limit, a query-log row for every outcome, failures shown as what they are)."
     },
     {
+      "id": "test-groupable-table",
+      "tier": "F",
+      "script": "scripts/test-groupable-table.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "General query model step 1: the compiler's grouping table is built from the attribute table (lib/nibrs-plan/attribute-table.ts) and is byte-identical to the hand-written table it replaced (golden file: columns, flags, join and binned text); every row is a dimension of the semantic layer. Offline."
+    },
+    {
       "id": "test-nibrs-duckdb-temp",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-temp.ts",
