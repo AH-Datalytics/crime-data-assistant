@@ -558,18 +558,20 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   loose(/\boverall\s+(?=(?:violent|property)\b)/gi, "", "left out, since the crime is named");
   loose(/\boverall\b(?=\s+(?:and|&)\s+violent\b)/gi, "violent crime and property crime", "violent crime plus property crime");
   // Not a clearance question (P57's current year) and not a trend ("current murder trends" is a series, never one year).
-  if (!/\bclearance|cleared|trend\w*\b/i.test(text) && !TIMEFRAME.test(text.replace(/\bcurrent(?:ly)?\b/gi, ""))) {
+  // "Right now" and "these days" are "current" (Jeff 2026-11-21).
+  const NOW_WORDS = /\bcurrent(?:ly)?\b|\bright\s+now\b|\bthese\s+days\b/gi;
+  if (!/\bclearance|cleared|trend\w*\b/i.test(text) && !TIMEFRAME.test(text.replace(NOW_WORDS, ""))) {
     const before = text;
-    text = text.replace(/\b(?:the\s+)?current(?:ly)?\b(?!\s*[-\s]?(?:year|month|date|day|week|population|trends?|data|situation|status|events?|officers?|staffing|rolling))\s*/gi, (m) => {
+    text = text.replace(/\b(?:the\s+)?(?:current(?:ly)?|right\s+now|these\s+days)\b(?!\s*[-\s]?(?:year|month|date|day|week|population|trends?|data|situation|status|events?|officers?|staffing|rolling))\s*/gi, (m) => {
       readings.push({ kind: "phrase", from: m.trim(), to: `the latest complete year, ${currentYear - 1}` });
       return "";
     });
     if (text !== before) endWith(`in ${currentYear - 1}`);
   }
   {
-    const TREND = String.raw`(?:going\s+up\s+or\s+down|going\s+up|going\s+down|gone\s+up|gone\s+down|up\s+or\s+down|dropping|up|down)`;
+    const TREND = String.raw`(?:going\s+up\s+or\s+down|going\s+up|going\s+down|gone\s+up|gone\s+down|up\s+or\s+down|dropping|rising|falling|increasing|getting\s+worse|getting\s+better|up|down)`;
     const t1 = new RegExp(String.raw`^(\s*)(?:is|are|has|have|was|were)\s+(.+?)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
-    const t2 = t1 ? null : new RegExp(String.raw`^(.*\b(?:crimes?|homicides?|murders?|rates?)\s+)(?:are|is|have|has)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
+    const t2 = t1 ? null : new RegExp(String.raw`^(.*?\S)\s+(?:are|is|have|has)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const [lead, x, w, rest]: string[] = t1 ? [t1[1], t1[2], t1[3], t1[4] ?? ""] : t2 ? [t2[1], "", t2[2], t2[3] ?? ""] : ["", "", "", ""];
     // Not with peers ("similar cities" stays the ask from PR 295).
     if (w && !/\bhow\b/i.test(`${lead}${x}`) && CRIME_WORD.test(`${lead}${x}`) && !/\b(?:similar|peers?|comparable)\b/i.test(rest)) {
@@ -619,7 +621,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/\band\s+(?:to\s+)?(?:the\s+)?(?:national(?:\s+(?:rate|average|total|level|figures?|trend))?|nation(?:\s+as\s+a\s+whole)?|U\.?S\.?\s+(?:rate|average|total)|nationally)\b/gi,
     (m: string, offset: number, whole: string) => {
       const rateBefore = /\b(?:rates?|per\s+capita|per\s+100,?000)\b/i.test(whole.slice(0, offset));
-      if (/\b(?:rate|average)\b/i.test(m) && !rateBefore) return m;
+      // "The national average" is the nation's figures beside the place's (Jeff 2026-11-21), a rate named or not.
+      if (/\brate\b/i.test(m) && !rateBefore) return m;
       // A national total against a rate asked mixes units: left as written (Codex comparison confirmation 01).
       if (/\b(?:total|figures?)\b/i.test(m) && rateBefore) return m;
       readings.push({ kind: "phrase", from: m, to: "and the United States" });

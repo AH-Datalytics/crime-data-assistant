@@ -2894,6 +2894,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("Has crime gone up in Asheville, NC since 2022").text, "crime in Asheville, NC since 2022 by year");
   assert.equal(rd("Crime and homicide rates are down").text, "Crime and homicide rates by year over the past 5 years");
   assert.ok(note("is crime up in milwaukee").some((r) => r.from === "up" && /past five years/.test(r.to)));
+  // Approved synonyms: "right now" and "these days" are current; "rising", "falling", "increasing", "getting worse/better" are up/down;
+  // "the national average" is the nation.
+  assert.equal(rd("What is the murder rate in Chicago right now?").text, "What is the murder rate in Chicago in 2025?");
+  assert.equal(rd("How is crime in Houston these days").text, "How is crime in Houston in 2025");
+  assert.equal(rd("is crime rising in Houston").text, "crime in Houston by year over the past 5 years");
+  assert.equal(rd("are murders falling in Houston?").text, "murders in Houston by year over the past 5 years?");
+  assert.equal(rd("is crime in Houston getting worse").text, "crime in Houston by year over the past 5 years");
+  assert.equal(rd("Murders in Houston are increasing since 2020").text, "Murders in Houston since 2020 by year");
+  assert.equal(rd("How does Houston compare to the national average in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
   // Not other uses of the words.
   assert.equal(rd("murders in Houston broken down by year").text, "murders in Houston broken down by year");
   assert.equal(rd("is the murder rate in Houston down 10% from 2020").text, "is the murder rate in Houston down 10% from 2020");
