@@ -34,3 +34,6 @@ next-env.d.ts
 # up in the P1.1 control-byte inventory.
 __pycache__/
 *.py[cod]
+
+# the engine service bundle (scripts/build-engine-service.mjs)
+/services/engine/dist

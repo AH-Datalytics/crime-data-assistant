@@ -1,0 +1,30 @@
+# The engine service unit TEMPLATE (stage 1 of the engine switch). A file in the repository only: nothing installs, enables or starts it. Installing it on the server is a separate,
+# typed-OK step (docs/runbooks/engine-service.md). The caps below are the STARTING values from the runner measurement plan, not a deployment decision: the final values are
+# confirmed against the measurement and Jeff's typed OK with the deploy.
+[Unit]
+Description=NIBRSAI engine service (answers from the canonical NIBRS release; 127.0.0.1 only)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/nibrs/current
+EnvironmentFile=/opt/nibrs/engine/engine.env
+ExecStart=/usr/bin/node /opt/nibrs/current/services/engine/dist/main.cjs
+Restart=on-failure
+RestartSec=5
+# Caps: the engine must never take the site down. MemoryMax kills the engine inside its own cgroup; no swap for it; the site wins every contention.
+MemoryHigh=4500M
+MemoryMax=5G
+MemorySwapMax=0
+CPUQuota=200%
+CPUWeight=50
+Nice=10
+IOWeight=50
+# DuckDB spill files go to the local disk, in a folder the service owns.
+Environment=TMPDIR=/opt/nibrs/engine/tmp
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/opt/nibrs/engine/tmp
+
+[Install]
+WantedBy=multi-user.target
