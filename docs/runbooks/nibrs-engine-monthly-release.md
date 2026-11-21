@@ -19,6 +19,14 @@ Written 2026-11-18 after the November release (canon2-20261118-host, new 2026 fi
 4. **Cubes**: the Model refreshes the group cube (crime_groups_v2) and the code cube against the new release (each manifest records `source_manifest_sha256` of the release's manifest.json; a cube built from another release is refused with a stderr line and the engine reads raw: slow, never wrong). The code cube must be built at Model commit 064661b or later (offender sequence 00 blank in sex and race).
 5. **Checks on the runner**: `scripts/test-nibrs-cube.ts` cell by cell (cube vs raw; env NIBRS_CUBE_TEST_ROOT, _CUBE, _CODE_CUBE, _PYTHON, _QUESTIONS), then the scorecard with the flag on and off, the 53 heavy ids and a shadow run. Merge only when all are identical to the previous release's rules.
 6. Commit the three fixtures in one small PR into dev; the correctness indexes (the Model's repo) and the record of new values are the Model's.
+7. **Re-verify the answers that moved.** A new release changes table digests (a new month, a different consistent-reporter set), and an answer counts as correct on the scorecard only at a verified digest, so every verified answer whose digest moved goes back to unverified. Do not loosen the match. Re-verify them by docs/runbooks/verify-new-answers.md, section "After a monthly refresh": the runner's cold scorecard on the new release gives the ids that moved correct to unverified; `make-verify-requests.ts --ids <those ids>` on the runner with the new build and the cold run's progress file; the blind SQL on the new parquet files only; `apply-verify-results.ts` with a new batch name (`crimeindex-<date>`). Only `scripts/fixtures/answer-eval/qlog-verified.json` changes. The pinned expected values (the Current Trends test pins and the answer-eval cases that name the Model's value files) move with the release and are updated in their own PR.
+
+## Crime Index (Current Trends) refresh, in order
+
+1. The Model archives the new snapshot (current_crime and its Final panel) and commits the manifest entry (append-only).
+2. Build the release folder: `python scripts/build-crimeindex.py --manifest <crimeindex-archive.json> --snapshots <historical snapshots folder> <folder with the new snapshot> --out <outside the repository>/crimeindex-<date>`. Every input's SHA-256 is checked against the manifest; a mismatch stops the build. The folder is named for its newest input. Zip it with its SHA256SUMS for the runner.
+3. Update the pinned values (test-nibrs-current.ts real-build block and the answer-eval cases LS-441 to LS-448) from the Model's independent recomputation, never from the engine's own output; the eval reads the Model's value files from `main`, or from a branch with `--values-ref`.
+4. Runner: cold scorecards on the old and the new release (flag off and on), then step 7 above.
 
 ## Known cost
 

@@ -103,6 +103,9 @@ const PRESENTATION = [
   /^(?:(?:show|display|make|put|draw)\s+(?:it\s+|this\s+|that\s+|them\s+)?)?(?:as|in)\s+(?:a\s+)?(?:bars?|lines?|columns?|a\s+table|table|pie)$/,
   /^(?:(?:show|display)\s+(?:the\s+|a\s+)?)?(?:table|chart|graph)(?:\s+only)?$|^(?:just|only)\s+(?:the\s+)?(?:table|chart|graph)$/,
   /^(?:hide|remove|no)\s+(?:the\s+)?(?:chart|graph|table)$/,
+  // P157: the same asks worded another way ("create a bar chart", "give me a pie chart", "label the columns on the chart"): all declined with the chart sentence.
+  /^(?:(?:create|build|generate|draw|plot|make|give|show)\s+(?:me\s+)?(?:it\s+)?(?:as\s+)?)?(?:(?:a|an)\s+)?(?:(?:stacked|grouped|horizontal|vertical)\s+)?(?:bar|line|pie|column|area|scatter)\s+(?:chart|graph|plot)$/,
+  /^(?:label|add\s+labels?\s+to)\s+(?:the\s+)?(?:columns?|bars?|lines?|points?|data|chart|graph)(?:\s+(?:on|in|of)\s+(?:the\s+)?(?:chart|graph))?$/,
 ];
 
 /** The clause-0 parts the reader finds in a question: measures, places, periods (their words as asked). */
