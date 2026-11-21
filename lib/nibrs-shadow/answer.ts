@@ -34,8 +34,8 @@ import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
-import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
-import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
+import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, pointsBack, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
+import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
@@ -63,7 +63,7 @@ import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnsw
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
-import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter } from "./shr";
+import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -839,10 +839,12 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
   try { yearly = run(question); } catch { return decl; }
   if (yearly.kind !== "historical" && yearly.kind !== "srs") return decl;
   const rows = yearly.delivered.table.rows;
-  if (!rows.flatMap((r) => r.slice(1)).some((c) => typeof c === "number")) return decl;
+  // One year asked gives a one-cell row with no Year column ([[127]]); several years give Year first.
+  const dated = yearly.delivered.table.columns.length > 1;
+  if (!rows.flatMap((r) => (dated ? r.slice(1) : r)).some((c) => typeof c === "number")) return decl;
   // The table opened from this button ends at its last year with a figure (Jeff 2026-11-19), the years after it named; no trailing blank rows.
   let last = rows.length - 1;
-  while (last >= 0 && rows[last].slice(1).every((c) => c === null)) last--;
+  while (dated && last >= 0 && rows[last].slice(1).every((c) => c === null)) last--;
   let opened: ShadowOutcome = yearly;
   if (last >= 0 && last < rows.length - 1) {
     const gone = rows.length - 1 - last, from = String(rows[last + 1][0]), to = String(rows[rows.length - 1][0]);
@@ -868,7 +870,37 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   return o;
 }
 /** The answer before dead buttons are dropped: for a caller that repairs a button's continuation first (the kind of assault). */
+/**
+ * P164 (Jeff 2026-11-19): "murder victims by race and sex" (also "victim race and gender", "victim age and sex") is one table of Homicide
+ * Reports, the first detail down the side and the second across. Each detail alone is read as usual (the reader gives one breakdown per
+ * answer); the two single answers must both reach Homicide Reports for the same place, period and conditions, and then the two-way
+ * question is asked of the release. Anything else is left to the usual path (which declines a second breakdown).
+ */
+const TWO_DIM = String.raw`(race|sex|gender|ethnicity|age)`;
+const TWO_WAY = new RegExp(String.raw`\bby\s+(?:the\s+)?${TWO_DIM}(?:\s+groups?)?\s*(?:,|and|&|\/)\s*(?:and\s+)?${TWO_DIM}(?:\s+groups?)?\b(?:\s+breakdown)?`, "i");
+const TWO_NOUN = new RegExp(String.raw`\b(victim|offender)s?(?:'s|s')?\s+${TWO_DIM}\s+(?:and|&|\/)\s+${TWO_DIM}\b(?:\s+breakdown)?`, "i");
+function shrTwoWay(question: string, deps: ShadowDeps): ShadowOutcome | null {
+  if (!deps.shr || deps.checkingOffer) return null;
+  const q = question.replace(TWO_NOUN, (_m, who: string, a: string, b: string) => `${who}s by ${a} and ${b}`);
+  const m = TWO_WAY.exec(q);
+  if (!m) return null;
+  const attr = (w: string) => (/^gender$/i.test(w) ? "sex" : w.toLowerCase());
+  const [a, b] = [attr(m[1]), attr(m[2])];
+  if (a === b) return null;
+  const one = (x: string) => shadowAnswer(q.replace(m[0], ` by ${x} `).replace(/\s+/g, " ").replace(/\s+([?.!,])/g, "$1").trim(), { ...deps, checkingOffer: true });
+  const [o1, o2] = [one(a), one(b)];
+  if (o1.kind !== "shr" || o2.kind !== "shr") return null;
+  const [s1, s2] = [o1.question, o2.question];
+  const person = (d: string | undefined) => !!d && /^(?:victim|offender)\./.test(d);
+  if (!s1.breakdown || !s2.breakdown || !person(s1.breakdown.dim) || !person(s2.breakdown.dim) || s1.breakdown.dim === s2.breakdown.dim || s1.unit !== s2.unit) return null;
+  const { breakdown2: _b2, ...rest } = s1;
+  const sq: ShrQuestion = { ...rest, share: false, breakdown2: { dim: s2.breakdown.dim, ...(s2.breakdown.bins ? { bins: s2.breakdown.bins } : {}) } };
+  const r = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  return r.kind === "shr" ? r : null;
+}
 function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): ShadowOutcome {
+  const two = deps.rewritten ? null : shrTwoWay(question, deps);
+  if (two) return two;
   const os = deps.rewritten ? null : otherStates(question, deps);
   if (os) return os;
   const o = answerAsked(question, deps);
@@ -1177,6 +1209,13 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   if ((r.kind as string) === "presentation") return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
   // A proposal returns before anything runs.
   if (r.kind === "propose") return { kind: "proposal", question: followUp, proposed: r.question, how: r.how, rewrite: r.question, rewriteKind: "propose" };
+  // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is read as a question of its own
+  // ("show me robberies and murders in the southwest" asked what it changes in the last question). Its first-turn answer or ask is given; when
+  // that would be a decline (words unread, a combination not offered) the question back about the last turn stays, as before.
+  if (r.kind === "ask" && !pointsBack(followUp) && followUp.trim().split(/\s+/).length >= 3) {
+    const own = shadowAnswer(followUp, deps);
+    if (own.kind !== "decline") return { ...own, rewrite: followUp, rewriteKind: "new" };
+  }
   if (r.kind === "ask") {
     // P69: uncertain, so ask; each option is a complete question, run as a new one. With none, the user rephrases. An
     // option is offered only when the reader reads it whole (Codex decline review 01: "...victims with a female offender"
@@ -1282,6 +1321,13 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const compare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "versus") || /\bcompar/i.test(ledger0.question);
   const sq = shrQuestionOf(plan, period, deps.shr, { compare });
   if ("why" in sq) return null;
+  // P163 (Jeff 2026-11-19): justifiable homicides are shown for both kinds together; "police" in the question alone is the felons killed by
+  // police (code 81), "civilians" or "private citizens" alone the felons killed by a private citizen (80). Both words ask for the two side by side.
+  if (sq.measure === "justifiable" && !sq.breakdown && !sq.filters.some((f) => f.dim === "circumstance")) {
+    const said = [ledger0.question, ...(flags(ledger0).readings ?? []).filter((r) => r.kind === "phrase").map((r) => r.from)].join(" ");
+    const police = /\b(?:police|officers?|law\s+enforcement)\b/i.test(said), civilian = /\b(?:civilians?|private\s+citizens?|citizens?)\b/i.test(said);
+    if (police !== civilian) sq.filters.push({ dim: "circumstance", codes: [police ? "81" : "80"] });
+  }
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
   if (a.kind === "shr" && detailEveryYear)
     return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
@@ -1371,10 +1417,10 @@ function shrSeveral(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const columns = [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Agency" }, ...first.delivered.table.columns];
   const rows = answers.flatMap((a) => a.delivered.table.rows.map((r) => [shortAgency(agencyOf(a).label), ...r]));
   // The lines: the first title with every agency named, then each answer's other lines once (its own agency lines kept).
-  // The first title with every agency named: a title ends with its place; a sentence ("Chicago had 12 murders in 2024.") becomes the title of the agencies' table.
+  // The first title with every agency named: a title now begins with its place (Jeff 2026-11-21); a sentence ("Chicago had 12 murders in 2024.") becomes the title of the agencies' table.
   const t0 = first.delivered.text[0], label0 = agencyOf(first).label;
   const sentence = /^.+? had ([\d.,]+) (.+) in (.+)\.$/.exec(t0);
-  const title = t0.endsWith(`, ${label0}`) ? `${t0.slice(0, t0.length - label0.length)}${listed}`
+  const title = t0.startsWith(`${label0} `) ? `${listed}${t0.slice(label0.length)}` : t0.endsWith(`, ${label0}`) ? `${t0.slice(0, t0.length - label0.length)}${listed}`
     : sentence ? seriesTitle(sentence[3], sentence[2].replace(/ per 100,000 people$/, ""), "Agency", listed) : t0;
   const rest: string[] = [];
   for (const a of answers) for (const t of a.delivered.text.slice(1)) if (!rest.includes(t) && !/^Source: /.test(t)) rest.push(t);
@@ -2752,6 +2798,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       plan.statistics.push({ kind: "count", as: "drug_crimes_together_count", measure: "drug_crimes_together" });
     }
   }
+  // P167 (Jeff 2026-11-19): "violent crime with a firearm" is NIBRS crimes against persons with the weapon on the victim's offense, and the answer
+  // says which crimes are counted (it is not the four crimes of the FBI's violent crime).
+  if (plan.measures.length === 1 && plan.measures[0].id === "violent_crime.ucr" && plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon")) {
+    plan.measures[0] = { ...plan.measures[0], id: "victims.person_crimes", unit: "victim" };
+    plan.filters = plan.filters.map((f): Filter => (f.kind === "exists" && f.entity === "offense_weapon" ? { ...f, scope: "victim" } : f));
+    plan.defaults.push({ path: "measures[0]", value: "victims.person_crimes", reason: "P167: violent crime with a weapon is counted as crimes against persons" });
+  }
   plan.measures.forEach((m, i) => {
     const name = m.id.replace(/^[a-z_]+\./, "");
     // D18: carjacking by offense; an offense has one location.
@@ -2775,6 +2828,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
       unbind((p) => p.concept === "unit");
       if (!statements.includes("property_counted_by_offense")) statements.push("property_counted_by_offense");
+    }
+    // P166 (Jeff 2026-11-19): a crime counted by victim, broken down by weapon, is counted by offense (the weapon belongs to the offense), and
+    // the answer says so: "Counts are aggravated assault offenses by weapon, not victims."
+    if (m.id.startsWith("victims.") && plan.measures[i].id === m.id && plan.groupings.some((g) => g.dimension === "offense_weapon.weapon")
+      && !!MEASURE_CODES[name] && !["violent_crime", "property_crime", "person_crimes", "against_property", "homicide", "homicide_all", "murder"].includes(name)) {
+      const toOffense = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" ? { ...f, scope: "offense" } : f);
+      plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense", ...(m.filters ? { filters: m.filters.map(toOffense) } : {}) };
+      plan.filters = plan.filters.map(toOffense);
+      plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P166: a breakdown by weapon counts the offenses, not the victims" });
+      unbind((p) => p.concept === "unit");
     }
   });
   // P31: a composite's crimes, each in its own unit (FBI standard), with the composite's weapon on the offense that
@@ -2909,10 +2972,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Any person's detail selected, offenders' included (Codex SHR-A review 01.6).
   const detailSelectedAny = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim));
   // P152 (Jeff 2026-11-19): "Homicide Reports" in the words asks for that source: murders and homicides only, said plainly otherwise.
-  if (flags(ledger0).shrAsked && !plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id)))
+  if (flags(ledger0).shrAsked && !plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide|justifiable_homicide)(?![a-z_])/.test(m.id)))
     return decline("unsupported_capability", "Homicide Reports hold murders and homicides only.");
-  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny || flags(ledger0).shrAsked)
-    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
+  // P163 (Jeff 2026-11-19): justifiable homicide is Homicide Reports' (a felon killed by a private citizen or by police), whatever the years.
+  const justifiable = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.justifiable_homicide$/.test(m.id));
+  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny || flags(ledger0).shrAsked || justifiable)
+    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide|justifiable_homicide)(?![a-z_])/.test(m.id))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
   if (!stateMode && murderDetail) {
     const s = plan.geography.places.length > 1 ? shrSeveral(plan, deps, ledger0) : shrOutcome(plan, deps, ledger0);
@@ -3039,7 +3104,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // details (the victims, offenders, relationship, weapon, circumstance): a location or a clearance stays NIBRS's
     // (Codex coverage review 1).
     const shrDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
-    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
+    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide_all|homicide|justifiable_homicide)(?![a-z_])/.test(m.id))
       && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
       && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
     if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
@@ -3132,11 +3197,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
     // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.
     ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
+    // P168: a person counted by a weapon of the incident's crime (the data does not link a person to one offense), one agency.
+    ...([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_weapon" && (f.scope === "offender" || f.scope === "arrestee"))
+      ? ["A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."] : []),
     // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
     ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
     // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
     ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
+    // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
+    ...(plan.defaults.some((d) => d.reason.startsWith("P166")) ? [`Counts are ${MEASURE_LABEL[plan.measures[0].id.split(".")[1]] ?? "crime"} offenses by weapon, not victims.`] : []),
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),
