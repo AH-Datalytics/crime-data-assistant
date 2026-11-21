@@ -26,6 +26,7 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
+import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
 import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
@@ -73,6 +74,26 @@ function stub0(sql: string): unknown[][] {
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
   if (sql.includes("agency/data.parquet")) return popRows(sql);
+  // P171: a state's clearance by type, read once (state-sum.ts, "grid once"): each agency-year's coverage row ('c') and its sums by type ('s'):
+  // half the year's units cleared by arrest (one incident fewer than units), the rest not cleared.
+  if (/g AS MATERIALIZED/.test(sql) && /cleared_exceptionally/.test(sql)) {
+    const by = new Map<string, number[]>(), oris = new Map<string, string>();
+    for (const [ori, ym, n, st] of gridRows(sql) as [string, string, number | null, string][]) {
+      const k = `${ori}|${ym.slice(0, 4)}`, rep = st === "VALUE" || st === "REPORTED_ZERO";
+      const a = by.get(k) ?? by.set(k, [Number(ym.slice(0, 4)), 0, 0, 0, 0, 0]).get(k)!;
+      oris.set(k, ori);
+      a[1]++; if (rep) { a[2]++; a[3] += n ?? 0; } if (st === "EVIDENCE_CONFLICT") a[4]++; if (st === "VALUE") a[5]++;
+    }
+    const out: unknown[][] = [];
+    for (const [k, a] of by) {
+      out.push(["c", oris.get(k), a[0], a[1], a[2], a[3], a[4], a[5], null, null]);
+      // Half by arrest, one in twelve under each exceptional type A to E (the stub's Smallville has none of C), the rest not cleared.
+      const arrest = Math.floor(a[3] / 2), ex = Math.floor(a[3] / 12), none = a[3] - arrest - 5 * ex;
+      const cats: [string, number][] = [["arrest", arrest], ["A", ex], ["B", ex], ["C", ex], ["D", ex], ["E", ex], ["none", none]];
+      for (const [c, n] of cats) out.push(["s", oris.get(k), a[0], n, null, null, null, null, c, Math.max(n - 1, 0)]);
+    }
+    return out;
+  }
   // A state sum's grid summed by agency and year (state-sum.ts): the stub sums its own monthly grid the same way.
   if (/repsum/.test(sql)) {
     const by = new Map<string, unknown[]>();
@@ -160,6 +181,15 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P168 (Jeff 2026-11-19): offenders or arrests by age for the crimes of an incident with a weapon, for one agency; the answer says how a person is counted.
+{
+  const byAge = as(ask("violent crimes involving a firearm in Houston in 2025 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(byAge.plan.measures[0].id, "offenders.person_crimes");
+  assert.ok(byAge.delivered.text.includes("A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."), JSON.stringify(byAge.delivered.text));
+  const arrests = as(ask("violent crime with a firearm in Houston in 2025 by age of arrestee"), "answer") as unknown as { delivered: { text: string[] } };
+  assert.ok(arrests.delivered.text.some((t) => /^A person is counted when the incident's crime/.test(t)), JSON.stringify(arrests.delivered.text));
+  assert.ok(sqls.some((s) => /w2\.offense_code IN \('09A'.*weapon IN \('11', '12', '13', '14', '15'\)/.test(s)), "the weapon is asked of the incident's offenses of the measure's codes");
+}
 // P170 (P82, Jeff 2026-11-19): domestic violence is the victims of the P82 crimes with an intimate partner or a family or household relationship to any offender, for one agency first.
 {
   const dv = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
@@ -177,8 +207,24 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   const police = ask("how many police involved domestic violence victims were reported in Houston in 2024?");
   assert.ok(police.kind === "decline" && /police involved/.test(police.explanation), JSON.stringify(police).slice(0, 300));
   // Not built yet: other units, and a state, the nation or several places (never the crimes alone).
-  for (const q of ["domestic violence offenses in Houston in 2024", "domestic violence incidents in Houston in 2024", "domestic violence arrests in Houston in 2024", "Domestic violence in Texas in 2024", "domestic violence nationally in 2024"])
+  // 3d: offenses and arrests, the unit asked, each with its own definition sentence.
+  const n2 = sqls.length;
+  const off = as(ask("domestic violence offenses in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(off.plan.measures[0].id, "offenses.domestic_violence");
+  assert.ok(off.delivered.text.includes("Offenses are the offenses of those crimes in incidents that had a domestic violence victim."), JSON.stringify(off.delivered.text));
+  const arr = as(ask("domestic violence arrests in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(arr.plan.measures[0].id, "arrests.domestic_violence");
+  assert.ok(arr.delivered.text.includes("Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders."), JSON.stringify(arr.delivered.text));
+  assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
+  for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
     assert.equal(ask(q).kind, "decline", q);
+  // 3b: the incidents with at least one domestic violence victim (the same P82 victim membership, each incident once).
+  const n1 = sqls.length;
+  const inc = as(ask("How have domestic violence incidents trended in Houston since 2019"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(inc.plan.measures[0].id, "incidents.domestic_violence");
+  assert.ok(inc.delivered.text.includes("An incident is counted once when at least one of its victims is counted as a domestic violence victim."), JSON.stringify(inc.delivered.text));
+  const incSql = sqls.slice(n1).find((s) => /o9\.offense_code = vo\.connected_offense/.test(s)) ?? "";
+  assert.ok(/r9\.offender_relationship IN \('SE'/.test(incSql) && /SELECT DISTINCT o\.data_year, o\.ori, o\.incident_num, NULL AS sub/.test(incSql), "distinct incidents from the qualifying victims");
 }
 // P153: a line, an annotation or a marker at a date on a chart is declined with its own sentence.
 for (const q of ["DC violent crime rolling over 12 months with a line at August 2025", "Houston murders per month with an annotation at May 2020",
@@ -410,13 +456,13 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
 {
   type Del = { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[]; chart: unknown } };
   const one = as(ask("Murders through April in Houston in 2024"), "answer") as unknown as Del;
-  assert.equal(one.delivered.text[0], "2024 Murder Victims January Through April by Year, Houston, Texas");
+  assert.equal(one.delivered.text[0], "Houston, Texas Murder Victims January Through April Per Year, 2024");
   assert.deepEqual(one.delivered.table.columns.map((c) => c.header), ["Year", "Murder victims"]);
   // The 2024 fixture has no March report: the year's figure is blank, never the three months that are known.
   assert.deepEqual(one.delivered.table.rows, [["2024", null]]);
   assert.ok(one.delivered.text.includes("Each year counts the same months: January through April."));
   const many = as(ask("Murders through April in Houston from 2022 to 2024"), "answer") as unknown as Del;
-  assert.equal(many.delivered.text[0], "2022 to 2024 Murder Victims January Through April by Year, Houston, Texas");
+  assert.equal(many.delivered.text[0], "Houston, Texas Murder Victims January Through April Per Year, 2022-2024");
   assert.deepEqual(many.delivered.table.rows, [["2022", 28], ["2023", 28], ["2024", null]]);
   assert.ok(many.delivered.text.some((t) => /^No figure is available for 2024: shown blank, not zero\.$/.test(t)));
   assert.deepEqual(many.delivered.chart, { kind: "bar", x: "Year", y: ["Murder victims"] });
@@ -442,7 +488,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     const sdeps = { ...deps, execute: sstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
       historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
     const early = as(shadowAnswer("Houston murders through May from 1983 to 1987", sdeps), "shr");
-    assert.equal(early.delivered.text[0], "1985 to 1987 Murder Victims January Through May by Year, Houston, Texas");
+    assert.equal(early.delivered.text[0], "Houston, Texas Murder Victims January Through May Per Year, 1985-1987");
     assert.equal(early.delivered.text[2], "Homicide Reports here start in 1985, so 1983 through 1984 aren't included.");
     assert.ok(!early.delivered.text.some((t) => /^No figure is available for /.test(t)), "no blank rows for the years before the source");
     assert.deepEqual(early.delivered.table.rows, [["1985", 15], ["1986", 15], ["1987", 15]]);
@@ -468,6 +514,53 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P163 (Jeff 2026-11-19): justifiable homicide is Homicide Reports' own measure; "police" alone is the felons killed by police (81), "civilians"
+    // alone the felons killed by a private citizen (80), neither word both together, both words the two side by side. Never counted as murder.
+    const jsql: string[] = [];
+    const jstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/FROM read_parquet\('\/shr/.test(sql)) { jsql.push(sql); return /AS k0/.test(sql) ? [["80", 3], ["81", 2]] : [[5]]; }
+      return [];
+    };
+    const jdeps = { ...sdeps, execute: jstub } as ShadowDeps;
+    const first = (q: string) => { const n = jsql.length; const o = as(shadowAnswer(q, jdeps), "shr"); return { o, sql: jsql[n] }; };
+    const jboth = first("justifiable homicides in Houston in 2023");
+    assert.ok(/homicide_type = 'A' AND r\.circumstance IN \('80', '81'\) AND r\.agency_key/.test(jboth.sql), jboth.sql);
+    assert.ok(jboth.o.delivered.text.some((t) => /ustifiable/.test(t)), JSON.stringify(jboth.o.delivered.text));
+    assert.ok(/r\.circumstance IN \('80', '81'\) .* AND r\.circumstance IN \('81'\)$/.test(first("justifiable homicides by police in Houston in 2023").sql));
+    assert.ok(/r\.circumstance IN \('80', '81'\) .* AND r\.circumstance IN \('80'\)$/.test(first("justifiable homicides by civilians in Houston in 2023").sql));
+    const jvs = first("justifiable homicides by police vs civilians in Houston in 2023").o;
+    assert.ok(jvs.delivered.table.columns.some((c) => c.header === "Circumstance") && jvs.delivered.table.rows.length === 2, JSON.stringify(jvs.delivered.table));
+    // P164 (Jeff 2026-11-19): two details of the same people are one table, the first down the side and the second across.
+    const wstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (!/FROM read_parquet\('\/shr\/canonical\/shr_(?:victim|offender)/.test(sql)) return [];
+      const two = /AS k1/.test(sql);
+      return two ? [["B", "M", 5], ["B", "F", 2], ["W", "M", 3]] : [["B", 7], ["W", 3]];
+    };
+    const wdeps = { ...sdeps, execute: wstub } as ShadowDeps;
+    for (const q of ["Houston murder victims by race and sex in 2023", "Houston murder victims by race and gender in 2023", "Houston murder victim race and gender in 2023"]) {
+      const o = as(shadowAnswer(q, wdeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Victim's race", "Male", "Female"], q);
+      assert.deepEqual(o.delivered.table.rows, [["White", 3, 0], ["Black", 5, 2]], q);
+      assert.equal(o.delivered.text[0], "Houston, Texas Murder Victims by The Victims' Race and the Victims' Sex, 2023");
+    }
+    // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
+    assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
+    // P165 (Jeff 2026-11-19): the share of murders that involved a firearm is the murders by weapon with each share, and one sentence for the firearms together.
+    const gstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (!/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) return [];
+      return /AS k0/.test(sql) ? [["12", 6], ["11", 2], ["20", 2]] : [[10]];
+    };
+    const gdeps = { ...sdeps, execute: gstub } as ShadowDeps;
+    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "what weapons were used in murders in Houston in 2023"]) {
+      const o = as(shadowAnswer(q, gdeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder victims", "Share (%)"], q);
+      assert.ok(/^Houston, Texas .* by Weapon, 2023$/.test(o.delivered.text[0]), o.delivered.text[0]);
+      if (!/weapons were used/.test(q)) assert.equal(o.delivered.text[1], "Firearms (handguns, rifles, shotguns, other guns and firearms of a type not stated) are 80% of the murder victims.", q);
+    }
+    {
     // P169 (Jeff 2026-11-19): domestic homicides are the murders whose victim was an intimate partner or a family or household member; the answer
     // names the relationships Homicide Reports do not record.
     const rsql: string[] = [];
@@ -513,6 +606,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(every.delivered.text.includes("No years were given, so every year in the data is shown: 1985 through 2026."), JSON.stringify(every.delivered.text));
     const share = as(shadowAnswer("What percentage of murder victims in Houston were male in 2023?", ddeps), "shr");
     assert.ok(share.delivered.table.columns.some((c) => c.header === "Share (%)") && share.delivered.table.columns.some((c) => c.header === "Victim's sex"), JSON.stringify(share.delivered.table.columns));
+    }
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {
@@ -595,7 +689,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   const cities = (q: string) => (as(shadowAnswer(q, cdeps), "historical") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } }).delivered;
   for (const q of ["murders in all American cities in 2024", "murders in all cities in the US in 2024", "murders in all U.S. cities in 2024"]) {
     const d = cities(q);
-    assert.equal(d.text[0], "2024 Murder Count by City, United States, Population 250,000 or More", q);
+    assert.equal(d.text[0], "United States Murder Count by City, Population 250,000 or More, 2024", q);
     assert.equal(d.text[1], "The 5 cities with the most murders are shown.", q);
     assert.deepEqual(d.table.rows, [["New York City, NY", 450], ["Houston, TX", 400], ["Dallas, TX", 200], ["El Paso, TX", 30], ["Lubbock, TX", 25]], q);
     assert.deepEqual(d.table.columns.map((c) => c.header), ["Agency", "Murders"], q);
@@ -603,14 +697,14 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   }
   for (const q of ["murders in all Texas cities in 2024", "murders in every city in Texas in 2024"]) {
     const d = cities(q);
-    assert.equal(d.text[0], "2024 Murder Count by City, Texas, Population 250,000 or More", q);
+    assert.equal(d.text[0], "Texas Murder Count by City, Population 250,000 or More, 2024", q);
     assert.deepEqual(d.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"], q);
   }
-  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "2024 Murder Rate by City, United States, Population 250,000 or More");
+  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "United States Murder Rate by City, Population 250,000 or More, 2024");
   assert.equal(cities("murder rate in all U.S. cities 2024").text[1], "The 5 cities with the highest rates are shown.");
   // "Major cities" with no rank word, and no place, are the nation's, said (the old reading gave the national total).
   const major = cities("murders in major cities in 2024");
-  assert.equal(major.text[0], "2024 Murder Count by City, United States, Population 250,000 or More");
+  assert.equal(major.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
   assert.ok(major.text.includes("No place was named, so these are cities across the United States."));
   // One year: none asks the year; several years are declined with the one-year ask.
   assert.equal(as(shadowAnswer("murders in all American cities", cdeps), "clarify").about, "which period");
@@ -628,7 +722,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
     "cannabis cultivation arrests in major us cities annually", "Share of vehicle burglaries where a firearm was stolen in big cities in Texas broken down by city",
     "murder by city in north carolina largest cities only", "locations of crimes in cities over 1M"]) assert.ok(!isSet(q), q);
   // Not changed: a ranking word, or a number, keeps the old readings.
-  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "2024 Murder Count by City, Texas, Population 250,000 or More");
+  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Texas Murder Count by City, Population 250,000 or More, 2024");
   assert.match(cities("the 10 largest cities murders 2024").text[0], /^The 6 largest cities in the United States by population/);
 }
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
@@ -636,28 +730,28 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
 {
   const title = (q: string) => (as(ask(q), "answer") as { delivered: { text: string[] } }).delivered.text[0];
   for (const w of ["juvenile", "minor", "kid", "child"]) {
-    assert.equal(title(`${w} robbery victims in Houston in 2024 by month`), "2024 Robbery Victims Under 18 by Month, Houston, Texas", w);
-    assert.equal(title(`${w} homicide victims in Houston in 2024 by month`), "2024 Homicide Victims Under 18 by Month, Houston, Texas", w);
+    assert.equal(title(`${w} robbery victims in Houston in 2024 by month`), "Houston, Texas Robbery Victims Under 18 Per Month, 2024", w);
+    assert.equal(title(`${w} homicide victims in Houston in 2024 by month`), "Houston, Texas Homicide Victims Under 18 Per Month, 2024", w);
   }
-  assert.equal(title("teen robbery victims in Houston in 2024 by month"), "2024 Robbery Victims Aged 13 to 19 by Month, Houston, Texas");
-  assert.equal(title("teenage homicide victims in Houston in 2024 by month"), "2024 Homicide Victims Aged 13 to 19 by Month, Houston, Texas");
-  assert.equal(title("child victims of burglary in Houston in 2024 by month"), "2024 Burglary Victims Under 18 by Month, Houston, Texas");
+  assert.equal(title("teen robbery victims in Houston in 2024 by month"), "Houston, Texas Robbery Victims Aged 13 to 19 Per Month, 2024");
+  assert.equal(title("teenage homicide victims in Houston in 2024 by month"), "Houston, Texas Homicide Victims Aged 13 to 19 Per Month, 2024");
+  assert.equal(title("child victims of burglary in Houston in 2024 by month"), "Houston, Texas Burglary Victims Under 18 Per Month, 2024");
   assert.ok(/^Ohio had 120 robbery victims under 18 in 2024/.test(title("How many juvenile robbery victims in Ohio in 2024?")));
-  assert.equal(title("juvenile robberies in Houston in 2024 by month"), "2024 Robbery Offenses With an Offender Under 18 by Month, Houston, Texas");
-  assert.equal(title("robbery victims in Houston in 2024 by month"), "2024 Robbery Offenses by Month, Houston, Texas", "no age: property victims stay counted by offense (P11)");
+  assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas Robbery Offenses With an Offender Under 18 Per Month, 2024");
+  assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas Robbery Offenses Per Month, 2024", "no age: property victims stay counted by offense (P11)");
 }
 // P120 on every side (Jeff 2026-11-16, Coordinator): teen and teenage are 13 to 19 for victims, offenders and arrestees, the range said;
 // juvenile, minor, child and kid stay under 18 (P107).
 {
   const title = (q: string) => (as(ask(q), "answer") as { delivered: { text: string[] } }).delivered.text[0];
-  assert.equal(title("teen robbery offenders in Houston in 2024 by month"), "2024 Robbery Offenders Aged 13 to 19 by Month, Houston, Texas");
-  assert.equal(title("robberies by teens in Houston in 2024 by month"), "2024 Robbery Offenses With an Offender Aged 13 to 19 by Month, Houston, Texas");
-  assert.equal(title("teen arrests for robbery in Houston in 2024 by month"), "2024 Robbery Arrests of Arrestees Aged 13 to 19 by Month, Houston, Texas");
-  assert.equal(title("juvenile arrests for robbery in Houston in 2024 by month"), "2024 Robbery Arrests of Arrestees Under 18 by Month, Houston, Texas");
-  assert.equal(title("juvenile robbery offenders in Houston in 2024 by month"), "2024 Robbery Offenders Under 18 by Month, Houston, Texas");
+  assert.equal(title("teen robbery offenders in Houston in 2024 by month"), "Houston, Texas Robbery Offenders Aged 13 to 19 Per Month, 2024");
+  assert.equal(title("robberies by teens in Houston in 2024 by month"), "Houston, Texas Robbery Offenses With an Offender Aged 13 to 19 Per Month, 2024");
+  assert.equal(title("teen arrests for robbery in Houston in 2024 by month"), "Houston, Texas Robbery Arrests of Arrestees Aged 13 to 19 Per Month, 2024");
+  assert.equal(title("juvenile arrests for robbery in Houston in 2024 by month"), "Houston, Texas Robbery Arrests of Arrestees Under 18 Per Month, 2024");
+  assert.equal(title("juvenile robbery offenders in Houston in 2024 by month"), "Houston, Texas Robbery Offenders Under 18 Per Month, 2024");
   assert.ok(/^Ohio had [\d,]+ robbery offenders aged 13 to 19 in 2024, summed over the agencies that reported\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
-  assert.equal(title("murders against teens in Houston in 2024 by month"), "2024 Murder Victims Aged 13 to 19 by Month, Houston, Texas");
-  assert.equal(title("murders against juveniles in Houston in 2024 by month"), "2024 Murder Victims Under 18 by Month, Houston, Texas");
+  assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas Murder Victims Aged 13 to 19 Per Month, 2024");
+  assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas Murder Victims Under 18 Per Month, 2024");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
   // The age word plural, and after the crime (Coordinator 2026-11-16): the same meaning as the singular.
   for (const [q, want] of [
@@ -1515,6 +1609,11 @@ for (const q of ["YTD 2026 compared to 2025 shoplifting in Detroit", "Shopliftin
   assert.equal(o.delivered.text[0], "Detroit had 63 shoplifting offenses in January through September 2026, but the data for January through September 2024 is incomplete, so no change is given.");
   assert.ok(o.delivered.text.includes("No data is available for March 2024, so the January through September 2024 total is not established and no change is given."));
 }
+// A year named beside the to-date word is one period, not a second one ("gun homicides in Memphis 2026 year-to-date" was declined).
+for (const q of ["Shoplifting in Detroit 2025 year-to-date", "Shoplifting in Detroit YTD 2025", "Shoplifting in Detroit year to date for 2025", "Shoplifting in Detroit in 2025 YTD"]) {
+  const o = ask(q);
+  assert.ok(o.kind !== "decline" || !/one period at a time/.test(o.explanation), `${q}: ${o.kind === "decline" ? o.explanation : o.kind}`);
+}
 // Not changed: no to-date word keeps today's reading; one year to date alone is not a comparison.
 assert.equal(as(ask("Is shoplifting in Detroit up this year compared with last year?"), "answer").delivered.text.includes("Compares the same months of each year: January through September."), true);
 // "Compared with" and "percent change" read; a change with a NIBRS filter is a comparison too.
@@ -1524,7 +1623,7 @@ for (const q of ["Shoplifting in Detroit in 2023 compared with 2022", "Percent c
 assert.equal(ask("Change in shoplifting and burglary in Detroit from 2022 to 2023").kind, "decline");
 // A set of years: only those years, grouped by year.
 const sepYears = as(ask("Shoplifting in Detroit in 2019 and 2023"), "answer");
-assert.deepEqual([sepYears.plan.period, sepYears.delivered.text[0]], [{ kind: "years", years: [2019, 2023] }, "2019 and 2023 Shoplifting Offenses by Year, Detroit, Michigan"]);
+assert.deepEqual([sepYears.plan.period, sepYears.delivered.text[0]], [{ kind: "years", years: [2019, 2023] }, "Detroit, Michigan Shoplifting Offenses Per Year, 2019 and 2023"]);
 assert.ok(sqls.at(-1)!.includes("IN ('2019', '2023')"));
 // Rolling windows reach back before the period; a window holding March 2024 is blank, never a shorter sum.
 const roll = as(ask("Rolling 12-month shoplifting in Detroit since 2024"), "answer");
@@ -1612,7 +1711,7 @@ assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", unde
 const ok4 = (q: string) => { const o = as(ask(q), "answer"); assert.deepEqual(o.delivered.contractProblems, [], q); return o; };
 const tulsaOkc = ok4("Shoplifting in Tulsa and Oklahoma City in 2024");
 assert.deepEqual(tulsaOkc.delivered.table.rows, [["Tulsa Police Department", 60], ["Oklahoma City Police Department", 60]]);
-assert.equal(tulsaOkc.delivered.text[0], "2024 Shoplifting Offenses by Agency, Tulsa, Oklahoma and Oklahoma City, Oklahoma");
+assert.equal(tulsaOkc.delivered.text[0], "Tulsa, Oklahoma and Oklahoma City, Oklahoma Shoplifting Offenses by Agency, 2024");
 assert.ok(sqls.some((s) => s.includes("unnest(['OK0550600', 'OK0720500']) AS ori")), "one grid query for both agencies");
 const combinedTotal = ok4("Shoplifting in Tulsa and Oklahoma City combined in 2024");
 assert.deepEqual(combinedTotal.delivered.table.rows, [[120]]);
@@ -1639,7 +1738,7 @@ const tx = ok4("Which Texas cities had the most shoplifting in 2024?");
 assert.deepEqual(tx.delivered.table.rows, [["Houston Police Department", 108], ["Dallas Police Department", 84], ["TX9999900", 60]]);
 assert.ok(tx.delivered.text.includes("Austin Police Department isn't ranked because it has data for only 11 of the 12 months of 2024."), JSON.stringify(tx.delivered.text));
 assert.ok(tx.delivered.text.includes("Only agencies with data for all 12 months of 2024 are ranked, and ties are ordered by agency name."), JSON.stringify(tx.delivered.text));
-assert.equal(tx.delivered.text[0], "2024 Shoplifting Offenses by City, Texas");
+assert.equal(tx.delivered.text[0], "Texas Shoplifting Offenses by City, 2024");
 const txRate = ok4("Which Texas cities had the highest shoplifting rate in 2024?");
 assert.deepEqual(txRate.delivered.table.rows, [["Dallas Police Department", 6.5], ["Houston Police Department", 4.7]]);
 assert.ok(txRate.delivered.text.includes("TX9999900 isn't ranked because the FBI gives no population."), JSON.stringify(txRate.delivered.text));
@@ -1999,10 +2098,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   }
   {
     const six = ask("Denver robberies rolling over 6 months since 2025");
-    if (six.kind === "answer") assert.ok(six.plan.transforms.some((t) => t.kind === "rolling" && t.months === 6) && six.delivered.text[0].includes("Rolling 6-Month Totals"), JSON.stringify(six.delivered.text));
+    if (six.kind === "answer") assert.ok(six.plan.transforms.some((t) => t.kind === "rolling" && t.months === 6) && six.delivered.text[0].includes("Rolling Over 6 Months"), JSON.stringify(six.delivered.text));
     else assert.ok(!(six.kind === "decline" && /didn't understand/.test(six.explanation)), JSON.stringify(six).slice(0, 200));
     const avg = ask("Denver robberies 3-month rolling average since 2025");
-    if (avg.kind === "answer") assert.ok(avg.delivered.text[0].includes("Rolling 3-Month Averages") && avg.delivered.table.columns.some((c) => /average per month/.test(c.header)), JSON.stringify(avg.delivered.text));
+    if (avg.kind === "answer") assert.ok(avg.delivered.text[0].includes("Rolling Average Over 3 Months") && avg.delivered.table.columns.some((c) => /average per month/.test(c.header)), JSON.stringify(avg.delivered.text));
     assert.equal(as(ask("Denver robberies rolling average since 2025"), "clarify").about, "which rolling window");
     // Codex P94 review 01: a length the engine can't compute is asked about, never 12; a 1-month window runs.
     assert.equal(as(ask("Denver robberies rolling 0 months since 2025"), "clarify").about, "which rolling window");
@@ -2190,6 +2289,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const det = shadowFollowUp("Murder victims in Houston by race in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", deps);
   assert.equal(det.rewriteKind, "new");
   assert.ok(det.kind !== "clarify" || !/could not be placed/.test(det.about), "never 'could not be placed' for a question of its own");
+  // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is a question of its own
+  // ("Puerto Rico Crime" asked what it changes); when its first-turn result would be a decline, the question back stays.
+  const own = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime", deps);
+  assert.equal(own.rewriteKind, "new");
+  assert.deepEqual({ ...own, rewrite: undefined, rewriteKind: undefined }, { ...ask("Puerto Rico Crime"), rewrite: undefined, rewriteKind: undefined });
+  const kept = shadowFollowUp("conviction rates for murders in Houston", "how many offenders were sentenced to prison", deps);
+  assert.equal(kept.rewriteKind, "ask", "a first-turn decline keeps the question about the last turn");
+  const pointing = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime again", deps);
+  assert.notEqual(pointing.rewriteKind, "new", "a turn that points back is not a new question");
   // A new question with no period, after one with a period: that period is offered as a button, never assumed.
   const shop = shadowFollowUp("Shoplifting in Memphis in 2023", "Shoplifting in Detroit", deps);
   assert.equal(shop.rewriteKind, "new");
@@ -2465,8 +2573,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const ask1 = as(shadowAnswer(q, rdeps), "clarify");
     assert.equal(ask1.about, "which period", q);
     const go = ask1.options[0].continuation!;
-    // The title reads the question back: the year first, then the measure, then "by City" (Jeff 2026-11-17).
-    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("2025 "), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
+    // The title reads the question back: the place, the measure, "by City", then the timeframe (Jeff 2026-11-21).
+    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("United States ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
   }
   assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
   // Without a release it stays Homicide Reports' (the tab has them), as before.
@@ -2563,12 +2671,12 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   {
     const roll = (q: string) => { let r: ShadowOutcome; try { r = shadowAnswer(q, cdeps); } catch (e) { assert.fail(`${q}: ${(e as Error).stack?.split("\n").slice(0, 6).join(" | ")}`); } assert.equal(r.kind, "current", `${q}: ${JSON.stringify(r).slice(0, 300)}`); return r as Extract<ShadowOutcome, { kind: "current" }>; };
     const r1 = roll("Dallas murders rolling over 12 months");
-    assert.equal(r1.delivered.text[0], "January 2018 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas");
+    assert.equal(r1.delivered.text[0], "Dallas, Texas Murders Rolling Over 12 Months, Jan 2018-Aug 2026");
     assert.deepEqual(r1.delivered.table.rows[0], ["2018-01", 132]);
     assert.deepEqual(r1.delivered.table.rows[r1.delivered.table.rows.length - 1], ["2026-08", 132]);
     assert.ok(!r1.delivered.text.some((t) => /Current Trends figures in the data cover/.test(t)), "no note about when Current Trends starts");
     const r2 = roll("Dallas murders rolling over 12 months since 2019");
-    assert.equal(r2.delivered.text[0], "January 2019 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas");
+    assert.equal(r2.delivered.text[0], "Dallas, Texas Murders Rolling Over 12 Months, Jan 2019-Aug 2026");
     assert.deepEqual(r2.delivered.table.rows[0], ["2019-01", 132]);
     const r3 = roll("Dallas murders rolling over 12 months since 2016");
     assert.deepEqual(r3.delivered.table.rows[0], ["2018-01", 132]);
@@ -2578,7 +2686,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(r4.delivered.text.includes("No figure is available for August 2026: every 12-month window containing that month is shown blank, not zero."), r4.delivered.text.join(" / "));
     const r5 = roll("Dallas and Houston murders rolling over 12 months since 2025");
     assert.deepEqual(r5.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Rolling 12-month murders"]);
-    assert.equal(r5.delivered.text[0], "January 2025 to August 2026 Rolling 12-Month Murders by Month, Dallas, Texas and Houston, Texas");
+    assert.equal(r5.delivered.text[0], "Dallas, Texas and Houston, Texas Murders Rolling Over 12 Months, Jan 2025-Aug 2026");
     // The nation (Jeff 2026-11-19): the agencies with a figure in every month of the span asked, summed; their number and people said once.
     const nat = roll("murders rolling over 12 months since 2016 nationally");
     assert.ok(nat.delivered.text.includes("Current Trends figures in the data cover January 2017 through August 2026; January 2016 through December 2016 are outside them."), nat.delivered.text.join(" / "));
@@ -2618,7 +2726,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     if (po.kind === "current") {
       assert.deepEqual(po.delivered.table.columns.map((c) => c.header), ["Month", "Violent crime", "Property crime", "Part I crime"], q);
       assert.deepEqual(po.delivered.table.rows[0], ["2025-01", 11, 11, 22], q);
-      assert.equal(po.delivered.text[0], "January 2025 to August 2026 Crime by Month, Dallas, Texas", q);
+      assert.equal(po.delivered.text[0], "Dallas, Texas Crime Per Month, Jan 2025-Aug 2026", q);
       assert.equal(po.delivered.text[po.delivered.text.length - 1], "Source: Crime Index.");
     }
   }
@@ -2637,17 +2745,21 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const blankCt = { kind: "current", period: { from: "2023-01", to: "2023-12" }, question: { measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee" }, form: "months", statistic: "count" },
     delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month" }, { binding: { kind: "statistic", as: "x" }, header: "Murders" }], rows: [["2023-01", null], ["2023-02", null]] }, text: [] } } as never;
   const blankDecl = allBlankMonthly(blankCt)!;
-  const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [], rows: [["2023", v]] }, text: [] } }) as never;
+  const yearlyWith = (v: number | null) => () => ({ kind: "historical", delivered: { table: { columns: [{ header: "Year" }, { header: "Murders" }], rows: [["2023", v]] }, text: [] } }) as never;
+  // One year asked: a one-cell row with no Year column (Oakland murders 2021: [[127]]).
+  const oneYear = () => ({ kind: "historical", delivered: { table: { columns: [{ header: "Murders" }], rows: [[127]] }, text: [] } }) as never;
   // The table opened from the button ends at its last year with a figure; the years after it are named (New Orleans rape: 2017 to 2023).
-  const longYearly = () => ({ kind: "historical", period: { from: "2022-01", to: "2025-12" }, delivered: { table: { columns: [], rows: [["2022", 5], ["2023", 9], ["2024", null], ["2025", null]] }, text: ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Source: Crime Index."] } }) as never;
+  const longYearly = () => ({ kind: "historical", period: { from: "2022-01", to: "2025-12" }, delivered: { table: { columns: [{ header: "Year" }, { header: "Murders" }], rows: [["2022", 5], ["2023", 9], ["2024", null], ["2025", null]] }, text: ["Memphis, Tennessee Murders Per Year, 2022-2025", "Source: Crime Index."] } }) as never;
   const trimmed = withYearlyOffer(blankDecl, blankCt, deps, longYearly);
   const opened = trimmed.kind === "decline" ? (trimmed.alternative as { continuation?: { delivered: { table: { rows: unknown[][] }; text: string[] }; period: { to: string } } } | null)?.continuation : undefined;
   assert.deepEqual(opened?.delivered.table.rows, [["2022", 5], ["2023", 9]]);
-  assert.deepEqual(opened?.delivered.text, ["2022 to 2025 Murders by Year, Memphis, Tennessee", "Crime Index has no murder figures for Memphis, Tennessee from 2024 to 2025, so the chart and table end in 2023.", "Source: Crime Index."]);
+  assert.deepEqual(opened?.delivered.text, ["Memphis, Tennessee Murders Per Year, 2022-2025", "Crime Index has no murder figures for Memphis, Tennessee from 2024 to 2025, so the chart and table end in 2023.", "Source: Crime Index."]);
   assert.equal(opened?.period.to, "2023-12");
   const offered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(351));
   assert.ok(offered.kind === "decline" && offered.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', JSON.stringify(offered).slice(0, 300));
   assert.equal(offered.kind === "decline" ? offered.explanation : "", "No data is available for murders in Memphis, Tennessee.");
+  const single = withYearlyOffer(blankDecl, blankCt, deps, oneYear);
+  assert.ok(single.kind === "decline" && single.alternative?.label === 'Ask instead: "murders in Memphis, Tennessee in 2023"', "one-cell yearly answer is offered");
   const notOffered = withYearlyOffer(blankDecl, blankCt, deps, yearlyWith(null));
   assert.ok(notOffered.kind === "decline" && notOffered.alternative === null, "no figure in the yearly series: no button");
 }
@@ -2674,7 +2786,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Agency", "Month", "Murder victims"]);
     assert.equal(two.delivered.table.rows.length, 24);
     assert.deepEqual(two.delivered.table.rows[0], ["Chicago", "2024-01", 3]);
-    assert.equal(two.delivered.text[0], "2024 Murder Victims With a Firearm by Month, Chicago, Illinois and Houston, Texas");
+    assert.equal(two.delivered.text[0], "Chicago, Illinois and Houston, Texas Murder Victims With a Firearm Per Month, 2024");
     assert.equal(two.delivered.text.filter((t) => /^Source: /.test(t)).length, 1);
   }
 }
@@ -2702,7 +2814,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const plainCount = shadowAnswer("Show me data about all homicides reported in South Carolina since 2020", d2);
   assert.equal(plainCount.kind, "srs", JSON.stringify(plainCount).slice(0, 300));
   if (plainCount.kind === "srs") {
-    assert.ok(/^2020 to \d{4} Murders by Year, South Carolina$/.test(plainCount.delivered.text[0]), plainCount.delivered.text[0]);
+    assert.ok(/^South Carolina Murders Per Year, 2020-\d{4}$/.test(plainCount.delivered.text[0]), plainCount.delivered.text[0]);
     assert.deepEqual(plainCount.delivered.table.columns.length, 2, "a year and a count, no breakdown");
     assert.ok(!plainCount.delivered.text.some((t) => /homicide|justifiable|disclaim/i.test(t)), "no disclaimer on Crime Index");
   }
@@ -2761,5 +2873,53 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A sentence that merely holds a similar word keeps its own handling: "occurred in" still reads as "in" and nothing else.
   assert.deepEqual(ask("how many murders occurred in Memphis in 2024").kind, ask("how many murders in Memphis in 2024").kind);
   assert.deepEqual(ask("Houston retail theft in 2024").kind, ask("Houston shoplifting in 2024").kind);
+}
+// P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
+{
+  const tx = as(ask("Texas murder clearance by type in 2025"), "answer");
+  assert.ok(tx.stateSum && tx.plan.statistics.some((s) => s.kind === "incidents"), "the reporting agencies' sum, with incidents");
+  const rows = tx.delivered.table.rows.map((r) => [r[0], r[1], r[2]]);
+  // Houston 9 + Dallas 7 + Austin 5 + Smallville 5 a month for 12 months = 312 units, half cleared by arrest; the incidents are one fewer per agency and type.
+  assert.deepEqual(rows.map((r) => r[1] === undefined ? r[0] : r.slice(0, 3)).flat().filter((x) => typeof x === "number").slice(0, 4).length > 0, true, JSON.stringify(tx.delivered.table));
+  // Jeff 2026-11-21: one row for arrest, each exceptional type A to E and not cleared, named as one agency's answer names them (no codes).
+  const names = tx.delivered.table.rows.map((r) => String(r[0]));
+  assert.deepEqual([...names].sort(), ["Cleared by arrest", "Exceptional: death of the offender", "Exceptional: in custody of another jurisdiction", "Exceptional: juvenile, no custody",
+    "Exceptional: prosecution declined", "Exceptional: victim refused to cooperate", "Uncleared"].sort(), JSON.stringify(names));
+  assert.ok(names.every((n) => !/^Code |^[A-E]$/.test(n)));
+  const byName = (n: string) => tx.delivered.table.rows.find((r) => r[0] === n)!;
+  // Houston 108 + Dallas 84 + Austin 60 + Smallville 60 = 312 units; arrest 54 + 42 + 30 + 30 = 156, each exceptional type 9 + 7 + 5 + 5 = 26; the rest 26; incidents one fewer per agency.
+  assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
+  assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
+  assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
+  // The nation is the same sum over every state (the runner timed it: 4.3 s); a clearance rate for a state keeps its own decline.
+  const us = as(ask("murder clearance by type in the United States in 2025"), "answer");
+  assert.ok(us.stateSum && us.delivered.table.rows.length >= 2, "the nation by clearance type");
+  assert.ok(/United States/.test(us.delivered.text[0]), us.delivered.text[0]);
+  assert.equal(ask("Texas murder clearance rate in 2025").kind, "decline");
+}
+// P159 (Jeff 2026-11-21): a title is PLACE, OFFENSE, PERIOD, TIMEFRAME.
+{
+  const t = (period: string, what: string, grouping: string, place: string) => seriesTitle(period, what, grouping, place);
+  assert.equal(t("January 2019 through October 2026", "Carjackings", "Month", "Houston, Texas"), "Houston, Texas Carjackings Per Month, Jan 2019-Oct 2026");
+  assert.equal(t("2015 to 2025", "Aggravated Assaults", "Year", "Texas"), "Texas Aggravated Assaults Per Year, 2015-2025");
+  assert.equal(t("January 2018 to August 2026", "Murders, Rolling 12-Month Totals", "Month", "Chicago, Illinois"), "Chicago, Illinois Murders Rolling Over 12 Months, Jan 2018-Aug 2026");
+  assert.equal(t("2024", "Robberies", "Weapon", "Chicago, Illinois"), "Chicago, Illinois Robberies by Weapon, 2024");
+  assert.equal(t("2015 to 2025", "Murders", "Year", "The United States"), "United States Murders Per Year, 2015-2025");
+  assert.equal(t("2026 Year to Date", "Murders", "Agency", "Texas"), "Texas Murders by Agency, Year to Date 2026");
+  assert.equal(titleTimeframe("January through October 2026"), "Jan-Oct 2026");
+  assert.equal(titleTimeframe("January 2025 to March 2025"), "Jan-Mar 2025");
+  assert.equal(titleTimeframe("2019 and 2023"), "2019 and 2023");
+}
+// P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
+{
+  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
+  assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
+  const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
+  assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
+  assert.ok(gunViolent.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "victim"));
+  assert.ok(gunViolent.delivered.text.some((t) => /^Counts NIBRS crimes against persons: /.test(t)), JSON.stringify(gunViolent.delivered.text));
+  // A crime already counted by offense, and the murder path, are left as they were.
+  assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

@@ -15203,13 +15203,15 @@
 "by": "codex-second-1"
 },
 "QL-shr-395acf3f23": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Missouri and Minnesota have qualifying counties.",
+"status": "reviewed",
+"by": "jeff-2026-11-20",
+"why": "P28: Jeff 2026-11-20, St. Louis County uses Missouri",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which St Louis County"
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
 ]
 }
 },

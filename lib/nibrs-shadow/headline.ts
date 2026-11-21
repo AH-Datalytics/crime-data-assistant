@@ -50,5 +50,40 @@ export function rateChangeSentence(who: Subject, measure: string, e: string, l: 
   return who.nation ? `${who.text} had a ${measure} rate of ${e} per 100,000 in ${E} and ${l} in ${L}, ${tail}`
     : `${possessive(who.text)} ${measure} rate was ${e} per 100,000 in ${E} and ${l} in ${L}, ${tail}`;
 }
-/** "2016 to 2025 Murders by Year, Atlanta, Georgia": the period, what is counted, the grouping, the place. */
-export const seriesTitle = (period: string, what: string, grouping: string, place: string) => `${period} ${titleCase(what)} by ${titleCase(grouping)}, ${titlePlace(place)}`;
+const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const abbr = (m: string) => m.slice(0, 3);
+const monthIndex = (m: string) => MONTHS_LONG.findIndex((x) => x.toLowerCase() === m.toLowerCase());
+/**
+ * The timeframe of a title, short (Jeff 2026-11-21): "2024", "2019-2026", "Jan-Oct 2026", "Jan 2019-Oct 2026", "Year to Date 2026".
+ * Takes the period as the answers word it ("2019 to 2026", "January through October 2026"); anything else is kept as it is.
+ */
+export function titleTimeframe(period: string): string {
+  const p = period.trim();
+  let m: RegExpExecArray | null;
+  if ((m = /^(\d{4}) Year to Date$/i.exec(p))) return `Year to Date ${m[1]}`;
+  if (/^\d{4}$/.test(p)) return p;
+  if ((m = /^(\d{4}) to (\d{4})$/.exec(p))) return `${m[1]}-${m[2]}`;
+  if ((m = /^([A-Za-z]+) (?:through|to) ([A-Za-z]+) (\d{4})$/i.exec(p)) && monthIndex(m[1]) >= 0 && monthIndex(m[2]) >= 0)
+    return monthIndex(m[1]) === 0 && monthIndex(m[2]) === 11 ? m[3] : `${abbr(m[1])}-${abbr(m[2])} ${m[3]}`;
+  if ((m = /^([A-Za-z]+) (\d{4}) (?:through|to) ([A-Za-z]+) (\d{4})$/i.exec(p)) && monthIndex(m[1]) >= 0 && monthIndex(m[3]) >= 0)
+    return monthIndex(m[1]) === 0 && monthIndex(m[3]) === 11 ? (m[2] === m[4] ? m[2] : `${m[2]}-${m[4]}`)
+      : m[2] === m[4] ? `${abbr(m[1])}-${abbr(m[3])} ${m[2]}` : `${abbr(m[1])} ${m[2]}-${abbr(m[3])} ${m[4]}`;
+  if ((m = /^([A-Za-z]+) (\d{4})$/.exec(p)) && monthIndex(m[1]) >= 0) return `${abbr(m[1])} ${m[2]}`;
+  return p;
+}
+/**
+ * "Atlanta, Georgia Murders Per Year, 2016-2025": the place, what is counted, the period (per month, per year, per quarter, rolling over
+ * 12 months, or by the breakdown's name), then the timeframe, short (Jeff 2026-11-21: PLACE, OFFENSE, PERIOD, TIMEFRAME).
+ */
+export function seriesTitle(period: string, what: string, grouping: string, place: string): string {
+  let words = what;
+  let rolling: string | null = null;
+  let m: RegExpExecArray | null;
+  if ((m = /^(.*?),? Rolling (\d+)-Month (Totals|Averages per Month)$/i.exec(words))) { words = m[1]; rolling = /^Totals$/i.test(m[3]) ? `Rolling Over ${m[2]} Months` : `Rolling Average Over ${m[2]} Months`; }
+  else if ((m = /^Rolling (\d+)-Month (.+)$/i.exec(words))) { words = m[2]; rolling = `Rolling Over ${m[1]} Months`; }
+  const g = grouping.trim();
+  const time = /^(month|year|quarter)$/i.exec(g);
+  const grain = rolling ?? (time ? `Per ${titleCase(time[1])}` : `by ${titleCase(g)}`);
+  const head = [place ? titlePlace(place) : "", titleCase(words)].filter(Boolean).join(" ");
+  return `${head} ${grain}, ${titleTimeframe(period)}`;
+}
