@@ -26,7 +26,8 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
-import { allBlankMonthly, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
+import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
+import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
 {
   const monthCols = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" }, { binding: { kind: "grouping", dimension: "time.month" }, header: "Month" },
@@ -172,7 +173,29 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
 for (const q of ["DC violent crime rolling over 12 months with a line at August 2025", "Houston murders per month with an annotation at May 2020",
   "Give me a chart of the monthly murder counts in Baltimore and Detroit. Add some kind of marker to show August 2025 on the chart."]) {
   const o = ask(q);
-  assert.ok(o.kind === "decline" && o.explanation === "Marking a date on a chart isn't available here.", `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  assert.ok(o.kind === "decline" && o.explanation === "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading.", `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+}
+// P157 (Jeff 2026-11-19): every request to change a chart is declined with the one sentence, as a follow-up or as a first turn; nothing returns the
+// previous answer unchanged any more. A data question that merely names a chart stays a question.
+{
+  const CHART = "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading.";
+  for (const [prev, f] of [["murders in Memphis by month in 2024", "make it a bar chart"], ["violent crime in cincinnati by month from 2018 to 2025", "create a bar chart"],
+    ["Top 10 auto theft rates in 2025", "Label the columns on the chart"], ["murders in Memphis by month in 2024", "make it a pie chart"], ["murders in Memphis by month in 2024", "sort by value"],
+    ["murders in Memphis by month in 2024", "change the colors to red"], ["murders in Memphis by month in 2024", "add labels"], ["murders in Memphis by month in 2024", "show it as a table"],
+    ["show me violent crime numbers in wilimington nc since 2018", "show linear regression line for this data"],
+    ["Using UCR data only, give me a graph that tracks the U.S. Violent and Property crime rate from 1990 to 2024.", "can you make the chart where the left Y-Axis maps property crime and the Y-axis on the left side tracks violent crime"]]) {
+    const o = shadowFollowUp(prev, f, deps);
+    assert.ok(o.kind === "decline" && o.explanation === CHART, `${f}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  for (const q of ["Chart New Orleans Part 1 UCR offenses by month", "murders in Memphis by month in 2024 as a line chart", "Present this data as a historical trend line by city"]) {
+    const o = ask(q);
+    assert.ok(o.kind !== "decline" || o.explanation !== CHART, `a data question is not a chart edit: ${q}`);
+  }
+  // The family never catches a label that is not a chart edit: exactly these labels (the questions of qlog-labels.json) are chart edits.
+  const labels = (JSON.parse(fs.readFileSync(`${__dirname}/fixtures/answer-eval/qlog-labels.json`, "utf8")) as { labels: { id: string; kind: string; question: string; previous: string | null }[] }).labels;
+  const edits = labels.filter((l) => isChartEdit(l.question) || (l.kind === "follow-up" && deterministicRewriter.rewrite(l.previous ?? "", l.question).kind === "presentation")).map((l) => l.id).sort();
+  assert.deepEqual(edits, ["QL-ct-00d6ec868c", "QL-ct-27712b6b3b", "QL-ct-3190b22821", "QL-ct-6017ec600f", "QL-ct-7a7d5d78a4", "QL-ct-a68c73fa1d", "QL-ct-c9f8fc224a", "QL-ct-d0202d45b2", "QL-ct-eae798a9bd",
+    "QL-ct-f6669e281d", "QL-ct-f71801135d", "QL-hist-18271ffa99", "QL-hist-3bf7843018", "QL-hist-5aaf80d9e8", "QL-hist-8cd529ba4e", "QL-hist-c70d2fda83", "QL-shr-0c808347cd", "QL-shr-3d41c7a12c", "QL-shr-8ce8361162", "QL-shr-f493f3140e"].sort());
 }
 
 // Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
@@ -434,6 +457,51 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P169 (Jeff 2026-11-19): domestic homicides are the murders whose victim was an intimate partner or a family or household member; the answer
+    // names the relationships Homicide Reports do not record.
+    const rsql: string[] = [];
+    const rstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) { rsql.push(sql); return /AS k0/.test(sql) ? [["2023", 4]] : [[7]]; }
+      return [];
+    };
+    const rdeps = { ...sdeps, execute: rstub } as ShadowDeps;
+    for (const q of ["domestic murders in Houston in 2023", "domestic violence murders in Houston in 2023", "domestic homicides in Houston in 2023"]) {
+      const o = as(shadowAnswer(q, rdeps), "shr");
+      assert.ok(/where the victim was an intimate partner or a family member of the offender/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
+      assert.ok(o.delivered.text.includes("Homicide Reports do not record a child of a boyfriend or girlfriend, a babysittee, a foster parent, a foster child or a cohabitant, so those relationships are not counted."), JSON.stringify(o.delivered.text));
+      assert.ok(o.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."), JSON.stringify(o.delivered.text));
+    }
+    const relSql = rsql.find((s) => /r\.relationship IN \(/.test(s)) ?? "";
+    assert.ok(/r\.relationship IN \('OF', 'HU', 'WI', 'CH', 'CW', 'BF', 'GF', 'XH', 'XW', 'HO', 'SO', 'DA', 'MO', 'FA', 'BR', 'SI', 'SS', 'SD', 'SF', 'SM', 'IL'\)/.test(relSql), relSql);
+    const ipv = as(shadowAnswer("intimate partner homicides in Houston in 2023", rdeps), "shr");
+    assert.ok(/where the victim was an intimate partner of the offender/.test(ipv.delivered.text[0]), ipv.delivered.text[0]);
+    assert.ok(!ipv.delivered.text.some((t) => /a babysittee/.test(t)), "an intimate-partner question names no family relationship");
+    // P160 to P162 (Jeff 2026-11-19): a victim's or offender's detail as a noun phrase, a share of a sex, and no period for a breakdown.
+    const dstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      const m = /data_year \* 100 \+ r\.offense_month BETWEEN (\d{6}) AND (\d{6})/.exec(sql);
+      if (m && /AS k0/.test(sql)) {
+        const ys = range(Math.floor(Number(m[1]) / 100), Math.floor(Number(m[2]) / 100));
+        const byYear = /r\.data_year AS k0/.test(sql);
+        const code = /shr_offender p/.test(sql) ? "B" : /p\.sex/.test(sql) ? "M" : "B";
+        return byYear ? ys.flatMap((y) => [[y, code, 6], [y, "W", 4]]) : [[code, 6], ["W", 4]];
+      }
+      return [];
+    };
+    const ddeps = { ...sdeps, execute: dstub } as ShadowDeps;
+    for (const q of ["murder victim race in Houston since 2010", "Houston murder victims by race since 2010", "What's the racial breakdown of murder victims in Houston since 2010?", "homicide offender race in Houston since 2010"]) {
+      const o = as(shadowAnswer(q, ddeps), "shr");
+      assert.ok(o.delivered.table.columns.some((c) => c.header === "Victim's race" || c.header === "Offender's race"), `${q}: ${JSON.stringify(o.delivered.table.columns)}`);
+      assert.ok(["White", "Black"].includes(String(o.delivered.table.rows[0][0])) && !o.delivered.text.some((t) => /No years were given/.test(t)), `${q}: ${JSON.stringify(o.delivered.table.rows[0])}`);
+    }
+    const circ = as(shadowAnswer("Break down homicide circumstances in Houston in 2023", ddeps), "shr");
+    assert.ok(circ.delivered.table.columns.some((c) => c.header === "Circumstance"), JSON.stringify(circ.delivered.table.columns));
+    const every = as(shadowAnswer("Houston murder victim race", ddeps), "shr");
+    assert.equal(every.delivered.table.rows[0][0], "1985");
+    assert.ok(every.delivered.text.includes("No years were given, so every year in the data is shown: 1985 through 2026."), JSON.stringify(every.delivered.text));
+    const share = as(shadowAnswer("What percentage of murder victims in Houston were male in 2023?", ddeps), "shr");
+    assert.ok(share.delivered.table.columns.some((c) => c.header === "Share (%)") && share.delivered.table.columns.some((c) => c.header === "Victim's sex"), JSON.stringify(share.delivered.table.columns));
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {
@@ -2074,7 +2142,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   };
   const noNextStep: string[] = [];
   const nextStep = (o: ShadowOutcome, where: string) => {
-    if (o.kind === "decline" && !o.notBuilt && !o.alternative && !/\bfor example\b|\bask for\b|\bname the\b|\btry\b/i.test(o.explanation)) noNextStep.push(`${where}: ${o.explanation}`);
+    // P157: the chart sentence is a plain decline whose second sentence is its only next step (the table sort); it offers no example question.
+    if (o.kind === "decline" && !o.notBuilt && !o.alternative && o.explanation !== CHART_MARKER_SENTENCE && !/\bfor example\b|\bask for\b|\bname the\b|\btry\b/i.test(o.explanation)) noNextStep.push(`${where}: ${o.explanation}`);
   };
   UNMAPPED.length = 0;
   for (const c of all) {

@@ -37,11 +37,11 @@
    "date": "2026-11-06"
   },
   "QL-ct-9d330706ed": {
-   "digest": "90833d561c2f9476",
+   "digest": "83a4afd01442aa4b",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-hist-19fd3c410f": {
    "digest": "99fb0ae81f11a989",
@@ -303,11 +303,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-99339e799c": {
-   "digest": "c95b96291c12969c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 8,
-   "date": "2026-11-06"
+   "digest": "ad53fe76d93f4b62",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 8
   },
   "QL-hist-5c550debe6": {
    "digest": "fb8dbef2e53f9cbb",
@@ -352,11 +352,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-c80490d42d": {
-   "digest": "f7c84a3fe4f7f58c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 93,
-   "date": "2026-11-06"
+   "digest": "625ef8ebcc4ef6b4",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
   },
   "QL-shr-dec6134eee": {
    "digest": "8a9763a3a794bc27",
@@ -422,11 +422,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-36fd8ddcf7": {
-   "digest": "f7c84a3fe4f7f58c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 93,
-   "date": "2026-11-06"
+   "digest": "625ef8ebcc4ef6b4",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
   },
   "QL-nibrs-39d95826db": {
    "digest": "3040d38563bd0015",
@@ -814,11 +814,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-c295e99339": {
-   "digest": "c95b96291c12969c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 8,
-   "date": "2026-11-06"
+   "digest": "ad53fe76d93f4b62",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 8
   },
   "QL-shr-9a8fa879dc": {
    "digest": "82241e59ed73da6b",
@@ -891,11 +891,11 @@
    "numbers": 21
   },
   "QL-ct-cde73145dd": {
-   "digest": "7096afa52a50aa44",
+   "digest": "c54e917310a8c8a8",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-hist-2b29c16156": {
    "digest": "a5b1993658848c53",
@@ -982,11 +982,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-a98b45c639": {
-   "digest": "f7c84a3fe4f7f58c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 93,
-   "date": "2026-11-06"
+   "digest": "625ef8ebcc4ef6b4",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
   },
   "QL-nibrs-e40678cc6d": {
    "digest": "3e9f3ac9bf9d0097",
@@ -1066,11 +1066,11 @@
    "date": "2026-11-06"
   },
   "QL-ct-0512a81751": {
-   "digest": "9f18ac2a588e03bb",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 105,
-   "date": "2026-11-06"
+   "digest": "4d51bb84259e66d8",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-ct-05db70c5db": {
    "digest": "da635b25146f56d0",
@@ -1486,18 +1486,18 @@
    "numbers": 57
   },
   "QL-ct-8de7330546": {
-   "digest": "fbaa9060a80e3774",
+   "digest": "fd0670d10ad5e463",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-ct-932b366969": {
-   "digest": "4809e7233b9ce2f9",
+   "digest": "1ed4c6b326bc41ea",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-ct-94b13a5b8e": {
    "digest": "b3663b54e0a51846",
@@ -1633,11 +1633,11 @@
    "date": "2026-11-06"
   },
   "QL-ct-ca550d3a77": {
-   "digest": "ff23f9cbc1e6fa87",
+   "digest": "de9bbbc1df5aee22",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-ct-cb9db4fde4": {
    "digest": "6260dbe7bae441de",
@@ -1647,11 +1647,11 @@
    "numbers": 19
   },
   "QL-ct-cd20c8a351": {
-   "digest": "95d584d18e6f30ce",
+   "digest": "810b976cdefacad7",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-ct-d771cabf31": {
    "digest": "bcd8cbf7d8726f50",
@@ -2550,11 +2550,11 @@
    "date": "2026-11-06"
   },
   "QL-hist-d3c38222b5": {
-   "digest": "ff23f9cbc1e6fa87",
+   "digest": "de9bbbc1df5aee22",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-hist-d4853e90ea": {
    "digest": "0d258c87705ef62c",
@@ -2739,18 +2739,18 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-053ae9faf0": {
-   "digest": "0fe889e4852310ae",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 45,
-   "date": "2026-11-06"
+   "digest": "9927ccbaa810cb40",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 45
   },
   "QL-nibrs-0810a7f0e2": {
-   "digest": "5b309f3bbd352fec",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 7,
-   "date": "2026-11-06"
+   "digest": "9a8a2cb7aecdcead",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
   },
   "QL-nibrs-0b6a9bd3b7": {
    "digest": "4534380454ff267d",
@@ -2760,11 +2760,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-0dc5353d5f": {
-   "digest": "25558885e057e022",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 100,
-   "date": "2026-11-06"
+   "digest": "0baa24f2e8c99d46",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 101
   },
   "QL-nibrs-0eeb3a78ed": {
    "digest": "92fb6040e4b3bdab",
@@ -2774,11 +2774,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-12623f07aa": {
-   "digest": "2ad5c407491fde25",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 57,
-   "date": "2026-11-06"
+   "digest": "319789b1583fc92d",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 58
   },
   "QL-nibrs-137f45372d": {
    "digest": "a05e61948bb74b4b",
@@ -2795,18 +2795,18 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-17b15bde40": {
-   "digest": "5836cdfce5d37f88",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 57,
-   "date": "2026-11-06"
+   "digest": "94f18864176a744d",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 58
   },
   "QL-nibrs-1929d7a58f": {
-   "digest": "404b2f13195a3a2b",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 81,
-   "date": "2026-11-06"
+   "digest": "2917cd7dbfc23c1f",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 82
   },
   "QL-nibrs-1993ea9c95": {
    "digest": "9817b1a5d015da4d",
@@ -2893,11 +2893,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-30ef6cabaa": {
-   "digest": "24985f96794275e5",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 81,
-   "date": "2026-11-06"
+   "digest": "65045cab451dca9e",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 82
   },
   "QL-nibrs-36073b06f9": {
    "digest": "dd32e93e13ccefc5",
@@ -2935,11 +2935,11 @@
    "numbers": 21
   },
   "QL-nibrs-47d92d444a": {
-   "digest": "7e5d47cd2b1fe836",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 57,
-   "date": "2026-11-06"
+   "digest": "81b8e8232f1769ac",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 54
   },
   "QL-nibrs-49eddf02d3": {
    "digest": "121db2597641b2fb",
@@ -2991,18 +2991,18 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-5732e720ce": {
-   "digest": "24985f96794275e5",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 81,
-   "date": "2026-11-06"
+   "digest": "65045cab451dca9e",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 82
   },
   "QL-nibrs-5905b47131": {
-   "digest": "f7c84a3fe4f7f58c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 93,
-   "date": "2026-11-06"
+   "digest": "625ef8ebcc4ef6b4",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
   },
   "QL-nibrs-5cc90027ca": {
    "digest": "b1ce87525fb74794",
@@ -3145,11 +3145,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-8ae1d0b9ab": {
-   "digest": "da98d304d2ffbf0c",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 36,
-   "date": "2026-11-06"
+   "digest": "53ef4a4b90c77e38",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 32
   },
   "QL-nibrs-91c71281e8": {
    "digest": "d2f218c2a09197a3",
@@ -3166,11 +3166,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-965e0aa4cc": {
-   "digest": "58fc54db2bfc5e43",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 5,
-   "date": "2026-11-06"
+   "digest": "8a745bb5ae6b5645",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
   },
   "QL-nibrs-9a623aa96b": {
    "digest": "5e8c5e7752cdf91b",
@@ -3187,11 +3187,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-9f45c7cea1": {
-   "digest": "603c1d6253128147",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 69,
-   "date": "2026-11-06"
+   "digest": "9d48945ec79cf10f",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 70
   },
   "QL-nibrs-a683c4c1ca": {
    "digest": "81b3896ffa448090",
@@ -3250,11 +3250,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-ca02c6e520": {
-   "digest": "732c182f192da48e",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 69,
-   "date": "2026-11-06"
+   "digest": "67d006a839342f82",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 69
   },
   "QL-nibrs-ca4fcfe4be": {
    "digest": "6ed97c5d2f2ea9a9",
@@ -3278,11 +3278,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-dbace663ef": {
-   "digest": "45832e8b65ec8ad4",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 69,
-   "date": "2026-11-06"
+   "digest": "25063ea4bc21b3d7",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 70
   },
   "QL-nibrs-df3d4cc373": {
    "digest": "6de16d156ef12b1a",
@@ -3341,11 +3341,11 @@
    "date": "2026-11-06"
   },
   "QL-nibrs-eba5d199f1": {
-   "digest": "603c1d6253128147",
-   "by": "model-canonical",
-   "batch": "nibrs-2026-11-06",
-   "numbers": 69,
-   "date": "2026-11-06"
+   "digest": "9d48945ec79cf10f",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 70
   },
   "QL-nibrs-ec32db0fea": {
    "digest": "a938d54b2008122c",
@@ -3481,11 +3481,11 @@
    "date": "2026-11-06"
   },
   "QL-shr-25ec63bdeb": {
-   "digest": "f0e3b4e18db8d986",
+   "digest": "565766de31809f70",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-shr-28f48072f9": {
    "digest": "2c082e3c25eef08b",
@@ -3642,11 +3642,11 @@
    "date": "2026-11-06"
   },
   "QL-shr-9d330706ed": {
-   "digest": "90833d561c2f9476",
+   "digest": "83a4afd01442aa4b",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-shr-aa663631fa": {
    "digest": "63f4f5e1e2e06fc0",
@@ -3705,11 +3705,11 @@
    "date": "2026-11-06"
   },
   "QL-shr-d3c38222b5": {
-   "digest": "ff23f9cbc1e6fa87",
+   "digest": "de9bbbc1df5aee22",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-shr-ea74a11e4f": {
    "digest": "730cd41c5ee7a457",
@@ -3999,11 +3999,11 @@
    "date": "2026-11-06"
   },
   "QL-ct-83ccb9d330": {
-   "digest": "90833d561c2f9476",
+   "digest": "83a4afd01442aa4b",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 1
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
   },
   "QL-ct-88a8908fbe": {
    "digest": "51ea4c8ef6060f42",
@@ -5518,18 +5518,18 @@
    "numbers": 100
   },
   "QL-ct-9f18f436a0": {
-   "digest": "a8aa5965d3d34bec",
+   "digest": "765846964fee6c83",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 57
   },
   "QL-shr-9f18f436a0": {
-   "digest": "a8aa5965d3d34bec",
+   "digest": "765846964fee6c83",
    "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 57
   },
   "QL-hist-d7fbcca23f": {
    "digest": "05572a980a98704d",
@@ -6629,12 +6629,11 @@
    "note": "Chicago 1984 officers per 100,000 = 397.0, derived from the published count and population (11,960 / 3,012,524 x 100,000) as the build publishes no rate that year (Jeff 2026-11-13); checked by this arithmetic; every other cell agreed with Codex"
   },
   "QL-nibrs-28e65b33e3": {
-   "digest": "f7c84a3fe4f7f58c",
-   "by": "model-canonical",
-   "batch": "vb2-2026-11-13",
-   "date": "2026-11-13",
-   "numbers": 93,
-   "note": "Houston carjackings per month: 91 of 93 cells matched; 2026-08 and 2026-09 are blank (Houston's month status UNKNOWN; a gap never reads as zero, D04) where the recount wrote 0"
+   "digest": "625ef8ebcc4ef6b4",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
   },
   "QL-hist-373c45ee26": {
    "digest": "70c22a9f4e5d48d7",
@@ -6656,6 +6655,818 @@
    "batch": "vb2-2026-11-13",
    "date": "2026-11-13",
    "numbers": 9
+  },
+  "QL-ct-148cc0f041": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-hist-148cc0f041": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-nibrs-148cc0f041": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-ct-43518ceafb": {
+   "digest": "ba25a67a84c586a7",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-nibrs-b3d1463819": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-nibrs-bcf852c3c3": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-ct-f688d148cc": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-hist-6b6bd148cc": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 105
+  },
+  "QL-ct-7c12a414fb": {
+   "digest": "33e1a471e09ea1f1",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-20261120-pr246",
+   "date": "2026-11-20",
+   "numbers": 12
+  },
+  "QL-ct-0e32865aa1": {
+   "digest": "0c037cec3384cdcb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 8
+  },
+  "QL-ct-177dadd2a1": {
+   "digest": "99e8be965ef6551e",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 3300
+  },
+  "QL-ct-2d0b894a44": {
+   "digest": "99e8be965ef6551e",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 3300
+  },
+  "QL-ct-75a35fd064": {
+   "digest": "a558c77476f39162",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 72
+  },
+  "QL-hist-0c299987a4": {
+   "digest": "9a3e5c2c2c676e24",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 92
+  },
+  "QL-hist-25f6547d6c": {
+   "digest": "9a189b5a5c690f72",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 65
+  },
+  "QL-hist-2c152457de": {
+   "digest": "9a3e5c2c2c676e24",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 92
+  },
+  "QL-hist-3f3230baaa": {
+   "digest": "fa7d7b44a0f68a6b",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 2300
+  },
+  "QL-hist-42d6417eea": {
+   "digest": "f0cd7e22e0be149e",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 95
+  },
+  "QL-hist-53b9c07fbe": {
+   "digest": "7c88cf6b077e92ea",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 92
+  },
+  "QL-hist-5d8f232ce0": {
+   "digest": "c4f7bfd05975af7b",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 3250
+  },
+  "QL-hist-660b3cd8f7": {
+   "digest": "02365ab772ffab76",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 1350
+  },
+  "QL-hist-7928a064cc": {
+   "digest": "db419a4a41951153",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 3300
+  },
+  "QL-hist-8c54d6f385": {
+   "digest": "f5e0184d0c517b94",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 92
+  },
+  "QL-hist-8e159f01fc": {
+   "digest": "594f9237e49dc371",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 14
+  },
+  "QL-hist-98dac1393e": {
+   "digest": "c73b87ba54b4b38d",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-hist-ab9b32bd71": {
+   "digest": "cd3e1cb3f702668b",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 3300
+  },
+  "QL-hist-dfc6eff4e0": {
+   "digest": "e4683e9cbfc83aef",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 95
+  },
+  "QL-hist-e963f43c0e": {
+   "digest": "f5e0184d0c517b94",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 92
+  },
+  "QL-hist-ef039f82ca": {
+   "digest": "d28e8a5a6140d4e0",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 89
+  },
+  "QL-hist-fa601848b3": {
+   "digest": "4ce03a057fbbab2f",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 400
+  },
+  "QL-nibrs-bf9d73aab1": {
+   "digest": "083b3d25470d4cca",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 50
+  },
+  "QL-nibrs-f3e8af8956": {
+   "digest": "d3a4c666c6b019ce",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 50
+  },
+  "QL-nibrs-ff3f230995": {
+   "digest": "701812be0c9dd810",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 66
+  },
+  "QL-shr-372901ecb1": {
+   "digest": "089009b3839da88d",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 6
+  },
+  "QL-shr-8ee90a9fbc": {
+   "digest": "1030a121e6360694",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 250
+  },
+  "QL-ct-0ee4082e34": {
+   "digest": "6c02811915befcc2",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 137
+  },
+  "QL-ct-1093753b9c": {
+   "digest": "7c88cf6b077e92ea",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 92
+  },
+  "QL-ct-b8f0b5bddb": {
+   "digest": "6eb3c2f257277e6e",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 6
+  },
+  "QL-ct-df6a210937": {
+   "digest": "84b084fb8b0cbb33",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 10
+  },
+  "QL-ct-f1591fb295": {
+   "digest": "c0529bd460bdfbdf",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 6
+  },
+  "QL-ct-fb295571c3": {
+   "digest": "8875a3f5029de803",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 8
+  },
+  "QL-hist-178c24f406": {
+   "digest": "9ec8b91a908d2df7",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 91
+  },
+  "QL-hist-284eaf1591": {
+   "digest": "0ca159a9aef55780",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 6
+  },
+  "QL-hist-3111b3111b": {
+   "digest": "07eacc9b45850b21",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 87
+  },
+  "QL-hist-377836640b": {
+   "digest": "39dc37e6c77485bf",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 16
+  },
+  "QL-hist-3c9ab4ac7d": {
+   "digest": "997e3a6853d90ac5",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 48
+  },
+  "QL-hist-3e57474023": {
+   "digest": "d72a76f9e8d0dee6",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 82
+  },
+  "QL-hist-4f40674023": {
+   "digest": "d72a76f9e8d0dee6",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 82
+  },
+  "QL-hist-65cad31cc9": {
+   "digest": "fbce503e1172feaf",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 40
+  },
+  "QL-hist-75fdc4c7bd": {
+   "digest": "300291988c61ecaf",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 44
+  },
+  "QL-hist-8022982e34": {
+   "digest": "6c02811915befcc2",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 137
+  },
+  "QL-hist-82e343c9ab": {
+   "digest": "f1aa3c3b5fd27a3d",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 48
+  },
+  "QL-hist-962ebe9409": {
+   "digest": "300291988c61ecaf",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 44
+  },
+  "QL-hist-adcbe3111b": {
+   "digest": "07eacc9b45850b21",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 87
+  },
+  "QL-hist-ce601b2113": {
+   "digest": "d9d1c806ae515f3f",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-hist-eaca199eb4": {
+   "digest": "f0018549a32bc395",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 11
+  },
+  "QL-hist-f159180229": {
+   "digest": "4f8df11ca3c16bca",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 91
+  },
+  "QL-hist-f41a5b2113": {
+   "digest": "d9d1c806ae515f3f",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-hist-f688dc8095": {
+   "digest": "9ec8b91a908d2df7",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 91
+  },
+  "QL-nibrs-86ca8ffbd5": {
+   "digest": "ed7ff0e1cc92a620",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-shr-c0b527cc0c": {
+   "digest": "a6859563a9bae169",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 96
+  },
+  "QL-ct-b0405181c2": {
+   "digest": "7542d4b53d340fef",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 117
+  },
+  "QL-ct-b250715789": {
+   "digest": "bd3f143380f13b7c",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 21
+  },
+  "QL-ct-c1a98efea7": {
+   "digest": "8907a7ed6ee178fb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-ct-d99b4e4a3f": {
+   "digest": "04c7366ece8e2795",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 77
+  },
+  "QL-ct-f929f6340f": {
+   "digest": "3c1a4dd4d3d39708",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-hist-aa5f983ecf": {
+   "digest": "8907a7ed6ee178fb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-hist-db781e70e9": {
+   "digest": "977dc47cc2d930ea",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-nibrs-aa5f983ecf": {
+   "digest": "8907a7ed6ee178fb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-shr-008f087e52": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 105
+  },
+  "QL-shr-49fc4a3dec": {
+   "digest": "414929a59f2a69ae",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-shr-aa5f983ecf": {
+   "digest": "8907a7ed6ee178fb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-shr-c1a98efea7": {
+   "digest": "8907a7ed6ee178fb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-ct-cde73008f0": {
+   "digest": "e94a745a9ef4f147",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 105
+  },
+  "QL-nibrs-b56b1d99b4": {
+   "digest": "04c7366ece8e2795",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 77
+  },
+  "QL-ct-3c7b2214e4": {
+   "digest": "7e6d65827efa48eb",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 234
+  },
+  "QL-ct-4d21c30199": {
+   "digest": "43208ecf55a22ce7",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 232
+  },
+  "QL-ct-b609093962": {
+   "digest": "f04ba8afaea2bd88",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 234
+  },
+  "QL-ct-bb7f4804a9": {
+   "digest": "c6eb0a06af431ba5",
+   "by": "runner-codex-blind",
+   "batch": "crimeindex-yearly-ct-20261121",
+   "date": "2026-11-21",
+   "numbers": 192
+  },
+  "QL-ct-6ed74f2fd0": {
+   "digest": "f2a09e9e495fea71",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-ct-9f2cc66b3e": {
+   "digest": "3ad02e89c455308d",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 101
+  },
+  "QL-nibrs-0db9574c2f": {
+   "digest": "e469de5e91695865",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-nibrs-0f8268e55b": {
+   "digest": "0baa24f2e8c99d46",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 101
+  },
+  "QL-nibrs-1985315511": {
+   "digest": "6ebdc3b4b20193f1",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 84
+  },
+  "QL-nibrs-1a5c6160be": {
+   "digest": "f0cd83c4279bf0f7",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
+  },
+  "QL-nibrs-1d94773bb7": {
+   "digest": "2cfe75be78d426b2",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 48
+  },
+  "QL-nibrs-21e388da4e": {
+   "digest": "52ac06ea31fc2326",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-nibrs-3b2cd85cdf": {
+   "digest": "b765d499facbbeef",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 65
+  },
+  "QL-nibrs-3f297f32a7": {
+   "digest": "2cfe75be78d426b2",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 48
+  },
+  "QL-nibrs-4c8edf1303": {
+   "digest": "2486076536b6a1ab",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-nibrs-4dfd7ab56e": {
+   "digest": "b9e74f09ce0bb0d6",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 8
+  },
+  "QL-nibrs-542a1ca196": {
+   "digest": "63dd28b2a0125004",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 85
+  },
+  "QL-nibrs-61a096133c": {
+   "digest": "c5d49d640f06d370",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
+  },
+  "QL-nibrs-621b845ba5": {
+   "digest": "95e160086e232ee7",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-nibrs-63840fca4f": {
+   "digest": "00b3fcf00fc8e822",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-nibrs-7d723ee4f8": {
+   "digest": "f0cd83c4279bf0f7",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
+  },
+  "QL-nibrs-83a5e3539f": {
+   "digest": "94e81bde3bbddb03",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-nibrs-8ae1da5e9a": {
+   "digest": "53ef4a4b90c77e38",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 32
+  },
+  "QL-nibrs-8c78ff73cb": {
+   "digest": "25cc9b17eb507bc0",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-nibrs-8d4ab9b4df": {
+   "digest": "1646d761631e37d7",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 93
+  },
+  "QL-nibrs-98af404ff6": {
+   "digest": "404367c21faa905d",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 144
+  },
+  "QL-nibrs-9bbed83a5e": {
+   "digest": "dc7a72a3d5c0faa8",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 4
+  },
+  "QL-nibrs-a3cf12cbd1": {
+   "digest": "42cfe086531c0499",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
+  },
+  "QL-nibrs-a3cf1d3672": {
+   "digest": "42cfe086531c0499",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
+  },
+  "QL-nibrs-a5e93918e2": {
+   "digest": "b07555f44b372749",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-nibrs-a881b3b2cd": {
+   "digest": "b765d499facbbeef",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 65
+  },
+  "QL-nibrs-ad2899b034": {
+   "digest": "2cfe75be78d426b2",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 48
+  },
+  "QL-nibrs-b5b09ed67c": {
+   "digest": "88c19bef2bf67272",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 9
+  },
+  "QL-nibrs-c0cbf1feec": {
+   "digest": "9b5ea134b6713fec",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 84
+  },
+  "QL-nibrs-c80f24c8ed": {
+   "digest": "2486076536b6a1ab",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-nibrs-ca9054dfd7": {
+   "digest": "642ced3e242568d5",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
+  },
+  "QL-nibrs-cf600d9f5c": {
+   "digest": "42cfe086531c0499",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 94
+  },
+  "QL-nibrs-e785389d0c": {
+   "digest": "c14f0e589e91e88a",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 16
+  },
+  "QL-nibrs-ec32dca905": {
+   "digest": "b0f3a8bd3e68e4f6",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-nibrs-fade97001c": {
+   "digest": "59ea7e2331f4be7f",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 16
+  },
+  "QL-nibrs-fecedb1bda": {
+   "digest": "d6e851a0e6297c0d",
+   "by": "runner-codex-blind",
+   "batch": "nibrs-canon2-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
   }
  }
 }
