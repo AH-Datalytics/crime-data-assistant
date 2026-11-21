@@ -2538,6 +2538,15 @@
       "note": "The engine service (stage 1 of the engine switch): the process pool (worker count, bounded queue, the busy answer, the timeout that kills and replaces a worker, a crashed worker, shutdown), the request protocol, the HTTP face (token, body limit, status codes) and the configuration read from the environment, with fake workers: no data, no Python, loopback only."
     },
     {
+      "id": "test-engine-route",
+      "tier": "F",
+      "script": "scripts/test-engine-route.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The web side of the engine switch's stage 1: the private flag (a keyed cookie, never the key; no key configured means no flag), the client of the engine service against a loopback service with a fake worker (unreachable, unreadable and too-slow services are reported as unavailable, never as a fallback), and the route logic with fakes (private flag first, rate limit, page token, session limit, a query-log row for every outcome, failures shown as what they are)."
+    },
+    {
       "id": "test-nibrs-duckdb-temp",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-temp.ts",

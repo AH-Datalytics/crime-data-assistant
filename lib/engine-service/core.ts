@@ -60,7 +60,7 @@ export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
           : req.previous ? (shadowFollowUp(req.previous, req.question, b.deps) as ShadowOutcome) : shadowAnswer(req.question, b.deps);
         const at = outcome && follow(outcome, req.path);
         if (!at) return { ok: false, kind: "bad_request", message: "That button is no longer offered for this question." };
-        return { ok: true, response: toPreview(at, req.path, b.deps.places, req.question), ms: 0, release: b.release };
+        return { ok: true, response: toPreview(at, req.path, b.deps.places, req.question), ms: 0, release: b.release, sql: at.kind === "answer" ? at.sql : null };
       } catch (e) {
         return { ok: false, kind: "error", message: `The engine failed: ${e instanceof Error ? e.message : String(e)}` };
       }
