@@ -7,7 +7,7 @@
  * Results (one JSON object per line): { id, status, kind, reason, ms, rows, digest, note }
  *   status  answered | declined | excluded | service_error
  *   kind    the response kind ("answer", "decline", "route", ...), or the service failure kind (busy, timeout, error)
- *   reason  a decline's reason code (response.reason) and, when present, its explanation's first 160 characters in `note`
+ *   reason  a decline's reason code (response.reason) and, when present, the engine's sentence (first 400 characters) in `note`
  *   ms      the service's own time for the question (no clock is read here)
  *   rows    the number of result rows; answer: { columns, rows, text } for an answered row (the engine's own table, rows keyed by column in display order, at most 5000), so a reference can be joined by id; digest: a short hash of the whole response (for comparing two runs or two builds)
  * Run at Idle priority, serial; `--timing` asks only the plain state and national one-year totals (the Texas/US per-measure raw timing table, with the matrix's state = Ohio).
@@ -67,7 +67,7 @@ async function main(): Promise<void> {
           const text = Array.isArray(resp.text) ? (resp.text as unknown[]).filter((t): t is string => typeof t === "string") : typeof resp.text === "string" ? [resp.text] : [];
           res = { id: r.id, status: classify(resp), kind: String(resp.kind ?? ""), ms: body.ms, digest: crypto.createHash("sha256").update(JSON.stringify(resp, noSql)).digest("hex").slice(0, 12),
             ...(rowsOut ? { rows: rowsOut.length } : {}), ...(resp.kind === "answer" && rowsOut ? { answer: { columns, rows: rowsOut.slice(0, 5000), text } } : {}),
-            ...(resp.kind === "decline" ? { reason: String(resp.reason ?? ""), note: (text.join(" ") || String(resp.explanation ?? "")).slice(0, 160) } : {}) };
+            ...(resp.kind === "decline" ? { reason: String(resp.reason ?? ""), note: (text.join(" ") || String(resp.explanation ?? "")).slice(0, 400) } : {}) };
         }
       } catch (e) { res = { id: r.id, status: "service_error", kind: "unreachable", note: String((e as Error).message).slice(0, 160) }; }
     }

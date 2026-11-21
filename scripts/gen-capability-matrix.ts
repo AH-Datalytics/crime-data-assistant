@@ -16,7 +16,7 @@
  * fixed ORIs picked by population band from scripts/fixtures/nibrs-shadow/agencies.json (deterministic). Nothing reads data.
  */
 import fs from "node:fs";
-import { MEASURE_CODES } from "../lib/nibrs-question-types";
+import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../lib/nibrs-question-types";
 import { MEASURE_NOUNS } from "./lib/cube-measure-forms";
 
 type Ag = { ori: string; kind: string; name: string; state: string; population: number; sources?: string[] };
@@ -77,13 +77,27 @@ const BREAKDOWN_DATA = (b: B): { unit: string; group_by: string | null; filters:
 };
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
 
-/** Combinations that are not valid questions by definition: never asked, counted as excluded with the reason. */
+/**
+ * Combinations that are not valid questions by definition: never asked, counted as excluded with the reason (class A "invalid combination" or B "not in the data" of Engine 2.0's decline classes).
+ * Reason strings are Engine 2.0's (2026-11-21). Not in the matrix, so no rule here: (a) arrests by victim/offender attributes (no such breakdown is generated), (c) clearance by victim/offender/arrest (only
+ * incidents by clearance is generated), (d) rates by group (no rates), (e) police staffing (not a NIBRS measure), (g) grains before 2017 (the grains start in 2020).
+ */
+const EXTRA_MEASURE_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
+const codesOf = (m: string): string[] => MEASURE_CODES[m] ?? EXTRA_MEASURE_CODES[m] ?? [];
+const isGroupB = (m: string) => codesOf(m).length > 0 && codesOf(m).every((c) => GROUP_B.has(c));
+const isPersonOnly = (m: string) => codesOf(m).length > 0 && codesOf(m).every((c) => PERSON_CODES.has(c));
+// Group A crimes with no victim record (against society, or no victim segment): victims and offenders are not defined (kept from the first version of the matrix).
+const NO_VICTIM = new Set(["bad_checks", "runaway", "all_other_offenses", "family_offense_nonviolent", "peeping_tom", "curfew_loitering", "drunkenness", "liquor_law", "disorderly_conduct", "trespass", "drug_equipment", "drug_possession", "drug_crimes", "dui", "weapon_law", "all_crime"]);
 function excluded(measure: string, b: B, grain: string): string | null {
-  // A grain that is already a time series cannot sit beside a category breakdown in one table the engine builds (the plan allows one time grouping, then attributes).
-  // That is NOT excluded: it is asked, and a decline is recorded as the answer (the point of the matrix). Only definitional impossibilities are excluded here.
-  if (/^(?:victims|offenders)_/.test(b.breakdown) && ["bad_checks", "runaway", "all_other_offenses", "family_offense_nonviolent", "peeping_tom", "curfew_loitering", "drunkenness", "liquor_law", "disorderly_conduct", "trespass", "drug_equipment", "drug_possession", "drug_crimes", "dui", "weapon_law", "all_crime"].includes(measure))
-    return "a crime against society or property with no victim record: victims/offenders are not defined for this measure";
+  // A grain that is already a time series beside a category breakdown is NOT excluded: it is asked, and a decline is recorded as the answer (the point of the matrix).
   void grain;
+  // (b) Group B arrests are standalone arrest records: no incident, so only arrests (and the plain count) exist.
+  if (isGroupB(measure) && ["victims", "offenders", "offenses", "incidents"].includes(b.family))
+    return "Group B arrests have no incident: no weapon, location, clearance, offender or victim attribute, no property";
+  if (/^(?:victims|offenders)_/.test(b.breakdown) && NO_VICTIM.has(measure)) return "a crime against society or property with no victim record: victims/offenders are not defined for this measure";
+  // (f) victims of crimes against property are counted by age only (P11, Jeff 2026-11-15; P120 for a victim age).
+  if (/^victims_(?:sex|race|ethnicity)$/.test(b.breakdown) && !isPersonOnly(measure) && !NO_VICTIM.has(measure))
+    return "victims of crimes against property are counted by age only (P11, Jeff 2026-11-15)";
   return null;
 }
 
