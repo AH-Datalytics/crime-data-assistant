@@ -25,7 +25,7 @@ import { stateName } from "./places";
 import { fmt, runs } from "./deliver";
 import { aboutPeople } from "./presentation";
 import { periodTitle, titleCase } from "./titles";
-import { agencySubject, changeSentence, countSentence, nationSubject, rateSentence, seriesTitle, type Subject } from "./headline";
+import { agencySubject, changeSentence, countSentence, nationSubject, rateSentence, seriesTitle, titleTimeframe, type Subject } from "./headline";
 
 /** The cohort sentence; the people clause only when the population is known (the final panel before 2025 has none, so never "roughly 0 people"). */
 const cohortSentence = (agencies: number, population: number | null | undefined, from: string, to: string): string =>
@@ -445,7 +445,7 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     shown = r.ranked; leftOut = r.leftOut;
     const most = rq.pick.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes (the sample note, ties, who is left out), then the source.
-    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${titleCase(where.replace(/^the /i, ""))}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}`;
+    lead = `${titleCase(where.replace(/^the /i, ""))} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}, ${titleTimeframe(periodTitle({ from: rq.from, to: rq.to }, spanWords))}`;
     extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.`);
     if (r.tie?.truncated) extra.push(truncatedTieSentence(r.tie, rate));
     else if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
@@ -457,7 +457,7 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     const byPop = sorted.filter((e, i) => i < n || e.population === cutPop);
     shown = byPop.filter((e) => e.known); leftOut = byPop.filter((e) => !e.known);
     shown = byPop;
-    lead = `${periodTitle({ from: rq.from, to: rq.to }, spanWords)} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${rq.state === "US" && !rq.region ? "" : `${titleCase(where.replace(/^the /i, ""))}, `}${byPop.length} Largest Cities`;
+    lead = `${rq.state === "US" && !rq.region ? "United States" : titleCase(where.replace(/^the /i, ""))} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}, ${byPop.length} Largest Cities, ${titleTimeframe(periodTitle({ from: rq.from, to: rq.to }, spanWords))}`;
     extra.push(`The cities are the ${byPop.length} largest in Current Trends' sample by population (${monthWords(rq.to)}), ${span}.`);
   }
   if (!shown.length) return { kind: "current-decline", explanation: `No ${kindWord} in Current Trends' sample have a figure for every month of ${span}.` };
@@ -675,7 +675,7 @@ export function partOneMonthly(v: CurrentAnswer | { kind: string }, p: CurrentAn
   };
   const isGap = (t: string) => /^No figure is available for /.test(t);
   const shared = [...a.delivered.text.slice(1), ...b.delivered.text.slice(1)].filter((t, i, all) => !isGap(t) && t !== "Source: Crime Index." && all.indexOf(t) === i);
-  const title = a.delivered.text[0].replace(/ Violent Crimes? by Month/i, " Crime by Month");
+  const title = a.delivered.text[0].replace(/ Violent Crimes? Per Month/i, " Crime Per Month");
   const columns: ResultTable["columns"] = [a.delivered.table.columns[0],
     { binding: { kind: "statistic", as: "violent" }, header: "Violent crime" }, { binding: { kind: "statistic", as: "property" }, header: "Property crime" },
     { binding: { kind: "statistic", as: "part_one" }, header: "Part I crime" }];
