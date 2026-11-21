@@ -244,6 +244,11 @@ const PHRASES: [RegExp, string][] = [
   [/\b(?:what\s+)?(?:percentage|percent|share|proportion)\s+of\s+((?:[a-z]+\s+){0,2}?(?:murder|homicide)\s+(?:victims|offenders))\s+(?:are|were)\s+in\s+each\s+(race|sex|age\s+group|ethnicity)\b/gi, "share of $1 by $2"],
   // "What race are offenders in NYC murders in 2024?": the offenders' race for the murders.
   [/\bwhat\s+(race|sex|gender|ethnicity|age)\s+(?:are|were)\s+(?:the\s+)?(offenders|victims)\s+(?:in|of|for)\s+(.+?)\s+(murder|homicide)s\b/gi, "$4 $2 by $1 in $3"],
+  // P163 (Jeff 2026-11-19): justifiable homicides "by police vs civilians" are the two kinds of justifiable homicide side by side (the
+  // circumstance breakdown); "by police" alone (or "by civilians" alone) is read from the question text where the answer is made.
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:private\s+)?(?:civilians?|citizens?)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:the\s+)?(?:police|officers|law\s+enforcement)\b/gi, "$1 by circumstance"],
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];

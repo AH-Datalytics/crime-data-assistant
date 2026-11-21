@@ -222,6 +222,8 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "all_crime", pattern: R(String.raw`\b(?:total|all|overall)\s+(?:crimes?|offenses?)\b`) },
   // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) beside murder and negligent manslaughter.
   { concept: "measure", value: () => "homicide_all", pattern: R(String.raw`\ball\s+(?:homicides?|homicide\s+types)\b`) },
+  // P163 (Jeff 2026-11-19): justifiable homicide is its own measure (a felon killed by a private citizen or by police), never murder.
+  { concept: "measure", value: () => "justifiable_homicide", pattern: R(String.raw`\bjustifiable\s+(?:homicides?|killings?)\b`) },
   { concept: "measure", value: () => "homicide", pattern: R(String.raw`\bhomicides?\b`) },
   { concept: "measure", value: () => "murder", pattern: R(String.raw`\bmurders?\b|\bkillings?\b`) },
   { concept: "measure", value: () => "rape", pattern: R(String.raw`\brapes?\b`) },
