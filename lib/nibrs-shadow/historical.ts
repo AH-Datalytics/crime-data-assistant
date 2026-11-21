@@ -24,7 +24,7 @@ import { stateName } from "./places";
 import { headerStates } from "../nibrs-plan/state-codes";
 import { answerSrsSeveral, type SrsPlace } from "./srs";
 import { titleCase } from "./titles";
-import { agencySubject, changeSentence, countSentence, rateChangeSentence, rateSentence, seriesTitle } from "./headline";
+import { agencySubject, changeSentence, countSentence, rateChangeSentence, rateSentence, seriesTitle, titleTimeframe } from "./headline";
 
 /** Where the Crime Index build is, and the years it holds. */
 export type HistoricalBuild = { root: string; release: string; firstYear: number; lastYear: number; clearanceFirstYear: number };
@@ -493,7 +493,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   // A title that reads back the question's datapoints (Jeff 2026-11-17: "2024 Murder Rate by State"), then plain notes, then the source line.
   const unitTitle = states ? "State" : counties ? "County Agency" : cities || rq.region ? "City" : "Agency";
   const unitPlural = states ? "states" : counties ? "county agencies" : cities || rq.region ? "cities" : "agencies";
-  const title = `${rq.year} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} by ${unitTitle}${states ? "" : `, ${titleCase(where)}`}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}`;
+  const title = `${states ? "United States" : titleCase(where)} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
   const text = [title,
     `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? "rates" : m.words} are shown.`,
     states ? "The 50 states are ranked; the District of Columbia is not a state, so it is left out."
