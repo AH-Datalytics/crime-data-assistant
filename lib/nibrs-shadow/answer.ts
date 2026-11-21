@@ -83,6 +83,8 @@ export type ShadowDeps = {
   asked?: string;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
+  /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
+  noDefaults?: boolean;
   /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
   rewritten?: boolean;
   /** Set while a bare-assault question goes on as asked: the bare-assault rule steps aside. */
@@ -879,8 +881,8 @@ let defaultDepth = 0;
  * (a place, then a period, then a kind of crime) ends in an answer. The notes say each default, after the title; buttons let the user change the
  * place or the year. Otherwise the ask stays as before (a ranking with no period, a heavy national shape, a question the reader cannot place).
  */
-function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
-  if (deps.checkingOffer || defaultDepth > 1 || o0.kind !== "clarify") return o0;
+export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
+  if (deps.checkingOffer || deps.noDefaults || defaultDepth > 1 || o0.kind !== "clarify") return o0;
   const notes: string[] = [];
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
@@ -904,6 +906,11 @@ function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowDeps): S
           const alt = shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, deps);
           if (ANSWER_KINDS.includes(alt.kind)) option = { label: "Every year available", continuation: alt };
         } finally { defaultDepth--; }
+      }
+      // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
+      if (!option) {
+        const latest = find(/^The latest complete year \((\d{4})\)$/);
+        if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
       }
       years = true;
       more.push({ label: "Another year", entry: "which year" });
@@ -1851,7 +1858,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const ageAsked = ledger0.parts.some((p) => p.clause === 0 && p.concept === "breakdown" && /age/.test(String(p.value)));
     // P172 (Jeff 2026-11-21): no kind of crime named is violent crime and property crime with their parts, said, with buttons for one kind or a
     // specific crime. Tried with the parts, then the two totals; asked as before when neither answers now (and for a victim-age question).
-    if (!ageAsked) {
+    if (!ageAsked && !deps.noDefaults) {
       const parts: [string, string][] = [["violent_crime", "violent crime"], ["property_crime", "property crime"], ["murder", "murder"], ["rape", "rape"], ["robbery", "robbery"],
         ["aggravated_assault", "aggravated assault"], ["burglary", "burglary"], ["theft", "theft"], ["motor_vehicle_theft", "motor vehicle theft"]];
       const crimeButtons: ShadowOption[] = [...runnable.filter((o) => o.label !== "Both"), { label: "A specific crime", entry: "which crime" }];
@@ -1973,7 +1980,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
     const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps);
     const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
-    const nationDefault = withDefault(nationOption, "No place was named, so the United States is shown.", placeButtons, "place");
+    const nationDefault = deps.noDefaults ? null : withDefault(nationOption, "No place was named, so the United States is shown.", placeButtons, "place");
     if (nationDefault) return nationDefault;
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [nationOption, ...placeButtons] };
   }
@@ -3039,7 +3046,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
     // P171 (Jeff 2026-11-21): the same for every question: no period named is every year by year, for a single figure or a breakdown too
     // (a series by year of it). Tried only when it answers now; otherwise the question is asked as before.
-    {
+    if (trend || !deps.noDefaults) {
       const base = trend ? ledger : filled(ledger, "grain", "year", "by year");
       const firstY = release.firstMonth.slice(0, 4);
       const monthly = (spec.grain === "month" || !!(spec as { window?: unknown }).window) && !flags(ledger0).quarter;
