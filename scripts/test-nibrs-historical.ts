@@ -134,7 +134,7 @@ assert.match(no({ statistic: "clearance_rate", from: 1959, to: 1960 }), /no murd
 // none blank and named; the leading years with none for any agency left out and named.
 const clrYears = ok({ statistic: "clearance_rate", from: 2021, to: 2023, byYear: true });
 assert.deepEqual(clrYears.delivered.table.rows, [["2022", 12.3], ["2023", 15.1]]);
-assert.deepEqual(clrYears.delivered.text, ["2022 to 2023 Murders Cleared (%) by Year, Memphis, Tennessee",
+assert.deepEqual(clrYears.delivered.text, ["Memphis, Tennessee Murders Cleared (%) Per Year, 2022-2023",
   "Crime Index has no murder clearance rate for Memphis, Tennessee in 2021, so the chart and table start in 2022.", SRS_SOURCE]);
 const clrPair = ok({ statistic: "clearance_rate", agencies: [memphis, dallas], from: 2022, to: 2023, byYear: true });
 assert.deepEqual(clrPair.delivered.table.rows, [["2022", 12.3, null], ["2023", 15.1, 40.2]]);
@@ -173,7 +173,7 @@ assert.ok(!named.delivered.text.some((t) => /reported by/i.test(t)));
   assert.equal(year.kind, "historical", JSON.stringify(year));
   if (year.kind === "historical") {
     assert.deepEqual(year.delivered.table.rows, [["Memphis, Tennessee", 57], ["Tennessee", 10]]);
-    assert.deepEqual(year.delivered.text, ["2023 Murders per 100,000 by Place, Memphis, Tennessee and Tennessee", "Figures for the Memphis Police Department.",
+    assert.deepEqual(year.delivered.text, ["Memphis, Tennessee and Tennessee Murders per 100,000 by Place, 2023", "Figures for the Memphis Police Department.",
       "Each rate is per 100,000 of that place's own population.", SRS_SOURCE]);
     assert.deepEqual(year.meaning.places, [{ kind: "agency", name: "Memphis", state: "TN" }, { kind: "state", name: "Tennessee", state: "TN" }]);
     assert.deepEqual([year.question.shown, year.question.beside], [["Memphis, Tennessee", "Tennessee"], [{ kind: "state", code: "TN" }]]);
@@ -184,7 +184,7 @@ assert.ok(!named.delivered.text.some((t) => /reported by/i.test(t)));
   if (years.kind === "historical") {
     assert.deepEqual(years.delivered.table.rows, [["2022", 21923, 252], ["2023", 19935, 351]]);
     assert.deepEqual(years.delivered.table.columns.map((c) => c.header), ["Year", "United States: murders", "Memphis, Tennessee: murders"]);
-    assert.equal(years.delivered.text[0], "2022 to 2023 Murders by Year, United States and Memphis, Tennessee");
+    assert.equal(years.delivered.text[0], "United States and Memphis, Tennessee Murders Per Year, 2022-2023");
   }
   // A year with no agency figure that the state has starts the series, the agency blank (not "starts in 2022").
   const blank = beside({ from: 2021, to: 2022, byYear: true }, [{ agency: memphis }, tn]);
@@ -503,7 +503,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   if (r.kind === "historical") {
     assert.deepEqual(r.delivered.table.rows, [["Houston", 91], ["Dallas", 59], ["Abilene", 48], ["Fort Worth", 48]]);
     // A title that reads back the question (Jeff 2026-11-17), then plain notes, then the source.
-    assert.equal(r.delivered.text[0], "1950 Murder Count by City, Texas");
+    assert.equal(r.delivered.text[0], "Texas Murder Count by City, 1950");
     assert.equal(r.delivered.text[1], "The 4 cities with the most murders are shown.");
     assert.equal(r.delivered.text[2], "Cities are Crime Index's city agencies, whatever the agency.");
     assert.ok(r.delivered.text.includes("Abilene and Fort Worth tie for 3rd, so 4 agencies are shown."), JSON.stringify(r.delivered.text));
@@ -561,7 +561,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   if (us.kind === "historical") {
     assert.deepEqual(us.delivered.table.rows, [["Chicago, IL", 461], ["New York City, NY", 356], ["Houston, TX", 334]]);
     // The floor the question carried is in the title; a default floor (not asked) is a note instead.
-    assert.equal(us.delivered.text[0], "2024 Murder Count by City, United States, Population 250,000 or More");
+    assert.equal(us.delivered.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
     assert.match(rsql[0], /agency_crime\.parquet'\) WHERE \(type = 'city' OR ori IN \('FL0160000'\)\) AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200'\) AND year = 2024 AND population >= 250000/);
   }
   // Every agency, city and county: no type in the query.
@@ -646,7 +646,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(r.kind === "current", JSON.stringify(r));
   if (r.kind === "current") {
     assert.deepEqual(r.delivered.table.rows, [["Dallas", 89], ["San Antonio", 58]]);
-    assert.equal(r.delivered.text[0], "2026 Year to Date Murder Count by City, Texas");
+    assert.equal(r.delivered.text[0], "Texas Murder Count by City, Year to Date 2026");
     assert.ok(r.delivered.text.includes("The 2 cities with the most murders are shown, January 2026 through August 2026."), JSON.stringify(r.delivered.text));
     assert.ok(r.delivered.text.includes("Houston isn't ranked because a month is missing."), JSON.stringify(r.delivered.text));
     assert.ok(r.delivered.text.some((t) => /Only Current Trends' sample agencies are included/.test(t)));
@@ -658,7 +658,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
   assert.ok(big.kind === "current", JSON.stringify(big));
   if (big.kind === "current") {
-    assert.equal(big.delivered.text[0], "2026 Year to Date Murder Count by City, Texas, 2 Largest Cities");
+    assert.equal(big.delivered.text[0], "Texas Murder Count by City, 2 Largest Cities, Year to Date 2026");
     assert.ok(big.delivered.text.includes("The cities are the 2 largest in Current Trends' sample by population (August 2026), January 2026 through August 2026."), JSON.stringify(big.delivered.text));
     assert.ok(!big.delivered.text.some((t) => /^(?:Ranked|Not ranked because|Blank because)\b.*:/.test(t)), "no Label: lead-in is left");
   }
@@ -666,7 +666,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const nat = answerCurrentRanking({ measure: "murder", state: "US", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 2 },
     minPopulation: 250000, floorAsked: true, entity: "city" }, cb, "/ci", cexec, rankAgencies);
   assert.ok(nat.kind === "current", JSON.stringify(nat));
-  if (nat.kind === "current") assert.equal(nat.delivered.text[0], "2026 Year to Date Murder Rate by City, United States, Population 250,000 or More");
+  if (nat.kind === "current") assert.equal(nat.delivered.text[0], "United States Murder Rate by City, Population 250,000 or More, Year to Date 2026");
   // A rate: per 100,000 of the latest month's population, not scaled to a full year.
   const rr =answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
     minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);

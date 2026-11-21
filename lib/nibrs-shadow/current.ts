@@ -673,7 +673,7 @@ export function partOneMonthly(v: CurrentAnswer | { kind: string }, p: CurrentAn
   };
   const isGap = (t: string) => /^No figure is available for /.test(t);
   const shared = [...a.delivered.text.slice(1), ...b.delivered.text.slice(1)].filter((t, i, all) => !isGap(t) && t !== "Source: Crime Index." && all.indexOf(t) === i);
-  const title = a.delivered.text[0].replace(/ Violent Crimes? by Month/i, " Crime by Month");
+  const title = a.delivered.text[0].replace(/ Violent Crimes? Per Month/i, " Crime Per Month");
   const columns: ResultTable["columns"] = [a.delivered.table.columns[0],
     { binding: { kind: "statistic", as: "violent" }, header: "Violent crime" }, { binding: { kind: "statistic", as: "property" }, header: "Property crime" },
     { binding: { kind: "statistic", as: "part_one" }, header: "Part I crime" }];

@@ -63,10 +63,11 @@ export function titleTimeframe(period: string): string {
   if ((m = /^(\d{4}) Year to Date$/i.exec(p))) return `Year to Date ${m[1]}`;
   if (/^\d{4}$/.test(p)) return p;
   if ((m = /^(\d{4}) to (\d{4})$/.exec(p))) return `${m[1]}-${m[2]}`;
-  if ((m = /^([A-Za-z]+) through ([A-Za-z]+) (\d{4})$/.exec(p)) && monthIndex(m[1]) >= 0 && monthIndex(m[2]) >= 0)
+  if ((m = /^([A-Za-z]+) (?:through|to) ([A-Za-z]+) (\d{4})$/i.exec(p)) && monthIndex(m[1]) >= 0 && monthIndex(m[2]) >= 0)
     return monthIndex(m[1]) === 0 && monthIndex(m[2]) === 11 ? m[3] : `${abbr(m[1])}-${abbr(m[2])} ${m[3]}`;
-  if ((m = /^([A-Za-z]+) (\d{4}) through ([A-Za-z]+) (\d{4})$/.exec(p)) && monthIndex(m[1]) >= 0 && monthIndex(m[3]) >= 0)
-    return monthIndex(m[1]) === 0 && monthIndex(m[3]) === 11 ? (m[2] === m[4] ? m[2] : `${m[2]}-${m[4]}`) : `${abbr(m[1])} ${m[2]}-${abbr(m[3])} ${m[4]}`;
+  if ((m = /^([A-Za-z]+) (\d{4}) (?:through|to) ([A-Za-z]+) (\d{4})$/i.exec(p)) && monthIndex(m[1]) >= 0 && monthIndex(m[3]) >= 0)
+    return monthIndex(m[1]) === 0 && monthIndex(m[3]) === 11 ? (m[2] === m[4] ? m[2] : `${m[2]}-${m[4]}`)
+      : m[2] === m[4] ? `${abbr(m[1])}-${abbr(m[3])} ${m[2]}` : `${abbr(m[1])} ${m[2]}-${abbr(m[3])} ${m[4]}`;
   if ((m = /^([A-Za-z]+) (\d{4})$/.exec(p)) && monthIndex(m[1]) >= 0) return `${abbr(m[1])} ${m[2]}`;
   return p;
 }

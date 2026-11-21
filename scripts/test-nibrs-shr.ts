@@ -178,7 +178,7 @@ assert.ok(ranked.kind === "shr", JSON.stringify(ranked));
 if (ranked.kind === "shr") {
   assert.deepEqual(ranked.delivered.table.rows, [["DALLAS, TX", 90], ["OMAHA, NE", 90], ["HOUSTON, TX", 80], ["NEW YORK, NY", 40]], "Chicago filed nothing and Philadelphia has no victim: neither is ranked");
   // A title that reads back the question (Jeff 2026-11-17), then plain notes, then the source.
-  assert.equal(ranked.delivered.text[0], "2024 Share of Murder Victims Killed With a Firearm by City, Population 250,000 or More");
+  assert.equal(ranked.delivered.text[0], "United States Share of Murder Victims Killed With a Firearm by City, Population 250,000 or More, 2024");
   assert.equal(ranked.delivered.text[1], "City agencies that filed Homicide Reports in 2024 and had at least one murder victim are ranked, and ties are ordered by agency name.");
   assert.ok(ranked.delivered.text.includes("Share = the city's victims with this detail out of all its murder victims in the period."));
   assert.ok(!ranked.delivered.text.some((t) => /CHICAGO|Not ranked/.test(t)), "no left-out city is named");
@@ -250,7 +250,7 @@ if (rolled.kind === "shr") {
   assert.equal(rolled.delivered.table.rows.length, 12);
   assert.deepEqual(rolled.delivered.table.rows[0], ["2019-01", 36], "12 months of 3");
   assert.equal(rolled.delivered.table.columns[1].header, "Rolling 12-month murder victims with a firearm");
-  assert.ok(rolled.delivered.text[0].startsWith("2019 Murder Victims With a Firearm, Rolling 12-Month Totals by Month, North Carolina"), rolled.delivered.text[0]);
+  assert.ok(rolled.delivered.text[0].startsWith("North Carolina Murder Victims With a Firearm Rolling Over 12 Months, 2019"), rolled.delivered.text[0]);
 }
 // 2018 filed nothing: 2019's windows that reach 2018 are blank, January 2019 through November 2019; December 2019 is its own 12 months.
 const gapped = answerShr(rollQ, build, rollStub([2019]));
