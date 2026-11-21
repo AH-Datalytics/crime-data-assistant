@@ -58,7 +58,7 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance } from "./clearance-current";
-import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { COMPOSITE_PARTS, composeCrimeOverTime, isComposite } from "./crime-over-time";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -706,6 +706,15 @@ export const askInsteadChecks = {
   stripped: (q: string) => { const l = readQuestion(q, 2026, "2026-09").ledger; return askInstead(l.question, l.parts.filter((p) => p.state === "not-interpreted"), 2026)?.question ?? null; },
 };
 const aboutCrime = (about: string) => /^which kind of crime\b|^which sex offenses\b/i.test(about);
+/**
+ * Crime in a place over time answers what used to ask the kind of crime: with words left out (a peer, "highlight major"), its
+ * answer is kept like that ask was, the words left out said in a line after the title (PR 292 subset, 2026-11-21).
+ */
+function compositeWithNote(again: ShadowOutcome | null, note: string): ShadowOutcome | null {
+  if (!again || (again.kind !== "historical" && again.kind !== "srs" && again.kind !== "current") || !isComposite(again.delivered.table)) return null;
+  const [title, ...rest] = again.delivered.text;
+  return { ...again, delivered: { ...again.delivered, text: [title, note, ...rest] } } as ShadowOutcome;
+}
 function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome | null {
   if (o.kind !== "decline" || COVERAGE_QUESTION.test(question)) return null;
   const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
@@ -713,7 +722,8 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
     const pr = peerRewrite(question, ledger);
     const again = pr ? answerAsked(pr.rest, { ...deps, rewritten: true }) : null;
     return again?.kind === "clarify" && aboutCrime(again.about)
-      ? { ...again, question, note: `Comparing with ${pr!.peer} isn't available, so these choices answer for the place named alone.` } : null;
+      ? { ...again, question, note: `Comparing with ${pr!.peer} isn't available, so these choices answer for the place named alone.` }
+      : compositeWithNote(again, `Comparing with ${pr?.peer} isn't available, so this answers for the place named alone.`);
   }
   if (o.reason !== "reader") return null;
   const unread = ledger.parts.filter((p) => p.state === "not-interpreted");
@@ -724,6 +734,7 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
   const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true }) : null;
   // Only pure filler left unread: the rest was read in full, so its answer is the question's (Jeff 2026-11-11).
   if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(again.kind)) return again;
+  if (fr && fr.left.length) { const c = compositeWithNote(again, `This answers without ${fr.left.map((t) => `"${t}"`).join(" and ")}.`); if (c) return c; }
   if (!fr || again?.kind !== "clarify") return null;
   // Words with a meaning of their own left out ("up in", "average"): said, so a button's answer is never taken for
   // the change or the average asked (Codex review 01.2).
@@ -1801,6 +1812,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const merged = parts.every((o) => o.kind === "current" || o.kind === "historical" || o.kind === "srs") ? composeCrimeOverTime(parts as never, rate) : null;
       if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
       if (merged) return merged as ShadowOutcome;
+      // Violent and property crime both answered with every cell blank (an agency Current Trends lists with no figures), the
+      // composite not built because an offense's answer is a decline: no data, as P148 said, not the ask of the kind.
+      const allBlank = (o: ShadowOutcome) => (o.kind === "current" || o.kind === "historical" || o.kind === "srs") && o.delivered.table.rows.every((r) => r.every((x) => typeof x !== "number"));
+      if (allBlank(parts[0]) && allBlank(parts[1])) {
+        const pq = (parts[0] as { question?: { place?: { label?: string }; agencies?: { label: string }[] } }).question;
+        return decline("outside_release_coverage", `No data is available for crime in ${pq?.place?.label ?? pq?.agencies?.[0]?.label ?? "this place"}.`);
+      }
     }
   }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
