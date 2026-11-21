@@ -1,0 +1,275 @@
+{
+  "_comment": "Written by scripts/gen-cube-measure-checks.ts; kept in step with the router by scripts/test-cube-measure-guard.ts. A measure is `approved` only with the questions that prove a cube statement is built for it and that the runner compares against raw.",
+  "approved": {
+    "against_property": {
+      "questions": [
+        "property crimes victims by age group in Memphis, Tennessee in 2024",
+        "property crimes offenders by sex in Memphis, Tennessee in 2024",
+        "property crimes arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "aggravated_assault": {
+      "questions": [
+        "aggravated assaults victims by sex in Memphis, Tennessee in 2024",
+        "aggravated assaults offenders by sex in Memphis, Tennessee in 2024",
+        "aggravated assaults arrests by sex in Memphis, Tennessee in 2024",
+        "aggravated assaults incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "all_crime": {
+      "questions": [
+        "crimes victims by age group in Memphis, Tennessee in 2024",
+        "crimes offenders by sex in Memphis, Tennessee in 2024",
+        "crimes arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "arson": {
+      "questions": [
+        "arsons offenders by sex in Memphis, Tennessee in 2024",
+        "arsons arrests by sex in Memphis, Tennessee in 2024",
+        "arsons by time of day in Memphis, Tennessee in 2024",
+        "arsons incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "assault_offenses": {
+      "questions": [
+        "assault offenses victims by sex in Memphis, Tennessee in 2024",
+        "assault offenses offenders by sex in Memphis, Tennessee in 2024",
+        "assault offenses arrests by sex in Memphis, Tennessee in 2024",
+        "assault offenses by location in Memphis, Tennessee in 2024",
+        "assault offense incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "burglary": {
+      "questions": [
+        "burglaries offenders by sex in Memphis, Tennessee in 2024",
+        "burglaries arrests by sex in Memphis, Tennessee in 2024",
+        "burglaries by time of day in Memphis, Tennessee in 2024",
+        "burglaries incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "curfew_loitering": {
+      "questions": [
+        "curfew and loitering offenses victims by sex in Memphis, Tennessee in 2024",
+        "curfew and loitering offenses offenders by sex in Memphis, Tennessee in 2024",
+        "curfew and loitering offenses arrests by sex in Memphis, Tennessee in 2024",
+        "curfew and loitering offenses by time of day in Memphis, Tennessee in 2024",
+        "curfew and loitering offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "disorderly_conduct": {
+      "questions": [
+        "disorderly conduct offenses victims by sex in Memphis, Tennessee in 2024",
+        "disorderly conduct offenses offenders by sex in Memphis, Tennessee in 2024",
+        "disorderly conduct offenses arrests by sex in Memphis, Tennessee in 2024",
+        "disorderly conduct offenses by time of day in Memphis, Tennessee in 2024",
+        "disorderly conduct offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "drug_crimes": {
+      "questions": [
+        "drug crimes offenders by sex in Memphis, Tennessee in 2024",
+        "drug crimes arrests by sex in Memphis, Tennessee in 2024",
+        "drug crimes by time of day in Memphis, Tennessee in 2024",
+        "drug crimes incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "drug_equipment": {
+      "questions": [
+        "drug equipment violations victims by sex in Memphis, Tennessee in 2024",
+        "drug equipment violations offenders by sex in Memphis, Tennessee in 2024",
+        "drug equipment violations arrests by sex in Memphis, Tennessee in 2024",
+        "drug equipment violations by time of day in Memphis, Tennessee in 2024",
+        "drug equipment violations incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "drug_possession": {
+      "questions": [
+        "drug possession offenses victims by sex in Memphis, Tennessee in 2024",
+        "drug possession offenses offenders by sex in Memphis, Tennessee in 2024",
+        "drug possession offenses arrests by sex in Memphis, Tennessee in 2024",
+        "drug possession offenses by time of day in Memphis, Tennessee in 2024",
+        "drug possession offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "drunkenness": {
+      "questions": [
+        "drunkenness offenses victims by sex in Memphis, Tennessee in 2024",
+        "drunkenness offenses offenders by sex in Memphis, Tennessee in 2024",
+        "drunkenness offenses arrests by sex in Memphis, Tennessee in 2024",
+        "drunkenness offenses by time of day in Memphis, Tennessee in 2024",
+        "drunkenness offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "dui": {
+      "questions": [
+        "DUI victims by sex in Memphis, Tennessee in 2024",
+        "DUI offenders by sex in Memphis, Tennessee in 2024",
+        "DUI arrests by sex in Memphis, Tennessee in 2024",
+        "DUI by time of day in Memphis, Tennessee in 2024",
+        "DUI incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "homicide": {
+      "questions": [
+        "homicides victims by sex in Memphis, Tennessee in 2024",
+        "homicides offenders by sex in Memphis, Tennessee in 2024",
+        "homicides arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "homicide_all": {
+      "questions": [
+        "all homicides arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "intimidation": {
+      "questions": [
+        "intimidation offenses victims by sex in Memphis, Tennessee in 2024",
+        "intimidation offenses offenders by sex in Memphis, Tennessee in 2024",
+        "intimidation offenses arrests by sex in Memphis, Tennessee in 2024",
+        "intimidation offenses by time of day in Memphis, Tennessee in 2024",
+        "intimidation offenses incidents by clearance type in Memphis, Tennessee in 2024"
+      ]
+    },
+    "liquor_law": {
+      "questions": [
+        "liquor law violations victims by sex in Memphis, Tennessee in 2024",
+        "liquor law violations offenders by sex in Memphis, Tennessee in 2024",
+        "liquor law violations arrests by sex in Memphis, Tennessee in 2024",
+        "liquor law violations by time of day in Memphis, Tennessee in 2024",
+        "liquor law violations incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "motor_vehicle_theft": {
+      "questions": [
+        "motor vehicle thefts offenders by sex in Memphis, Tennessee in 2024",
+        "motor vehicle thefts arrests by sex in Memphis, Tennessee in 2024",
+        "motor vehicle thefts by time of day in Memphis, Tennessee in 2024",
+        "motor vehicle thefts incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "murder": {
+      "questions": [
+        "murders victims by sex in Memphis, Tennessee in 2024",
+        "murders offenders by sex in Memphis, Tennessee in 2024",
+        "murders arrests by sex in Memphis, Tennessee in 2024",
+        "murders incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "peeping_tom": {
+      "questions": [
+        "peeping tom offenses victims by sex in Memphis, Tennessee in 2024",
+        "peeping tom offenses offenders by sex in Memphis, Tennessee in 2024",
+        "peeping tom offenses arrests by sex in Memphis, Tennessee in 2024",
+        "peeping tom offenses by time of day in Memphis, Tennessee in 2024",
+        "peeping tom offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "person_crimes": {
+      "questions": [
+        "violent crimes victims by age group in Memphis, Tennessee in 2024",
+        "violent crimes offenders by sex in Memphis, Tennessee in 2024",
+        "violent crimes arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "property_crime": {
+      "questions": [
+        "property crimes victims by age group in Memphis, Tennessee in 2024",
+        "property crimes offenders by sex in Memphis, Tennessee in 2024",
+        "property crimes arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "rape": {
+      "questions": [
+        "rapes victims by sex in Memphis, Tennessee in 2024",
+        "rapes offenders by sex in Memphis, Tennessee in 2024",
+        "rapes arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "robbery": {
+      "questions": [
+        "robberies offenders by sex in Memphis, Tennessee in 2024",
+        "robberies arrests by sex in Memphis, Tennessee in 2024",
+        "robberies by time of day in Memphis, Tennessee in 2024",
+        "robberies incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "sex_offense": {
+      "questions": [
+        "sex offenses victims by sex in Memphis, Tennessee in 2024",
+        "sex offenses offenders by sex in Memphis, Tennessee in 2024",
+        "sex offenses arrests by sex in Memphis, Tennessee in 2024",
+        "sex offenses by location in Memphis, Tennessee in 2024"
+      ]
+    },
+    "shoplifting": {
+      "questions": [
+        "shoplifting offenses victims by sex in Memphis, Tennessee in 2024",
+        "shoplifting offenses offenders by sex in Memphis, Tennessee in 2024",
+        "shoplifting offenses arrests by sex in Memphis, Tennessee in 2024",
+        "shoplifting offenses by time of day in Memphis, Tennessee in 2024",
+        "shoplifting offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "simple_assault": {
+      "questions": [
+        "simple assaults victims by sex in Memphis, Tennessee in 2024",
+        "simple assaults offenders by sex in Memphis, Tennessee in 2024",
+        "simple assaults arrests by sex in Memphis, Tennessee in 2024",
+        "simple assaults by location in Memphis, Tennessee in 2024",
+        "simple assaults incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "theft": {
+      "questions": [
+        "thefts arrests by sex in Memphis, Tennessee in 2024",
+        "thefts by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "theft_from_motor_vehicle": {
+      "questions": [
+        "thefts from motor vehicles victims by sex in Memphis, Tennessee in 2024",
+        "thefts from motor vehicles offenders by sex in Memphis, Tennessee in 2024",
+        "thefts from motor vehicles arrests by sex in Memphis, Tennessee in 2024",
+        "thefts from motor vehicles by time of day in Memphis, Tennessee in 2024",
+        "thefts from motor vehicles incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "trespass": {
+      "questions": [
+        "trespass offenses victims by sex in Memphis, Tennessee in 2024",
+        "trespass offenses offenders by sex in Memphis, Tennessee in 2024",
+        "trespass offenses arrests by sex in Memphis, Tennessee in 2024",
+        "trespass offenses by time of day in Memphis, Tennessee in 2024",
+        "trespass offenses incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    },
+    "violent_crime": {
+      "questions": [
+        "violent crimes victims by age group in Memphis, Tennessee in 2024",
+        "violent crimes offenders by sex in Memphis, Tennessee in 2024",
+        "violent crimes arrests by sex in Memphis, Tennessee in 2024"
+      ]
+    },
+    "weapon_law": {
+      "questions": [
+        "weapon law violations victims by sex in Memphis, Tennessee in 2024",
+        "weapon law violations offenders by sex in Memphis, Tennessee in 2024",
+        "weapon law violations arrests by sex in Memphis, Tennessee in 2024",
+        "weapon law violations by time of day in Memphis, Tennessee in 2024",
+        "weapon law violations incidents by time of day in Memphis, Tennessee in 2024"
+      ]
+    }
+  },
+  "raw": {
+    "all_other_offenses": "no question form reaches a cube (the cube holds nothing for it, or its forms are not in the reader): it runs from the raw statements",
+    "bad_checks": "no question form reaches a cube (the cube holds nothing for it, or its forms are not in the reader): it runs from the raw statements",
+    "carjacking": "its definition is more than its codes (a stolen vehicle on the incident)",
+    "domestic_violence": "its definition is more than its codes (P82: the incident holds the offense, a domestic relationship pair)",
+    "family_offense_nonviolent": "no question form reaches a cube (the cube holds nothing for it, or its forms are not in the reader): it runs from the raw statements",
+    "hate_crime": "its definition is more than its codes",
+    "motor_vehicle_property": "its definition is more than its codes",
+    "property_value": "its definition is more than its codes",
+    "runaway": "no question form reaches a cube (the cube holds nothing for it, or its forms are not in the reader): it runs from the raw statements"
+  }
+}
