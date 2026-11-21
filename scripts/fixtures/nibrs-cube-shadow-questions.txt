@@ -1,5 +1,5 @@
 # The approved measures' cube forms for real places of different sizes (Phoenix, AZ; Hoover, AL; Ketchikan, AK; Seldovia, AK; Ohio; the United States), 2024: run with NIBRS_CUBE=shadow and NIBRS_CUBE_LOG set (any line in the log is a difference), or through scripts/test-nibrs-cube.ts.
-# Written by scripts/gen-cube-measure-checks.ts; 786 questions. Questions the reader or the data decline are counted by the runner, not failures.
+# Written by scripts/gen-cube-measure-checks.ts; 798 questions. Questions the reader or the data decline are counted by the runner, not failures.
 property crimes victims by age group in Phoenix, AZ in 2024
 property crimes victims by age group in Hoover, AL in 2024
 property crimes victims by age group in Ketchikan, AK in 2024
@@ -36,6 +36,12 @@ aggravated assaults arrests by sex in Ketchikan, AK in 2024
 aggravated assaults arrests by sex in Seldovia, AK in 2024
 aggravated assaults arrests by sex in Ohio in 2024
 aggravated assaults arrests by sex in the United States in 2024
+aggravated assaults by weapon in Phoenix, AZ in 2024
+aggravated assaults by weapon in Hoover, AL in 2024
+aggravated assaults by weapon in Ketchikan, AK in 2024
+aggravated assaults by weapon in Seldovia, AK in 2024
+aggravated assaults by weapon in Ohio in 2024
+aggravated assaults by weapon in the United States in 2024
 aggravated assaults incidents by time of day in Phoenix, AZ in 2024
 aggravated assaults incidents by time of day in Hoover, AL in 2024
 aggravated assaults incidents by time of day in Ketchikan, AK in 2024
@@ -558,6 +564,12 @@ rapes arrests by sex in Ketchikan, AK in 2024
 rapes arrests by sex in Seldovia, AK in 2024
 rapes arrests by sex in Ohio in 2024
 rapes arrests by sex in the United States in 2024
+rapes by weapon in Phoenix, AZ in 2024
+rapes by weapon in Hoover, AL in 2024
+rapes by weapon in Ketchikan, AK in 2024
+rapes by weapon in Seldovia, AK in 2024
+rapes by weapon in Ohio in 2024
+rapes by weapon in the United States in 2024
 robberies offenders by sex in Phoenix, AZ in 2024
 robberies offenders by sex in Hoover, AL in 2024
 robberies offenders by sex in Ketchikan, AK in 2024

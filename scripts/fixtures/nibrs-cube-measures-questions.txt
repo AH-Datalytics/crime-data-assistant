@@ -1,11 +1,12 @@
-# Every approved measure's cube questions (Memphis, 2024): the runner compares each against raw, whole answers (NIBRS_CUBE_TEST_QUESTIONS_FILE, all four cubes, MIN_SERVED 131).
-# Written by scripts/gen-cube-measure-checks.ts; 131 questions for 32 measures.
+# Every approved measure's cube questions (Memphis, 2024): the runner compares each against raw, whole answers (NIBRS_CUBE_TEST_QUESTIONS_FILE, all four cubes, MIN_SERVED 133).
+# Written by scripts/gen-cube-measure-checks.ts; 133 questions for 32 measures.
 property crimes victims by age group in Memphis, Tennessee in 2024
 property crimes offenders by sex in Memphis, Tennessee in 2024
 property crimes arrests by sex in Memphis, Tennessee in 2024
 aggravated assaults victims by sex in Memphis, Tennessee in 2024
 aggravated assaults offenders by sex in Memphis, Tennessee in 2024
 aggravated assaults arrests by sex in Memphis, Tennessee in 2024
+aggravated assaults by weapon in Memphis, Tennessee in 2024
 aggravated assaults incidents by time of day in Memphis, Tennessee in 2024
 crimes victims by age group in Memphis, Tennessee in 2024
 crimes offenders by sex in Memphis, Tennessee in 2024
@@ -93,6 +94,7 @@ property crimes arrests by sex in Memphis, Tennessee in 2024
 rapes victims by sex in Memphis, Tennessee in 2024
 rapes offenders by sex in Memphis, Tennessee in 2024
 rapes arrests by sex in Memphis, Tennessee in 2024
+rapes by weapon in Memphis, Tennessee in 2024
 robberies offenders by sex in Memphis, Tennessee in 2024
 robberies arrests by sex in Memphis, Tennessee in 2024
 robberies by time of day in Memphis, Tennessee in 2024
