@@ -880,7 +880,7 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     }
     // The rewrites (read no data; the tests' stub has no Crime Index build, so its crime choices can't run here):
     // the question without the filler, and the words left out that mean something, to be said (Codex 01.2).
-    const { fillerRewrite, peerRewrite, covers } = askInsteadChecks;
+    const { fillerRewrite, covers } = askInsteadChecks;
     assert.deepEqual(fillerRewrite("Minneapolis scorecard"), { rest: "Minneapolis", left: [] });
     assert.deepEqual(fillerRewrite("Toledo crime scorecard"), { rest: "Toledo crime", left: [] });
     assert.deepEqual(fillerRewrite("is crime up in milwaukee"), { rest: "is crime milwaukee", left: ["up in"] });
@@ -898,11 +898,11 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");
-    // Peers: the place alone; "compared to" is read as "and" and still rewritten (Codex 01.3).
-    assert.deepEqual(peerRewrite("Crime trends in Philadelphia compared to similar cities"), { rest: "Crime trends in Philadelphia", peer: "similar cities" });
-    assert.deepEqual(peerRewrite("i want to know how crime in nashville compares to peer cities"), { rest: "i want to know crime in nashville", peer: "peer" });
-    assert.equal(peerRewrite("robberies in Philadelphia compared to similar cities in 2024"), null);
-    assert.equal(peerRewrite("is crime up in Philadelphia in 2024 compared to similar cities"), null);
+    // Peers (Jeff 2026-11-21: no partial answers): never the place alone; the reader's decline, which asks for the agencies to compare.
+    for (const q of ["Crime trends in Philadelphia compared to similar cities", "i want to know how crime in nashville compares to peer cities"]) {
+      const o = ask(q);
+      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    }
     for (const q of ["Do you have any data for NYC?", "Do we have data for the United States?", "does Olathe KS report NIBRS data?"]) assert.ok(covers(q), q);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
