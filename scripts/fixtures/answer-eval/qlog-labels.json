@@ -17185,24 +17185,19 @@
    "question": "what is the correlation between the monthly percentage change in murder and the monthly percentage change in robbery? How about murder and assault?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which assault offense: aggravated assault or simple assault",
+    "about_any": [
+     "which assault offense: aggravated assault or simple assault"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output; by month for a state or the nation is Current Trends (P155). Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex (re-checked against the P155 sentence); no engine output. The rules do not resolve assault: aggravated assault routes monthly to rtci, simple assault to nibrs; correlation and percentage-change calculations are also outside the rules, although monthly murder and robbery route to rtci."
    }
   },
   {

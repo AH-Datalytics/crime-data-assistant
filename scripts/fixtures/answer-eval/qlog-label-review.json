@@ -5133,14 +5133,10 @@
 "QL-ct-cdccd5ec8b": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex (re-checked against the P155 sentence); no engine output",
 "expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci",
-"nibrs"
-]
+"outcome": "clarify",
+"about": "which assault offense: aggravated assault or simple assault"
 }
 },
 "QL-ct-cdd1100910": {
