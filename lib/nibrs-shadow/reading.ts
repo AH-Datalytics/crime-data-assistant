@@ -229,6 +229,17 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P163 (Jeff 2026-11-19): justifiable homicides "by police vs civilians" are the two kinds of justifiable homicide side by side (the
+  // circumstance breakdown); "by police" alone (or "by civilians" alone) is read from the question text where the answer is made.
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:private\s+)?(?:civilians?|citizens?)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:the\s+)?(?:police|officers|law\s+enforcement)\b/gi, "$1 by circumstance"],
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
+  // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
+  // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|were\s+committed\s+(?:with|using)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
+  [/\s+analysis\s+for\s+/gi, " in "],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
   [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
   [/\bfamily\s+violence\b/gi, "domestic violence by family members"],

@@ -160,6 +160,15 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P168 (Jeff 2026-11-19): offenders or arrests by age for the crimes of an incident with a weapon, for one agency; the answer says how a person is counted.
+{
+  const byAge = as(ask("violent crimes involving a firearm in Houston in 2025 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(byAge.plan.measures[0].id, "offenders.person_crimes");
+  assert.ok(byAge.delivered.text.includes("A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."), JSON.stringify(byAge.delivered.text));
+  const arrests = as(ask("violent crime with a firearm in Houston in 2025 by age of arrestee"), "answer") as unknown as { delivered: { text: string[] } };
+  assert.ok(arrests.delivered.text.some((t) => /^A person is counted when the incident's crime/.test(t)), JSON.stringify(arrests.delivered.text));
+  assert.ok(sqls.some((s) => /w2\.offense_code IN \('09A'.*weapon IN \('11', '12', '13', '14', '15'\)/.test(s)), "the weapon is asked of the incident's offenses of the measure's codes");
+}
 // P170 (P82, Jeff 2026-11-19): domestic violence is the victims of the P82 crimes with an intimate partner or a family or household relationship to any offender, for one agency first.
 {
   const dv = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
@@ -484,6 +493,53 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P163 (Jeff 2026-11-19): justifiable homicide is Homicide Reports' own measure; "police" alone is the felons killed by police (81), "civilians"
+    // alone the felons killed by a private citizen (80), neither word both together, both words the two side by side. Never counted as murder.
+    const jsql: string[] = [];
+    const jstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/FROM read_parquet\('\/shr/.test(sql)) { jsql.push(sql); return /AS k0/.test(sql) ? [["80", 3], ["81", 2]] : [[5]]; }
+      return [];
+    };
+    const jdeps = { ...sdeps, execute: jstub } as ShadowDeps;
+    const first = (q: string) => { const n = jsql.length; const o = as(shadowAnswer(q, jdeps), "shr"); return { o, sql: jsql[n] }; };
+    const jboth = first("justifiable homicides in Houston in 2023");
+    assert.ok(/homicide_type = 'A' AND r\.circumstance IN \('80', '81'\) AND r\.agency_key/.test(jboth.sql), jboth.sql);
+    assert.ok(jboth.o.delivered.text.some((t) => /ustifiable/.test(t)), JSON.stringify(jboth.o.delivered.text));
+    assert.ok(/r\.circumstance IN \('80', '81'\) .* AND r\.circumstance IN \('81'\)$/.test(first("justifiable homicides by police in Houston in 2023").sql));
+    assert.ok(/r\.circumstance IN \('80', '81'\) .* AND r\.circumstance IN \('80'\)$/.test(first("justifiable homicides by civilians in Houston in 2023").sql));
+    const jvs = first("justifiable homicides by police vs civilians in Houston in 2023").o;
+    assert.ok(jvs.delivered.table.columns.some((c) => c.header === "Circumstance") && jvs.delivered.table.rows.length === 2, JSON.stringify(jvs.delivered.table));
+    // P164 (Jeff 2026-11-19): two details of the same people are one table, the first down the side and the second across.
+    const wstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (!/FROM read_parquet\('\/shr\/canonical\/shr_(?:victim|offender)/.test(sql)) return [];
+      const two = /AS k1/.test(sql);
+      return two ? [["B", "M", 5], ["B", "F", 2], ["W", "M", 3]] : [["B", 7], ["W", 3]];
+    };
+    const wdeps = { ...sdeps, execute: wstub } as ShadowDeps;
+    for (const q of ["Houston murder victims by race and sex in 2023", "Houston murder victims by race and gender in 2023", "Houston murder victim race and gender in 2023"]) {
+      const o = as(shadowAnswer(q, wdeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Victim's race", "Male", "Female"], q);
+      assert.deepEqual(o.delivered.table.rows, [["White", 3, 0], ["Black", 5, 2]], q);
+      assert.equal(o.delivered.text[0], "2023 Murder Victims by The Victims' Race and the Victims' Sex, Houston, Texas");
+    }
+    // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
+    assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
+    // P165 (Jeff 2026-11-19): the share of murders that involved a firearm is the murders by weapon with each share, and one sentence for the firearms together.
+    const gstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (!/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) return [];
+      return /AS k0/.test(sql) ? [["12", 6], ["11", 2], ["20", 2]] : [[10]];
+    };
+    const gdeps = { ...sdeps, execute: gstub } as ShadowDeps;
+    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "what weapons were used in murders in Houston in 2023"]) {
+      const o = as(shadowAnswer(q, gdeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder victims", "Share (%)"], q);
+      assert.ok(/ by Weapon, Houston, Texas$/.test(o.delivered.text[0]), o.delivered.text[0]);
+      if (!/weapons were used/.test(q)) assert.equal(o.delivered.text[1], "Firearms (handguns, rifles, shotguns, other guns and firearms of a type not stated) are 80% of the murder victims.", q);
+    }
+    {
     // P169 (Jeff 2026-11-19): domestic homicides are the murders whose victim was an intimate partner or a family or household member; the answer
     // names the relationships Homicide Reports do not record.
     const rsql: string[] = [];
@@ -529,6 +585,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(every.delivered.text.includes("No years were given, so every year in the data is shown: 1985 through 2026."), JSON.stringify(every.delivered.text));
     const share = as(shadowAnswer("What percentage of murder victims in Houston were male in 2023?", ddeps), "shr");
     assert.ok(share.delivered.table.columns.some((c) => c.header === "Share (%)") && share.delivered.table.columns.some((c) => c.header === "Victim's sex"), JSON.stringify(share.delivered.table.columns));
+    }
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {
@@ -2767,5 +2824,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const gun = as(ask("Firearm carjackings per month in Houston since 2019"), "answer");
   assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
   assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
+}
+// P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
+{
+  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
+  assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
+  const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
+  assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
+  assert.ok(gunViolent.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "victim"));
+  assert.ok(gunViolent.delivered.text.some((t) => /^Counts NIBRS crimes against persons: /.test(t)), JSON.stringify(gunViolent.delivered.text));
+  // A crime already counted by offense, and the murder path, are left as they were.
+  assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
