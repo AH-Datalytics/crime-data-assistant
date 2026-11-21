@@ -229,6 +229,9 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
+  [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
+  [/\bfamily\s+violence\b/gi, "domestic violence by family members"],
   // P160 (Jeff 2026-11-19): a person's detail written as a noun phrase is that breakdown: "murder victim race in Houston" is
   // "murder victims by race in Houston", "homicide offender race" is "homicide offenders by race"; "victim demographics by
   // race" is "victims by race"; "the racial breakdown of murder victims" is "murder victims by race"; "homicide circumstances"
