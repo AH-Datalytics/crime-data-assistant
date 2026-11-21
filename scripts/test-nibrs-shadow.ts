@@ -73,6 +73,24 @@ function stub0(sql: string): unknown[][] {
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
   if (sql.includes("agency/data.parquet")) return popRows(sql);
+  // P171: a state's clearance by type, read once (state-sum.ts, "grid once"): each agency-year's coverage row ('c') and its sums by type ('s'):
+  // half the year's units cleared by arrest (one incident fewer than units), the rest not cleared.
+  if (/g AS MATERIALIZED/.test(sql) && /cleared_exceptionally/.test(sql)) {
+    const by = new Map<string, number[]>(), oris = new Map<string, string>();
+    for (const [ori, ym, n, st] of gridRows(sql) as [string, string, number | null, string][]) {
+      const k = `${ori}|${ym.slice(0, 4)}`, rep = st === "VALUE" || st === "REPORTED_ZERO";
+      const a = by.get(k) ?? by.set(k, [Number(ym.slice(0, 4)), 0, 0, 0, 0, 0]).get(k)!;
+      oris.set(k, ori);
+      a[1]++; if (rep) { a[2]++; a[3] += n ?? 0; } if (st === "EVIDENCE_CONFLICT") a[4]++; if (st === "VALUE") a[5]++;
+    }
+    const out: unknown[][] = [];
+    for (const [k, a] of by) {
+      out.push(["c", oris.get(k), a[0], a[1], a[2], a[3], a[4], a[5], null, null]);
+      const arrest = Math.floor(a[3] / 2), none = a[3] - arrest;
+      out.push(["s", oris.get(k), a[0], arrest, null, null, null, null, "arrest", Math.max(arrest - 1, 0)], ["s", oris.get(k), a[0], none, null, null, null, null, "none", Math.max(none - 1, 0)]);
+    }
+    return out;
+  }
   // A state sum's grid summed by agency and year (state-sum.ts): the stub sums its own monthly grid the same way.
   if (/repsum/.test(sql)) {
     const by = new Map<string, unknown[]>();
@@ -2731,5 +2749,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const gun = as(ask("Firearm carjackings per month in Houston since 2019"), "answer");
   assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
   assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
+}
+// P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
+{
+  const tx = as(ask("Texas murder clearance by type in 2025"), "answer");
+  assert.ok(tx.stateSum && tx.plan.statistics.some((s) => s.kind === "incidents"), "the reporting agencies' sum, with incidents");
+  const rows = tx.delivered.table.rows.map((r) => [r[0], r[1], r[2]]);
+  // Houston 9 + Dallas 7 + Austin 5 + Smallville 5 a month for 12 months = 312 units, half cleared by arrest; the incidents are one fewer per agency and type.
+  assert.deepEqual(rows.map((r) => r[1] === undefined ? r[0] : r.slice(0, 3)).flat().filter((x) => typeof x === "number").slice(0, 4).length > 0, true, JSON.stringify(tx.delivered.table));
+  const nums = tx.delivered.table.rows.flatMap((r) => r.filter((x) => typeof x === "number") as number[]);
+  assert.ok(nums.includes(156) && nums.includes(152), `156 units and 152 incidents per type: ${JSON.stringify(tx.delivered.table.rows)}`);
+  assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
+  // The nation stays declined until its timing is known; a clearance rate for a state keeps its own decline.
+  assert.equal(ask("murder clearance by type in the United States in 2025").kind, "decline");
+  assert.equal(ask("Texas murder clearance rate in 2025").kind, "decline");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

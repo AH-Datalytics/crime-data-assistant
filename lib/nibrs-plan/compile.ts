@@ -371,8 +371,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (!grid) {
     if (plan.geography.places.length !== 1) return no("v0 compiles one place");
     if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come later`);
-  } else if (plan.groupings[0]?.dimension !== "time.month" || plan.groupings.slice(1).some((g) => g.dimension.startsWith("time.")) || plan.groupings.length > 2 || plan.statistics.length !== 1)
-    // A monthly grid of one count, by at most one category (coordinator 2026-11-04: a state or national sum by category).
+  } else if (plan.groupings[0]?.dimension !== "time.month" || plan.groupings.slice(1).some((g) => g.dimension.startsWith("time.")) || plan.groupings.length > 2
+    || !(plan.statistics.length === 1 || (plan.statistics.length === 2 && plan.statistics[1].kind === "incidents" && plan.groupings.length === 2)))
+    // A monthly grid of one count, by at most one category (coordinator 2026-11-04: a state or national sum by category), with its
+    // incidents beside it (P171, a state's clearance by type: P66).
     return no("v0 compiles several agencies as a monthly grid of one count, by at most one category");
   // A national grid (about 17,000 agencies) names them once, in the first CTE (GRID), and every other use reads that CTE: the list is about
   // 230 KB, and four copies made a statement of 1 MB that DuckDB spent more than a second parsing. A state's grid (under BIG_LIST agencies) stays an

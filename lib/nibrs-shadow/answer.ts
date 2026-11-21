@@ -2923,7 +2923,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
   // with the same groupings and filters, as a second count. One agency only for now.
   if (clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
-    if (stateMode || placesMode || cmpFlag || rollingT || several)
+    // P171 (Jeff 2026-11-21): clearance by type for a state is the reporting agencies' sum (one clearance grouping); the nation
+    // only with NIBRS_CLEARANCE_WIDE=on until the runner has timed it.
+    const stateClearance = stateMode && stateBreakdown && catG.some((g) => g.dimension.startsWith("offense.clearance_"))
+      && (plan.geography.places[0].kind === "state" || process.env.NIBRS_CLEARANCE_WIDE === "on");
+    if ((stateMode && !stateClearance) || placesMode || cmpFlag || rollingT || several)
       return decline("unsupported_capability", "This isn't available: clearance for a state, the nation or several agencies, for several crimes, or as a change or rolling windows.");
     plan.statistics.splice(1, 0, { kind: "incidents", as: `${plan.measures[0].as}_incidents`, measure: plan.measures[0].as });
   }
