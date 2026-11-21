@@ -53,7 +53,7 @@ check("A4  the sealed set is the inventory's hard-coded scope", res.sealedRoutes
   "app/api/embed/route.ts", "app/api/hc-query/route.ts", "app/api/nibrs-query/route.ts",
   "app/api/query/route.ts", "app/api/shr-query/route.ts",
 ].sort());
-check("A5  exactly eight routes are excluded with justification", res.excludedRoutes.length, 8);
+check("A5  exactly ten routes are excluded with justification", res.excludedRoutes.length, 10);
 checkTrue("A6  every exclusion carries a substantive written reason",
   EXCLUSIONS.every((e) => e.reason.trim().length >= 40));
 
@@ -169,6 +169,8 @@ const FULL = {
   "app/api/session-analytics/route.ts": CRED, "app/api/query-log/route.ts": QLOG,
   // The local preview's API (dev-only, 404 in production): excluded, and inert as the guard measures it.
   "app/api/nibrs-shadow-query/route.ts": INERT,
+  // Stage 1 of the engine switch: the private-flag routes (behind the owner's cookie), excluded with justification, inert as the guard measures them.
+  "app/api/engine-query/route.ts": INERT, "app/api/engine-private/route.ts": INERT,
 };
 // Fixtures supply their own registries. The real ones are keyed by value-aware fingerprints
 // containing production literal text; a fixture that reproduced them would be a copy of
@@ -219,7 +221,7 @@ console.log("\nPART C — escape 1: JavaScript route modules");
 
   const root = tree("c1", { ...FULL, "app/api/sneaky/route.js": NEW_FACTUAL_UNSEALED });
   const r = elig(root);
-  check("C1  the .js route is now enumerated", routeFiles(root).length, 14);
+  check("C1  the .js route is now enumerated", routeFiles(root).length, 16);
   checkTrue("C2  a JavaScript route answering with crime data FAILS", !r.ok);
   checkTrue("C3  and it is named", r.failures.some((f) => f.route === "app/api/sneaky/route.js"));
   check("C4  every Next.js route extension is enumerated", ROUTE_BASENAMES.slice().sort(),
