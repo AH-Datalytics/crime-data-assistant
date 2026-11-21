@@ -48,6 +48,22 @@ assert.deepEqual(sb.categories?.Handgun, ["12"]);
 assert.match(String(sb.categories?.Unknown), /blank code/);
 assert.doesNotMatch(String(sb.categories?.Unknown), /beyond the record/, "a record's weapon counts for every victim (02.3)");
 
+// A hate crime answer (hate.ts) is verifiable: its place, its bias, and the counting rules reach the checker, never a value or SQL.
+const hateO = { kind: "hate", period: { from: "2022-01", to: "2024-12" },
+  question: { place: { kind: "state", code: "TX" }, from: "2022-01", to: "2024-12", grain: "year", bias: { code: "32", name: "Anti-Hispanic or Latino" } },
+  meaning: { measures: [{ name: "hate_crime" }], statistic: "count" },
+  delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year" }, { binding: { kind: "statistic", as: "count" }, header: "Anti-Hispanic or Latino hate crimes" }],
+    rows: [["2022", 10], ["2023", 11], ["2024", 12]] }, text: [] } };
+const hr = requestOf({ ...label, id: "QL-hate-x", tab: "hate_crime" }, hateO)!;
+assert.equal(hr.source, "hate_crime");
+assert.equal(hr.verifiable, true);
+assert.deepEqual(hr.places, [{ kind: "state", code: "TX" }]);
+const hb = blindOf(hr) as { filters?: unknown; combine?: string; source: string; cells: unknown[] };
+assert.deepEqual(hb.filters, [{ bias_code: "32", bias: "Anti-Hispanic or Latino" }]);
+assert.match(String(hb.combine), /DISTINCT year \+ ORI \+ incident_number/);
+assert.equal(hb.cells.length, 3);
+assert.doesNotMatch(JSON.stringify(hb), /"value"|sql/i);
+
 // A NIBRS answer: its plan, without any SQL at any depth; the engine's own query is never in a request.
 const nibrs = { kind: "answer", period: { from: "2023-01", to: "2023-12" }, sql: "SELECT secret", delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: "Robberies" }], rows: [[512]] } },
   plan: { measures: [{ id: "offenses.robbery", as: "robbery" }], statistics: [{ kind: "count", as: "robbery_count", measure: "robbery" }], filters: [], groupings: [], geography: { places: [{ kind: "agency", ori: "MA0130100", label: "Boston, Massachusetts" }], combine: "separate" }, compiled: { sql: "SELECT x" } } };

@@ -89,30 +89,30 @@ assert.equal(ytdOut.kind, "current-decline", "a rolling 12 reaching before the g
 }
 
 // Against the build, when it is here.
-const root = process.env.CURRENT_BUILD ?? "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct";
+const root = process.env.CURRENT_BUILD ?? "C:/Users/jeffm/crimeindex-build/crimeindex-20261119";
 const python = process.env.NIBRS_SHADOW_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe";
 if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const execute = duckdbExecutor(python);
   const build = currentBuildAt(root, execute)!;
-  assert.deepEqual([build.firstMonth, build.lastMonth, build.finalFirstMonth], ["2025-01", "2026-08", "2017-01"]);
-  // nibrs-model V173 (the nation, 2026-08): 547 agencies, murder 501, rape 3,625 with 14 agencies blank.
-  assert.deepEqual(groupMonths(build, null, "murder", "2026-08", "2026-08", execute).get("2026-08"), { value: 501, agencies: 547, population: 111272916, blank: 0 });
-  assert.deepEqual(groupMonths(build, null, "rape", "2026-08", "2026-08", execute).get("2026-08")?.blank, 14);
-  // V174 (the Northeast): 47 agencies, murder 65.
-  const ne = groupMonths(build, REGIONS.noe.states, "murder", "2026-08", "2026-08", execute).get("2026-08")!;
-  assert.deepEqual([ne.agencies, ne.value], [47, 65]);
+  assert.deepEqual([build.firstMonth, build.lastMonth, build.finalFirstMonth], ["2025-01", "2026-09", "2017-01"]);
+  // nibrs-model V173 on snapshot 20261119 (the nation, 2026-09): 588 agencies, murder 466, rape 3,803 with 13 agencies blank.
+  assert.deepEqual(groupMonths(build, null, "murder", "2026-09", "2026-09", execute).get("2026-09"), { value: 466, agencies: 588, population: 120598451, blank: 0 });
+  assert.deepEqual(groupMonths(build, null, "rape", "2026-09", "2026-09", execute).get("2026-09")?.blank, 13);
+  // V174 (the Northeast): 69 agencies, murder 55.
+  const ne = groupMonths(build, REGIONS.noe.states, "murder", "2026-09", "2026-09", execute).get("2026-09")!;
+  assert.deepEqual([ne.agencies, ne.value], [69, 55]);
   // The design note's MO0922400: January-March 2025 property 37, blank, 16; the published year to date says 53.
   const mo = agencyMonths(build, "MO0922400", "property_crime", "2025-01", "2025-03", execute);
   assert.deepEqual([...mo.values()], [37, null, 16]);
   assert.equal(cumulative([...mo.values()], [...mo.keys()]).value, null);
   // Decision A: Memphis's 2018 months come from the Final panel.
   assert.ok((agencyMonths(build, "TNMPD0000", "murder", "2018-01", "2018-03", execute).get("2018-01") ?? -1) > 0);
-  // The nation's rape total names the agencies left out (V173: 14 of 547).
-  const r = answerCurrent({ measure: "rape", place: nation, from: "2026-08", to: "2026-08", form: "months" }, build, execute);
+  // The nation's rape total names the agencies left out (V173: 13 of 588).
+  const r = answerCurrent({ measure: "rape", place: nation, from: "2026-09", to: "2026-09", form: "months" }, build, execute);
   assert.equal(r.kind, "current");
   if (r.kind === "current") {
-    assert.deepEqual(r.delivered.table.rows, [["2026-08", 3625]]);
-    assert.ok(r.delivered.text.includes("Agencies with no rape figure are left out of the total: August 2026 (14 of 547)."));
+    assert.deepEqual(r.delivered.table.rows, [["2026-09", 3803]]);
+    assert.ok(r.delivered.text.includes("Agencies with no rape figure are left out of the total: September 2026 (13 of 588)."));
     assert.equal(r.delivered.text.at(-1), "Source: Crime Index.");
   }
   // MO0922400's March 2025 year to date: February is unknown, so no total (the published 53 is never shown).
@@ -123,10 +123,10 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const mem = answerCurrent({ measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee", name: "Memphis", state: "TN" }, from: "2024-11", to: "2025-02", form: "months" }, build, execute);
   assert.ok(mem.kind === "current" && mem.delivered.table.rows.length === 4 && mem.read.tables.join() === "current_final,current_crime");
   // Codex review 01.1: a group's rate counts only its agencies with every month known, over their own population.
-  const rb = groupRateBase(build, null, "rape", "2026-01", "2026-08", execute)!;
-  assert.deepEqual([rb.count, rb.population], [29434, 105035976]);
-  const rr = answerCurrent({ measure: "rape", place: nation, from: "2026-01", to: "2026-08", form: "ytd", statistic: "rate" }, build, execute);
-  assert.ok(rr.kind === "current" && rr.delivered.table.rows[0][0] === 28);
+  const rb = groupRateBase(build, null, "rape", "2026-01", "2026-09", execute)!;
+  assert.deepEqual([rb.count, rb.population], [35579, 114452779]);
+  const rr = answerCurrent({ measure: "rape", place: nation, from: "2026-01", to: "2026-09", form: "ytd", statistic: "rate" }, build, execute);
+  assert.ok(rr.kind === "current" && rr.delivered.table.rows[0][0] === 31.1);
   // Codex review 01.4: two spans compared, each a complete total (Memphis murders, January-August: 146 against 99).
   const memphis = { kind: "agency" as const, ori: "TNMPD0000", label: "Memphis, Tennessee", name: "Memphis", state: "TN" };
   const ch = answerCurrentChange({ measure: "murder", place: memphis, from: "2026-01", to: "2026-08", form: "total" }, ["2025-01", "2025-08"], ["2026-01", "2026-08"], build, execute);

@@ -265,11 +265,38 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   const codes = m ? MEASURE_CODES[m[2]] ?? EXTRA_CODES[m[2]] : undefined;
   if (!m || !codes) return { error: `measure "${measureId}" has no executable definition in v0` };
   if (codes.some((c) => GROUP_B.has(c))) return { error: `"${measureId}" is a Group B offense: Group B arrests are not offense segments` };
+  // P82 defines domestic violence by victim only; its offenses, incidents and arrests (the unit asked) are not built yet, never answered as the crimes alone.
+  if (m[2] === "domestic_violence" && m[1] === "offenders") return { error: `"${measureId}" has no executable definition in v0 (domestic violence is built by victim, incident, offense and arrest)` };
   const kind = m[1];
-  if (kind === "offenses" && unit === "offense") {
+  if (kind === "offenses" && unit === "offense" && m[2] !== "domestic_violence") {
     // An offense segment's identity includes its occurrence key (a code repeated within an incident).
     return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
       FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+  }
+  // 3d: an incident that has a P82 domestic violence victim (the victims' membership), for the offenses and the arrests the unit asked names.
+  // The incidents with a P82 victim, once, as a derived table joined on the incident key: a join lets DuckDB carry the agency and year conditions into it (the correlated EXISTS
+  // it replaces was read over every year of every agency: 70 s for offenses and 320-410 s for arrests of ONE agency, the runner's timing).
+  const dvJoin = (a: string) => `JOIN (SELECT DISTINCT dv.data_year, dv.ori, dv.incident_num FROM ${read("victim")} dv JOIN ${read("victim_offense")} dvo
+        ON dvo.data_year = dv.data_year AND dvo.ori = dv.ori AND dvo.incident_num = dv.incident_num AND dvo.victim_seq = dv.victim_seq AND dvo.key_occurrence = dv.key_occurrence
+      WHERE dvo.connected_offense IN (${list(codes)})
+        AND EXISTS (SELECT 1 FROM ${read("offense")} o9 WHERE ${sameIncident("o9", "dv")} AND o9.offense_code = dvo.connected_offense)
+        AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "dv")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))) dvq
+      ON dvq.data_year = ${a}.data_year AND dvq.ori = ${a}.ori AND dvq.incident_num = ${a}.incident_num`;
+  if (kind === "offenses" && unit === "offense" && m[2] === "domestic_violence")
+    return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("offense")} o ${dvJoin("o")} ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+  if (kind === "arrests" && (unit === "arrest" || unit === "arrestee") && m[2] === "domestic_violence")
+    return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a ${dvJoin("a")} ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${incidentFilter("a")}` };
+  if (kind === "incidents" && unit === "incident" && m[2] === "domestic_violence") {
+    // 3b: the distinct incidents with at least one P82 domestic violence victim (the victims' membership, each incident once).
+    return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("victim")} o JOIN ${read("victim_offense")} vo
+        ON vo.data_year = o.data_year AND vo.ori = o.ori AND vo.incident_num = o.incident_num
+       AND vo.victim_seq = o.victim_seq AND vo.key_occurrence = o.key_occurrence ${joins}
+      WHERE vo.connected_offense IN (${list(codes)})
+        AND EXISTS (SELECT 1 FROM ${read("offense")} o9 WHERE ${sameIncident("o9", "o")} AND o9.offense_code = vo.connected_offense)
+        AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "o")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))${incidentFilter("o")}` };
   }
   if (kind === "incidents" && unit === "incident") {
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
@@ -282,7 +309,10 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
         ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num
        AND vo.victim_seq = v.victim_seq AND vo.key_occurrence = v.key_occurrence ${joins}
-      WHERE vo.connected_offense IN (${list(codes)})${incidentFilter("v")}` };
+      WHERE vo.connected_offense IN (${list(codes)})${m[2] === "domestic_violence"
+        // P82: the incident has an offense segment with the connected code, and any relationship pair of the victim, to any offender, is domestic.
+        ? ` AND EXISTS (SELECT 1 FROM ${read("offense")} o9 WHERE ${sameIncident("o9", "v")} AND o9.offense_code = vo.connected_offense)
+           AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "v")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))` : ""}${incidentFilter("v")}` };
   }
   if (kind === "offenders" && unit === "offender") {
     // P44: the offender segments of incidents with the codes, one per segment (segment 00, no offender known, as recorded).
@@ -327,7 +357,11 @@ const CUBE_NOT_CHECKED = new Set(["justifiable_homicide"]);
 const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES).filter((k) => !CUBE_NOT_CHECKED.has(k)), "drug_equipment", "drug_crimes", "all_crime"]);
 export const cubeServesMeasure = (id: string): boolean => CUBE_PLAIN_MEASURES.has(id.split(".")[1] ?? "");
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
-const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
+const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"],
+  // P82 (decided 2026-11-01): the crimes of domestic violence, counted by victim.
+  domestic_violence: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"] };
+/** P82 and D20: the relationships of domestic violence, intimate partner and family or household (the Model's correctness/slice_dv.py sets). */
+const DOMESTIC_RELATIONSHIPS = ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"];
 
 /**
  * The agencies of a place and their populations (increment 4), from the canonical agency table's batch-header rows:
@@ -470,6 +504,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       const on = `${f.entity} ${w?.dimension} ${f.scope} ${entity}`;
       if (on === "offense_weapon offense_weapon.weapon offense offense")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameOffense("w2", "o")} AND ${weaponIn("w2", values)})`);
+      else if (on === "offense_weapon offense_weapon.weapon offender offender" && codes.length && !grid)
+        // P168: an offender is not linked to one offense, so the offenders of an incident with an offense of the measure's codes that had the weapon.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "f")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
+      else if (on === "offense_weapon offense_weapon.weapon arrestee arrestee" && codes.length && !grid)
+        // P168: an arrest on an incident with an offense of the measure's codes that had the weapon (as an arrest on an incident with an offense of the codes, above).
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "a")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
       else if (on === "offense_weapon offense_weapon.weapon victim victim")
         // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
         // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.

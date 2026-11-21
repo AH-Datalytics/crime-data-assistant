@@ -20,6 +20,7 @@ import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
 import { shrBuildAt } from "../lib/nibrs-shadow/shr";
+import { hateBuildAt } from "../lib/nibrs-shadow/hate";
 import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { blindOf, requestOf, type VerifyLabel } from "../lib/answer-eval/verify-request";
@@ -52,7 +53,8 @@ const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), roo
 const execute = duckdbExecutor(python, { timeoutMs: 300_000 });
 const deps = { places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" },
   target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-  execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined) } as ShadowDeps;
+  execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined),
+  hate: hateBuildAt(arg("--hate", process.env.NIBRS_HATE_ROOT ?? "") || undefined) } as ShadowDeps;
 
 const lines: string[] = [];
 const blind: string[] = [];
