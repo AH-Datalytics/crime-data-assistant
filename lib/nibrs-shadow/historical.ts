@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Meaning } from "../answer-eval/case";
 import type { ResultTable } from "../nibrs-plan/result";
-import { pct1, rankAgencies } from "../nibrs-plan/transforms";
+import { pct1, rankAgencies, truncatedTieSentence } from "../nibrs-plan/transforms";
 import { fmt, fmtRate, periodWords, SRS_SOURCE } from "./deliver";
 import { stateName } from "./places";
 import { headerStates } from "../nibrs-plan/state-codes";
@@ -500,7 +500,8 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
       : cities ? "Cities are Crime Index's city agencies, whatever the agency."
         : counties ? "County agencies are sheriffs and county police (Crime Index's county type), each on its own coverage, mostly unincorporated areas; cities in the county are not included."
         : `Every agency, city and county, with a ${figure} is ranked.`];
-  if (tie) {
+  if (tie?.truncated) text.push(truncatedTieSentence(tie, rate));
+  else if (tie) {
     const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
     text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
   }

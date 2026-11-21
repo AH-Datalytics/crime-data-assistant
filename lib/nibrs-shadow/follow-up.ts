@@ -150,6 +150,11 @@ const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|ag
 // compare to shoplifting in Nashville?" points back; "Murder rate comparison between Houston and Chicago for 2026" is
 // complete (query-log scorecard, follow-up cluster A, 2026-11-05).
 const COMPARE_WORD = /\b(?:compar(?:e|ed|es|ing|ison)|vs\.?|versus|against|relative to|than)\b/i;
+/** A turn that points back at the previous answer by its opening or its words ("same", "also", "now", "that", "these", "again"...). */
+export function pointsBack(turn: string): boolean {
+  const t = turn.trim();
+  return BACK_LEAD.test(t) || COMPARE_LEAD.test(t) || COMPARE_WORD.test(t) || BACK_WORD.test(t) || /\b(?:that|it|these|those|its)\b|\bthis\b(?!\s+(?:year|month|quarter|week)\b)/i.test(t);
+}
 export function standsAlone(turn: string): boolean {
   const t = turn.trim();
   // "these cities: Chicago, IL New York City, NY ..." names its places after the colon (not a pointer back), and "for as long as you have
