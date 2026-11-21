@@ -2732,4 +2732,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
   assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
 }
+// P190 (Jeff 2026-11-21, reader class): small words and slips read as the question they are, never "I didn't understand".
+{
+  const readerDecline = (q: string) => { const o = ask(q); return o.kind === "decline" && o.reason === "reader"; };
+  for (const q of ["how many murders ocurred in Memphis in 2024", "how many murders occurredin Memphis in 2024", "how mnay murders in Memphis in 2024", "murders in Memphis for year 2024",
+    "murders in Memphis 2024 year-to-date", "murders in Memphis in 2024 YTD", "Houston retail theft in 2024", "Houston larceny from auto in 2024", "Houston murders sincce 2020 by year"])
+    assert.ok(!readerDecline(q), q);
+  // A sentence that merely holds a similar word keeps its own handling: "occurred in" still reads as "in" and nothing else.
+  assert.deepEqual(ask("how many murders occurred in Memphis in 2024").kind, ask("how many murders in Memphis in 2024").kind);
+  assert.deepEqual(ask("Houston retail theft in 2024").kind, ask("Houston shoplifting in 2024").kind);
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
