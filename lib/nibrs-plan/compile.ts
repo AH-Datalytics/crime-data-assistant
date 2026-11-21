@@ -265,6 +265,8 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   const codes = m ? MEASURE_CODES[m[2]] ?? EXTRA_CODES[m[2]] : undefined;
   if (!m || !codes) return { error: `measure "${measureId}" has no executable definition in v0` };
   if (codes.some((c) => GROUP_B.has(c))) return { error: `"${measureId}" is a Group B offense: Group B arrests are not offense segments` };
+  // P82 defines domestic violence by victim only; its offenses, incidents and arrests (the unit asked) are not built yet, never answered as the crimes alone.
+  if (m[2] === "domestic_violence" && m[1] !== "victims") return { error: `"${measureId}" has no executable definition in v0 (domestic violence is built by victim only)` };
   const kind = m[1];
   if (kind === "offenses" && unit === "offense") {
     // An offense segment's identity includes its occurrence key (a code repeated within an incident).
@@ -282,7 +284,10 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
         ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num
        AND vo.victim_seq = v.victim_seq AND vo.key_occurrence = v.key_occurrence ${joins}
-      WHERE vo.connected_offense IN (${list(codes)})${incidentFilter("v")}` };
+      WHERE vo.connected_offense IN (${list(codes)})${m[2] === "domestic_violence"
+        // P82: the incident has an offense segment with the connected code, and any relationship pair of the victim, to any offender, is domestic.
+        ? ` AND EXISTS (SELECT 1 FROM ${read("offense")} o9 WHERE ${sameIncident("o9", "v")} AND o9.offense_code = vo.connected_offense)
+           AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "v")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))` : ""}${incidentFilter("v")}` };
   }
   if (kind === "offenders" && unit === "offender") {
     // P44: the offender segments of incidents with the codes, one per segment (segment 00, no offender known, as recorded).
@@ -327,7 +332,11 @@ const CUBE_NOT_CHECKED = new Set(["justifiable_homicide"]);
 const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES).filter((k) => !CUBE_NOT_CHECKED.has(k)), "drug_equipment", "drug_crimes", "all_crime"]);
 export const cubeServesMeasure = (id: string): boolean => CUBE_PLAIN_MEASURES.has(id.split(".")[1] ?? "");
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
-const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"] };
+const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"],
+  // P82 (decided 2026-11-01): the crimes of domestic violence, counted by victim.
+  domestic_violence: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"] };
+/** P82 and D20: the relationships of domestic violence, intimate partner and family or household (the Model's correctness/slice_dv.py sets). */
+const DOMESTIC_RELATIONSHIPS = ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"];
 
 /**
  * The agencies of a place and their populations (increment 4), from the canonical agency table's batch-header rows:
