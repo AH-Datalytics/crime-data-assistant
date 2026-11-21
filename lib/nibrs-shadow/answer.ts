@@ -402,6 +402,24 @@ function mapOption(x: ShadowOption, f: (c: ShadowOutcome) => ShadowOutcome): Sha
 }
 /** An option that runs: a deferred one (it reached its heavy statement), or one whose continuation runs. */
 const optionRuns = (o: ShadowOption) => isDeferred(o) || (!!o.continuation && runsNow(o.continuation));
+/**
+ * P170 to P172 (Jeff 2026-11-21): a missing place, period or kind of crime is filled with its default, said, with buttons to change it. The
+ * option's answer is used only when it exists now (a heavy national statement is deferred, a decline is not an answer): otherwise null, and the
+ * question is asked as before. The note goes right after the title or sentence.
+ */
+/** Why a default could not answer (a measurement for the census, never read by the engine): the ask site and the reason. */
+export const DEFAULT_MISSES: { site: string; why: string }[] = [];
+function withDefault(o: ShadowOption, note: string, buttons: ShadowOption[], site = ""): ShadowOutcome | null {
+  if (isDeferred(o) || !o.continuation) { DEFAULT_MISSES.push({ site, why: "heavy" }); return null; }
+  const r = o.continuation;
+  if (!["answer", "srs", "historical", "current", "shr", "hate"].includes(r.kind)) {
+    DEFAULT_MISSES.push({ site, why: `${r.kind}:${"reason" in r ? r.reason : "about" in r ? r.about : ""}` });
+    return null;
+  }
+  const x = r as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
+  const text = [x.delivered.text[0], note, ...x.delivered.text.slice(1)];
+  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
+}
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
 const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 /**
@@ -853,8 +871,64 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
   return { ...decl, alternative: { label: `Ask instead: "${question}"`, continuation: opened } };
 }
 
+const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
+let defaultDepth = 0;
+/**
+ * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
+ * with the default instead, when the option that carries it answers now (not a heavy statement deferred, not a decline), and the chain of asks
+ * (a place, then a period, then a kind of crime) ends in an answer. The notes say each default, after the title; buttons let the user change the
+ * place or the year. Otherwise the ask stays as before (a ranking with no period, a heavy national shape, a question the reader cannot place).
+ */
+function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
+  if (deps.checkingOffer || defaultDepth > 1 || o0.kind !== "clarify") return o0;
+  const notes: string[] = [];
+  const buttons: ShadowOption[] = [];
+  let cur: ShadowOutcome = o0;
+  let years = false;
+  for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
+    const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
+    const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
+    let option: ShadowOption | undefined;
+    let note = "";
+    const more: ShadowOption[] = [];
+    if (c.about === "which place") {
+      option = find(/^The United States$/);
+      note = "No place was named, so the United States is shown.";
+      more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
+    } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
+      option = find(/^Every year available$/);
+      // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
+      if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
+        defaultDepth++;
+        try {
+          const alt = shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, deps);
+          if (ANSWER_KINDS.includes(alt.kind)) option = { label: "Every year available", continuation: alt };
+        } finally { defaultDepth--; }
+      }
+      years = true;
+      more.push({ label: "Another year", entry: "which year" });
+    } else if (c.about === "which kind of crime") {
+      option = find(/^Both$/);
+      note = "No kind of crime was named, so violent crime and property crime are shown.";
+      more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+    }
+    if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
+    notes.push(note);
+    buttons.push(...more);
+    cur = option.continuation;
+  }
+  if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
+  const x = cur as ShadowOutcome & { delivered: { text: string[]; table: { rows: unknown[][] } }; buttons?: ShadowOption[] };
+  const rows = x.delivered.table?.rows ?? [];
+  const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
+  const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
+  const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
+  const text = [x.delivered.text[0], ...say, ...x.delivered.text.slice(1)];
+  void years;
+  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
+}
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  const o = withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps));
+  const o = applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
@@ -1775,6 +1849,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     // "Another crime" (Jeff 2026-11-15): a victim-age question without a crime may name its own ("Which crime?").
     const ageAsked = ledger0.parts.some((p) => p.clause === 0 && p.concept === "breakdown" && /age/.test(String(p.value)));
+    // P172 (Jeff 2026-11-21): no kind of crime named is violent crime and property crime with their parts, said, with buttons for one kind or a
+    // specific crime. Tried with the parts, then the two totals; asked as before when neither answers now (and for a victim-age question).
+    if (!ageAsked) {
+      const parts: [string, string][] = [["violent_crime", "violent crime"], ["property_crime", "property crime"], ["murder", "murder"], ["rape", "rape"], ["robbery", "robbery"],
+        ["aggravated_assault", "aggravated assault"], ["burglary", "burglary"], ["theft", "theft"], ["motor_vehicle_theft", "motor vehicle theft"]];
+      const crimeButtons: ShadowOption[] = [...runnable.filter((o) => o.label !== "Both"), { label: "A specific crime", entry: "which crime" }];
+      for (const ms of [parts, kinds[2].measures as [string, string][]]) {
+        const tried = withDefault(deferHeavy("Both", (d) => fromLedger(filledAll(ledger, "measure", ms), d, pins), deps),
+          "No kind of crime was named, so violent crime and property crime are shown.", crimeButtons, "crime");
+        if (tried) return tried;
+      }
+    }
     return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: ageAsked ? [...runnable, { label: "Another crime", entry: "which crime" }] : runnable };
   }
   // D09 beside another crime ("homicide and crime rates", "murder and crime"): the bare word is asked about too, never
@@ -1884,9 +1970,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
-    return { kind: "clarify", about: "which place", question: ledger0.question, options: [
-      deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps),
-      { label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }] };
+    // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
+    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps);
+    const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
+    const nationDefault = withDefault(nationOption, "No place was named, so the United States is shown.", placeButtons, "place");
+    if (nationDefault) return nationDefault;
+    return { kind: "clarify", about: "which place", question: ledger0.question, options: [nationOption, ...placeButtons] };
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
@@ -2948,7 +3037,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Jeff 2026-11-11, "All years by default": "by year", "per month", "over time" with no range is every year the source
     // has, said, never asked. By year (or quarter): NIBRS's first year through the latest complete year; by month or a
     // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
-    if (trend) {
+    // P171 (Jeff 2026-11-21): the same for every question: no period named is every year by year, for a single figure or a breakdown too
+    // (a series by year of it). Tried only when it answers now; otherwise the question is asked as before.
+    {
+      const base = trend ? ledger : filled(ledger, "grain", "year", "by year");
       const firstY = release.firstMonth.slice(0, 4);
       const monthly = (spec.grain === "month" || !!(spec as { window?: unknown }).window) && !flags(ledger0).quarter;
       // Murder detail is Homicide Reports' from its own first year; everything else NIBRS's.
@@ -2959,12 +3051,20 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const murderOnly = murderMeasure && (plan.filters.length > 0 || plan.groupings.some((g) => !g.dimension.startsWith("time.")) || monthly);
       const starts = murderOnly ? [String(SHR_FIRST_YEAR), firstY] : [firstY];
       for (const start of starts) {
-        const all = fromLedger(filled(ledger, "period", monthly ? `since:${start}` : `range:${start}:${lcy}`, "every year available"), deps, pins);
+        const everyYear = (d: ShadowDeps) => fromLedger(filled(base, "period", monthly ? `since:${start}` : `range:${start}:${lcy}`, "every year available"), d, pins);
+        // A single figure or breakdown made a series: its statements may be heavy (a national one takes minutes), so only an answer that exists now is used.
+        let all: ShadowOutcome;
+        if (trend) all = everyYear(deps);
+        else { const o = deferHeavy("every", everyYear, deps); if (isDeferred(o) || !o.continuation) { DEFAULT_MISSES.push({ site: "period", why: "heavy" }); continue; } all = o.continuation; }
         if (all.kind === "shr") return all;
-        if (all.kind === "answer") {
+        if (["answer", "srs", "historical", "current", "hate"].includes(all.kind)) {
           const span = monthly ? `${monthName(`${start}-01`)} through ${monthName(release.lastMonth)}` : `${start} through ${lcy}`;
-          return { ...all, delivered: { ...all.delivered, text: [all.delivered.text[0], `No years were given, so every year in the data is shown: ${span}.`, ...all.delivered.text.slice(1)] } };
+          const x = all as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
+          const justYear = deferHeavy(`Just ${lcy}`, (d2) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d2, pins), deps);
+          return { ...x, delivered: { ...x.delivered, text: [x.delivered.text[0], `No years were given, so every year in the data is shown: ${span}.`, ...x.delivered.text.slice(1)] },
+            buttons: [...(x.buttons ?? []), ...(trend ? [] : [justYear, { label: "Another year", entry: "which year" } as ShadowOption])] } as ShadowOutcome;
         }
+        DEFAULT_MISSES.push({ site: "period", why: `${all.kind}:${"reason" in all ? all.reason : "about" in all ? all.about : ""}` });
         // Another question first ("which New York"): asked, its answers already for every year.
         if (all.kind === "clarify" && all.about !== "which period" && all.about !== "which range of years") return all;
       }
