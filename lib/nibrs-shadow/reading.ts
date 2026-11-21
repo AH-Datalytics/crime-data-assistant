@@ -244,7 +244,7 @@ const PHRASES: [RegExp, string][] = [
   [/\b(?:for|in|across|throughout|of)\s+(?:the\s+)?(?:entire|whole|full)\s+(?:u\.?s\.?a?\.?|united\s+states(?:\s+of\s+america)?|country|nation)(?=[\s,.?!]|$)/gi, "nationwide"],
   // P191 (Jeff 2026-11-21, reader class): "cleared by arrest versus exceptional means" is the clearance types (arrest, each exceptional type,
   // uncleared); "exceptional clearances by type" is the exceptional types; "exceptional means" alone is the exception.
-  [/,?\s*\b(?:were\s+|was\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|or|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional\s+means|exception|exceptional\s+clearance)\b/gi, " by clearance type"],
+  [/,?\s*\b(?:were\s+|was\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional\s+means|exception|exceptional\s+clearance)\b/gi, " by clearance type"],
   [/\bexceptional\s+((?:[a-z]+\s+){0,1}?)clearances?\b/gi, "$1cleared by exception"],
   [/(\bcleared\s+by\s+exception\b[^?.]*?)\b(?:per|by)\s+year\s+and\s+type\b/gi, "$1by year and clearance type"],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.

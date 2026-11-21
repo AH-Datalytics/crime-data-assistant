@@ -977,7 +977,7 @@ ROWS = [
     ("P191",
      "\"How many robberies in Chicago were cleared by arrest versus exceptional means in 2024?\", \"Chicago robbery exceptional clearances by type in 2024\", \"annual murder rates for the entire US\", \"murder rate across the whole country by year\"",
      "Declined (\"I didn't understand \\\"exceptional means\\\"\", \"exceptional\", \"for the entire\", \"across the whole\").",
-     "\"Cleared by arrest versus exceptional means\" is the clearance types (cleared by arrest, each exceptional type, uncleared). \"Exceptional clearances by type\" is the exceptional types. \"For the entire US\", \"across the whole country\" and \"throughout the nation\" are the nation, as \"nationwide\" is.",
+     "\"Cleared by arrest versus exceptional means\" (also \"vs\", \"and\", \"compared to\", \"against\") is the clearance types (cleared by arrest, each exceptional type, uncleared); \"or\" is not read as that split, since \"cleared by arrest or exceptional means\" is the total cleared either way. \"Exceptional clearances by type\" is the exceptional types. \"For the entire US\", \"across the whole country\" and \"throughout the nation\" are the nation, as \"nationwide\" is.",
      "The clearance-type table, or the nation's figures.",
      "Jeff 2026-11-21 (through the coordinator): the reader owns question recognition; real asks the reader did not understand.",
      "Decided 2026-11-21 (Jeff, through the coordinator)",
