@@ -29,6 +29,17 @@ export interface ChartConfig {
   partialBasis?: { asOf: string; rule: "current-calendar-year" };
 }
 
+/** The engine switch's answer metadata (stage 1): what the engine returned and the buttons it offers. Present only on an answer from /api/engine-query. */
+export interface EngineMeta {
+  kind: "answer" | "clarify" | "decline";
+  release: string;
+  /** The question the engine ran (a button step re-runs it with the longer path). */
+  question: string;
+  previous?: string;
+  path: string[];
+  buttons: { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built" | "question"; note?: string; question?: string }[];
+}
+
 export interface QueryResponse {
   success: true;
   requestId?: string;
@@ -54,6 +65,7 @@ export interface QueryResponse {
   statusText?: string;
   newerExcludedYear?: number | null;
   showClearance?: boolean;
+  engine?: EngineMeta;
 }
 
 export interface QueryError {
