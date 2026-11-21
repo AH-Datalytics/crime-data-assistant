@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { hateBuildAt, HATE_REPORTING_CAVEAT, HATE_SOURCE } from "../lib/nibrs-shadow/hate";
+import { hateBuildAt, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE } from "../lib/nibrs-shadow/hate";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 // A release folder as the export writes it: the latest incident date is mid-October 2026, so the last complete month is September 2026.
@@ -93,4 +93,22 @@ const noBuild = as(ask("anti-Hispanic hate crimes in Texas in 2024", { ...deps, 
 assert.ok(!/weapon or relationship/.test(noBuild.explanation));
 const rate = ask("hate crimes per 100,000 in Texas in 2024");
 assert.notEqual(rate.kind, "answer", "a rate is not built");
+// H1 (2026-11-21): several biases named are side by side, one column each in the order asked, each its own count (never an
+// incident with both, never added), with the overlap line.
+{
+  const n0 = sqls.length;
+  const two = as(ask("anti-Islamic and anti-Jewish hate crimes in Texas by year from 2022 to 2024"), "hate");
+  assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Year", "Anti-Islamic (Muslim) hate crimes", "Anti-Jewish hate crimes"]);
+  assert.deepEqual(two.delivered.table.rows, [["2022", 10, 10], ["2023", 11, 11], ["2024", 12, 12]]);
+  assert.equal(two.delivered.text[0], "Texas Anti-Islamic (Muslim) and Anti-Jewish Hate Crimes Per Year, 2022-2024");
+  assert.ok(two.delivered.text.includes(HATE_BIASES_OVERLAP) && two.delivered.text[two.delivered.text.length - 1] === HATE_SOURCE);
+  const run = sqls.slice(n0);
+  assert.equal(run.length, 2, "one statement per bias");
+  assert.ok(/bias_code = '24'/.test(run[0]) && /bias_code = '21'/.test(run[1]) && run.every((s) => !/bias_code IN|bias_code = '\d+' AND bias_code/.test(s)), run.join("\n"));
+  const total = as(ask("anti-Islamic and anti-Jewish hate crimes in Texas in 2024"), "hate");
+  assert.equal(total.delivered.text[0], "Texas had 857 anti-Islamic (Muslim) hate crimes and 857 anti-Jewish hate crimes in 2024.");
+  assert.deepEqual(total.delivered.table.rows, [[857, 857]]);
+  // A rolling window of several biases is not built.
+  assert.equal(ask("anti-Asian and anti-Black hate crimes in Texas rolling 12 months").kind, "decline");
+}
 console.log("nibrs hate: hate crime questions are answered from the hate crime data only, with its caveat and its latest-date rule");
