@@ -9,7 +9,7 @@
  *   kind    the response kind ("answer", "decline", "route", ...), or the service failure kind (busy, timeout, error)
  *   reason  a decline's reason code (response.reason) and, when present, its explanation's first 160 characters in `note`
  *   ms      the service's own time for the question (no clock is read here)
- *   rows    the number of result rows when the response carries a table; digest: a short hash of the whole response (for comparing two runs or two builds)
+ *   rows    the number of result rows; answer: { columns, rows, text } for an answered row (the engine's own table, rows keyed by column in display order, at most 5000), so a reference can be joined by id; digest: a short hash of the whole response (for comparing two runs or two builds)
  * Run at Idle priority, serial; `--timing` asks only the plain state and national one-year totals (the Texas/US per-measure raw timing table, with the matrix's state = Ohio).
  * Cube on versus off (the matrix as a same-build equality check, no reference needed): run the whole matrix against a service started with the cube set and again against one without
  * (two ENGINE_SERVICE_URL ports), then `--compare cube-on.jsonl cube-off.jsonl`: every id whose status or response digest (statements left out) differs is listed; exit code 1.
@@ -19,7 +19,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 
 type Row = { id: string; measure: string; breakdown: string; family: string; scope: string; grain: string; question: string; excluded?: string; timing?: boolean };
-type Res = { id: string; status: "answered" | "declined" | "excluded" | "service_error"; kind: string; reason?: string; ms?: number; rows?: number; digest?: string; note?: string };
+type Res = { id: string; status: "answered" | "declined" | "excluded" | "service_error"; kind: string; reason?: string; ms?: number; rows?: number; digest?: string; note?: string; answer?: { columns: string[]; rows: Record<string, unknown>[]; text: string[] } };
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const has = (k: string) => process.argv.includes(`--${k}`);
 const readJsonl = <T>(p: string): T[] => (fs.existsSync(p) ? fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as T) : []);
@@ -61,9 +61,13 @@ async function main(): Promise<void> {
         if (!body.ok) res = { id: r.id, status: "service_error", kind: body.kind ?? "error", note: String(body.message ?? "").slice(0, 160) };
         else {
           const resp = body.response ?? {};
-          const table = (resp as { table?: { rows?: unknown[] } }).table;
+          // The engine's response carries columns (names), rows (objects keyed by column, in display order) and text (lines) at the top level.
+          const columns = Array.isArray(resp.columns) ? (resp.columns as unknown[]).filter((c): c is string => typeof c === "string") : [];
+          const rowsOut = Array.isArray(resp.rows) ? (resp.rows as Record<string, unknown>[]) : null;
+          const text = Array.isArray(resp.text) ? (resp.text as unknown[]).filter((t): t is string => typeof t === "string") : typeof resp.text === "string" ? [resp.text] : [];
           res = { id: r.id, status: classify(resp), kind: String(resp.kind ?? ""), ms: body.ms, digest: crypto.createHash("sha256").update(JSON.stringify(resp, noSql)).digest("hex").slice(0, 12),
-            ...(table?.rows ? { rows: table.rows.length } : {}), ...(resp.kind === "decline" ? { reason: String(resp.reason ?? ""), note: String(resp.explanation ?? "").slice(0, 160) } : {}) };
+            ...(rowsOut ? { rows: rowsOut.length } : {}), ...(resp.kind === "answer" && rowsOut ? { answer: { columns, rows: rowsOut.slice(0, 5000), text } } : {}),
+            ...(resp.kind === "decline" ? { reason: String(resp.reason ?? ""), note: (text.join(" ") || String(resp.explanation ?? "")).slice(0, 160) } : {}) };
         }
       } catch (e) { res = { id: r.id, status: "service_error", kind: "unreachable", note: String((e as Error).message).slice(0, 160) }; }
     }
