@@ -26,6 +26,8 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
+// P185 (Jeff 2026-11-21): the FBI master-files sentence follows the note under a NIBRS state or national sum (never under one agency's answer).
+const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
 import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
 import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
@@ -1316,7 +1318,8 @@ assert.ok(!("ordered" in bySex.delivered.table.columns[0]), "categories by count
 assert.deepEqual(bySex.delivered.table.rows, [["Female", 30, 60], ["Male", 20, 40], ["Unknown", null, null]]);
 assert.ok(!bySex.delivered.text.some((t) => /^Each share is/.test(t)), "P86: the share's header says what it is");
 assert.ok(bySex.delivered.text.includes("Shown blank, not zero, because reporting isn't complete: Unknown."));
-assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
+// A one-period breakdown by one category is a bar chart of the count, in the table's order (Jeff 2026-11-21, issue 3).
+assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], { kind: "bar", x: "Victim sex", y: ["Simple assault victims"] }]);
 assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").kind === "answer", false, "two-way breakdowns are not built");
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
 const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
@@ -1896,7 +1899,7 @@ assert.equal(txCj.buttons![0].label, "Consistent Reporting Agencies");
 assert.deepEqual(txCj.stateSum!.years.map((y) => [y.agencies, y.partial, y.every.agencies, y.every.sum]), [[4, 1, 3, 252]]);
 // One short note line, then the source (Jeff 2026-11-01).
 // Jeff (2026-11-01): his note, then the source; nothing else.
-assert.deepEqual(txCj.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
+assert.deepEqual(txCj.delivered.text.slice(1), ["Includes all agencies.", FBI_MASTER_FILES, "Source: FBI NIBRS."]);
 const txEvery = txCj.buttons![0].continuation as Extract<ShadowOutcome, { kind: "answer" }>;
 assert.deepEqual([txEvery.plan.coverage.cohort, txEvery.delivered.table.rows], ["same_agencies", [[252]]]);
 assert.deepEqual(txEvery.delivered.table.columns.map((c) => c.header), ["Carjacking offenses"]);
@@ -1948,7 +1951,7 @@ CONFLICT = null;
 assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /^No rate is given for North Carolina in 2024, because 1 of the agencies counted have no FBI population/);
 const nc = as(ask("Shoplifting in North Carolina in 2024, with the number of agencies reporting"), "answer");
 assert.match(String(nc.delivered.table.rows[0][2]), /^≥[\d.]+%$/, "a lower bound is marked in its cell");
-assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
+assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", FBI_MASTER_FILES, "Source: FBI NIBRS."]);
 // 6. A span reaching this year: its completed years, this year named; a future year is declined.
 const toNow = srs("Robberies in Texas by year from 2020 to 2026");
 assert.deepEqual([toNow.delivered.table.rows.map((x) => x[0]), toNow.delivered.text[1]], [["2020", "2021", "2022", "2023", "2024", "2025"], "2026 is this year: its figures come from Current Trends (Crime Index) and are not included here."]);
