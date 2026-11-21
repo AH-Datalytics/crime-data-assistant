@@ -523,7 +523,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "a")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
       else if (on === "offense_weapon offense_weapon.weapon victim victim")
         // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
-        // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.
+        // codes). A victim names its connected offense by code only (NIBRS data element 24; the victim_offense row's key_occurrence is the VICTIM's numbering, not an offense
+        // occurrence), so any segment of that code in the incident counts. That is exact while an incident holds at most one offense segment per code: scripts/check-release-occurrence.py
+        // fails a release in which a code repeats (offense or offense_weapon key_occurrence > 1), and none of the 2017-2026 canon2-20261118-host years does.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "vo")} AND w2.offense_code = vo.connected_offense AND ${weaponIn("w2", values)})`);
       else if (on === "offense offense.offense incident arrestee")
         // Increment 6: an arrest on an incident that has an offense with one of the codes.
