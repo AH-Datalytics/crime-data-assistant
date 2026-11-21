@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { callEngine, engineClientConfig } from "../lib/engine-client";
 import { engineCookieValue, isEngineKey, isEnginePrivate } from "../lib/engine-private";
+import { adaptEngineResponse } from "../lib/engine-adapt";
 import { engineLogRow, handleEngineQuery, type EngineLogRow, type RouteDeps } from "../lib/engine-route";
 import { createEngineServer } from "../lib/engine-service/http";
 import { EnginePool, type PoolWorker } from "../lib/engine-service/pool";
@@ -82,6 +83,23 @@ async function main(): Promise<void> {
     }
   }
 
+  // --- the engine's answer in the page's shape
+  {
+    const req: EngineRequest = { tab: "nibrs", question: "Robberies in Texas in 2024", path: ["Violent crime"], previous: "Crime in Texas" };
+    const btn = { label: "By month", path: ["Violent crime", "By month"], kind: "continuation" as const };
+    const a = adaptEngineResponse(req, { kind: "answer", columns: ["Year", "Robberies"], rows: [{ Year: 2024, Robberies: 5 }], chart: { type: "bar", xAxis: "Year", yAxis: "Robberies", title: "t" }, text: ["There were 5 robberies.", "Counted by offense."], buttons: [btn] }, "rel-1", 41.6);
+    assert.deepEqual([a.success, a.title, a.explanation, a.columns, a.rowCount, a.executionTimeMs, a.sql, a.truncated, a.chartMeta], [true, "There were 5 robberies.", "There were 5 robberies.\n\nCounted by offense.", ["Year", "Robberies"], 1, 42, "", false, null]);
+    assert.deepEqual(a.chartConfig, { type: "bar", xAxis: "Year", yAxis: "Robberies", title: "t" });
+    assert.deepEqual(a.engine, { kind: "answer", release: "rel-1", question: "Robberies in Texas in 2024", previous: "Crime in Texas", path: ["Violent crime"], buttons: [btn] }, "the engine meta carries what a button step needs");
+    const c = adaptEngineResponse({ tab: "nibrs", question: "Crime in Ohio", path: [] }, { kind: "clarify", about: "which Ohio", note: "Two places match.", buttons: [btn, { label: "x" }, null] }, "rel-1", 1);
+    assert.deepEqual([c.success, c.explanation, c.rows, c.chartConfig, c.engine.kind, c.engine.buttons.length], [true, "Which Ohio?\n\nTwo places match.", [], null, "clarify", 1], "a question back has words and buttons, no table; malformed buttons are dropped");
+    const d = adaptEngineResponse({ tab: "nibrs", question: "Non-fatal shootings", path: [] }, { kind: "decline", reason: "not_held", text: "We do not track non-fatal shootings.", buttons: [] }, "rel-1", 1);
+    assert.deepEqual([d.explanation, d.engine.kind, d.columns], ["We do not track non-fatal shootings.", "decline", []]);
+    const u = adaptEngineResponse({ tab: "nibrs", question: "q", path: [] }, { kind: "something-new" }, "rel-1", 1);
+    assert.deepEqual([u.engine.kind, typeof u.explanation], ["decline", "string"], "an unknown kind is shown as a decline, never a crash");
+    assert.equal(adaptEngineResponse({ tab: "nibrs", question: "q", path: [] }, null, "r", 1).rowCount, 0);
+  }
+
   // --- the route logic, with fakes
   {
     const logs: EngineLogRow[] = [];
@@ -96,7 +114,9 @@ async function main(): Promise<void> {
 
     let r = await handleEngineQuery(body, deps());
     assert.equal(r.status, 200);
-    assert.deepEqual([r.json.success, r.json.engine, r.json.release, r.json.ms], [true, true, "canon2-x", 50]);
+    const eng = r.json.engine as { kind: string; release: string; question: string; path: string[]; buttons: unknown[] };
+    assert.deepEqual([r.json.success, eng.kind, eng.release, eng.question, eng.path, r.json.executionTimeMs], [true, "answer", "canon2-x", "Robberies by weapon in Texas in 2024", [], 50]);
+    assert.deepEqual([r.json.title, r.json.columns, r.json.rowCount, r.json.sql], ["Counted by offense.", ["Weapon", "Robbery offenses"], 2, ""], "the answer is in the shape the page renders");
     assert.deepEqual([...calls], [{ tab: "nibrs", question: "Robberies by weapon in Texas in 2024", path: [] }], "tab defaults to nibrs; the question is trimmed");
     assert.equal(count(logs), 1, "one log row for an answer");
     assert.equal(logs[0].sessionId, "sess-1");
@@ -132,7 +152,7 @@ async function main(): Promise<void> {
       reset();
       result = { ok: false, kind, message: `m-${kind}` };
       r = await handleEngineQuery(body, deps());
-      assert.deepEqual([r.status, r.json.success, r.json.engine, r.json.kind, r.json.error], [status, false, true, kind, `m-${kind}`]);
+      assert.deepEqual([r.status, r.json.success, r.json.engineFailure, r.json.kind, r.json.error], [status, false, true, kind, `m-${kind}`]);
       assert.deepEqual([count(logs), logs[0].error], [1, `engine_${kind}`], "every outcome is logged");
     }
 
