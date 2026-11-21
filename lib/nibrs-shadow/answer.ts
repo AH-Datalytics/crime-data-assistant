@@ -35,7 +35,7 @@ import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
 import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
-import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
@@ -2773,6 +2773,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       plan.statistics.push({ kind: "count", as: "drug_crimes_together_count", measure: "drug_crimes_together" });
     }
   }
+  // P167 (Jeff 2026-11-19): "violent crime with a firearm" is NIBRS crimes against persons with the weapon on the victim's offense, and the answer
+  // says which crimes are counted (it is not the four crimes of the FBI's violent crime).
+  if (plan.measures.length === 1 && plan.measures[0].id === "violent_crime.ucr" && plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon")) {
+    plan.measures[0] = { ...plan.measures[0], id: "victims.person_crimes", unit: "victim" };
+    plan.filters = plan.filters.map((f): Filter => (f.kind === "exists" && f.entity === "offense_weapon" ? { ...f, scope: "victim" } : f));
+    plan.defaults.push({ path: "measures[0]", value: "victims.person_crimes", reason: "P167: violent crime with a weapon is counted as crimes against persons" });
+  }
   plan.measures.forEach((m, i) => {
     const name = m.id.replace(/^[a-z_]+\./, "");
     // D18: carjacking by offense; an offense has one location.
@@ -2796,6 +2803,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
       unbind((p) => p.concept === "unit");
       if (!statements.includes("property_counted_by_offense")) statements.push("property_counted_by_offense");
+    }
+    // P166 (Jeff 2026-11-19): a crime counted by victim, broken down by weapon, is counted by offense (the weapon belongs to the offense), and
+    // the answer says so: "Counts are aggravated assault offenses by weapon, not victims."
+    if (m.id.startsWith("victims.") && plan.measures[i].id === m.id && plan.groupings.some((g) => g.dimension === "offense_weapon.weapon")
+      && !!MEASURE_CODES[name] && !["violent_crime", "property_crime", "person_crimes", "against_property", "homicide", "homicide_all", "murder"].includes(name)) {
+      const toOffense = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" ? { ...f, scope: "offense" } : f);
+      plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense", ...(m.filters ? { filters: m.filters.map(toOffense) } : {}) };
+      plan.filters = plan.filters.map(toOffense);
+      plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P166: a breakdown by weapon counts the offenses, not the victims" });
+      unbind((p) => p.concept === "unit");
     }
   });
   // P31: a composite's crimes, each in its own unit (FBI standard), with the composite's weapon on the offense that
@@ -3147,6 +3164,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
     // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
     ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
+    // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
+    ...(plan.defaults.some((d) => d.reason.startsWith("P166")) ? [`Counts are ${MEASURE_LABEL[plan.measures[0].id.split(".")[1]] ?? "crime"} offenses by weapon, not victims.`] : []),
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),

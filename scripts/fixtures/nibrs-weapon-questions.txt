@@ -16,3 +16,7 @@ Firearm robberies in Texas in 2024
 Murders with a knife in Texas in 2024
 Violent crime with a firearm in Texas in 2024
 Aggravated assault incidents with a firearm in Ohio in 2024
+# P166 (capability PR 260): a victim crime by weapon is COUNTED BY OFFENSE (the planner converts victims.aggravated_assault to offenses.aggravated_assault), so the weapon cube serves it: the answer must equal the raw offense statement and say "Counts are aggravated assault offenses by weapon, not victims."
+Aggravated assault victims by weapon type in Texas in 2024
+Aggravated assault victims by weapon in Chicago in 2024
+# P167 (capability PR 260): "Violent crime with a firearm in Texas in 2024" above is now crimes against persons by VICTIM with the weapon on the victim's offense: it is conditioned, so it is NOT served from the weapon cube (raw only). Lower MIN_SERVED by one for it; the two P166 lines above add two.
