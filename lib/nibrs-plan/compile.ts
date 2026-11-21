@@ -47,7 +47,8 @@
  */
 import { cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
-import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import { FAMILIES, GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import cubeMeasures from "./cube-measures.json";
 import type { NibrsPlan } from "./plan";
 import { ATTRIBUTE_TABLE, type AttributeRow } from "./attribute-table";
 import { clearanceDims, peopleFacts, type AnswerStatement } from "./result";
@@ -72,7 +73,7 @@ export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "u
  * names (several agencies, combined, or a state's agencies). Totals, combined sums, rates and rankings are rolled from
  * the grid (lib/nibrs-plan/transforms.ts), so each agency-month keeps its own status (D6).
  */
-export type CompileTarget = { root: string; builtYears: number[]; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
+export type CompileTarget = { root: string; builtYears: number[]; /** Probe only (scripts/gen-cube-measure-checks.ts): lets every measure reach a cube so the generator can see which forms would. Never set in production. */ cubeAllMeasures?: boolean; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
 
 const CARJACK_VEHICLES = ["03", "05", "24", "28", "37"];
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -361,10 +362,12 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
  * arrest: "all_crime"). The cube is keyed by code list, so a measure with an extra condition inside its own statement (carjacking's stolen vehicle, domestic violence's
  * relationship and incident rules) would be read as the plain group that shares its codes: a wrong count, not a slow one. A measure is added here only with its own cube check.
  */
-// A plain measure that has not had its cell-by-cell cube check yet stays on raw statements (justifiable homicide, 09C: expected to equal the code cube's 09C row, never compared).
-const CUBE_NOT_CHECKED = new Set(["justifiable_homicide"]);
-const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES).filter((k) => !CUBE_NOT_CHECKED.has(k)), "drug_equipment", "drug_crimes", "all_crime"]);
-export const cubeServesMeasure = (id: string): boolean => CUBE_PLAIN_MEASURES.has(id.split(".")[1] ?? "");
+// The list is a FILE (cube-measures.json, written by scripts/gen-cube-measure-checks.ts and kept in step with this router by scripts/test-cube-measure-guard.ts): a measure is on it only with
+// the questions that prove a cube statement is built for it and that the runner compares against raw; every measure the vocabulary knows is on it or in the file's `raw` list with a reason.
+const CUBE_APPROVED = new Set(Object.keys(cubeMeasures.approved));
+export const cubeServesMeasure = (id: string): boolean => CUBE_APPROVED.has(id.split(".")[1] ?? "");
+/** Every measure name the vocabulary knows (the codes of MEASURE_CODES and EXTRA_CODES, the special families and all_crime), for the guard test: each must be classified in cube-measures.json. */
+export const knownMeasureNames = (): string[] => [...new Set([...Object.keys(MEASURE_CODES), ...Object.keys(EXTRA_CODES), ...FAMILIES, "all_crime"])].sort();
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"],
   // P82 (decided 2026-11-01): the crimes of domestic violence, counted by victim.
@@ -575,7 +578,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
   // (carjacking, domestic violence, any later one) is never answered from the cube row of the group whose code list it happens to share.
-  const cubeCfg = cubeWanted && cubeServesMeasure(m.id) ? cubeWanted : null;
+  const cubeCfg = cubeWanted && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;
