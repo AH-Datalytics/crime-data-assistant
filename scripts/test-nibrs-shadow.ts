@@ -484,6 +484,24 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(notMurder.kind === "decline" && notMurder.explanation === "Homicide Reports hold murders and homicides only.", JSON.stringify(notMurder).slice(0, 240));
     // A span wholly inside the source has no such line.
     assert.ok(!as(shadowAnswer("Houston murders through May from 1985 to 1987", sdeps), "shr").delivered.text.some((t) => /start in 1985/.test(t)));
+    // P163 (Jeff 2026-11-19): justifiable homicide is Homicide Reports' own measure; "police" alone is the felons killed by police (81), "civilians"
+    // alone the felons killed by a private citizen (80), neither word both together, both words the two side by side. Never counted as murder.
+    const jsql: string[] = [];
+    const jstub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/FROM read_parquet\('\/shr/.test(sql)) { jsql.push(sql); return /AS k0/.test(sql) ? [["80", 3], ["81", 2]] : [[5]]; }
+      return [];
+    };
+    const jdeps = { ...sdeps, execute: jstub } as ShadowDeps;
+    const first = (q: string) => { const n = jsql.length; const o = as(shadowAnswer(q, jdeps), "shr"); return { o, sql: jsql[n] }; };
+    const jboth = first("justifiable homicides in Houston in 2023");
+    assert.ok(/homicide_type = 'A' AND r\.circumstance IN \('80', '81'\) AND r\.agency_key/.test(jboth.sql), jboth.sql);
+    assert.ok(jboth.o.delivered.text.some((t) => /ustifiable/.test(t)), JSON.stringify(jboth.o.delivered.text));
+    assert.ok(/r\.circumstance IN \('80', '81'\) .* AND r\.circumstance IN \('81'\)$/.test(first("justifiable homicides by police in Houston in 2023").sql));
+    assert.ok(/r\.circumstance IN \('80', '81'\) .* AND r\.circumstance IN \('80'\)$/.test(first("justifiable homicides by civilians in Houston in 2023").sql));
+    const jvs = first("justifiable homicides by police vs civilians in Houston in 2023").o;
+    assert.ok(jvs.delivered.table.columns.some((c) => c.header === "Circumstance") && jvs.delivered.table.rows.length === 2, JSON.stringify(jvs.delivered.table));
+    {
     // P169 (Jeff 2026-11-19): domestic homicides are the murders whose victim was an intimate partner or a family or household member; the answer
     // names the relationships Homicide Reports do not record.
     const rsql: string[] = [];
@@ -529,6 +547,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(every.delivered.text.includes("No years were given, so every year in the data is shown: 1985 through 2026."), JSON.stringify(every.delivered.text));
     const share = as(shadowAnswer("What percentage of murder victims in Houston were male in 2023?", ddeps), "shr");
     assert.ok(share.delivered.table.columns.some((c) => c.header === "Share (%)") && share.delivered.table.columns.some((c) => c.header === "Victim's sex"), JSON.stringify(share.delivered.table.columns));
+    }
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
   for (const q of ["Murders through april New york city", "Murders through April in Houston"]) {

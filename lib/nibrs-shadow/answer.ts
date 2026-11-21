@@ -1282,6 +1282,13 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const compare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "versus") || /\bcompar/i.test(ledger0.question);
   const sq = shrQuestionOf(plan, period, deps.shr, { compare });
   if ("why" in sq) return null;
+  // P163 (Jeff 2026-11-19): justifiable homicides are shown for both kinds together; "police" in the question alone is the felons killed by
+  // police (code 81), "civilians" or "private citizens" alone the felons killed by a private citizen (80). Both words ask for the two side by side.
+  if (sq.measure === "justifiable" && !sq.breakdown && !sq.filters.some((f) => f.dim === "circumstance")) {
+    const said = [ledger0.question, ...(flags(ledger0).readings ?? []).filter((r) => r.kind === "phrase").map((r) => r.from)].join(" ");
+    const police = /\b(?:police|officers?|law\s+enforcement)\b/i.test(said), civilian = /\b(?:civilians?|private\s+citizens?|citizens?)\b/i.test(said);
+    if (police !== civilian) sq.filters.push({ dim: "circumstance", codes: [police ? "81" : "80"] });
+  }
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
   if (a.kind === "shr" && detailEveryYear)
     return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
@@ -2884,10 +2891,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Any person's detail selected, offenders' included (Codex SHR-A review 01.6).
   const detailSelectedAny = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim));
   // P152 (Jeff 2026-11-19): "Homicide Reports" in the words asks for that source: murders and homicides only, said plainly otherwise.
-  if (flags(ledger0).shrAsked && !plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id)))
+  if (flags(ledger0).shrAsked && !plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide|justifiable_homicide)(?![a-z_])/.test(m.id)))
     return decline("unsupported_capability", "Homicide Reports hold murders and homicides only.");
-  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny || flags(ledger0).shrAsked)
-    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
+  // P163 (Jeff 2026-11-19): justifiable homicide is Homicide Reports' (a felon killed by a private citizen or by police), whatever the years.
+  const justifiable = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.justifiable_homicide$/.test(m.id));
+  const murderDetail = (catG.some((g) => shrDetailDim(g.dimension)) || detailSelectedAny || flags(ledger0).shrAsked || justifiable)
+    && plan.measures.every((m) => /^(?:victims|offenders|offenses)\.(?:murder|homicide_all|homicide|justifiable_homicide)(?![a-z_])/.test(m.id))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
   if (!stateMode && murderDetail) {
     const s = plan.geography.places.length > 1 ? shrSeveral(plan, deps, ledger0) : shrOutcome(plan, deps, ledger0);
@@ -3010,7 +3019,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // details (the victims, offenders, relationship, weapon, circumstance): a location or a clearance stays NIBRS's
     // (Codex coverage review 1).
     const shrDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
-    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))
+    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide_all|homicide|justifiable_homicide)(?![a-z_])/.test(m.id))
       && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
       && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
     if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
