@@ -60468,7 +60468,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the FBI's definition, named as the FBI's",
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -60478,8 +60478,8 @@
     "status": "reviewed",
     "rule": "R06",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D1 (Jeff 2026-11-04): FBI definitions"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "clearance types (P191): the question asks counts by clearance type; rule-based, Codex second labeler"
    }
   },
   {
