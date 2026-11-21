@@ -207,6 +207,17 @@ const PHRASES: [RegExp, string][] = [
   [/\bv(?:lolent|ilont|iolant|ilolent)\b/gi, (m: string) => (m[0] === "V" ? "Violent" : "violent")] as unknown as [RegExp, string],
   [/\bckearance\b/gi, (m: string) => (m[0] === "C" ? "Clearance" : "clearance")] as unknown as [RegExp, string],
   [/\bmoter(\s+vehicle)/gi, (m: string, v: string) => `${m[0] === "M" ? "Motor" : "motor"}${v}`] as unknown as [RegExp, string],
+  // Reader class (census 2026-11-21, real asks): small words and slips the log shows. "how many murders occurred in Colorado" (spelled
+  // "ocurred", "occured", "occurredin") is "murders in Colorado"; "how mnay" is "how many"; "sincce" is "since"; "for year 2026" is "in 2026";
+  // "retail theft" is shoplifting; "larceny from auto" is theft from a motor vehicle; "violent crime and property trends" is violent crime and property crime.
+  [/\b(?:have\s+|has\s+|had\s+)?(?:occurred|occured|ocurred|occurrd|occurrred)\s*in\b/gi, "in"],
+  [/\bhow\s+(?:mnay|mny|manny|mamy)\b/gi, "how many"],
+  [/\bs(?:incce|icne|inec|ince(?=e))\b/gi, "since"],
+  [/\bfor\s+year\s+((?:19|20)\d{2})\b/gi, "in $1"],
+  [/\bmassachuss?ett?s\b|\bmassachusetes\b|\bmassachussetts\b|\bmasachusetts\b/gi, "Massachusetts"],
+  [/\bretail\s+thefts?\b/gi, "shoplifting"],
+  [/\blarcen(?:y|ies)\s+(?:from|of)\s+(?:an?\s+)?(?:auto|autos|motor\s+vehicles?|vehicles?|cars?)\b/gi, "theft from motor vehicle"],
+  [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
@@ -229,6 +240,20 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P163 (Jeff 2026-11-19): justifiable homicides "by police vs civilians" are the two kinds of justifiable homicide side by side (the
+  // circumstance breakdown); "by police" alone (or "by civilians" alone) is read from the question text where the answer is made.
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:private\s+)?(?:civilians?|citizens?)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:the\s+)?(?:police|officers|law\s+enforcement)\b/gi, "$1 by circumstance"],
+  [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
+  // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
+  // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|were\s+committed\s+(?:with|using)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
+  [/\s+analysis\s+for\s+/gi, " in "],
+  // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
+  [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
+  [/\bfamily\s+violence\b/gi, "domestic violence by family members"],
   // P160 (Jeff 2026-11-19): a person's detail written as a noun phrase is that breakdown: "murder victim race in Houston" is
   // "murder victims by race in Houston", "homicide offender race" is "homicide offenders by race"; "victim demographics by
   // race" is "victims by race"; "the racial breakdown of murder victims" is "murder victims by race"; "homicide circumstances"
@@ -570,6 +595,13 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   for (const [re, to, weapon] of COMPOSITES) text = text.replace(re, (m) => {
     readings.push({ kind: "phrase", from: m, to });
     composite = weapon;
+    return to;
+  });
+  // A year named beside the to-date word is that one period ("Memphis ... 2026 year-to-date", "YTD 2026", "year to date for 2026"): read once, never as
+  // the named year plus the current year ("I can answer for one period at a time").
+  text = text.replace(/\b(?:((?:19|20)\d{2})\s+(?:year[-\s]to[-\s]date|ytd)|(?:year[-\s]to[-\s]date|ytd)\s+(?:(?:of|for|in)\s+)?((?:19|20)\d{2}))\b/gi, (m, a, b) => {
+    const to = `in ${a ?? b}`;
+    readings.push({ kind: "period", from: m, to });
     return to;
   });
   text = text.replace(YTD, (m, y) => {

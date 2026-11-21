@@ -130,6 +130,11 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
 /** "Violent crime" by a victim's or offender's age: NIBRS crimes against persons (no robbery named: Jeff 2026-11-15). */
 export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.";
 /** "All homicides" (Jeff 2026-11-16): what NIBRS counted. */
+/** Domestic violence (P82): what NIBRS counted, one line. */
+export const DOMESTIC_VIOLENCE_LINE = "Domestic violence counts each victim of murder or manslaughter, a sex offense, assault, kidnapping, incest, statutory rape or human trafficking whose offender, or one of the offenders, was the victim's intimate partner or a family or household member.";
+export const DOMESTIC_VIOLENCE_OFFENSES_LINE = "Offenses are the offenses of those crimes in incidents that had a domestic violence victim.";
+export const DOMESTIC_VIOLENCE_ARRESTS_LINE = "Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders.";
+export const DOMESTIC_VIOLENCE_INCIDENTS_LINE ="An incident is counted once when at least one of its victims is counted as a domestic violence victim.";
 export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide.";
 /** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";

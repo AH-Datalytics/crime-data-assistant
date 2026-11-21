@@ -17,13 +17,13 @@
 import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
-import { combineMonths, rankAgencies, rate, rollup, type Cell, type MonthCell } from "../nibrs-plan/transforms";
+import { combineMonths, rankAgencies, rate, rollup, truncatedTieSentence, type Cell, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { agencyName, reportedBy, stateName } from "./places";
 import { deliverMonthly, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 import { periodTitle, titleCase } from "./titles";
-import { agencySubject, rateNoun, rateSentence, seriesTitle } from "./headline";
+import { agencySubject, rateNoun, rateSentence, seriesTitle, titleTimeframe } from "./headline";
 
 const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
 
@@ -123,7 +123,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const floor = set.where.find((w) => w.field === "agency.population");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
     const most = rankT.direction === "top" ? (isRate ? "highest" : "most") : (isRate ? "lowest" : "fewest");
-    lines.push(`${periodTitle(period, periodWords)} ${titleCase(what)}${isRate ? " per 100,000" : ""} by City, ${where}${floor ? `, Population ${fmt(Number(floor.value))} or More` : ""}`);
+    lines.push(`${where} ${titleCase(what)}${isRate ? " per 100,000" : ""} by City${floor ? `, Population ${fmt(Number(floor.value))} or More` : ""}, ${titleTimeframe(periodTitle(period, periodWords))}`);
     partLine();
     lines.push(`The ${ranked.length} agencies with the ${most} ${what}${isRate ? " per 100,000" : ""} are shown.`);
     const full = partYear ? `every month of ${when}` : `all 12 months of ${when}`;
@@ -131,7 +131,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     lines.push(`Only agencies with data for ${full} are ranked, and ties are ordered by agency name.`);
     // A tie at the cut shows every place tied, said plainly (coordinator 2026-11-06: "Arlington and Amarillo tie for
     // 10th, so 11 places are shown").
-    if (tie) {
+    if (tie?.truncated) lines.push(truncatedTieSentence(tie, isRate));
+    else if (tie) {
       const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
       const names = tie.names.length > 2 ? `${tie.names.slice(0, -1).join(", ")} and ${tie.names[tie.names.length - 1]}` : tie.names.join(" and ");
       lines.push(`${names} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
