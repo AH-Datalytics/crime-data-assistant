@@ -86,8 +86,10 @@ function stub0(sql: string): unknown[][] {
     const out: unknown[][] = [];
     for (const [k, a] of by) {
       out.push(["c", oris.get(k), a[0], a[1], a[2], a[3], a[4], a[5], null, null]);
-      const arrest = Math.floor(a[3] / 2), none = a[3] - arrest;
-      out.push(["s", oris.get(k), a[0], arrest, null, null, null, null, "arrest", Math.max(arrest - 1, 0)], ["s", oris.get(k), a[0], none, null, null, null, null, "none", Math.max(none - 1, 0)]);
+      // Half by arrest, one in twelve under each exceptional type A to E (the stub's Smallville has none of C), the rest not cleared.
+      const arrest = Math.floor(a[3] / 2), ex = Math.floor(a[3] / 12), none = a[3] - arrest - 5 * ex;
+      const cats: [string, number][] = [["arrest", arrest], ["A", ex], ["B", ex], ["C", ex], ["D", ex], ["E", ex], ["none", none]];
+      for (const [c, n] of cats) out.push(["s", oris.get(k), a[0], n, null, null, null, null, c, Math.max(n - 1, 0)]);
     }
     return out;
   }
@@ -2757,8 +2759,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const rows = tx.delivered.table.rows.map((r) => [r[0], r[1], r[2]]);
   // Houston 9 + Dallas 7 + Austin 5 + Smallville 5 a month for 12 months = 312 units, half cleared by arrest; the incidents are one fewer per agency and type.
   assert.deepEqual(rows.map((r) => r[1] === undefined ? r[0] : r.slice(0, 3)).flat().filter((x) => typeof x === "number").slice(0, 4).length > 0, true, JSON.stringify(tx.delivered.table));
-  const nums = tx.delivered.table.rows.flatMap((r) => r.filter((x) => typeof x === "number") as number[]);
-  assert.ok(nums.includes(156) && nums.includes(152), `156 units and 152 incidents per type: ${JSON.stringify(tx.delivered.table.rows)}`);
+  // Jeff 2026-11-21: one row for arrest, each exceptional type A to E and not cleared, named as one agency's answer names them (no codes).
+  const names = tx.delivered.table.rows.map((r) => String(r[0]));
+  assert.deepEqual([...names].sort(), ["Cleared by arrest", "Exceptional: death of the offender", "Exceptional: in custody of another jurisdiction", "Exceptional: juvenile, no custody",
+    "Exceptional: prosecution declined", "Exceptional: victim refused to cooperate", "Uncleared"].sort(), JSON.stringify(names));
+  assert.ok(names.every((n) => !/^Code |^[A-E]$/.test(n)));
+  const byName = (n: string) => tx.delivered.table.rows.find((r) => r[0] === n)!;
+  // Houston 108 + Dallas 84 + Austin 60 + Smallville 60 = 312 units; arrest 54 + 42 + 30 + 30 = 156, each exceptional type 9 + 7 + 5 + 5 = 26; the rest 26; incidents one fewer per agency.
+  assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
+  assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
   assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
   // The nation stays declined until its timing is known; a clearance rate for a state keeps its own decline.
   assert.equal(ask("murder clearance by type in the United States in 2025").kind, "decline");
