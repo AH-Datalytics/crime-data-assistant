@@ -3159,6 +3159,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
     // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.
     ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
+    // P168: a person counted by a weapon of the incident's crime (the data does not link a person to one offense), one agency.
+    ...([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_weapon" && (f.scope === "offender" || f.scope === "arrestee"))
+      ? ["A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."] : []),
     // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
     ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),

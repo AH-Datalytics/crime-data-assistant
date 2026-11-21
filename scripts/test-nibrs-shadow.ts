@@ -160,6 +160,15 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P168 (Jeff 2026-11-19): offenders or arrests by age for the crimes of an incident with a weapon, for one agency; the answer says how a person is counted.
+{
+  const byAge = as(ask("violent crimes involving a firearm in Houston in 2025 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(byAge.plan.measures[0].id, "offenders.person_crimes");
+  assert.ok(byAge.delivered.text.includes("A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."), JSON.stringify(byAge.delivered.text));
+  const arrests = as(ask("violent crime with a firearm in Houston in 2025 by age of arrestee"), "answer") as unknown as { delivered: { text: string[] } };
+  assert.ok(arrests.delivered.text.some((t) => /^A person is counted when the incident's crime/.test(t)), JSON.stringify(arrests.delivered.text));
+  assert.ok(sqls.some((s) => /w2\.offense_code IN \('09A'.*weapon IN \('11', '12', '13', '14', '15'\)/.test(s)), "the weapon is asked of the incident's offenses of the measure's codes");
+}
 // P170 (P82, Jeff 2026-11-19): domestic violence is the victims of the P82 crimes with an intimate partner or a family or household relationship to any offender, for one agency first.
 {
   const dv = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
