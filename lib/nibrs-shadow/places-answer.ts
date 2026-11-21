@@ -23,7 +23,7 @@ import { agencyName, reportedBy, stateName } from "./places";
 import { deliverMonthly, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 import { periodTitle, titleCase } from "./titles";
-import { agencySubject, rateNoun, rateSentence, seriesTitle } from "./headline";
+import { agencySubject, rateNoun, rateSentence, seriesTitle, titleTimeframe } from "./headline";
 
 const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
 
@@ -123,7 +123,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const floor = set.where.find((w) => w.field === "agency.population");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
     const most = rankT.direction === "top" ? (isRate ? "highest" : "most") : (isRate ? "lowest" : "fewest");
-    lines.push(`${periodTitle(period, periodWords)} ${titleCase(what)}${isRate ? " per 100,000" : ""} by City, ${where}${floor ? `, Population ${fmt(Number(floor.value))} or More` : ""}`);
+    lines.push(`${where} ${titleCase(what)}${isRate ? " per 100,000" : ""} by City${floor ? `, Population ${fmt(Number(floor.value))} or More` : ""}, ${titleTimeframe(periodTitle(period, periodWords))}`);
     partLine();
     lines.push(`The ${ranked.length} agencies with the ${most} ${what}${isRate ? " per 100,000" : ""} are shown.`);
     const full = partYear ? `every month of ${when}` : `all 12 months of ${when}`;
