@@ -131,7 +131,7 @@ const FILTERS: Rule[] = [
   { concept: "fentanyl", pattern: R(String.raw`\bfentanyl\b`), state: "not-recorded", explanation: FENTANYL },
   // domestic violence categories
   { concept: "filter", value: () => "dv:intimate_partner", pattern: R(String.raw`\bintimate[-\s]partners?(?:\s+violence)?\b|\bipv\b`) },
-  { concept: "filter", value: () => "dv:family", pattern: R(String.raw`\bfamily\s+violence\b`) },
+  { concept: "filter", value: () => "dv:family", pattern: R(String.raw`\bfamily\s+violence\b|\bby\s+(?:family|household)\s+members?\b`) },
   // P169 (Jeff 2026-11-19): "domestic homicides" / "domestic murders" are the murders whose victim was an intimate partner or a family or household member.
   { concept: "filter", value: () => "dv:domestic", pattern: R(String.raw`\bdomestic(?:\s+violence)?(?=\s+(?:homicides?|murders?|killings?)\b)`) },
   // bias motivations
@@ -222,6 +222,8 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "all_crime", pattern: R(String.raw`\b(?:total|all|overall)\s+(?:crimes?|offenses?)\b`) },
   // P10 (Jeff 2026-11-16): "all homicides" adds justifiable homicide (09C) beside murder and negligent manslaughter.
   { concept: "measure", value: () => "homicide_all", pattern: R(String.raw`\ball\s+(?:homicides?|homicide\s+types)\b`) },
+  // P163 (Jeff 2026-11-19): justifiable homicide is its own measure (a felon killed by a private citizen or by police), never murder.
+  { concept: "measure", value: () => "justifiable_homicide", pattern: R(String.raw`\bjustifiable\s+(?:homicides?|killings?)\b`) },
   { concept: "measure", value: () => "homicide", pattern: R(String.raw`\bhomicides?\b`) },
   { concept: "measure", value: () => "murder", pattern: R(String.raw`\bmurders?\b|\bkillings?\b`) },
   { concept: "measure", value: () => "rape", pattern: R(String.raw`\brapes?\b`) },
@@ -275,6 +277,8 @@ const RULES: Rule[] = [
   { concept: "no-fines-fees", pattern: R(String.raw`\bfines?\s+(?:or|and)\s+fees\b|\b(?:court|criminal|legal)\s+(?:fines?|fees)\b|\bfines\b`), state: "not-recorded", explanation: notRecorded("court fines or fees; it records crimes reported to police, arrests and clearances") },
   { concept: "no-housing-type", pattern: R(String.raw`\b(?:multi[-\s]?family|single[-\s]?family)(?:\s+(?:apartment|complexes|buildings?|properties|homes?|houses?|residences?|dwellings?|units?))*\b`), state: "not-recorded", explanation: notRecorded("single-family versus multifamily housing or individual apartment complexes; the data stops at the agency level") },
   { concept: "no-metro-areas", pattern: R(String.raw`\bmetro(?:politan)?\s+areas?\b|\bmsas?\b|\bcbsas?\b`), state: "not-recorded", explanation: notRecorded("metropolitan areas; places here are agencies, counties, states or the nation") },
+  // Police-involved domestic violence (an offender who is a police officer): occupation is not recorded, so the question is declined, never answered as all domestic violence.
+  { concept: "no-police-involved", pattern: R(String.raw`\b(?:police|officer|law[-\s]enforcement)[-\s]involved\b`), state: "not-recorded", explanation: notRecorded("whether an offender is a police officer or any other occupation") },
   { concept: "no-police-killings", pattern: R(String.raw`\b(?:killed|deaths?|fatalities)\s+(?:by|from|at\s+the\s+hands\s+of)\s+(?:the\s+)?(?:police|law\s+enforcement(?:\s+officers?)?|cops|officers|sheriffs?|deput(?:y|ies))\b`), state: "not-recorded", explanation: notRecorded("deaths caused by law enforcement; it does not count them comprehensively") },
   // Option 3 batch 1 (P367): "or distribution of", "sales of drugs": not a separate NIBRS measure.
   { concept: "drug-activity", pattern: R(String.raw`\b(?:or|and)\s+(?:distribution|distributing|dealing|sales?|selling|trafficking)(?:\s+of)?\b|\b(?:distribution|dealing|sales?|selling|trafficking)\s+of\s+(?:drugs?|narcotics?)\b`), state: "not-recorded", explanation: DRUG_ACTIVITY },
