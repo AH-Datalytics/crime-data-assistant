@@ -504,6 +504,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       const on = `${f.entity} ${w?.dimension} ${f.scope} ${entity}`;
       if (on === "offense_weapon offense_weapon.weapon offense offense")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameOffense("w2", "o")} AND ${weaponIn("w2", values)})`);
+      else if (on === "offense_weapon offense_weapon.weapon offender offender" && codes.length && !grid)
+        // P168: an offender is not linked to one offense, so the offenders of an incident with an offense of the measure's codes that had the weapon.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "f")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
+      else if (on === "offense_weapon offense_weapon.weapon arrestee arrestee" && codes.length && !grid)
+        // P168: an arrest on an incident with an offense of the measure's codes that had the weapon (as an arrest on an incident with an offense of the codes, above).
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "a")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
       else if (on === "offense_weapon offense_weapon.weapon victim victim")
         // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
         // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.
