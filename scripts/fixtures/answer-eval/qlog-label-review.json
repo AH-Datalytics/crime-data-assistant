@@ -33,15 +33,7 @@
 },
 "QL-ct-02efee94c8": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-032604ee4d": {
 "status": "reviewed",
@@ -57,15 +49,7 @@
 },
 "QL-ct-044b1c2d8b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-044d076301": {
 "status": "reviewed",
@@ -85,15 +69,7 @@
 },
 "QL-ct-05207c1c39": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-055a43e626": {
 "status": "reviewed",
@@ -215,15 +191,7 @@
 },
 "QL-ct-0d0619170f": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-0d63ef207a": {
 "status": "draft",
@@ -341,15 +309,7 @@
 },
 "QL-ct-0f9d4c2ca6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-11a62c2341": {
 "status": "draft",
@@ -444,13 +404,12 @@
 },
 "QL-ct-15953e5e90": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -579,15 +538,7 @@
 },
 "QL-ct-1b2d72b814": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-1b5a0fbff6": {
 "status": "reviewed",
@@ -700,15 +651,7 @@
 },
 "QL-ct-22d8219062": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-234c6538d0": {
 "status": "reviewed",
@@ -736,15 +679,7 @@
 },
 "QL-ct-249ec8f677": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-24a3f5183f": {
 "status": "reviewed",
@@ -853,15 +788,7 @@
 },
 "QL-ct-284a2a38ab": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-2856a9f0fb": {
 "status": "reviewed",
@@ -907,15 +834,7 @@
 },
 "QL-ct-2971127fb4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-29e52f8bd6": {
 "status": "reviewed",
@@ -931,15 +850,7 @@
 },
 "QL-ct-2a926dd306": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-2b0349e8cd": {
 "status": "draft",
@@ -1125,15 +1036,7 @@
 },
 "QL-ct-37db955605": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-382e531ff6": {
 "status": "draft",
@@ -1239,15 +1142,7 @@
 },
 "QL-ct-3fc37547d0": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-400464e9e9": {
 "status": "reviewed",
@@ -1259,15 +1154,7 @@
 },
 "QL-ct-40c37371d8": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-41ade9349c": {
 "status": "reviewed",
@@ -1340,15 +1227,7 @@
 },
 "QL-ct-466ae09644": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-46e524d3a7": {
 "status": "reviewed",
@@ -1387,15 +1266,7 @@
 },
 "QL-ct-49902c69a7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-49f10ad033": {
 "status": "reviewed",
@@ -1596,15 +1467,7 @@
 },
 "QL-ct-5348be64c9": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-53e57c212a": {
 "status": "reviewed",
@@ -1649,15 +1512,7 @@
 },
 "QL-ct-54f833a755": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-5508a82b64": {
 "status": "reviewed",
@@ -1751,15 +1606,7 @@
 },
 "QL-ct-5b14c76028": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-5b406272e9": {
 "status": "reviewed",
@@ -1784,15 +1631,7 @@
 },
 "QL-ct-5c43502d8a": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-5cb7168473": {
 "status": "draft",
@@ -1846,15 +1685,7 @@
 },
 "QL-ct-5e94d1c0f5": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-5ef5ef0364": {
 "status": "reviewed",
@@ -1981,15 +1812,7 @@
 },
 "QL-ct-64a3a1ebfa": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-64e0221f9a": {
 "status": "reviewed",
@@ -2088,15 +1911,7 @@
 },
 "QL-ct-6857db5c72": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-685e5422ff": {
 "status": "reviewed",
@@ -2171,15 +1986,7 @@
 },
 "QL-ct-6c1fa8cca0": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-6c215c2301": {
 "status": "reviewed",
@@ -2398,15 +2205,7 @@
 },
 "QL-ct-72acf63fed": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-72cccd1bcd": {
 "status": "reviewed",
@@ -2555,15 +2354,7 @@
 },
 "QL-ct-784da15084": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-795fe7d926": {
 "status": "reviewed",
@@ -2646,39 +2437,15 @@
 },
 "QL-ct-8175febb5f": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-817d9f2fa6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8236ecd184": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8281018a03": {
 "status": "reviewed",
@@ -2686,15 +2453,7 @@
 },
 "QL-ct-82e96877f2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-83ccbd67c0": {
 "status": "reviewed",
@@ -2702,15 +2461,7 @@
 },
 "QL-ct-84257d4348": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8473882fe3": {
 "status": "reviewed",
@@ -2729,25 +2480,17 @@
 },
 "QL-ct-848734783e": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-85b412bcd7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
 ]
 }
 },
@@ -2848,15 +2591,7 @@
 },
 "QL-ct-8ac85de938": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8af732b532": {
 "status": "reviewed",
@@ -2884,15 +2619,7 @@
 },
 "QL-ct-8d3ae0e6f9": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8db47643ca": {
 "status": "draft",
@@ -2952,15 +2679,7 @@
 },
 "QL-ct-90df667521": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-90f53b4f51": {
 "status": "draft",
@@ -3164,15 +2883,7 @@
 },
 "QL-ct-9c9f209702": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-9cb30b663a": {
 "status": "reviewed",
@@ -3184,15 +2895,7 @@
 },
 "QL-ct-9dffba280e": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-9e726e7163": {
 "status": "reviewed",
@@ -3200,15 +2903,7 @@
 },
 "QL-ct-9efa2b4b64": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-9f18f436a0": {
 "status": "reviewed",
@@ -3253,15 +2948,7 @@
 },
 "QL-ct-9fcc4f488b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-a10e4c85df": {
 "status": "reviewed",
@@ -3349,15 +3036,7 @@
 },
 "QL-ct-a5fb444727": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-a622b1abdb": {
 "status": "reviewed",
@@ -3451,15 +3130,7 @@
 },
 "QL-ct-ad603f5854": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-ada11013b3": {
 "status": "reviewed",
@@ -3471,27 +3142,11 @@
 },
 "QL-ct-aea2d9733e": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-aec0429f74": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-af6638402f": {
 "status": "reviewed",
@@ -3579,27 +3234,11 @@
 },
 "QL-ct-b4745ffc27": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-b4eb855d89": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-b59cfdca3c": {
 "status": "reviewed",
@@ -3751,15 +3390,7 @@
 },
 "QL-ct-c0d723d0b2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c0dfedfee5": {
 "status": "reviewed",
@@ -3789,15 +3420,7 @@
 },
 "QL-ct-c1d663d4ea": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c2599fb9d3": {
 "status": "reviewed",
@@ -3809,15 +3432,7 @@
 },
 "QL-ct-c314cb210d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c37505c3fd": {
 "status": "reviewed",
@@ -3841,15 +3456,7 @@
 },
 "QL-ct-c407129a27": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c490651b2a": {
 "status": "reviewed",
@@ -3865,15 +3472,7 @@
 },
 "QL-ct-c51ebcc696": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c5febb0077": {
 "status": "reviewed",
@@ -3902,15 +3501,7 @@
 },
 "QL-ct-c634f23382": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c671e95f5b": {
 "status": "reviewed",
@@ -3962,15 +3553,7 @@
 },
 "QL-ct-c8786862f3": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c92ce4820a": {
 "status": "reviewed",
@@ -4048,15 +3631,7 @@
 },
 "QL-ct-cd9a53a332": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-cdad65033c": {
 "status": "draft",
@@ -4096,14 +3671,14 @@
 "by": "codex-second-1"
 },
 "QL-ct-ce3e48f994": {
-"status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"status": "draft",
+"by": "codex-second-1",
+"why": "No comparison baseline is supplied.",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"comparison place",
+"period"
 ]
 }
 },
@@ -4264,15 +3839,7 @@
 },
 "QL-ct-d51bef23a5": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-d5b345b9dc": {
 "status": "draft",
@@ -4318,15 +3885,7 @@
 },
 "QL-ct-d75a29e499": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-d771cabf31": {
 "status": "reviewed",
@@ -4539,15 +4098,7 @@
 },
 "QL-ct-e458d653a4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-e4a7dfd910": {
 "status": "reviewed",
@@ -4555,15 +4106,7 @@
 },
 "QL-ct-e517b2324c": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-e51f50aa19": {
 "status": "reviewed",
@@ -4610,15 +4153,7 @@
 },
 "QL-ct-e763fe102b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-e79bbb0d4f": {
 "status": "draft",
@@ -4793,15 +4328,7 @@
 },
 "QL-ct-f1bc4cd8d7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-f23ce28af1": {
 "status": "reviewed",
@@ -4809,15 +4336,7 @@
 },
 "QL-ct-f3a4576614": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-f3b1e8f431": {
 "status": "reviewed",
@@ -4833,15 +4352,7 @@
 },
 "QL-ct-f40a6163a1": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-f41161579d": {
 "status": "reviewed",
@@ -4996,15 +4507,7 @@
 },
 "QL-ct-f7c019cf71": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-f8648874f6": {
 "status": "reviewed",
@@ -5170,15 +4673,7 @@
 },
 "QL-ct-ffdbdb7940": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-ffdd173d12": {
 "status": "reviewed",
@@ -5375,15 +4870,7 @@
 },
 "QL-hist-00806c8eb6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-009fdb4ecf": {
 "status": "reviewed",
@@ -5395,15 +4882,7 @@
 },
 "QL-hist-0221c68104": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-02316224ec": {
 "status": "reviewed",
@@ -5488,15 +4967,7 @@
 },
 "QL-hist-06ad7ab812": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-06b7771900": {
 "status": "draft",
@@ -5511,15 +4982,7 @@
 },
 "QL-hist-06bf4f7494": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-079af70597": {
 "status": "reviewed",
@@ -5620,15 +5083,7 @@
 },
 "QL-hist-0c6aee61cf": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-0cb0ebde92": {
 "status": "reviewed",
@@ -5817,15 +5272,7 @@
 },
 "QL-hist-16f9323b65": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-172637a206": {
 "status": "draft",
@@ -5851,15 +5298,7 @@
 },
 "QL-hist-18271ba6f5": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-184acc0c40": {
 "status": "draft",
@@ -5982,15 +5421,7 @@
 },
 "QL-hist-200454c354": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-20e371adac": {
 "status": "draft",
@@ -6018,15 +5449,7 @@
 },
 "QL-hist-21c8bfa2e2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-2207a11038": {
 "status": "reviewed",
@@ -6101,15 +5524,7 @@
 },
 "QL-hist-284a2a38ab": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-290bfcefc9": {
 "status": "reviewed",
@@ -6129,15 +5544,7 @@
 },
 "QL-hist-2a7f8b5d0e": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-2a9faf994e": {
 "status": "reviewed",
@@ -6299,15 +5706,7 @@
 },
 "QL-hist-360d76d337": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-365d88b7b5": {
 "status": "draft",
@@ -6539,15 +5938,7 @@
 },
 "QL-hist-41c66624f4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-42073f9426": {
 "status": "reviewed",
@@ -6575,15 +5966,7 @@
 },
 "QL-hist-43ccbffa40": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-43eb6b2933": {
 "status": "reviewed",
@@ -6600,15 +5983,7 @@
 },
 "QL-hist-44d40ebbd6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-44e77e4d21": {
 "status": "reviewed",
@@ -6644,15 +6019,7 @@
 },
 "QL-hist-4866c5a19c": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-48e3359e9a": {
 "status": "reviewed",
@@ -6660,15 +6027,7 @@
 },
 "QL-hist-48f35be03d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-490692e53b": {
 "status": "reviewed",
@@ -6839,15 +6198,7 @@
 },
 "QL-hist-53324e2570": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-53668ad682": {
 "status": "reviewed",
@@ -7011,13 +6362,13 @@
 },
 "QL-hist-5d8dbe9215": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
 ]
 }
 },
@@ -7071,14 +6422,14 @@
 "by": "codex-second-1"
 },
 "QL-hist-6031946974": {
-"status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"status": "draft",
+"by": "codex-second-1",
+"why": "P28 requires city versus county.",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"which Baltimore",
+"period"
 ]
 }
 },
@@ -7186,15 +6537,7 @@
 },
 "QL-hist-659d619e04": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-65ae9ba87a": {
 "status": "reviewed",
@@ -7247,15 +6590,7 @@
 },
 "QL-hist-68daf7a592": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-699c710f50": {
 "status": "reviewed",
@@ -7409,15 +6744,7 @@
 },
 "QL-hist-71d3299cb7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-71e1033593": {
 "status": "reviewed",
@@ -7553,14 +6880,13 @@
 "by": "codex-second-1"
 },
 "QL-hist-7a7483cd6d": {
-"status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"status": "draft",
+"by": "codex-second-1",
+"why": "Cops clearly means police officers.",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -7888,15 +7214,7 @@
 },
 "QL-hist-91470fc854": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-919e10fb48": {
 "status": "reviewed",
@@ -7927,15 +7245,7 @@
 },
 "QL-hist-93963c24fe": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-93ee89ff46": {
 "status": "reviewed",
@@ -7976,27 +7286,11 @@
 },
 "QL-hist-95ff490bd5": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-962eb80e59": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-972ebafb9b": {
 "status": "reviewed",
@@ -8091,15 +7385,7 @@
 },
 "QL-hist-9a7ca1fc04": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-9aabb4f610": {
 "status": "reviewed",
@@ -8172,15 +7458,7 @@
 },
 "QL-hist-9d988510dc": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-9fca4ab766": {
 "status": "reviewed",
@@ -8188,15 +7466,7 @@
 },
 "QL-hist-9fec58b242": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-a02cdb1065": {
 "status": "draft",
@@ -8244,15 +7514,7 @@
 },
 "QL-hist-a2f87f1758": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-a361a102f0": {
 "status": "reviewed",
@@ -8367,15 +7629,7 @@
 },
 "QL-hist-ad09800576": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-ad6c946535": {
 "status": "reviewed",
@@ -8418,15 +7672,7 @@
 },
 "QL-hist-aecb4970f3": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-aed1d47be5": {
 "status": "reviewed",
@@ -8460,15 +7706,7 @@
 },
 "QL-hist-b1ba38d842": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-b1dff57f9a": {
 "status": "reviewed",
@@ -8530,15 +7768,7 @@
 },
 "QL-hist-b4745ffc27": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-b47c8b9d58": {
 "status": "reviewed",
@@ -8560,15 +7790,7 @@
 },
 "QL-hist-b683936167": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-b69a1d880b": {
 "status": "reviewed",
@@ -8588,15 +7810,7 @@
 },
 "QL-hist-b7840b658c": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-b7bf61afa6": {
 "status": "reviewed",
@@ -8613,15 +7827,7 @@
 },
 "QL-hist-b8b361a3d6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-b90835c6f0": {
 "status": "draft",
@@ -8657,15 +7863,7 @@
 },
 "QL-hist-ba76c020ec": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-ba8620128c": {
 "status": "reviewed",
@@ -8774,39 +7972,15 @@
 },
 "QL-hist-c0cbe36088": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c125d271c5": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c12616f395": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c13647e676": {
 "status": "reviewed",
@@ -8876,15 +8050,7 @@
 },
 "QL-hist-c637e4cc89": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c660e8c0be": {
 "status": "reviewed",
@@ -8917,15 +8083,7 @@
 },
 "QL-hist-c7746d3fb6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c7806a2de5": {
 "status": "reviewed",
@@ -8958,15 +8116,7 @@
 },
 "QL-hist-c85cf00086": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c987716d0b": {
 "status": "reviewed",
@@ -8989,15 +8139,7 @@
 },
 "QL-hist-ca0a7cac07": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-cb0a873518": {
 "status": "draft",
@@ -9082,15 +8224,7 @@
 },
 "QL-hist-cf6e782d06": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-cf73c94c19": {
 "status": "draft",
@@ -9133,13 +8267,12 @@
 },
 "QL-hist-d154718834": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -9299,15 +8432,7 @@
 },
 "QL-hist-ddf8a494cb": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-debe6a1d64": {
 "status": "reviewed",
@@ -9340,15 +8465,7 @@
 },
 "QL-hist-e041c60942": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e0c82bb26d": {
 "status": "reviewed",
@@ -9356,39 +8473,15 @@
 },
 "QL-hist-e1123f7c83": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e192ac333b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e23b28c9a7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e28337db32": {
 "status": "reviewed",
@@ -9404,15 +8497,7 @@
 },
 "QL-hist-e3b03b623b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e3c8b7d429": {
 "status": "reviewed",
@@ -9420,15 +8505,7 @@
 },
 "QL-hist-e458d653a4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e4658ca112": {
 "status": "reviewed",
@@ -9440,15 +8517,7 @@
 },
 "QL-hist-e514f187b2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e51f50aa19": {
 "status": "reviewed",
@@ -9503,15 +8572,7 @@
 },
 "QL-hist-e7af5fa70e": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-e7f9136187": {
 "status": "reviewed",
@@ -9543,15 +8604,7 @@
 },
 "QL-hist-ea283dd872": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-eaca1e3f3f": {
 "status": "reviewed",
@@ -9650,15 +8703,7 @@
 },
 "QL-hist-efd4e71aa2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-effa496f6e": {
 "status": "reviewed",
@@ -9714,15 +8759,7 @@
 },
 "QL-hist-f4753c9bf2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-f4aa354052": {
 "status": "reviewed",
@@ -9767,15 +8804,7 @@
 },
 "QL-hist-f857721e9a": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-f8b8d0a58b": {
 "status": "draft",
@@ -9800,15 +8829,7 @@
 },
 "QL-hist-f98e3ce3b0": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-f99100593c": {
 "status": "draft",
@@ -9824,15 +8845,7 @@
 },
 "QL-hist-f9eec1a050": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-fa1e6c29b3": {
 "status": "draft",
@@ -9849,27 +8862,11 @@
 },
 "QL-hist-fa724549d8": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-fae233c80f": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-fae2c9620b": {
 "status": "reviewed",
@@ -9983,15 +8980,7 @@
 },
 "QL-nibrs-029d44c2ab": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-02c8abd2f7": {
 "status": "reviewed",
@@ -10236,15 +9225,7 @@
 },
 "QL-nibrs-0c4b9914e8": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-0c5e2a89c7": {
 "status": "reviewed",
@@ -10650,15 +9631,7 @@
 },
 "QL-nibrs-1c517cc938": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-1c68b515cf": {
 "status": "reviewed",
@@ -10934,15 +9907,7 @@
 },
 "QL-nibrs-2971127fb4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-2986fe5cc2": {
 "status": "draft",
@@ -11060,15 +10025,7 @@
 },
 "QL-nibrs-2e4388e288": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-2e4d142c44": {
 "status": "reviewed",
@@ -11434,15 +10391,7 @@
 },
 "QL-nibrs-421d9d5a5d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-423179ca6d": {
 "status": "reviewed",
@@ -11478,15 +10427,7 @@
 },
 "QL-nibrs-42d415dae4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-43401cd191": {
 "status": "reviewed",
@@ -11549,13 +10490,12 @@
 },
 "QL-nibrs-4687a654cb": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -11614,27 +10554,11 @@
 },
 "QL-nibrs-48c07664fb": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-49190e8d45": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-492f0dad6a": {
 "status": "draft",
@@ -11866,15 +10790,7 @@
 },
 "QL-nibrs-503fb44d05": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-50506c8f0a": {
 "status": "draft",
@@ -11910,15 +10826,7 @@
 },
 "QL-nibrs-513b2b2145": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-51e96ec029": {
 "status": "reviewed",
@@ -12343,15 +11251,7 @@
 },
 "QL-nibrs-62fc236175": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-63582141f9": {
 "status": "draft",
@@ -12405,15 +11305,7 @@
 },
 "QL-nibrs-65ed5c6925": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-6602972d35": {
 "status": "draft",
@@ -12557,15 +11449,7 @@
 },
 "QL-nibrs-6bab954633": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-6bc1e36c38": {
 "status": "reviewed",
@@ -12795,27 +11679,11 @@
 },
 "QL-nibrs-76b61f12ad": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-776f5633fe": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-77c058e63e": {
 "status": "reviewed",
@@ -12913,15 +11781,7 @@
 },
 "QL-nibrs-7ad9c9765d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-7afa82cd5e": {
 "status": "reviewed",
@@ -13174,15 +12034,7 @@
 },
 "QL-nibrs-86540c7be7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-86905ece1d": {
 "status": "reviewed",
@@ -13253,15 +12105,7 @@
 },
 "QL-nibrs-8824710f8d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-887edc0e07": {
 "status": "reviewed",
@@ -13307,15 +12151,7 @@
 },
 "QL-nibrs-89e306c5c2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-89fefb8e7e": {
 "status": "reviewed",
@@ -13330,14 +12166,13 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-8a781d4004": {
-"status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"status": "draft",
+"by": "codex-second-1",
+"why": "New Mexico is a U.S. state.",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -13419,15 +12254,7 @@
 },
 "QL-nibrs-8dfa8f16b7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-8e3c298ac0": {
 "status": "reviewed",
@@ -13496,15 +12323,7 @@
 },
 "QL-nibrs-90ca780929": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-90fd3669e0": {
 "status": "draft",
@@ -13517,15 +12336,7 @@
 },
 "QL-nibrs-911a556839": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-915117b971": {
 "status": "reviewed",
@@ -13606,15 +12417,7 @@
 },
 "QL-nibrs-9541b634c3": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-9552c87c49": {
 "status": "draft",
@@ -13986,15 +12789,7 @@
 },
 "QL-nibrs-a780ab40ca": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-a7b335edef": {
 "status": "reviewed",
@@ -14014,15 +12809,7 @@
 },
 "QL-nibrs-a881beaca7": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-a89f07a43e": {
 "status": "reviewed",
@@ -14279,15 +13066,7 @@
 },
 "QL-nibrs-b4eb855d89": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-b55f1f906b": {
 "status": "reviewed",
@@ -14347,15 +13126,7 @@
 },
 "QL-nibrs-b83018b915": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-b865f3a2fc": {
 "status": "reviewed",
@@ -14433,15 +13204,7 @@
 },
 "QL-nibrs-bdc8e4f561": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-be59d2efab": {
 "status": "reviewed",
@@ -14460,14 +13223,13 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-beee338707": {
-"status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"status": "draft",
+"by": "codex-second-1",
+"why": "Which state supplies national comparison scope.",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -14621,14 +13383,13 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-c3bbadef99": {
-"status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"status": "draft",
+"by": "codex-second-1",
+"why": "Which state supplies national comparison scope.",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -14909,15 +13670,7 @@
 },
 "QL-nibrs-d0c5a13231": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-d0fa782411": {
 "status": "draft",
@@ -14974,15 +13727,7 @@
 },
 "QL-nibrs-d288044d9a": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-d291d3b34d": {
 "status": "reviewed",
@@ -15045,15 +13790,7 @@
 },
 "QL-nibrs-d5e902534d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-d6337e17df": {
 "status": "reviewed",
@@ -15395,15 +14132,7 @@
 },
 "QL-nibrs-e9d606a061": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-ea006762b3": {
 "status": "reviewed",
@@ -15537,15 +14266,7 @@
 },
 "QL-nibrs-ee9f071dc3": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-ef151ed6f4": {
 "status": "reviewed",
@@ -15954,15 +14675,7 @@
 },
 "QL-shr-0d25c9d243": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-0dbe3a7bf5": {
 "status": "reviewed",
@@ -16173,15 +14886,7 @@
 },
 "QL-shr-1f7c6033bd": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-1f87226e1d": {
 "status": "reviewed",
@@ -16299,15 +15004,7 @@
 },
 "QL-shr-26e06c2b73": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-27c5d5fa97": {
 "status": "reviewed",
@@ -16386,15 +15083,7 @@
 },
 "QL-shr-2d72402d96": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-2d9267d85a": {
 "status": "reviewed",
@@ -16607,15 +15296,7 @@
 },
 "QL-shr-42f3eb3256": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-43292faa5d": {
 "status": "reviewed",
@@ -16689,15 +15370,7 @@
 },
 "QL-shr-4660c160ed": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-46ddcac843": {
 "status": "draft",
@@ -16718,15 +15391,7 @@
 },
 "QL-shr-49312ed3d1": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-49348383f2": {
 "status": "draft",
@@ -16923,15 +15588,7 @@
 },
 "QL-shr-59ebe7a861": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-5a4820135e": {
 "status": "reviewed",
@@ -17080,15 +15737,7 @@
 },
 "QL-shr-65db91d04d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-6663c952a8": {
 "status": "disputed",
@@ -17107,15 +15756,7 @@
 },
 "QL-shr-66dee78a0a": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-674a87ecce": {
 "status": "reviewed",
@@ -17414,15 +16055,7 @@
 },
 "QL-shr-82acffff37": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-838060b631": {
 "status": "reviewed",
@@ -17537,15 +16170,7 @@
 },
 "QL-shr-8b8bf37a5d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-8c1a55926e": {
 "status": "reviewed",
@@ -17823,15 +16448,7 @@
 },
 "QL-shr-a3e22298e9": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-a4035cae34": {
 "status": "draft",
@@ -17923,15 +16540,7 @@
 },
 "QL-shr-ab2588aa69": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-ab3a5de130": {
 "status": "reviewed",
@@ -17947,15 +16556,7 @@
 },
 "QL-shr-ac10d16d6f": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-ac647c9aee": {
 "status": "reviewed",
@@ -18042,15 +16643,7 @@
 },
 "QL-shr-b419f94cc4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-b4b7876803": {
 "status": "reviewed",
@@ -18062,15 +16655,7 @@
 },
 "QL-shr-b5ebbeca1d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-b7405d05f1": {
 "status": "reviewed",
@@ -18090,15 +16675,7 @@
 },
 "QL-shr-b8b5531bbd": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-ba29854ea6": {
 "status": "reviewed",
@@ -18276,15 +16853,7 @@
 },
 "QL-shr-c40342fc6b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-c4eebf2c50": {
 "status": "reviewed",
@@ -18330,15 +16899,7 @@
 },
 "QL-shr-c8538da991": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-c8c803a6ef": {
 "status": "reviewed",
@@ -18350,15 +16911,7 @@
 },
 "QL-shr-c9a286bf4a": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-ca097cfeb1": {
 "status": "reviewed",
@@ -18523,15 +17076,7 @@
 },
 "QL-shr-d37e1afda6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-d3c38222b5": {
 "status": "reviewed",
@@ -18875,15 +17420,7 @@
 },
 "QL-shr-f78aec1e6a": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-f79af00f76": {
 "status": "draft",
@@ -18896,15 +17433,7 @@
 },
 "QL-shr-f79b2f3961": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-f7d5f3fc2b": {
 "status": "reviewed",
@@ -19113,15 +17642,7 @@
 },
 "QL-ct-1a2292828f": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-1a2dc839b4": {
 "status": "reviewed",
@@ -19163,13 +17684,12 @@
 },
 "QL-ct-2071d2071d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -19303,15 +17823,7 @@
 },
 "QL-ct-4599e4866c": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-46e5213672": {
 "status": "reviewed",
@@ -19510,27 +18022,11 @@
 },
 "QL-ct-6490b82eeb": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-655774ce4c": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-65577c8882": {
 "status": "reviewed",
@@ -19546,13 +18042,12 @@
 },
 "QL-ct-6b86b2071d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -19595,15 +18090,7 @@
 },
 "QL-ct-72ccc84873": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-73198dcf9c": {
 "status": "draft",
@@ -19640,15 +18127,7 @@
 },
 "QL-ct-8175f237ff": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8175f5e44f": {
 "status": "reviewed",
@@ -19656,15 +18135,7 @@
 },
 "QL-ct-817d9637d5": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-82eeb7fddb": {
 "status": "draft",
@@ -19689,15 +18160,7 @@
 },
 "QL-ct-848730eab9": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-88a8908fbe": {
 "status": "reviewed",
@@ -19717,15 +18180,7 @@
 },
 "QL-ct-8db47a3e22": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-8dd9cf8de4": {
 "status": "reviewed",
@@ -19898,15 +18353,7 @@
 },
 "QL-ct-b0433182f3": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-b424005f06": {
 "status": "reviewed",
@@ -19923,15 +18370,7 @@
 },
 "QL-ct-b6d74d12fc": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-b70cce52c7": {
 "status": "draft",
@@ -19952,27 +18391,11 @@
 },
 "QL-ct-c05e016e6c": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "rtci",
-"source_any": [
-"rtci"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c0dfec4941": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c1d66983ea": {
 "status": "reviewed",
@@ -20004,15 +18427,7 @@
 },
 "QL-ct-c6d38d036d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-ct-c8882f649b": {
 "status": "reviewed",
@@ -20084,13 +18499,12 @@
 },
 "QL-ct-d5b34c57bc": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -20165,13 +18579,12 @@
 },
 "QL-ct-e0aff2071d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
+"by": "jeff-2026-11-10",
+"why": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
+"outcome": "clarify",
+"about_any": [
+"period"
 ]
 }
 },
@@ -20572,15 +18985,7 @@
 },
 "QL-hist-136fb04182": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-17725394e5": {
 "status": "reviewed",
@@ -20712,15 +19117,7 @@
 },
 "QL-hist-3a51b260d8": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-3c94c07785": {
 "status": "reviewed",
@@ -20911,15 +19308,7 @@
 },
 "QL-hist-61eb60aae9": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-63b3371912": {
 "status": "draft",
@@ -20932,15 +19321,7 @@
 },
 "QL-hist-64c77e23b2": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-653aa9c5d7": {
 "status": "reviewed",
@@ -21017,15 +19398,7 @@
 },
 "QL-hist-6b6bde514f": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-6c27261815": {
 "status": "reviewed",
@@ -21170,15 +19543,7 @@
 },
 "QL-hist-9243417215": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-924349745b": {
 "status": "reviewed",
@@ -21233,15 +19598,7 @@
 },
 "QL-hist-9881cd5e90": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-9c5d7c28d5": {
 "status": "reviewed",
@@ -21469,15 +19826,7 @@
 },
 "QL-hist-c6d38d036d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c70d2fda83": {
 "status": "reviewed",
@@ -21494,15 +19843,7 @@
 },
 "QL-hist-c94af059db": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-c9a0635a2e": {
 "status": "reviewed",
@@ -21510,27 +19851,11 @@
 },
 "QL-hist-c9ad68ae8e": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-cc26b20045": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-cd94102005": {
 "status": "reviewed",
@@ -21680,15 +20005,7 @@
 },
 "QL-hist-f41a5136fb": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-f41a5b2113": {
 "status": "disputed",
@@ -21896,15 +20213,7 @@
 },
 "QL-nibrs-1d947c4cd6": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-1eacaecfd5": {
 "status": "reviewed",
@@ -22126,15 +20435,7 @@
 },
 "QL-nibrs-4c8ed89e30": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-4cd231b478": {
 "status": "draft",
@@ -22572,15 +20873,7 @@
 },
 "QL-nibrs-9933989e30": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-996a1eb4c7": {
 "status": "draft",
@@ -22593,15 +20886,7 @@
 },
 "QL-nibrs-9aed29541b": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-9bbed83a5e": {
 "status": "reviewed",
@@ -22732,15 +21017,7 @@
 },
 "QL-nibrs-c04e1f6e7d": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-c158d112e9": {
 "status": "reviewed",
@@ -22752,15 +21029,7 @@
 },
 "QL-nibrs-c266789e30": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-c2667c295e": {
 "status": "reviewed",
@@ -22768,15 +21037,7 @@
 },
 "QL-nibrs-c295e89e30": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-c295e99339": {
 "status": "reviewed",
@@ -22981,15 +21242,7 @@
 },
 "QL-nibrs-f6e7d8d3ae": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-f7038535e7": {
 "status": "draft",
@@ -23021,15 +21274,7 @@
 },
 "QL-nibrs-ff0aec8786": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-ffbd537ab6": {
 "status": "reviewed",
@@ -23088,15 +21333,7 @@
 },
 "QL-shr-0b29726e06": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-0b297c5a75": {
 "status": "reviewed",
@@ -23735,15 +21972,7 @@
 },
 "QL-shr-c9a28c9a28": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-shr-cb73a440cd": {
 "status": "reviewed",

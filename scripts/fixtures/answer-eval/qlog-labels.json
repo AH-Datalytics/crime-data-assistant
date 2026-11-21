@@ -115,23 +115,19 @@
    "question": "How many murders last year?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -222,23 +218,20 @@
    "question": "Top 10 cities for homicide rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -356,23 +349,19 @@
    "question": "Top 10 cities by aggravated assault in 2023",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -916,23 +905,19 @@
    "question": "motor vehicle theft per month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -1297,23 +1282,19 @@
    "question": "aggravated assault in Florida",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -1741,23 +1722,19 @@
    "question": "Other large cities and violent crime",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -2307,23 +2284,19 @@
    "question": "Murder rate in Houston per 100K",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -2915,23 +2888,20 @@
    "question": "top 10 cities for car theft",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -3090,23 +3060,19 @@
    "question": "new jersey rape data",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -3576,23 +3542,19 @@
    "question": "Compare auto thefts between Philadelphia and Chicago.",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -3735,23 +3697,19 @@
    "question": "how many homicides were there each month in 2025?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -3846,23 +3804,19 @@
    "question": "Which states have the highest murder rates?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -4658,23 +4612,19 @@
    "question": "auto theft trends",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -5147,23 +5097,19 @@
    "question": "what city has the highest murder rate in the us?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -5227,23 +5173,19 @@
    "question": "Which city has the highest murder rate per 100K in 2024?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -5582,23 +5524,19 @@
    "question": "what was the homicide rate in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -5787,23 +5725,19 @@
    "question": "What is the clearance rates for auto theft in Philadelphia and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -6699,23 +6633,19 @@
    "question": "homicides per year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -6910,23 +6840,19 @@
    "question": "show me the top 10 cities with the highest murder in the us",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -7264,23 +7190,20 @@
    "question": "What is the clearance rate for rapes",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -7372,23 +7295,19 @@
    "question": "Which cities had the most robberies in 2024?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -7555,23 +7474,19 @@
    "question": "Compare thefts in Rochester, NY to Omaha",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -8137,23 +8052,20 @@
    "question": "what is the rape rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -8582,23 +8494,19 @@
    "question": "Top 10 cities by murder in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -8912,23 +8820,19 @@
    "question": "murder rate per 100K in Houston vs Dallas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -9836,23 +9740,19 @@
    "question": "compare murder rates nationally to Rochester,ny",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -10434,23 +10334,19 @@
    "question": "Memphis murders",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -10863,23 +10759,20 @@
    "question": "violent crime",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -10892,23 +10785,20 @@
    "question": "homicide'",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -10921,23 +10811,19 @@
    "question": "murder rate per 100k in Houston",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -10975,23 +10861,19 @@
    "question": "violent crime in North Carolina",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -11034,23 +10916,19 @@
    "question": "how is murder data in louisville kentucky?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -11114,23 +10992,19 @@
    "question": "Oklahoma murders",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -11143,23 +11017,20 @@
    "question": "Compare violent crime rates in the 5 biggest Texas cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period",
+     "crime"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -11600,23 +11471,19 @@
    "question": "how many homicides were there per month in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -11788,23 +11655,19 @@
    "question": "what is the lowest violent crime town in North Carolina?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -12042,23 +11905,19 @@
    "question": "robbery in New Orleans",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -12972,23 +12831,19 @@
    "question": "are robberies going up or down in Miami?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -13056,23 +12911,19 @@
    "question": "Compare robbery in Honolulu and Las Vegas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -13111,23 +12962,19 @@
    "question": "How many murders in New Orleans?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -13243,23 +13090,19 @@
    "question": "Compare murders in Nashville and Louisville",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -13593,23 +13436,19 @@
    "question": "Compare auto theft in San Francisco and Oakland",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -14029,23 +13868,19 @@
    "question": "Cities with the most murders in 2026",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -14109,23 +13944,19 @@
    "question": "property crime in Illinois",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -14138,23 +13969,20 @@
    "question": "Homicide",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -14572,23 +14400,19 @@
    "question": "Violent crime in Washington dc",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -14601,23 +14425,19 @@
    "question": "Can I see the violent crime rate in Portland Oregon?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -15361,23 +15181,19 @@
    "question": "theft in Georgia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -15488,23 +15304,19 @@
    "question": "how many murders in chicago",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -15577,23 +15389,19 @@
    "question": "violent crime rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -15688,23 +15496,19 @@
    "question": "Compare Houston's murder rate to the Texas state average",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -15794,23 +15598,19 @@
    "question": "What are the murder rates for New Orleans",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -15901,23 +15701,19 @@
    "question": "what were the top 10 cities with the highest homicide rates in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -16193,23 +15989,19 @@
    "question": "top 10 cities by robbery in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -16533,23 +16325,19 @@
    "question": "What is Montgomery County, MD’s current homicide rate?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -16673,23 +16461,20 @@
    "question": "Compare to Tulsa murders",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "comparison place",
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "comparison place"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": null,
+    "notes": "No comparison baseline is supplied."
    }
   },
   {
@@ -17124,23 +16909,20 @@
    "question": "what are the top 10 cities aggrevated assault rates",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -17305,23 +17087,20 @@
    "question": "Burglary",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -18261,23 +18040,19 @@
    "question": "homicide rate from 1960 to present",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -18315,23 +18090,19 @@
    "question": "Compare murders per capita in Detroit and New Orleans",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -18526,23 +18297,19 @@
    "question": "Is Philadelphia's overall violent crime dropping compared to the nation?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -19398,23 +19165,19 @@
    "question": "murders in idaho ?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -19453,23 +19216,19 @@
    "question": "What is rate of homicide i  nyc?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -19559,23 +19318,19 @@
    "question": "Cities with highest murder rate in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -20065,23 +19820,19 @@
    "question": "Murder rates in Baltimore city, Washington DC, and Detroit",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -20837,23 +20588,19 @@
    "question": "show the top 10 cities with the highest homicide rate with a population of at least 200,000 in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -21937,23 +21684,19 @@
    "question": "violent crime rate in new orleans",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -22014,23 +21757,19 @@
    "question": "ROCK HILL, SC violent crime",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -22476,23 +22215,20 @@
    "question": "Give me the top 20 county agency murder rates",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -22530,23 +22266,19 @@
    "question": "What is SFPD rape clearance rate?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -23020,23 +22752,20 @@
    "question": "can you calculate per capita murder rates",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -23917,23 +23646,19 @@
    "question": "murder in boston",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -24023,23 +23748,19 @@
    "question": "national motor-vehicle theft clearance rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -24663,23 +24384,19 @@
    "question": "murders in Philadelphia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -24765,23 +24482,19 @@
    "question": "Murder rate in Texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -25102,23 +24815,19 @@
    "question": "Compare auto thefts between Philadelphia and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -25237,23 +24946,19 @@
    "question": "burglary trend since 1985",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -26074,23 +25779,20 @@
    "question": "total violent crime",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -27071,23 +26773,19 @@
    "question": "murder rate in new orleans",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -27255,23 +26953,19 @@
    "question": "murder rates in Boston and nationwide",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -27332,23 +27026,19 @@
    "question": "How have car thefts changed over the past 20 years?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -27558,23 +27248,19 @@
    "question": "top 10 cities by murder rate in 2020",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -27613,23 +27299,19 @@
    "question": "NYPD staffing",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -28429,23 +28111,19 @@
    "question": "property crime in Georgia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -29130,23 +28808,20 @@
    "question": "Show me the murder rate for the 50 largest cities in the United States.",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period",
+     "crime"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -29439,23 +29114,20 @@
    "question": "Baltimore police staffing",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Baltimore",
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Baltimore"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": null,
+    "notes": "P28 requires city versus county."
    }
   },
   {
@@ -30000,23 +29672,19 @@
    "question": "Fort Wayne Indiana vs rapid city violent crime",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -30305,23 +29973,19 @@
    "question": "New Orleans murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -30995,23 +30659,19 @@
    "question": "violent crime in Florida",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -31682,23 +31342,19 @@
    "question": "how many cops does Houston have?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": null,
+    "notes": "Cops clearly means police officers."
    }
   },
   {
@@ -33230,23 +32886,19 @@
    "question": "CAN I SEE VIOLENT CRIME DATA FROM 2008 TO 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -33387,23 +33039,19 @@
    "question": "what city had the highest homicide rate in 1940?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -33620,23 +33268,19 @@
    "question": "Louisiana vs US murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -33649,23 +33293,19 @@
    "question": "clearance rate for murder since 1960",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -34039,23 +33679,19 @@
    "question": "Show me violent crimes in tarrant county, Texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -34377,23 +34013,19 @@
    "question": "murder counts in baltimore city",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -34436,23 +34068,19 @@
    "question": "Chicago police staffing",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -34670,23 +34298,19 @@
    "question": "Show me the homicide clearance rate from 1930 to today",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -35335,23 +34959,19 @@
    "question": "what were the top 10 homicide cities in 1936 with a population of at least 50,000.",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -35566,23 +35186,19 @@
    "question": "Fort Wayne Indiana vs rapid city violent crime rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -35729,23 +35345,19 @@
    "question": "what are the homicide rates in kansas city, MO",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -36056,23 +35668,19 @@
    "question": "Violent crime in Washington dc",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -36129,23 +35737,19 @@
    "question": "motor vehicle theft in Ohio",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -36261,23 +35865,19 @@
    "question": "Louisiana vs national murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -36342,23 +35942,19 @@
    "question": "Show me the aggravated assault clearance rate over time",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -36491,23 +36087,19 @@
    "question": "What are the homicide rates in Baltimore city Boston Chicago Cleveland Detroit Houston Phoenix Pittsburgh Washington DC Philadelphia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -37084,23 +36676,19 @@
    "question": "homicide rate graph from 1960 to 2026",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -37113,23 +36701,19 @@
    "question": "Rapid City vs Fort Wayne Indiana violent crime rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -37142,23 +36726,19 @@
    "question": "Assault in North Carolina",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -37504,23 +37084,19 @@
    "question": "Baltimore city homicides",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -37689,23 +37265,19 @@
    "question": "Homicide rates over the last 20 years",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -37865,23 +37437,19 @@
    "question": "compare the murder rate in Seattle with the United States",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -37971,23 +37539,19 @@
    "question": "show murder rates in baltimore city and nationwide side-by-side",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -38405,23 +37969,20 @@
    "question": "Robbery clearance rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -38558,23 +38119,19 @@
    "question": "Tell me about murder rates in the largest cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -39416,23 +38973,19 @@
    "question": "what is the homicide rate for miami, florida?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -39576,23 +39129,20 @@
    "question": "murders",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -39631,23 +39181,19 @@
    "question": "takoma park mryland violent crime",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -39660,23 +39206,19 @@
    "question": "murders in baltimore city",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -39689,23 +39231,19 @@
    "question": "murder in Jefferson Parish Louisiana",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -39800,23 +39338,19 @@
    "question": "violent crime in Baltimore County, MD",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -39851,23 +39385,19 @@
    "question": "homicide rate from 1960 to present",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -39932,23 +39462,19 @@
    "question": "What are the clearance rates for auto theft in Philadelphia and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -40192,23 +39718,19 @@
    "question": "LAPD staffing",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -40403,23 +39925,19 @@
    "question": "aggravated assault in North Carolina",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -40820,23 +40338,19 @@
    "question": "murder rate in boston",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -41179,23 +40693,19 @@
    "question": "murder rate in the 1990s",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -41442,23 +40952,19 @@
    "question": "show me the violent crime rate in worcester county, md",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -41523,23 +41029,19 @@
    "question": "newark murder clearance rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -41578,23 +41080,19 @@
    "question": "NOPD vs. Jefferson Parish Police Department murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -41655,23 +41153,19 @@
    "question": "has violent  crime  in new orlens",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -41684,23 +41178,19 @@
    "question": "show me violent crime offenders by age for tarrant county, texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -42236,23 +41726,19 @@
    "question": "Top 10 cities by robbery count in 2022",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -43473,23 +42959,19 @@
    "question": "show violent crimes in pocomoke city, md",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -45550,23 +45032,19 @@
    "question": "show me the violent crime rate by month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -46826,23 +46304,19 @@
    "question": "how many homicides were there each month in 2025?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -47330,23 +46804,19 @@
    "question": "What's the violent crime rate in Philadelphia versus Phoenix?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -49063,23 +48533,19 @@
    "question": "Show me murders by year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -49200,23 +48666,19 @@
    "question": "Compare murder clearance rates in Philadelphia and Memphis",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -49511,23 +48973,19 @@
    "question": "What are the murder rates per 100,000 for the top 10 largest cities?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -49767,23 +49225,19 @@
    "question": "What is the clearance rate for rapes in the united states",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -49796,23 +49250,19 @@
    "question": "What cities are the most violent in 2025?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -50873,23 +50323,19 @@
    "question": "What is the aggravated assault rate in White Plains, NY?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -51029,23 +50475,19 @@
    "question": "murder clearance rate Baltimore city",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -52846,23 +52288,19 @@
    "question": "murder clearance rate, 2018 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -53133,23 +52571,19 @@
    "question": "show me violent crimes by offender age in bernalillo county, nm",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -53882,23 +53316,19 @@
    "question": "How many police officers are employed in Houston?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -55000,23 +54430,19 @@
    "question": "show me violent crimes by offender age for albuquerque police department",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -55029,23 +54455,19 @@
    "question": "Murders in Memphis, TN",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -55460,23 +54882,19 @@
    "question": "homicides in chicago",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -56707,23 +56125,19 @@
    "question": "murders in chicago",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -56957,23 +56371,19 @@
    "question": "top 5 cities by murder rate in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -57185,23 +56595,19 @@
    "question": "robbery by weapon type in Philadelphia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -57294,23 +56700,19 @@
    "question": "Compare burglaries in Nebraska and New Mexico",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": null,
+    "notes": "New Mexico is a U.S. state."
    }
   },
   {
@@ -57683,23 +57085,19 @@
    "question": "How do murder rates compare between Chicago, Houston, and Detroit?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -58009,23 +57407,19 @@
    "question": "robberies in anne arundel county, md?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -58060,23 +57454,20 @@
    "question": "show me violent crimes",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -58540,23 +57931,19 @@
    "question": "aggravated assault with firearm in Dallas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -60216,23 +59603,19 @@
    "question": "number homicides by year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -60346,23 +59729,19 @@
    "question": "carjackings in baltimore city",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -61511,23 +60890,19 @@
    "question": "Can I see the violent crime rate in Portland Oregon?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -61845,23 +61220,19 @@
    "question": "Compare murders in Houston and Dallas in NIBRS",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -62276,23 +61647,19 @@
    "question": "compare Portland, Oregon vs national level in terms of motor vehicle theft",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -62408,23 +61775,19 @@
    "question": "Which state has the highest murder rate?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": null,
+    "notes": "Which state supplies national comparison scope."
    }
   },
   {
@@ -63021,23 +62384,19 @@
    "question": "Which state has the highest motor vehicle theft rate?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": null,
+    "notes": "Which state supplies national comparison scope."
    }
   },
   {
@@ -64315,23 +63674,19 @@
    "question": "Compare property crimes in Miami and Tampa",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -64500,23 +63855,19 @@
    "question": "What's the murder rate in San Francisco?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -64798,23 +64149,19 @@
    "question": "Show me violent crime offenders by age in tarrant county, Texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -66425,23 +65772,19 @@
    "question": "Murders involving a gun in atlanta",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -66985,23 +66328,19 @@
    "question": "show me the violent crime rate per 100,000 population by month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -69007,23 +68346,19 @@
    "question": "Top 10 cities by murder rate in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -69899,23 +69234,19 @@
    "question": "fatal shootings in Kansas City, Missouri",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -70408,23 +69739,19 @@
    "question": "firearm murders in Philadelphia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -70676,23 +70003,19 @@
    "question": "show the national robbery rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -71578,23 +70901,19 @@
    "question": "show me the washington dc murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -71814,23 +71133,19 @@
    "question": "memphis fatal shootings",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -71912,23 +71227,19 @@
    "question": "Show me Tulsa vs Oklahoma City homicide rates",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -72630,23 +71941,19 @@
    "question": "What is Chicago's current homicide rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -73219,23 +72526,19 @@
    "question": "birmingham fatal shootings",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -73299,23 +72602,20 @@
    "question": "homicide clearance rates?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -74442,23 +73742,19 @@
    "question": "murder rates per 100,000 in montana compared to california",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -74864,23 +74160,19 @@
    "question": "Washington DC homicide",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -76052,23 +75344,19 @@
    "question": "murders in albuquerque",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -76460,23 +75748,20 @@
    "question": "show robbery rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -76586,23 +75871,19 @@
    "question": "show me sworn officers per 1,000 in salem, eugene, portland, hillsboro and beaverton oregon",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -76999,23 +76280,20 @@
    "question": "murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -77079,23 +76357,19 @@
    "question": "murder rates per 100k in montana versus idaho",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -77207,23 +76481,19 @@
    "question": "washington dc murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -77872,23 +77142,19 @@
    "question": "Show me theft in Memphis",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -78055,23 +77321,19 @@
    "question": "show me murder clearance rates since 1965",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -78131,23 +77393,19 @@
    "question": "fatal shootings in Cook County",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -78765,23 +78023,19 @@
    "question": "murders in anne arundel county, md?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -80039,23 +79293,19 @@
    "question": "firearm murders in Harris County, TX",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -80094,23 +79344,19 @@
    "question": "detroit murder rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -81349,23 +80595,19 @@
    "question": "Washington dc violent crime",
    "previous": "San Francisco",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -81632,23 +80874,19 @@
    "question": "homicide totals in top 15 cities",
    "previous": "homicide totals in top 15 cities",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -82629,23 +81867,19 @@
    "question": "top 10 cities by murder rate in 2020",
    "previous": "Naperville, IL crime per year since 2015",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -83715,23 +82949,19 @@
    "question": "how Rochester, NY's murder rate compares to the national average",
    "previous": "How does Rochester NY compare to the rest of the nation?",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -83744,23 +82974,19 @@
    "question": "Top 25 cities for murder rate in 2024",
    "previous": "2024",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -83892,23 +83118,19 @@
    "question": "homicide totals in top 15 cities",
    "previous": "1",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -84153,23 +83375,19 @@
    "question": "Oklahoma murders",
    "previous": "what are the crime trends for Fairfax County Virginia Police Department for the past three years?",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -84339,23 +83557,19 @@
    "question": "murder rate Indianapolis vs chicago",
    "previous": "violent crime",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -84398,23 +83612,19 @@
    "question": "homicides in philadelphia",
    "previous": "homicide'",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -84555,23 +83765,19 @@
    "question": "edmond oklahoma murders",
    "previous": "Oklahoma murders",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -84758,23 +83964,19 @@
    "question": "murders in albuquerque",
    "previous": "where is this data taken from",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -85640,23 +84842,19 @@
    "question": "show me homicides in paterson",
    "previous": "what do you have on PPD?",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -85759,23 +84957,19 @@
    "question": "violent crimes in Kings County, NY",
    "previous": "violent crimes in Brooklyn, NY",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -85865,23 +85059,19 @@
    "question": "What cities have the lowest violent crime rates in 2026",
    "previous": "What are the safest cities in america",
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -85894,23 +85084,19 @@
    "question": "violent crime in philadelphia, washington dc, chicago, nyc, dallas and nationwide",
    "previous": "current trend",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -86161,23 +85347,19 @@
    "question": "murder rate for cities of 250k or more in 2025",
    "previous": "murder, violent crime and property crime rate for all cities of 250,000 or more in 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -86507,23 +85689,19 @@
    "question": "what is the murder rate for the 20 most populous cities?",
    "previous": "the 20 most populous cities in the dataset ranked by their 2026 murder rate",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -86903,23 +86081,19 @@
    "question": "homicide totals in top 15 cities",
    "previous": "top 15 cities overall, rank them by total count",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10>2nd",
     "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
    }
   },
   {
@@ -89397,23 +88571,19 @@
    "question": "show me violent crimes for worcester county, md sheriff",
    "previous": "compare with statewide violent crime rate in maryland",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -90370,23 +89540,19 @@
    "question": "show me violent crimes reported by the worcester county, md sheriff's office and the pocomoke city, md police department",
    "previous": "show me crimes reported by the worcester county, md sheriff's office and the pocomoke city, md police department",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -91495,23 +90661,19 @@
    "question": "houston murder rate",
    "previous": "new orleans murder rate every year",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -91546,23 +90708,19 @@
    "question": "murder in Jefferson Parish Louisiana",
    "previous": "crime in Harris County Texas",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -91995,23 +91153,19 @@
    "question": "What are the clearance rates for auto theft in Philadelphia and Chicago?",
    "previous": "national murder clearance rate since 1960",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -92919,23 +92073,19 @@
    "question": "Murder rate in Arizona",
    "previous": "National robbery clearance rate since 1960",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -93274,23 +92424,19 @@
    "question": "Show me violent crime offenders by age in tarrant county, Texas",
    "previous": "Add countywide violent crimes in Dallas county, Texas",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -94834,23 +93980,19 @@
    "question": "murder rate for cities of 250k or more in 2025",
    "previous": "murder, violent crime and property crime rate for all cities of 250,000 or more in 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -94911,23 +94053,19 @@
    "question": "show me aggravated assaults in St Louis County, Missouri",
    "previous": "why does county only exist for a few small stretches around the 60s and 70s",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -94966,23 +94104,19 @@
    "question": "compare murders in the City of St. Louis and St. Louis County",
    "previous": "remove 2025 as it has missing data",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -95016,23 +94150,19 @@
    "question": "murders in Philadelphia",
    "previous": "national murder clearance rate trend",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -95983,23 +95113,19 @@
    "question": "compare with statewide violent crime rate in maryland",
    "previous": "countywide total",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -97689,23 +96815,19 @@
    "question": "show me violent crimes in worcester county, md by offender age",
    "previous": "show violent crime in pocomoke city, md by offender age by year",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -99503,23 +98625,19 @@
    "question": "robbery by weapon type in Philadelphia",
    "previous": "carjacking trend in Washington DC",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -102265,23 +101383,19 @@
    "question": "robbery by weapon type in Philadelphia",
    "previous": "Houston carjackings since 2019",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -102337,23 +101451,19 @@
    "question": "aggravated assault with firearm in Dallas",
    "previous": "What percentage of murders are cleared by arrest vs exceptional nationally?",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -103452,23 +102562,19 @@
    "question": "what is the lowest violent crime town in Virginia",
    "previous": "what is the safest town in the United States with a population over 100000?",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -103574,23 +102680,19 @@
    "question": "robbery by weapon type in Philadelphia",
    "previous": "carjacking clearance rates in Chicago",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -103628,23 +102730,19 @@
    "question": "robbery by weapon type in Philadelphia",
    "previous": "DUI arrests nationally",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -105094,23 +104192,19 @@
    "question": "what is the lowest violent crime town in North Carolina?",
    "previous": "what is the lowest violent crime town in Virginia",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -105414,23 +104508,19 @@
    "question": "top 10 cities by robbery in 2024",
    "previous": "Houston murder victims by race and gender from 2022 to 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -105718,23 +104808,19 @@
    "question": "firearm murders in Philadelphia",
    "previous": "domestic homicides in California since 1980",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -109363,23 +108449,19 @@
    "question": "fatal shootings in Cook County",
    "previous": "fatal shootings in Cook County",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults: Jeff 2026-11-21 (P180 to P182): a missing place, period or kind of crime is filled with its default and said"
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {

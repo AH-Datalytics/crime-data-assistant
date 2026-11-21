@@ -907,8 +907,9 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
         defaultDepth++;
         try {
-          const alt = shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, deps);
-          if (ANSWER_KINDS.includes(alt.kind)) option = { label: "Every year available", continuation: alt };
+          // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
+          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
+          if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
       // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
@@ -1910,18 +1911,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     // "Another crime" (Jeff 2026-11-15): a victim-age question without a crime may name its own ("Which crime?").
     const ageAsked = ledger0.parts.some((p) => p.clause === 0 && p.concept === "breakdown" && /age/.test(String(p.value)));
-    // P172 (Jeff 2026-11-21): no kind of crime named is violent crime and property crime with their parts, said, with buttons for one kind or a
-    // specific crime. Tried with the parts, then the two totals; asked as before when neither answers now (and for a victim-age question).
-    if (!ageAsked && !deps.noDefaults) {
-      const parts: [string, string][] = [["violent_crime", "violent crime"], ["property_crime", "property crime"], ["murder", "murder"], ["rape", "rape"], ["robbery", "robbery"],
-        ["aggravated_assault", "aggravated assault"], ["burglary", "burglary"], ["theft", "theft"], ["motor_vehicle_theft", "motor vehicle theft"]];
-      const crimeButtons: ShadowOption[] = [...runnable.filter((o) => o.label !== "Both"), { label: "A specific crime", entry: "which crime" }];
-      for (const ms of [parts, kinds[2].measures as [string, string][]]) {
-        const tried = withDefault(deferHeavy("Both", (d) => fromLedger(filledAll(ledger, "measure", ms), d, pins), deps),
-          "No kind of crime was named, so violent crime and property crime are shown.", crimeButtons, "crime");
-        if (tried) return tried;
-      }
-    }
+    // P182 (no kind of crime named) is applied once, at the top (applyDefaults picks the "Both" button): never here, where this ask is also built
+    // inside other asks' buttons and a default would run its statements for every button (the gate found a 1 s question taking 218 s).
     return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: ageAsked ? [...runnable, { label: "Another crime", entry: "which crime" }] : runnable };
   }
   // D09 beside another crime ("homicide and crime rates", "murder and crime"): the bare word is asked about too, never
@@ -3123,7 +3114,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
     // P171 (Jeff 2026-11-21): the same for every question: no period named is every year by year, for a single figure or a breakdown too
     // (a series by year of it). Tried only when it answers now; otherwise the question is asked as before.
-    if (trend || !deps.noDefaults) {
+    // A single figure or a breakdown with no period (P181) is made a series only at the top (applyDefaults), never here: this ask is also built
+    // inside other asks' buttons, where a series would run its statements for every button.
+    if (trend) {
       const base = trend ? ledger : filled(ledger, "grain", "year", "by year");
       const firstY = release.firstMonth.slice(0, 4);
       const monthly = (spec.grain === "month" || !!(spec as { window?: unknown }).window) && !flags(ledger0).quarter;
