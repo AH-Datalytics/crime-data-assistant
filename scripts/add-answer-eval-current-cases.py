@@ -7,7 +7,7 @@ P90, P91; Jeff's decisions A-C) to cases.json, with drafted labels.
 Cases are appended after every existing case (same group and question: left alone). Each label is written from the
 design note and the decided rows it cites, never from a candidate's output: a state, region or the nation is the sum of
 its Consistent Reporting Agencies (P91), an unknown month is never zero, "so far this year" is the year to date through
-Current Trends' latest month (2026-08), and NIBRS named in words is NIBRS (P01). Values are nibrs-model's V173-V176
+Current Trends' latest month (2026-09), and NIBRS named in words is NIBRS (P01). Values are nibrs-model's V173-V176
 (main 8bc9eca), named by file, group, size, month and column in values.source; the runner reads them
 (lib/answer-eval/shadow.ts bindValueSources). Run scripts/test-answer-eval-cases.ts afterwards.
 """
@@ -69,19 +69,19 @@ def agency_case(question, source, frm, to, groupings, policy):
 
 NEW = [
     # The nation, a month (V173): the consistent sum, and a total that leaves agencies out names them.
-    group_case("Murders in the United States in August 2026", US, "murder", "2026-08", "2026-08", "V173", "us", "murder_total", ["month"]),
-    group_case("Rapes in the United States in August 2026", US, "rape", "2026-08", "2026-08", "V173", "us", "rape_total", ["month"],
-               ["names the agencies with no figure, left out of the total (14 of 547)"]),
+    group_case("Murders in the United States in September 2026", US, "murder", "2026-09", "2026-09", "V173", "us", "murder_total", ["month"]),
+    group_case("Rapes in the United States in September 2026", US, "rape", "2026-09", "2026-09", "V173", "us", "rape_total", ["month"],
+               ["names the agencies with no figure, left out of the total (13 of 588)"]),
     # The year to date (V173's murder_ytd): "so far this year" is January through Current Trends' latest month.
-    group_case("Murders in the United States so far this year", US, "murder", "2026-01", "2026-08", "V173", "us", "murder_ytd", []),
+    group_case("Murders in the United States so far this year", US, "murder", "2026-01", "2026-09", "V173", "us", "murder_ytd", []),
     # Census regions (V174).
-    group_case("Robberies in the Northeast in August 2026", [p for c in REGION["noe"] for p in state(c)], "robbery", "2026-08", "2026-08", "V174", "noe", "robbery_total", ["month"]),
-    group_case("Murders in the Midwest in August 2026", [p for c in REGION["mdw"] for p in state(c)], "murder", "2026-08", "2026-08", "V174", "mdw", "murder_total", ["month"]),
+    group_case("Robberies in the Northeast in September 2026", [p for c in REGION["noe"] for p in state(c)], "robbery", "2026-09", "2026-09", "V174", "noe", "robbery_total", ["month"]),
+    group_case("Murders in the Midwest in September 2026", [p for c in REGION["mdw"] for p in state(c)], "murder", "2026-09", "2026-09", "V174", "mdw", "murder_total", ["month"]),
     # States (V175), including one whose every agency is blank: unknown, never zero.
-    group_case("Violent crime in Tennessee in August 2026", state("TN"), "violent crime", "2026-08", "2026-08", "V175", "tn", "violent_total", ["month"]),
-    group_case("Property crime in Texas in August 2026", state("TX"), "property crime", "2026-08", "2026-08", "V175", "tx", "property_total", ["month"]),
-    group_case("Rapes in Alabama in August 2026", state("AL"), "rape", "2026-08", "2026-08", "V175", "al", "rape_total", ["month"],
-               ["says no figure is available for August 2026 (never zero)"]),
+    group_case("Violent crime in Tennessee in September 2026", state("TN"), "violent crime", "2026-09", "2026-09", "V175", "tn", "violent_total", ["month"]),
+    group_case("Property crime in Texas in September 2026", state("TX"), "property crime", "2026-09", "2026-09", "V175", "tx", "property_total", ["month"]),
+    group_case("Rapes in Alabama in September 2026", state("AL"), "rape", "2026-09", "2026-09", "V175", "al", "rape_total", ["month"],
+               ["names the agencies with no figure, left out of the total (2 of 3)"]),
     # Routing (design note section 4): a Part I crime by month at a Current Trends agency is Current Trends'; NIBRS named
     # in words is NIBRS (P01).
     agency_case("Memphis murders by month in 2025", "rtci", "2025-01", "2025-12", ["month"], ["P01", "D04"]),
