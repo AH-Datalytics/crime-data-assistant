@@ -3076,8 +3076,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (p.kind === "agency") return [p.ori];
     // A state or the nation: the agencies with a header for that year (P61).
     if (p.kind === "state" || p.kind === "national") {
-      const key = `${p.kind === "state" ? p.code : "US"}|${y}`;
-      if (!cityMembers.has(key)) cityMembers.set(key, deps.execute(agencyHeaderSql(deps.target.root, universeStates(p), [y])).map((r) => String(r[0])));
+      const place = p.kind === "state" ? p.code : "US";
+      const key = `${place}|${y}`;
+      if (!cityMembers.has(key)) {
+        // One statement for every year the period asks, not one per year (a 40-year question ran 36): the rows come back with their year.
+        const asked = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
+        const years = asked.includes(y) ? asked : [y];
+        const byYear = new Map<number, string[]>(years.map((yr) => [yr, []]));
+        for (const r of deps.execute(agencyHeaderSql(deps.target.root, universeStates(p), years))) byYear.get(Number(r[1]))?.push(String(r[0]));
+        for (const [yr, oris] of byYear) cityMembers.set(`${place}|${yr}`, oris);
+      }
       return cityMembers.get(key)!;
     }
     if (p.kind !== "agency_set" || p.within.kind !== "state") return [];
