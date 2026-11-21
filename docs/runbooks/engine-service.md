@@ -8,6 +8,9 @@ The engine service answers questions from the canonical NIBRS release, in its ow
 - Each worker holds one DuckDB (Python) executor with a memory limit and thread count. One question per worker at a time.
 - `lib/engine-service/*`: the protocol, the pool, the HTTP face and the engine adapter (`core.ts`), all unit-tested without data (`scripts/test-engine-service.ts`).
 - Build: `node scripts/build-engine-service.mjs` (esbuild; the server then needs only node and a python with duckdb 1.5.6, no tsx).
+- Install path: build in the deployed release, then copy the bundle to a stable folder the unit runs from:
+  `cd /opt/nibrs/current && node scripts/build-engine-service.mjs && mkdir -p /opt/nibrs/engine/dist /opt/nibrs/engine/tmp && cp -r services/engine/dist/. /opt/nibrs/engine/dist/`.
+  The unit (`services/engine/engine.service`) runs `/opt/nibrs/engine/dist/main.cjs` with the release as its working directory. After every deploy (a new release folder) repeat the build and copy, then `systemctl restart nibrs-engine`.
 
 ## Configuration (environment file, `/opt/nibrs/engine/engine.env`)
 
