@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
+import { cubeServesMeasure } from "../lib/nibrs-plan/compile";
 import { ageFilterBins, ageMapping, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, WEAPON_FILE_SHA256_V1, WEAPON_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 import { categorySumsFromGrid } from "../lib/nibrs-shadow/state-sum";
 
@@ -263,6 +264,13 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeWeaponUnits({ ...ask, cfg: { ...cfgW, weapon: { ...weapon, attributes: ["weapon"] } }, grouping: false, weaponFilter: firearm }), null, "no firearm attribute listed");
 }
 
+// --- Which measures a cube may serve: only a measure that is exactly the units of its offense codes. A measure with more in its own statement is never read from the row of
+// the group that shares its code list (domestic violence, P82, shares person_crimes' fourteen codes: the runner found 2 to 2.8 times the right count when it was routed there).
+{
+  for (const id of ["victims.person_crimes", "victims.murder", "offenses.robbery", "incidents.burglary", "arrests.all_crime", "arrests.drug_crimes", "offenders.aggravated_assault", "group_b_arrests.dui"]) assert.ok(cubeServesMeasure(id), `${id} is a plain-codes measure`);
+  for (const id of ["victims.domestic_violence", "offenses.domestic_violence", "arrests.domestic_violence", "incidents.domestic_violence", "offenses.carjacking", "incidents.carjacking", "victims.hate_crime", "victims.some_new_measure", "victims", "victims.justifiable_homicide", "offenders.justifiable_homicide"]) assert.ok(!cubeServesMeasure(id), `${id} is never read from a cube`);
+}
+
 // --- The manifest check: a cube is used only when it was built from this release, with the engine's group lists, and its file is there.
 {
   assert.equal(listSha256(CUBE_GROUPS.person_crimes), "e0da932813fb580e2fa05215a6ce59d977c7915830f3f0cdfb3cc12db4bb87ee", "the Model's recorded hash of the person_crimes list");
@@ -408,6 +416,101 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
       }
     } finally { console.error = quiet; }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
+
+// --- A cube SET (the Model's monthly wrapper): one pinned manifest names every product; READY required; a product that fails its pins is left out.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-cube-set-"));
+  const quiet = console.error; const warnings: string[] = []; console.error = (m: string) => { warnings.push(String(m)); };
+  let tick = 1_900_000_000; // fixed, increasing modification times (no clock read): the loader caches on mtime and size
+  const write = (file: string, content: string) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, content); tick += 2; fs.utimesSync(file, tick, tick); };
+  const sha = (f: string) => createHash("sha256").update(fs.readFileSync(f)).digest("hex");
+  try {
+    const release = path.join(dir, "release"), canonical = path.join(release, "canonical");
+    fs.mkdirSync(canonical, { recursive: true });
+    write(path.join(release, "manifest.json"), '{"id":"rel-1"}');
+    const relSha = sha(path.join(release, "manifest.json"));
+    const four = ["age_bin", "sex", "race", "ethnicity"];
+    const groups = Object.fromEntries(Object.entries(CUBE_GROUPS).map(([g, c]) => [g, { codes: c, list_sha256: listSha256(c) }]));
+    const base = { source_manifest_sha256: relSha, years: { "2024": {} }, files: { "canonical/cube/data_year=2024/data.parquet": {} } };
+    const manifests: Record<string, object> = {
+      "group-v4": { ...base, schema_version: "cube-0.1", groups_version: GROUPS_VERSION_V4, groups_file_sha256: GROUPS_FILE_SHA256_V4, groups, unit_attributes: { offender: four, victim: four, arrestee: four } },
+      "code-v2": { ...base, schema_version: "cube-code-0.1", never_add_across_codes: true, reference_codes: ["09A"], groups_version: CODE_VERSION_V2, groups_file_sha256: CODE_FILE_SHA256_V2, unit_attributes: { offender: four, victim: four, arrestee: four } },
+      "offense-v1": { ...base, schema_version: "cube-offense-0.1", product: "offense", groups_version: OFFENSE_VERSION_V1, groups_file_sha256: OFFENSE_FILE_SHA256_V1, unit_attributes: { offense: ["incident_hour", "location_type", "clearance_type"] }, counting_contract: "x", reference_codes: ["120"] },
+      "weapon-v1": { ...base, schema_version: "cube-weapon-0.1", product: "weapon", groups_version: WEAPON_VERSION_V1, groups_file_sha256: WEAPON_FILE_SHA256_V1, unit_attributes: { offense: ["weapon", "firearm"] }, counting_contract: "x", reference_codes: ["120"] },
+    };
+    const folderOf = (k: string) => `${k}-rel-1`;
+    const build = (name: string, over: Record<string, Partial<{ folder: string; status: string; schema_version: string; groups_file_sha256: string; manifest_sha256: string }> | null> = {}, top: object = {}, ready: object | null = {}) => {
+      const set: Record<string, unknown> = { set_version: 1, release_id: "rel-1", release_manifest_sha256: relSha, attempt: 1, as_of: "2024-08", complete: true, required_missing: [], optional_missing: [], failures: {}, products: {} };
+      for (const [k, m] of Object.entries(manifests)) {
+        write(path.join(dir, name, folderOf(k), "manifest.json"), JSON.stringify(m));
+        write(path.join(dir, name, folderOf(k), "canonical/cube/data_year=2024/data.parquet"), "x");
+        const rec = { folder: folderOf(k), manifest_sha256: sha(path.join(dir, name, folderOf(k), "manifest.json")), schema_version: (m as { schema_version: string }).schema_version,
+          groups_file_sha256: (m as { groups_file_sha256: string }).groups_file_sha256, status: "ready", required: k !== "weapon-v1" };
+        if (over[k] === null) continue;
+        (set.products as Record<string, unknown>)[k] = { ...rec, ...(over[k] ?? {}) };
+      }
+      Object.assign(set, top);
+      const file = path.join(dir, name, "cube-set-rel-1-1.json");
+      write(file, JSON.stringify(set));
+      if (ready) write(file.replace(/\.json$/, ".READY.json"), JSON.stringify({ status: "ready", set_manifest_sha256: sha(file), release_id: "rel-1", written_at: "x", ...ready }));
+      return { file, sha: sha(file), env: { NIBRS_CUBE: "on", NIBRS_CUBE_SET: file, NIBRS_CUBE_SET_SHA256: sha(file) } };
+    };
+    // A good set: all four products read, each from its own folder.
+    let t = build("good");
+    const c = cubeFromEnv(t.env, canonical)!;
+    assert.ok(c && c.groupV4 && c.code?.ethnicity && c.offense && c.weapon, "a complete set gives all four cubes");
+    assert.ok(c.root.endsWith("group-v4-rel-1") && c.offense!.root.endsWith("offense-v1-rel-1"), "each product reads from its folder beside the set manifest");
+    assert.deepEqual(c.years, [2024]);
+    // The set is pinned by hash; no hash, a wrong hash, a changed file: no set.
+    assert.equal(cubeFromEnv({ ...t.env, NIBRS_CUBE_SET_SHA256: undefined }, canonical), null, "no pin: refused");
+    assert.equal(cubeFromEnv({ ...t.env, NIBRS_CUBE_SET_SHA256: "0".repeat(64) }, canonical), null, "another hash: refused");
+    // READY, completeness and release.
+    t = build("noready", {}, {}, null);
+    assert.equal(cubeFromEnv(t.env, canonical), null, "no READY file: refused");
+    t = build("badready", {}, {}, { set_manifest_sha256: "0".repeat(64) });
+    assert.equal(cubeFromEnv(t.env, canonical), null, "a READY file for another set: refused");
+    t = build("badreadyrel", {}, {}, { release_id: "rel-9" });
+    assert.equal(cubeFromEnv(t.env, canonical), null, "a READY file for another release id: refused");
+    t = build("incomplete", {}, { complete: false });
+    assert.equal(cubeFromEnv(t.env, canonical), null, "an incomplete set: refused");
+    t = build("reqmissing", {}, { required_missing: ["code-v2"] });
+    assert.equal(cubeFromEnv(t.env, canonical), null, "a required product missing: refused");
+    t = build("ver2", {}, { set_version: 2 });
+    assert.equal(cubeFromEnv(t.env, canonical), null, "another set version: refused");
+    t = build("otherrelease", {}, { release_manifest_sha256: "0".repeat(64) });
+    assert.equal(cubeFromEnv(t.env, canonical), null, "built from another release than the one read: refused");
+    // A product that is absent or fails its pins is left out with a warning; the others stay.
+    warnings.length = 0;
+    t = build("noweapon", { "weapon-v1": null });
+    let n = cubeFromEnv(t.env, canonical)!;
+    assert.ok(n.offense && n.code && !n.weapon, "an absent optional product is left out");
+    assert.ok(warnings.some((w) => /weapon-v1 is not in the set/.test(w)), "and said once");
+    t = build("badmanifest", { "offense-v1": { manifest_sha256: "0".repeat(64) } });
+    n = cubeFromEnv(t.env, canonical)!;
+    assert.ok(!n.offense && n.weapon && n.code, "a product whose manifest is not the recorded one is left out");
+    t = build("badschema", { "weapon-v1": { schema_version: "cube-weapon-9" } });
+    assert.ok(!cubeFromEnv(t.env, canonical)!.weapon, "another schema: left out");
+    t = build("badgroups", { "code-v2": { groups_file_sha256: "0".repeat(64) } });
+    assert.ok(!cubeFromEnv(t.env, canonical)!.code, "another groups file: left out");
+    t = build("notready", { "weapon-v1": { status: "failed" } });
+    assert.ok(!cubeFromEnv(t.env, canonical)!.weapon, "a product that is not ready: left out");
+    for (const folder of ["../elsewhere", "/abs/path", "C:/abs", "a/../../b"]) {
+      t = build("trav" + folder.replace(/\W/g, "_"), { "offense-v1": { folder } });
+      assert.ok(!cubeFromEnv(t.env, canonical)!.offense, `a folder that leaves the set's folder is refused: ${folder}`);
+    }
+    // An unknown product key is ignored; an explicit root variable overrides its product.
+    t = build("unknown");
+    const raw = JSON.parse(fs.readFileSync(t.file, "utf8")); raw.products["relationship-v1"] = { folder: "x", status: "ready" };
+    write(t.file, JSON.stringify(raw)); write(t.file.replace(/\.json$/, ".READY.json"), JSON.stringify({ status: "ready", set_manifest_sha256: sha(t.file), release_id: "rel-1" }));
+    assert.ok(cubeFromEnv({ ...t.env, NIBRS_CUBE_SET_SHA256: sha(t.file) }, canonical)!.offense, "an unknown product key is ignored");
+    t = build("override");
+    const other = path.join(dir, "good", "weapon-v1-rel-1");
+    const ov = cubeFromEnv({ ...t.env, NIBRS_WEAPON_CUBE_ROOT: other }, canonical)!;
+    assert.equal(ov.weapon!.root, other.replace(/\\/g, "/"), "an explicit root variable overrides the set's folder for that product");
+    // The set alone, no release known: refused (each product is bound to the release it was built from).
+    assert.equal(cubeFromEnv(t.env, undefined), null, "no release being read: refused");
+  } finally { console.error = quiet; fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
 // --- Shadow mode: the raw statement answers; the cube statement rides in a comment, is run beside it, and a difference or failure is only logged.
