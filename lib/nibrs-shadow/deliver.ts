@@ -8,6 +8,7 @@
  */
 import { CIRCUMSTANCE, CIRCUMSTANCE_HELD } from "../nibrs-plan/draft-layer";
 import { stateName } from "./places";
+import { NO_CATEGORY } from "../nibrs-plan/compile";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
@@ -384,9 +385,12 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const periods = ip >= 0 ? [...new Set(rows.map((r) => String(r[ip])))] : [""];
     const filled: unknown[][] = [];
     for (const p of periods) {
-      const inP = rows.filter((r) => ip < 0 || String(r[ip]) === p);
+      const all = rows.filter((r) => ip < 0 || String(r[ip]) === p);
+      // The placeholder row the statement keeps when no type occurred carries the period's status; it is not a row of the table.
+      const inP = all.filter((r) => String(r[ic] ?? "") !== NO_CATEGORY);
       // A period whose figures are not known (a blank month, a conflict) gets no invented zeros.
-      const known = inP.length > 0 && inP.every((r) => r[sc] === "VALUE" || r[sc] === "REPORTED_ZERO");
+      const known = all.length > 0 && all.every((r) => r[sc] === "VALUE" || r[sc] === "REPORTED_ZERO");
+      const total = inP.reduce((s, r) => s + Number(r[at(count)] ?? 0), 0);
       for (const code of CLEARANCE_TYPE_ORDER) {
         if (!allowed.has(code)) continue;
         const have = inP.find((r) => String(r[ic] ?? "").trim() === code);
@@ -396,7 +400,8 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
         if (ip >= 0) z[ip] = p;
         z[ic] = code; z[at(count)] = 0; z[sc] = "VALUE";
         if (beside) { z[at(beside)] = 0; z[at(`${beside}_status`)] = "VALUE"; }
-        if (share) { z[at(share)] = 0; z[at(`${share}_status`)] = "VALUE"; }
+        // A share of nothing is not a number: with no offense at all in the period, the share is blank.
+        if (share) { z[at(share)] = total > 0 ? 0 : null; z[at(`${share}_status`)] = total > 0 ? "VALUE" : "UNAVAILABLE"; }
         filled.push(z);
       }
       for (const r of inP) if (!CLEARANCE_TYPE_ORDER.includes(String(r[ic] ?? "").trim()) || !allowed.has(String(r[ic] ?? "").trim())) filled.push(r);

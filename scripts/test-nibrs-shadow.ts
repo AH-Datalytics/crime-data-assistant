@@ -64,6 +64,7 @@ let AZERO: string[] = [];
 let withLeftOut = false;
 /** Clearance types the state-clearance stub leaves out of its rows (P192: the answer still lists all seven). */
 let OMIT_TYPES: string[] = [];
+let EMPTY_CLEARANCE = false;
 /** A year or total's rows end with `left_out` (the zero-report months, "202407"); a stub branch that built it says so. */
 function stub(sql: string): unknown[][] {
   withLeftOut = false;
@@ -108,7 +109,9 @@ function stub0(sql: string): unknown[][] {
   }
   if (/unnest\(\[.*\]\) AS ori/.test(sql)) return gridRows(sql);
   // P192: one agency's clearance by type, only the types that occurred (arrest 704, uncleared 8,170: Chicago robbery 2024's real shape).
-  if (/cats AS/.test(sql) && !/AS period/.test(sql) && /cleared_exceptionally/.test(sql) && /_incidents"/.test(sql)) return [["arrest", 704, "VALUE", 704, "VALUE", 0.079, "VALUE"], ["none", 8170, "VALUE", 8170, "VALUE", 0.921, "VALUE"]];
+  // (EMPTY_CLEARANCE: no type occurred, the statement's placeholder row alone, which carries the period's status.)
+  if (/cats AS/.test(sql) && !/AS period/.test(sql) && /cleared_exceptionally/.test(sql) && /_incidents"/.test(sql))
+    return EMPTY_CLEARANCE ? [["__none__", 0, "VALUE", 0, "VALUE", null, "UNAVAILABLE"]] : [["arrest", 704, "VALUE", 704, "VALUE", 0.079, "VALUE"], ["none", 8170, "VALUE", 8170, "VALUE", 0.921, "VALUE"]];
   // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
   // The same with the incidents beside the count (P66): one incident had a female and a male victim (12 + 9 > 20).
   if (/cats AS/.test(sql) && !/AS period/.test(sql) && /_incidents"/.test(sql)) return [["F", 14, "VALUE", 12, "VALUE", 0.6, "VALUE"], ["M", 10, "VALUE", 9, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN", null, "UNKNOWN"]];
@@ -2895,6 +2898,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.deepEqual(names, ["Cleared by arrest", "Exceptional: death of the offender", "Exceptional: prosecution declined", "Exceptional: in custody of another jurisdiction",
     "Exceptional: victim refused to cooperate", "Exceptional: juvenile, no custody", "Uncleared"], JSON.stringify(hou.delivered.table));
   assert.deepEqual(hou.delivered.table.rows.map((r) => [r[1], r[2]]), [[704, 704], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [8170, 8170]]);
+  // No type occurred at all (a clearance condition with no case): never an empty table, the allowed types are zero rows.
+  EMPTY_CLEARANCE = true;
+  try {
+    const none = as(ask("Houston robberies cleared by exception by type in 2024"), "answer");
+    assert.equal(none.delivered.table.rows.length, 5, JSON.stringify(none.delivered.table));
+    assert.ok(none.delivered.table.rows.every((r) => /^Exceptional:/.test(String(r[0])) && r[1] === 0 && r[2] === 0), JSON.stringify(none.delivered.table.rows));
+    const all7 = as(ask("Houston robbery clearance by type in 2024"), "answer");
+    assert.equal(all7.delivered.table.rows.length, 7);
+    assert.ok(all7.delivered.table.rows.every((r) => r[1] === 0), "no case of any type: seven zero rows");
+  } finally { EMPTY_CLEARANCE = false; }
+  // A state or the nation with no type at all: seven zero rows, never an empty table.
+  OMIT_TYPES = ["arrest", "A", "B", "C", "D", "E", "none"];
+  try {
+    const t = as(ask("Texas murder clearance by type in 2025"), "answer");
+    assert.equal(t.delivered.table.rows.length, 7, JSON.stringify(t.delivered.table));
+    assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
+  } finally { OMIT_TYPES = []; }
 }
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
