@@ -311,7 +311,8 @@ const FILTER_VALUE_RANGE: Record<string, [number, number]> = { "age:Under 18": [
 const FILTER_VALUE_SET: Record<string, string[]> = {
   "weapon:firearm": ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"],
   "dv:intimate_partner": ["SE", "CS", "BG", "XS", "XR", "HR"],
-  "dv:family": ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE"],
+  "dv:family": ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"],
+  "dv:domestic": ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"],
   "location:commercial": ["02", "03", "05", "07", "08", "09", "12", "14", "17", "19", "21", "23", "24", "40", "41", "47", "55"],
 };
 const sameSet = (a: unknown[], b: string[]) => a.length === b.length && b.every((x) => a.map(String).includes(x));

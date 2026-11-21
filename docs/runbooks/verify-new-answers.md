@@ -57,6 +57,15 @@ npx tsx scripts/apply-verify-results.ts --requests <dir>/requests.jsonl --result
 
 A request whose every number matched is added to `qlog-verified.json` at its table digest; any other is listed and left out. The apply step re-checks each result against the request it is applied to (the cell, the engine value that request shows, and the checker's value), so results from an earlier run can never verify a changed answer, whatever they say. An id already verified at the same digest is left as it is. One already verified at *another* digest is a conflict and is not replaced (the script exits 1); replacing it is the owner's decision, said on the command with `--replace <id>` and in the commit message. Commit the file as a follow-up commit on the PR, with the run's counts in the message. The scorecard then counts those answers as correct, and a later change to their numbers puts them back to unverified.
 
+## After a monthly refresh
+
+A new release changes table digests, so verified answers whose table moved fall back to unverified (an extra newest month, a different consistent-reporter set). The gate stays hard: they are verified again, not accepted as they were.
+
+1. Run the cold scorecards on the old and the new release on the runner. The ids that moved correct to unverified are the list to verify (the runner's `.changed.json`). Answers whose text changed but whose table digest did not stay correct.
+2. `make-verify-requests.ts --ids <the ids> --labels <labels> --progress <the new release's cold run>.jsonl --root <canonical root> --historical <the new Crime Index build> --python <python> --out <dir>/requests.jsonl` on the runner. It needs the run's progress file (a request is built only if the rerun's digest equals the scored one) and the same roots as the run; Current Trends answers read the Crime Index build only, but the engine still loads the canonical release's description, so use the runner's roots.
+3. The blind SQL (sections 2 and 3) on the NEW parquet files only. Codex writes and runs it from the folder of blind requests, as for every batch.
+4. `apply-verify-results.ts ... --batch crimeindex-<date>`; commit `qlog-verified.json` in its own PR. The labels files do not change.
+
 ## Not covered
 
 - Routes and clarifies show no numbers and need no verification.

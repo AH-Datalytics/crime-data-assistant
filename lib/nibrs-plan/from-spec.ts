@@ -30,7 +30,10 @@ export type AdapterResult =
 const FIREARM = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
 const DV: Record<string, string[]> = {
   intimate_partner: ["SE", "CS", "BG", "XS", "XR", "HR"],
-  family: ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE"],
+  // P82 and D20: family or household includes the stepsibling, foster parent, foster child and cohabitant relationships.
+  family: ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"],
+  // P169: domestic is both, one list (a victim with a relationship in either).
+  domestic: ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"],
 };
 /** Today's age groups (scripts/nibrs-auto-update.py age_group_expr), as bins; special codes stay their own categories. */
 /** Today's age groups (P30). */

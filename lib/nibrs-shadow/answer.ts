@@ -889,13 +889,28 @@ function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
 
 /** P153 (Jeff 2026-11-18): a line, an annotation or a marker at a date on a chart ("with a line at August 2025", "add some kind of marker to show May 2020"). */
 export const CHART_MARKER = new RegExp(String.raw`\b(?:with\s+(?:an?\s+|some\s+)?(?:vertical\s+|dotted\s+|dashed\s+)?(?:line|annotation|marker|label|note|flag)s?\s+(?:at|in|on|for|to\s+show)\b|(?:add|put|draw|mark|show|include)\s+(?:in\s+)?(?:an?\s+|some\s+(?:kind\s+of\s+)?)?(?:vertical\s+|dotted\s+|dashed\s+)?(?:line|annotation|marker|label|flag)s?\b[^.?!]*\b(?:(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}|\d{4})\b|(?:mark|highlight|annotate)\s+(?:the\s+)?(?:month\s+of\s+)?(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4})`, "i");
-export const CHART_MARKER_SENTENCE = "Marking a date on a chart isn't available here.";
+/**
+ * P157 (Jeff 2026-11-19): any request to change a chart is declined with one sentence, whatever the change (a date marker, a trend or regression line,
+ * axes, a reference line, shading, a title, and the chart type, labels, legend, gridlines, colors or sort that "presentation" edits used to answer with the
+ * previous answer unchanged). The only real control named is the table's column-heading sort.
+ */
+export const CHART_MARKER_SENTENCE = "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading.";
+/** An instruction to change a chart beyond a date marker: a trend or regression line, axes, a reference line, shading, a chart title, fonts. */
+export const CHART_EDIT = new RegExp([
+  String.raw`\b(?:add|show|draw|fit|plot|include|with)\s+(?:an?\s+|some\s+)?(?:linear\s+)?(?:trend\s*-?\s*lines?|regression(?:\s+lines?)?)\b|\blinear\s+regression\b|\blines?\s+of\s+best\s+fit\b|\bbest[-\s]fit\b`,
+  String.raw`\b(?:make|set|put|flip|swap|switch|start|change|use|map|move)\b[^.?!]*\b(?:(?:left|right|primary|secondary|second|dual|twin|y|x)[-\s]*axis|axes)\b|\b(?:max|min)(?:imum)?\b[^.?!]*\by[-\s]*axis\b|\by[-\s]*axis\b[^.?!]*\b(?:max|min|should)\b|\bdual[-\s]axis\b|\baxis\s+(?:scale|range|title|limits?|break)\b|\blog(?:arithmic)?\s+scale\b`,
+  String.raw`\b(?:add|draw|put|show|include)\s+(?:in\s+)?(?:an?\s+|some\s+)?(?:horizontal\s+|reference\s+|benchmark\s+|average\s+|target\s+|vertical\s+|dotted\s+|dashed\s+)?lines?\b(?!\s+(?:chart|graph|for\s+the\s+(?:national|state)))`,
+  String.raw`\b(?:shade|highlight|circle|call\s*out)\b[^.?!]*\b(?:bar|column|point|region|area)s?\b|\bchart\s+title\b|\bfonts?\b`,
+  String.raw`\b(?:with|add|put|draw|mark|include)\s+(?:an?\s+|some\s+)?(?:annotation|marker|flag)s?\b`,
+].join("|"), "i");
+/** A request to change a chart (a date marker or any other change the page cannot make). */
+export const isChartEdit = (turn: string) => CHART_MARKER.test(turn) || CHART_EDIT.test(turn);
 
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
-  // A date marked on a chart is declined with its own sentence, before any place or crime is asked.
-  if (CHART_MARKER.test(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
+  // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
+  if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
@@ -1123,6 +1138,8 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // P38: a follow-up in gang words ("only gang-related", "what about gangs?") is declined as a first question would be,
   // with no follow-up reading offered (Codex review 19.2, 19.3).
   if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
+  // P157: a request to change a chart (a marker, a line, axes) is declined with the one chart sentence, not asked about the last question.
+  if (isChartEdit(followUp)) return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
   // "Is it getting better?" (Jeff 2026-11-18): a verdict is not given; the decline says so and offers a comparison built from the previous
   // question, the latest complete year against the year before.
   if (JUDGEMENT.test(followUp)) {
@@ -1155,6 +1172,9 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     return { ...withOffer, rewrite: followUp, rewriteKind: "new" };
   }
   const r = rewriter.rewrite(previous, followUp);
+  // P157: a presentation-only edit (chart type, labels, legend, gridlines, colors, sort, "as a table", "hide the chart") used to return the previous
+  // answer unchanged with nothing said; the page has no control for it, so it is declined with the one chart sentence.
+  if ((r.kind as string) === "presentation") return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
   // A proposal returns before anything runs.
   if (r.kind === "propose") return { kind: "proposal", question: followUp, proposed: r.question, how: r.how, rewrite: r.question, rewriteKind: "propose" };
   // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is read as a question of its own
@@ -1247,7 +1267,13 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   // No period named: the period is asked, as on NIBRS's path, never a default year answered (job SA1: "firearm murders
   // in Philadelphia" is labelled to ask which period).
   // Not so when Homicide Reports is named and a series by year or month is asked: it runs over every year the source holds (P152).
-  const everyYear = plan.defaults.some((d) => d.path === "period") && flags(ledger0).shrAsked && plan.groupings.some((g) => g.dimension === "time.year" || g.dimension === "time.month");
+  const everyYear0 = plan.defaults.some((d) => d.path === "period") && flags(ledger0).shrAsked && plan.groupings.some((g) => g.dimension === "time.year" || g.dimension === "time.month");
+  // P161 (Jeff 2026-11-19): a victim's or offender's detail broken down with no period ("Murder victim race in Houston") is every year by
+  // year from Homicide Reports' first year, with the sentence that no years were given.
+  const detailEveryYear = !everyYear0 && plan.defaults.some((d) => d.path === "period") && !plan.groupings.some((g) => g.dimension.startsWith("time."))
+    && plan.groupings.length === 1 && /^(?:victim|offender)\./.test(plan.groupings[0].dimension);
+  if (detailEveryYear) plan = { ...plan, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }, ...plan.groupings] };
+  const everyYear = everyYear0 || detailEveryYear;
   if (plan.defaults.some((d) => d.path === "period") && !everyYear) return null;
   let period: { from: string; to: string };
   if (everyYear) period = { from: `${SHR_FIRST_YEAR}-01`, to: deps.shr.latestMonth };
@@ -1264,6 +1290,8 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const sq = shrQuestionOf(plan, period, deps.shr, { compare });
   if ("why" in sq) return null;
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  if (a.kind === "shr" && detailEveryYear)
+    return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 /**

@@ -958,6 +958,23 @@ const EXCLUSIONS = [
       "user-facing page, this exclusion must be revisited and the route sealed.",
     claims: { readsCrimeDb: false, returnsRows: false, invokesModel: false },
   },
+  {
+    route: "app/api/engine-query/route.ts",
+    reason:
+      "Stage 1 of the engine switch (owner decision 2026-11-19): the NIBRS tab answered by the new engine, behind a PRIVATE flag only the owner's browser holds (the nibrs_engine cookie, " +
+      "lib/engine-private.ts); every other request gets a 404 before anything else runs, and no page sends a visitor here without the cookie. It reads no crime database of the app and " +
+      "invokes no model: it forwards the question to the engine service on 127.0.0.1 (lib/engine-client.ts), which answers from nibrs-model's canonical parquet, and writes a query-log row " +
+      "for every outcome (lib/engine-route.ts). It is not part of the public question flow and returns no delivery decision of the old typed-outcome contract; its answers are typed by the " +
+      "engine's own outcome kinds. When the engine switch makes this route public (a later stage, with the owner's typed OK), this exclusion must be revisited and the route sealed.",
+    claims: { readsCrimeDb: false, returnsRows: false, invokesModel: false },
+  },
+  {
+    route: "app/api/engine-private/route.ts",
+    reason:
+      "The private flag's own route (stage 1 of the engine switch): it sets, clears or reports the owner's nibrs_engine cookie. It answers { enabled } only, reads no data and invokes no model; " +
+      "with no ENGINE_PRIVATE_KEY configured it is a 404.",
+    claims: { readsCrimeDb: false, returnsRows: false, invokesModel: false },
+  },
 ];
 
 function routeFiles(root) {
