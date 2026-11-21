@@ -8,6 +8,9 @@ The engine service answers questions from the canonical NIBRS release, in its ow
 - Each worker holds one DuckDB (Python) executor with a memory limit and thread count. One question per worker at a time.
 - `lib/engine-service/*`: the protocol, the pool, the HTTP face and the engine adapter (`core.ts`), all unit-tested without data (`scripts/test-engine-service.ts`).
 - Build: `node scripts/build-engine-service.mjs` (esbuild; the server then needs only node and a python with duckdb 1.5.6, no tsx).
+- Install path: build in the deployed release, then copy the bundle to a stable folder the unit runs from:
+  `cd /opt/nibrs/current && node scripts/build-engine-service.mjs && mkdir -p /opt/nibrs/engine/dist /opt/nibrs/engine/tmp && cp -r services/engine/dist/. /opt/nibrs/engine/dist/`.
+  The unit (`services/engine/engine.service`) runs `/opt/nibrs/engine/dist/main.cjs` with the release as its working directory. After every deploy (a new release folder) repeat the build and copy, then `systemctl restart nibrs-engine`.
 
 ## Configuration (environment file, `/opt/nibrs/engine/engine.env`)
 
@@ -28,6 +31,10 @@ The service reads `scripts/fixtures/nibrs-shadow/{release,agencies,agency-names}
 ## Checks without the site
 
 `curl -s http://127.0.0.1:8420/health` (pool, release, cubes loaded), then a question: `curl -s -X POST http://127.0.0.1:8420/answer -H "x-engine-token: $ENGINE_TOKEN" -H "content-type: application/json" -d '{"tab":"nibrs","question":"Robberies in Texas in 2024"}'`.
+
+## Release check before a release is served
+
+`python scripts/check-release-occurrence.py <release>/canonical` (read-only, about a minute): fails (exit 1) when an offense code repeats inside an incident in any year. The engine reads a victim's weapon by incident and offense code only (compile.ts, P31), which is exact only while that never happens; a failing release is not served until the victim weapon join uses an occurrence. Run it where the release is copied, before a new release folder is pinned.
 
 ## Rollback
 

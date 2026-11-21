@@ -2556,6 +2556,15 @@
       "note": "The cube's measure guard: every measure the vocabulary knows is approved in lib/nibrs-plan/cube-measures.json with the questions that prove a cube statement is built for it (and that the runner compares against raw), or raw with a reason; the router follows the file; a raw measure is never read from a cube whatever the question form; the checked-question and shadow-question files are exactly the approved forms. Offline: a stand-in cube configuration, nothing read."
     },
     {
+      "id": "test-groupable-table",
+      "tier": "F",
+      "script": "scripts/test-groupable-table.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "General query model step 1: the compiler's grouping table is built from the attribute table (lib/nibrs-plan/attribute-table.ts) and is byte-identical to the hand-written table it replaced (golden file: columns, flags, join and binned text); every row is a dimension of the semantic layer. Offline."
+    },
+    {
       "id": "test-nibrs-duckdb-temp",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-temp.ts",

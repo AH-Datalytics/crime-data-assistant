@@ -50,6 +50,7 @@ import { BIG_LIST, oriRows } from "./ori-rows";
 import { FAMILIES, GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import cubeMeasures from "./cube-measures.json";
 import type { NibrsPlan } from "./plan";
+import { ATTRIBUTE_TABLE, type AttributeRow } from "./attribute-table";
 import { clearanceDims, peopleFacts, type AnswerStatement } from "./result";
 import type { ResolvedPeriod } from "./resolve";
 import { headerStates, postalStateSql } from "./state-codes";
@@ -158,27 +159,35 @@ function clearanceCond(read: Read, a: string, dimension: string, values: string[
 const hourGroup = (a: string): Groupable => ({ col: "ih.incident_hour", age: true,
   join: (read) => `LEFT JOIN ${read("incident")} ih ON ${sameIncident("ih", a)}`,
   binned: (bins) => `CASE ${bins.map((b) => `WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN ${b.from} AND ${b.to} THEN ${q(b.label)}`).join(" ")} ELSE 'Unknown' END` });
-const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
-  victim: { "victim.race": own(unknownAs("v.race")), "victim.sex": own(unknownAs("v.sex")), "victim.ethnicity": own(unknownAs("v.ethnicity")), "victim.age": age("v"),
-    "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
-    // Element 31 (coordinator 2026-11-04): up to two per victim, each counted once under each (categories_overlap).
-    "victim_circumstance.circumstance": { col: "vc.circumstance", multi: true, join: (read) => `LEFT JOIN ${read("victim_circumstance")} vc ON ${sameVictim("vc", "v")}` },
-    "incident.hour": hourGroup("v"),
-    ...offenderGroupings("v"), ...Object.fromEntries(OFFENDER_ATTRS.map((x) => [`victim_offender.offender_${x}`, pairAttr(x)])), ...clearance("v") },
-  offense: { "offense.location_type": own("o.location_type"),
-    "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
-    "incident.hour": hourGroup("o"), ...offenderGroupings("o"), ...clearance("o") },
-  incident: { "incident.hour": hourGroup("o"), ...clearance("o") },
-  // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted
-  // as one offender, whatever its blank fields hold; its attributes are Unknown (P86: one Unknown row).
-  offender: Object.fromEntries(OFFENDER_ATTRS.map((x) => {
-    const seq00 = (c: string) => `CASE WHEN f.offender_seq = '00' THEN ${x === "age" ? "'Unknown'" : "'U'"} ELSE ${c} END`;
-    return [`offender.${x}`, x === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(unknownAs(`f.${x}`)))];
-  })),
-  arrestee: { "arrestee.race": own(unknownAs("a.race")), "arrestee.sex": own(unknownAs("a.sex")), "arrestee.ethnicity": own(unknownAs("a.ethnicity")), "arrestee.age": age("a") },
-  // Arrests for one Group B offense (DUI, disorderly conduct ...): the standalone arrest's own columns (job AR6).
-  group_b_arrest: { "group_b_arrest.race": own(unknownAs("a.race")), "group_b_arrest.sex": own(unknownAs("a.sex")), "group_b_arrest.ethnicity": own(unknownAs("a.ethnicity")), "group_b_arrest.age": age("a") },
-};
+/**
+ * The grouping table, built from the attribute table (attribute-table.ts: data, one row per unit and dimension) with one builder per kind. Held byte-identical to the hand-written
+ * table it replaced by scripts/test-groupable-table.ts (general query model, step 1: no behaviour change).
+ */
+function groupableOf(r: AttributeRow): Groupable {
+  const c = r.column ?? "";
+  switch (r.kind) {
+    case "own": return r.age ? age(r.alias) : own(r.unknown ? unknownAs(`${r.alias}.${c}`) : `${r.alias}.${c}`);
+    case "hour": return hourGroup(r.alias);
+    case "offenders": return offenderAttr(r.alias, c as (typeof OFFENDER_ATTRS)[number]);
+    case "paired": return pairAttr(c as (typeof OFFENDER_ATTRS)[number]);
+    case "linked": {
+      const ca = r.childAlias ?? "", table = r.table ?? "";
+      return { col: `${ca}.${c}`, multi: true, join: (read) => `LEFT JOIN ${read(table)} ${ca} ON ${r.keys === "victim" ? sameVictim(ca, r.alias) : sameOffense(ca, r.alias)}` };
+    }
+    case "clearance": return { col: CLEARANCE_COL[r.dimension], join: clearanceJoin(r.alias) };
+    case "self": {
+      // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted as one offender, whatever its blank fields hold; its attributes
+      // are Unknown (P86: one Unknown row).
+      const seq00 = (x: string) => `CASE WHEN f.offender_seq = '00' THEN ${c === "age" ? "'Unknown'" : "'U'"} ELSE ${x} END`;
+      return c === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(unknownAs(`f.${c}`)));
+    }
+  }
+}
+export const GROUPABLE: Record<Entity, Record<string, Groupable>> = (() => {
+  const out: Record<Entity, Record<string, Groupable>> = { victim: {}, offense: {}, incident: {}, offender: {}, arrestee: {}, group_b_arrest: {} };
+  for (const r of ATTRIBUTE_TABLE) out[r.unit][r.dimension] = groupableOf(r);
+  return out;
+})();
 
 /**
  * Age in bins (P30): infants in the bin holding 1, 01-99 as numbers; "00" (an age recorded as unknown) and a blank (no
@@ -517,7 +526,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "a")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
       else if (on === "offense_weapon offense_weapon.weapon victim victim")
         // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
-        // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.
+        // codes). A victim names its connected offense by code only (NIBRS data element 24; the victim_offense row's key_occurrence is the VICTIM's numbering, not an offense
+        // occurrence), so any segment of that code in the incident counts. That is exact while an incident holds at most one offense segment per code: scripts/check-release-occurrence.py
+        // fails a release in which a code repeats (offense or offense_weapon key_occurrence > 1), and none of the 2017-2026 canon2-20261118-host years does.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "vo")} AND w2.offense_code = vo.connected_offense AND ${weaponIn("w2", values)})`);
       else if (on === "offense offense.offense incident arrestee")
         // Increment 6: an arrest on an incident that has an offense with one of the codes.
