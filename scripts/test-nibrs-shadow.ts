@@ -62,6 +62,8 @@ const sqls: string[] = [];
 /** One agency's month reported as zero crimes (AZERO, "2024-07"): the stub marks it NOT_REPORTED, as the compiler does for one agency. */
 let AZERO: string[] = [];
 let withLeftOut = false;
+/** Clearance types the state-clearance stub leaves out of its rows (P192: the answer still lists all seven). */
+let OMIT_TYPES: string[] = [];
 /** A year or total's rows end with `left_out` (the zero-report months, "202407"); a stub branch that built it says so. */
 function stub(sql: string): unknown[][] {
   withLeftOut = false;
@@ -89,7 +91,7 @@ function stub0(sql: string): unknown[][] {
       out.push(["c", oris.get(k), a[0], a[1], a[2], a[3], a[4], a[5], null, null]);
       // Half by arrest, one in twelve under each exceptional type A to E (the stub's Smallville has none of C), the rest not cleared.
       const arrest = Math.floor(a[3] / 2), ex = Math.floor(a[3] / 12), none = a[3] - arrest - 5 * ex;
-      const cats: [string, number][] = [["arrest", arrest], ["A", ex], ["B", ex], ["C", ex], ["D", ex], ["E", ex], ["none", none]];
+      const cats = ([["arrest", arrest], ["A", ex], ["B", ex], ["C", ex], ["D", ex], ["E", ex], ["none", none]] as [string, number][]).filter(([c]) => !OMIT_TYPES.includes(c));
       for (const [c, n] of cats) out.push(["s", oris.get(k), a[0], n, null, null, null, null, c, Math.max(n - 1, 0)]);
     }
     return out;
@@ -105,6 +107,8 @@ function stub0(sql: string): unknown[][] {
     return [...by.values()];
   }
   if (/unnest\(\[.*\]\) AS ori/.test(sql)) return gridRows(sql);
+  // P192: one agency's clearance by type, only the types that occurred (arrest 704, uncleared 8,170: Chicago robbery 2024's real shape).
+  if (/cats AS/.test(sql) && !/AS period/.test(sql) && /cleared_exceptionally/.test(sql) && /_incidents"/.test(sql)) return [["arrest", 704, "VALUE", 704, "VALUE", 0.079, "VALUE"], ["none", 8170, "VALUE", 8170, "VALUE", 0.921, "VALUE"]];
   // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
   // The same with the incidents beside the count (P66): one incident had a female and a male victim (12 + 9 > 20).
   if (/cats AS/.test(sql) && !/AS period/.test(sql) && /_incidents"/.test(sql)) return [["F", 14, "VALUE", 12, "VALUE", 0.6, "VALUE"], ["M", 10, "VALUE", 9, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN", null, "UNKNOWN"]];
@@ -2873,6 +2877,24 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A sentence that merely holds a similar word keeps its own handling: "occurred in" still reads as "in" and nothing else.
   assert.deepEqual(ask("how many murders occurred in Memphis in 2024").kind, ask("how many murders in Memphis in 2024").kind);
   assert.deepEqual(ask("Houston retail theft in 2024").kind, ask("Houston shoplifting in 2024").kind);
+}
+// P192 (Jeff 2026-11-21): clearance by type always shows all seven rows, zeros included, in one fixed order.
+{
+  OMIT_TYPES = ["C", "E"];
+  try {
+    const tx = as(ask("Texas murder clearance by type in 2025"), "answer");
+    assert.deepEqual(tx.delivered.table.rows.map((r) => r[0]), ["Cleared by arrest", "Exceptional: death of the offender", "Exceptional: prosecution declined",
+      "Exceptional: in custody of another jurisdiction", "Exceptional: victim refused to cooperate", "Exceptional: juvenile, no custody", "Uncleared"]);
+    const zero = tx.delivered.table.rows.filter((r) => /custody of another|juvenile/.test(String(r[0])));
+    assert.ok(zero.length === 2 && zero.every((r) => r[1] === 0 && r[2] === 0), JSON.stringify(zero));
+    assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 260, "the zero rows add nothing (312 less the 52 the stub left out)");
+  } finally { OMIT_TYPES = []; }
+  // One agency: only arrest and uncleared occurred; all seven rows are listed, the five exceptional types with zero and zero incidents.
+  const hou = as(ask("Houston robbery clearance by type in 2024"), "answer");
+  const names = hou.delivered.table.rows.map((r) => r[0]);
+  assert.deepEqual(names, ["Cleared by arrest", "Exceptional: death of the offender", "Exceptional: prosecution declined", "Exceptional: in custody of another jurisdiction",
+    "Exceptional: victim refused to cooperate", "Exceptional: juvenile, no custody", "Uncleared"], JSON.stringify(hou.delivered.table));
+  assert.deepEqual(hou.delivered.table.rows.map((r) => [r[1], r[2]]), [[704, 704], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [8170, 8170]]);
 }
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
