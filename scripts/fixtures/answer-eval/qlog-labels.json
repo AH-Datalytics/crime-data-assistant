@@ -30401,16 +30401,23 @@
    "question": "What is the clearance rate for rape in Florida by year?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -32417,16 +32424,23 @@
    "question": "Show the burglary clearance rate in Ohio since 2000",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -40495,16 +40509,23 @@
    "question": "What is the rape clearance rate in Florida by year?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -41531,16 +41552,23 @@
    "question": "What is the murder clearance rate in Texas by year?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -68251,16 +68279,23 @@
    "question": "What is the homicide clearance rate over time for Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -77277,16 +77312,19 @@
    "question": "What is the homicide clearance rate in Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
