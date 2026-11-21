@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -2695,6 +2695,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       plan.statistics = [{ kind: "count", as: plan.statistics[0].as, measure: m0.as }, { kind: "share", as: "share_of_period", measure: m0.as, within: plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension) }];
     }
   }
+  // P82: domestic violence is built for one agency first (a state or national count waits for its measured time).
+  // NIBRS_DV_WIDE=on lets the runner time the raw statement for a state or the nation (never set in production).
+  if (plan.measures.some((m) => /\.domestic_violence$/.test(m.id)) && process.env.NIBRS_DV_WIDE !== "on" && !(plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency"))
+    return decline("unsupported_capability", "This isn't available: domestic violence for a state, the nation or several places. Ask for one city or agency.");
   // Places (increment 4): named agencies, separate or combined, and a state's city agencies for a ranking. State and
   // national totals are increment 5.
   const citySet = (p: Place) => p.kind === "agency_set" && p.within.kind === "state"
@@ -3134,6 +3138,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
     // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
     ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
+    // P82: what domestic violence counts, one plain note.
+    ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     // Time of day (Jeff 2026-11-15): the buckets, one line under the table.
     ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE, NIGHT_LINE] : [])];
   // Every arrest in the nation broken down by a person's attribute over more than one year is too large to count here

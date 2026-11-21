@@ -43,7 +43,19 @@ const planStatistic = (plan?: Record<string, unknown>) => {
   return kind ? [kind, ...transforms].join("+") : null;
 };
 
-const SOURCE: Record<string, string> = { answer: "nibrs", srs: "crimeindex_state_national", current: "current_trends", shr: "shr_canonical" };
+const SOURCE: Record<string, string> = { answer: "nibrs", srs: "crimeindex_state_national", current: "current_trends", shr: "shr_canonical", hate: "hate_crime" };
+
+/**
+ * A hate crime answer (hate.ts) names its counting rules, so a checker counts the same rows: the export has one row per
+ * incident-offense, an incident is the distinct year + ORI + incident number, and a month with no row is a month with no
+ * reported incident (reporting is voluntary), never a blank.
+ */
+const HATE_RULES = "Hate crime export (hate_crime_incident/data.parquet; one row per incident-offense, columns include year, state, ori, incident_number, "
+  + "incident_date, bias_code): the count is the number of DISTINCT year + ORI + incident_number among rows in the place and span (never rows, never offenses); "
+  + "an agency is its ORI, a state its postal code in `state`, the nation every row; a bias, when the request names one, is rows with that bias_code (an incident counts "
+  + "once however many of its rows carry it); a month or year is read from incident_date; a month or year with no row is 0 (reporting is voluntary, the figure is the "
+  + "reported incidents), but a month before 1991-01 is blank; a column headed \"rolling N months\" is the sum of the N monthly counts ending at the row's month, shown only "
+  + "from the first month whose window lies wholly in 1991-01 or later; the span ends at the last complete month of the data (the request's period already says it)";
 
 /** A cell's identity: its column and where it sits, as structured JSON (never a joined string that two cells could share). */
 export const cellKey = (column: string, at: Record<string, unknown>) => JSON.stringify([column, Object.keys(at).sort().map((k) => [k, at[k]])]);
@@ -65,7 +77,7 @@ export function sameValue(engine: unknown, mine: unknown): boolean {
 /** The request for one answered label, or null for an outcome that shows no table (a clarify, a decline, a route). */
 export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null {
   const table = o.delivered?.table;
-  if (!table || !["answer", "historical", "srs", "current", "shr"].includes(o.kind)) return null;
+  if (!table || !["answer", "historical", "srs", "current", "shr", "hate"].includes(o.kind)) return null;
   const groups = table.columns.map((c, i) => [c, i] as const).filter(([c]) => c.binding.kind === "grouping");
   const numbers = table.rows.flatMap((row) => table.columns.flatMap((c, i): VerifyNumber[] => (c.binding.kind !== "statistic" ? []
     : [{ column: c.header, binding: c.binding, at: Object.fromEntries(groups.map(([g, gi]) => [g.header, row[gi]])), value: row[i] }])));
@@ -97,6 +109,7 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     : o.kind === "srs" ? (q.places ?? (q.place ? [q.place] : [])).map(geo)
     // A Current Trends ranking or set lists its agencies with their ORIs, so a checker can find each one (job S4).
     : o.kind === "current" ? [...(q.place ? [q.place] : []), ...(q.agencies ?? []).map((a) => ({ kind: "agency", ori: a.ori, state: a.state ?? null, label: a.label }))]
+    : o.kind === "hate" ? (q.place ? [q.place] : [])
     : shr ? [...(q.place ? [q.place] : []), ...((q as { places?: { kind: string; ori?: string; label?: string; state?: string }[] }).places ?? [])]
     : ((o.plan?.geography as { places?: unknown[] } | undefined)?.places ?? []));
   const source = o.kind === "historical" ? (q.beside?.length ? (q.agencies?.length ? "crimeindex_agency+state_national" : "crimeindex_state_national") : "crimeindex_agency") : SOURCE[o.kind];
@@ -105,9 +118,10 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     id: label.id, tab: label.tab, times_asked: label.times, question: label.question, follow_up_of: label.kind === "follow-up" ? label.previous : null, source,
     measure: q.measure ?? planMeasure(o.plan) ?? o.meaning?.measures?.[0]?.name ?? null, statistic: q.statistic ?? planStatistic(o.plan) ?? o.meaning?.statistic ?? null, grain, places: withoutSql(places) as unknown[],
     // A rate's denominator is only the reporting agencies' residents (Codex rankings-B review 03.1).
-    combine: shr ? (q as { ranking?: unknown }).ranking ? `${SHR_RULES}; RANKING: the nation's city agencies (Crime Index agency_crime type city, plus Jacksonville's sheriff, minus the dropped duplicates) with the question's population or more in the last year of the period (capped at Crime Index's last year) and a Homicide Reports filing (shr_agency_year records > 0) in EVERY year of the period; each city's figure is its count of matching victims, or for a share matching victims over all its murder victims (one decimal), a city with no murder victim has no share; ranked by figure, ties by name` : SHR_RULES : county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
+    combine: o.kind === "hate" ? HATE_RULES : shr ? (q as { ranking?: unknown }).ranking ? `${SHR_RULES}; RANKING: the nation's city agencies (Crime Index agency_crime type city, plus Jacksonville's sheriff, minus the dropped duplicates) with the question's population or more in the last year of the period (capped at Crime Index's last year) and a Homicide Reports filing (shr_agency_year records > 0) in EVERY year of the period; each city's figure is its count of matching victims, or for a share matching victims over all its murder victims (one decimal), a city with no murder victim has no share; ranked by figure, ties by name` : SHR_RULES : county ? `sum of the listed agencies, each only in its listed years; an agency-year with no figure adds nothing, and the sum is blank only if none has one${
       (q.statistic === "rate") ? "; a rate is the summed count per 100,000 of the summed population of the agencies with a figure that year, blank if any of them has no population" : ""}` : (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
-    filters: shr ? (q.filters ?? []) : o.plan ? withoutSql(o.plan.filters) ?? null : null,
+    filters: o.kind === "hate" ? ((q as { bias?: { code: string; name: string } | null }).bias ? [{ bias_code: (q as { bias: { code: string } }).bias.code, bias: (q as { bias: { name: string } }).bias.name }] : [])
+      : shr ? (q.filters ?? []) : o.plan ? withoutSql(o.plan.filters) ?? null : null,
     ...(shr ? { categories: shrCategoryCodes(o.question as ShrQuestion) } : {}), groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
     verifiable: numbers.length > 0 && !ambiguous && !odd,
@@ -143,6 +157,8 @@ export function blindOf(q: VerifyRequest): Record<string, unknown> {
     // A Homicide Reports request's filters (SHR codes; one group is one person) and each category's codes: without them
     // a checker counts every murder (job SA1).
     ...(q.source === "shr_canonical" ? { filters: q.filters, categories: (q as { categories?: unknown }).categories ?? null } : {}),
+    // A hate crime request's bias, when one is named (the code and the FBI's name for it): without it a checker counts every incident.
+    ...(q.source === "hate_crime" ? { filters: q.filters } : {}),
     // A NIBRS request's plan, what was asked and how it is counted (measures, filters, groupings with their bins,
     // statistics, coverage such as "only agencies that reported every month", time basis), never a value or SQL: a
     // recount must count the same agencies and the same rows (job AR1).
