@@ -37,3 +37,4 @@ __pycache__/
 
 # the engine service bundle (scripts/build-engine-service.mjs)
 /services/engine/dist
+scripts/fixtures/nibrs-capability-matrix.jsonl
