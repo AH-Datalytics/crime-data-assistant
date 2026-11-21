@@ -29,6 +29,10 @@ The service reads `scripts/fixtures/nibrs-shadow/{release,agencies,agency-names}
 
 `curl -s http://127.0.0.1:8420/health` (pool, release, cubes loaded), then a question: `curl -s -X POST http://127.0.0.1:8420/answer -H "x-engine-token: $ENGINE_TOKEN" -H "content-type: application/json" -d '{"tab":"nibrs","question":"Robberies in Texas in 2024"}'`.
 
+## Release check before a release is served
+
+`python scripts/check-release-occurrence.py <release>/canonical` (read-only, about a minute): fails (exit 1) when an offense code repeats inside an incident in any year. The engine reads a victim's weapon by incident and offense code only (compile.ts, P31), which is exact only while that never happens; a failing release is not served until the victim weapon join uses an occurrence. Run it where the release is copied, before a new release folder is pinned.
+
 ## Rollback
 
 The site never depends on the service in stage 1: the page calls it only for a visitor holding the private cookie. Rollback = stop the service (`systemctl stop nibrs-engine`) or remove the cookie. A new release or cube set is a new folder and a new pin in the environment file; the previous folders stay on disk.
