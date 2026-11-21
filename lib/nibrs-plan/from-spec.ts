@@ -142,6 +142,8 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
     case "hour": return g("incident.hour", { bins: HOUR_BINS });
     case "drug": return g("property_drug.drug", { multiValue: "each_value" });
+    // Hate crimes by bias (H2, Jeff 2026-11-21): answered from the hate crime data only (planFromSpec allows it for hate crimes alone).
+    case "bias": return g("offense_bias.bias", { multiValue: "each_value" });
     default: return null;
   }
 }
@@ -250,6 +252,8 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       periodValue = periodOf(spec.period, false);
       if (spec.byYear) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
       if (spec.byMonth) groupings.push({ dimension: "time.month", unknown: "visible", absent: "show" });
+      // By bias is a hate crime breakdown (the hate crime data), never NIBRS's offense bias records for another crime.
+      if (spec.dim === "bias" && spec.measure !== "hate_crime") return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by bias: bias is answered for hate crimes only, from the hate crime data` };
       const g = groupingFor(spec.dim, unit);
       if (!g) return { kind: "unmapped", reason: `breakdown ${spec.dim} has no plan form` };
       groupings.push(g);

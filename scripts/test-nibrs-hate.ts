@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { hateBuildAt, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE } from "../lib/nibrs-shadow/hate";
+import { hateBuildAt, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 // A release folder as the export writes it: the latest incident date is mid-October 2026, so the last complete month is September 2026.
@@ -27,6 +27,10 @@ assert.throws(() => hateBuildAt(bad), /no stored label that differs/);
 const sqls: string[] = [];
 const execute = (sql: string): unknown[][] => {
   sqls.push(sql);
+  // A breakdown (H2/H3): per bias or location, by year when asked; the incidents left out of a school count (H4).
+  if (/AS k, \w+ AS c/.test(sql)) return [[2023, "Anti-Jewish", 7], [2023, "Location not confirmed", 9], [2023, "Anti-Black or African American", 8], [2024, "Anti-Jewish", 3]];
+  if (/ AS c,/.test(sql)) return [["Anti-Black or African American", 5], ["Location not confirmed", 9], ["Anti-Jewish", 7], [null, 1]];
+  if (/^SELECT count\(\*\) FROM \(/.test(sql)) return [[4]];
   if (/GROUP BY k/.test(sql)) {
     const keys = /year\(incident_date\) AS k/.test(sql) ? [2022, 2023, 2024] : [202301, 202302, 202303, 202304, 202305, 202306, 202307, 202308, 202309, 202310, 202311, 202312, 202201, 202202];
     return keys.map((k, i) => [k, 10 + i]);
@@ -110,5 +114,34 @@ assert.notEqual(rate.kind, "answer", "a rate is not built");
   assert.deepEqual(total.delivered.table.rows, [[857, 857]]);
   // A rolling window of several biases is not built.
   assert.equal(ask("anti-Asian and anti-Black hate crimes in Texas rolling 12 months").kind, "decline");
+}
+// H2, H3 (Jeff 2026-11-21): by bias, by location: one row each, incidents, largest first, "Location not confirmed" and no location last;
+// an incident in several rows, said with the period's total; no share column; a breakdown by bias is for hate crimes only.
+{
+  const byBias = as(ask("hate crimes by bias nationally in 2024"), "hate");
+  assert.deepEqual(byBias.delivered.table.columns.map((c) => c.header), ["Bias", "Hate crimes"]);
+  assert.deepEqual(byBias.delivered.table.rows, [["Anti-Jewish", 7], ["Anti-Black or African American", 5], ["Location not confirmed", 9], ["Not recorded", 1]]);
+  assert.ok(byBias.delivered.text.includes("An incident with more than one bias is counted under each, so the rows add to more than 857 hate crimes."), byBias.delivered.text.join(" / "));
+  assert.ok(/ GROUP BY c$/.test(sqls[sqls.length - 2]) && /bias_label AS c/.test(sqls[sqls.length - 2]), sqls[sqls.length - 2]);
+  const yearly = as(ask("hate crimes by bias in Texas by year from 2023 to 2024"), "hate");
+  assert.deepEqual(yearly.delivered.table.columns.map((c) => c.header), ["Year", "Bias", "Hate crimes"]);
+  assert.deepEqual(yearly.delivered.table.rows, [["2023", "Anti-Black or African American", 8], ["2023", "Anti-Jewish", 7], ["2023", "Location not confirmed", 9], ["2024", "Anti-Jewish", 3]]);
+  assert.ok(yearly.delivered.text.includes("An incident with more than one bias is counted under each, so a year's rows can add to more than its hate crimes."));
+  const byLoc = as(ask("hate crimes by location in Texas in 2024"), "hate");
+  assert.deepEqual(byLoc.delivered.table.columns.map((c) => c.header), ["Location", "Hate crimes"]);
+  assert.ok(/location AS c/.test(sqls[sqls.length - 2]) && byLoc.delivered.text.includes("An incident at more than one location is counted under each, so the rows add to more than 857 hate crimes."));
+  assert.ok(byLoc.delivered.table.columns.every((c) => !/share/i.test(c.header)), "no share column");
+  assert.equal(ask("robberies by bias in Texas in 2024").kind, "decline", "a breakdown by bias is for hate crimes only");
+}
+// H4 (Jeff 2026-11-21): at schools: incidents with any offense at a school location; the incidents with no confirmed location are not
+// counted, and a line says how many.
+{
+  const school = as(ask("anti-Black hate crimes at schools in Texas in 2024"), "hate");
+  const counted = sqls[sqls.length - 2], left = sqls[sqls.length - 1];
+  assert.ok(/location IN \('School\/College', 'School-College\/University', 'School-Elementary\/Secondary'\)/.test(counted) && /bias_code = '12'/.test(counted), counted);
+  assert.ok(/HAVING bool_or\(location = 'Location not confirmed'\) AND NOT bool_or\(location IN/.test(left), left);
+  assert.equal(school.delivered.text[0], "Texas had 857 anti-Black or African American hate crimes at schools in 2024.");
+  assert.ok(school.delivered.text.includes(SCHOOL_LINE) && school.delivered.text.includes("4 hate crimes in 2024 have no confirmed location and are not counted."), school.delivered.text.join(" / "));
+  assert.equal(as(ask("hate crimes at schools by year nationally"), "hate").delivered.table.columns[1].header, "Hate crimes at schools");
 }
 console.log("nibrs hate: hate crime questions are answered from the hate crime data only, with its caveat and its latest-date rule");
