@@ -2556,6 +2556,15 @@
       "note": "The cube's measure guard: every measure the vocabulary knows is approved in lib/nibrs-plan/cube-measures.json with the questions that prove a cube statement is built for it (and that the runner compares against raw), or raw with a reason; the router follows the file; a raw measure is never read from a cube whatever the question form; the checked-question and shadow-question files are exactly the approved forms. Offline: a stand-in cube configuration, nothing read."
     },
     {
+      "id": "test-crime-over-time",
+      "tier": "F",
+      "script": "scripts/test-crime-over-time.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Crime in a place over time: the nine per-measure answers (violent and property crime, the seven Part I offenses) become one table of one source, by year or month, for one place or several (side by side or long); Part I is their sum for counts and is omitted for rates; a blank cell stays blank; notes are said once or merged; anything else is null and keeps its path; the chart is violent and property crime (violent only for several places). Offline."
+    },
+    {
       "id": "test-groupable-table",
       "tier": "F",
       "script": "scripts/test-groupable-table.ts",

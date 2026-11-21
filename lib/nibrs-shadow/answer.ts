@@ -58,7 +58,8 @@ import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance } from "./clearance-current";
-import { partOneMonthly, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -262,7 +263,11 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // example read "robberies in nationwide in 2025").
   const placePart = own.find((p) => p.concept === "place" && p.state === "recognized");
   const measure = text("measure"), place = placePart?.value === "national" ? "the United States" : placePart?.text.trim();
-  if (measure && place) {
+  // The simple forms below are built from the crime and the place only. When the crime is only the one the unit implies ("nationwide
+  // arrests": every crime), dropping the unit changes the question: "All crime in the United States by year" (crimes, not arrests)
+  // was offered once crime over time answered it.
+  const unitOnly = !!text("unit") && /^(?:all_crime|unspecified)$/.test(String(own.find((p) => p.concept === "measure" && p.state === "recognized")?.value ?? ""));
+  if (measure && place && !unitOnly) {
     const period = text("period") ?? `in ${Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1)}`;
     // The nearest question for the same place and crime (coordinator 2026-11-02): as asked with only its period, then
     // the place's whole series by year, then from the first year the data holds (a period before it, asked of NIBRS).
@@ -1778,16 +1783,24 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
       { label: "Another year", entry: "which year" }] };
   }
-  // P148 (Jeff 2026-11-18): "crime", "overall crime" or "all crimes" by month for one place is Current Trends' violent and property
-  // crime beside their sum, the Part I total, not asked and not NIBRS's every offense. Only when both series answer as one agency's months.
+  // P148 (Jeff 2026-11-18), widened (crime in a place over time, Coordinator 2026-11-21): "crime", "overall crime", "all crimes" or a
+  // crime trend, by year (Crime Index) or by month (Current Trends), for one place or several, is violent and property crime beside
+  // their sum and the seven Part I offenses (crime-over-time.ts), not asked and not NIBRS's every offense. Only when all nine series
+  // answer as one source's series for the same places; otherwise the question keeps the path below.
   {
-    const ms = clause0("measure");
-    if (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && clause0("grain").some((g) => g.value === "month") && clause0("place").length === 1
-      && !flags(ledger0).comparison && !flags(ledger0).combined) {
-      const one = (m: string[]) => fromLedger(filledAll(ledger, "measure", [m]), deps, pins);
-      const merged = partOneMonthly(one(["violent_crime", "violent crime"]) as never, one(["property_crime", "property crime"]) as never);
+    const ms = clause0("measure"), grains = clause0("grain").map((g) => g.value);
+    // Nothing else asked: no unit (arrests, victims), breakdown, cohort, filter or source named; words not read are filler only.
+    const onlyCrimeOverTime = ledger0.parts.every((p) => p.clause !== 0 || p.state === "context" || ["measure", "place", "period", "grain", "statistic"].includes(p.concept)
+      || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
+      && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
+    const f0 = flags(ledger0);
+    if (onlyCrimeOverTime && ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && grains.length === 1 && (grains[0] === "month" || grains[0] === "year")
+      && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
+      const parts = COMPOSITE_PARTS.map((p) => fromLedger(filledAll(ledger, "measure", [[p.measure, p.words]]), deps, pins));
+      const rate = clause0("statistic").some((p) => /^(?:rate|per100k|percapita)$/.test(String(p.value ?? "")));
+      const merged = parts.every((o) => o.kind === "current" || o.kind === "historical" || o.kind === "srs") ? composeCrimeOverTime(parts as never, rate) : null;
       if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
-      if (merged) return merged;
+      if (merged) return merged as ShadowOutcome;
     }
   }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
