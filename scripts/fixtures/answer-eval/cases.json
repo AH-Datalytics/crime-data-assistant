@@ -7659,73 +7659,37 @@
     "P22"
    ],
    "expected": {
-    "action": "clarify",
-    "about": "which years",
-    "options": [
-     {
-      "label": "Last 10 complete years",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Houston Police Department",
-         "state": "TX"
-        }
-       ],
-       "period": {
-        "rule": "last 10 complete years"
-       },
-       "measures": [
-        {
-         "name": "theft from motor vehicle",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month",
-        "clearance status"
-       ],
-       "statistic": "count"
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Houston Police Department",
+       "state": "TX"
       }
+     ],
+     "period": {
+      "rule": "every year available"
      },
-     {
-      "label": "Every year available",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Houston Police Department",
-         "state": "TX"
-        }
-       ],
-       "period": {
-        "rule": "every year available"
-       },
-       "measures": [
-        {
-         "name": "theft from motor vehicle",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month",
-        "clearance status"
-       ],
-       "statistic": "count"
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
       }
-     },
-     {
-      "label": "Another range",
-      "leads_to": "clarify",
-      "meaning": null,
-      "next_about": "which range of years"
-     }
+     ],
+     "filters": [],
+     "groupings": [
+      "month",
+      "clearance status"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months shown (every month in the data)"
     ]
    },
    "label": {
@@ -13581,71 +13545,36 @@
     "P22"
    ],
    "expected": {
-    "action": "clarify",
-    "about": "which range of years",
-    "options": [
-     {
-      "label": "The last 10 complete years",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Memphis Police Department",
-         "state": "TN"
-        }
-       ],
-       "period": {
-        "rule": "last 10 complete years"
-       },
-       "measures": [
-        {
-         "name": "carjacking",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month"
-       ],
-       "statistic": "count"
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
       }
+     ],
+     "period": {
+      "rule": "every year available"
      },
-     {
-      "label": "Every year available",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "Memphis Police Department",
-         "state": "TN"
-        }
-       ],
-       "period": {
-        "rule": "every year in the data"
-       },
-       "measures": [
-        {
-         "name": "carjacking",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month"
-       ],
-       "statistic": "count"
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
       }
-     },
-     {
-      "label": "Another range",
-      "leads_to": "clarify",
-      "meaning": null,
-      "next_about": "which range of years"
-     }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months shown (every month in the data)"
     ]
    },
    "label": {
@@ -18487,7 +18416,8 @@
      "status": "pending_build"
     },
     "statements": [
-     "names September 2026 as having no data",
+     "says the data for January through October 2026 is incomplete, so no change is given (P140)",
+     "names the month with no data (October 2026 in the 20261119 release), in a note after the sentence",
      "makes no change claim: the 2026 months are not all established",
      "names the agency (Seattle Police Department)",
      "names its source at the end"
@@ -18674,7 +18604,7 @@
     },
     "statements": [
      "defines each point as the sum of the 12 months ending that month",
-     "shows the windows ending November 2025 through September 2026 as missing (each contains November or December 2025), never zero or a shorter-window total",
+     "shows every window containing November or December 2025 (those ending November 2025 through December 2026) as missing, never zero or a shorter-window total",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names its source at the end"
@@ -19184,7 +19114,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "gives no rate, because not every month of 2025 is available",
+     "says no rate is given for Greensboro in 2025, because not every month is available",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names its source at the end"
@@ -19257,7 +19187,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "shows 20 agencies (D05)",
+     "shows the 20 agencies asked for, plus the agencies tied at the 20th value when they add no more than 20 (D05, P17)",
      "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "adds no other eligibility filter",
@@ -19413,7 +19343,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "says large means 250,000 residents or more",
+     "names the 250,000-resident cutoff for large (in the title or a note)",
      "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "names its source at the end"
@@ -19619,7 +19549,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "gives no combined total, because Greensboro's 2025 total is not established",
+     "says no combined total is given for Greensboro and Raleigh in 2025, because not every month is available for every agency counted",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names the agency (Raleigh Police Department)",
@@ -19825,7 +19755,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "gives no rate, because not every month of 2025 is available for every agency counted",
+     "says no combined rate is given for Greensboro and Raleigh in 2025, because not every month is available for every agency counted",
      "names November and December 2025 as having no data",
      "names the agency (Greensboro Police Department)",
      "names the agency (Raleigh Police Department)",
@@ -20066,13 +19996,13 @@
      "filters": [],
      "groupings": [],
      "statistic": "rate",
-     "denominator": "the state's residents, per 100,000"
+     "denominator": "the state's population, per 100,000"
     },
     "values": {
      "status": "pending_build"
     },
     "statements": [
-     "gives the rate per 100,000 residents",
+     "gives the rate per 100,000 people",
      "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
@@ -26576,7 +26506,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Murders in the United States in August 2026",
+   "question": "Murders in the United States in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26594,8 +26524,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26612,7 +26542,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V173 us all 2026-08 murder_total"
+     "source": "nibrs-model V173 us all 2026-09 murder_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26636,7 +26566,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Rapes in the United States in August 2026",
+   "question": "Rapes in the United States in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26654,8 +26584,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26672,11 +26602,11 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V173 us all 2026-08 rape_total"
+     "source": "nibrs-model V173 us all 2026-09 rape_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
-     "names the agencies with no figure, left out of the total (14 of 547)",
+     "names the agencies with no figure, left out of the total (13 of 588)",
      "names its source at the end"
     ]
    },
@@ -26716,7 +26646,7 @@
      ],
      "period": {
       "from": "2026-01",
-      "to": "2026-08"
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26731,7 +26661,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V173 us all 2026-08 murder_ytd"
+     "source": "nibrs-model V173 us all 2026-09 murder_ytd"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26755,7 +26685,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Robberies in the Northeast in August 2026",
+   "question": "Robberies in the Northeast in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26815,8 +26745,8 @@
      ],
      "combine": "combined",
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26833,7 +26763,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V174 noe all 2026-08 robbery_total"
+     "source": "nibrs-model V174 noe all 2026-09 robbery_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26857,7 +26787,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Murders in the Midwest in August 2026",
+   "question": "Murders in the Midwest in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26932,8 +26862,8 @@
      ],
      "combine": "combined",
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26950,7 +26880,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V174 mdw all 2026-08 murder_total"
+     "source": "nibrs-model V174 mdw all 2026-09 murder_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26974,7 +26904,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Violent crime in Tennessee in August 2026",
+   "question": "Violent crime in Tennessee in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26993,8 +26923,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -27011,7 +26941,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V175 tn all 2026-08 violent_total"
+     "source": "nibrs-model V175 tn all 2026-09 violent_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -27035,7 +26965,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Property crime in Texas in August 2026",
+   "question": "Property crime in Texas in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -27054,8 +26984,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -27072,7 +27002,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V175 tx all 2026-08 property_total"
+     "source": "nibrs-model V175 tx all 2026-09 property_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -27096,7 +27026,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Rapes in Alabama in August 2026",
+   "question": "Rapes in Alabama in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -27115,8 +27045,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -27133,11 +27063,11 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V175 al all 2026-08 rape_total"
+     "source": "nibrs-model V175 al all 2026-09 rape_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
-     "says no figure is available for August 2026 (never zero)",
+     "names the agencies with no figure, left out of the total (2 of 3)",
      "names its source at the end"
     ]
    },
