@@ -901,24 +901,16 @@
    "question": "i want to know how crime in nashville compares to peer citites",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -1009,24 +1001,16 @@
    "question": "compare crime trends in San Francisco per 100k to similar sized cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -16388,24 +16372,16 @@
    "question": "Crime trends in Philadelphia compared to similar cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {

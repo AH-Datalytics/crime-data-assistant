@@ -250,14 +250,9 @@
 "QL-ct-0ccd61a7cd": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-0d002d35e7": {
@@ -289,14 +284,9 @@
 "QL-ct-0d825bc231": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-0d990fbc20": {
@@ -4893,14 +4883,9 @@
 "QL-ct-c5febb0077": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-c605731327": {
