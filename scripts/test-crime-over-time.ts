@@ -92,6 +92,8 @@ const one = (kind: string, period: typeof YEAR | typeof MONTH, periods: string[]
   assert.equal(composeCrimeOverTime([...base.slice(0, 2), total, ...base.slice(3)], false), null, "a total, not a series");
   const noTitle = one("historical", YEAR, ["2024"], () => 1).map((a, i) => (i === 0 ? { ...a, delivered: { ...a.delivered, text: ["Something else", "Source: Crime Index."] } } : a));
   assert.equal(composeCrimeOverTime(noTitle, false), null, "a title that does not name violent crime");
+  const twice = one("historical", YEAR, ["2023", "2024", "2024"], () => 1);
+  assert.equal(composeCrimeOverTime(twice, false), null, "a year twice is never one cell silently");
 }
 // Every cell blank: none, with the place.
 {

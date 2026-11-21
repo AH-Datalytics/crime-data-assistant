@@ -53,30 +53,27 @@ function seriesOf(a: PartAnswer): Series | null {
   const cols = a.delivered.table.columns, rows = a.delivered.table.rows;
   const isTime = (c: Column | undefined) => !!c && c.binding.kind === "grouping" && /^time\.(?:year|month)$/.test(c.binding.dimension);
   const stat = (c: Column) => c.binding.kind === "statistic";
-  const cells = new Map<string, number | null>();
   const val = (v: unknown) => (typeof v === "number" ? v : null);
-  if (isTime(cols[0]) && cols.length >= 2 && cols.slice(1).every(stat)) {
-    if (cols.length === 2) {
-      for (const r of rows) cells.set(key("", String(r[0])), val(r[1]));
-      return { kind: a.kind, periodCol: cols[0], placeCol: null, places: [""], cells };
-    }
+  // [place, period, value] for every cell, and the table's shape.
+  let cells: [string, string, number | null][], periodCol: Column, placeCol: Column | null, places: string[];
+  if (isTime(cols[0]) && cols.length === 2 && stat(cols[1])) {
+    cells = rows.map((r) => ["", String(r[0]), val(r[1])]);
+    periodCol = cols[0]; placeCol = null; places = [""];
+  } else if (isTime(cols[0]) && cols.length > 2 && cols.slice(1).every(stat)) {
     // Several places side by side: each column's place, by the question's agencies or the header before ": ".
     const agencies = ((a.question as { agencies?: { name: string }[] } | undefined)?.agencies) ?? [];
-    const places = cols.slice(1).map((c, i) => (agencies.length === cols.length - 1 ? agencies[i].name : c.header.split(": ")[0]));
-    if (new Set(places).size !== places.length) return null;
-    for (const r of rows) places.forEach((p, i) => cells.set(key(p, String(r[0])), val(r[i + 1])));
-    return { kind: a.kind, periodCol: cols[0], placeCol: { binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" }, places, cells };
-  }
-  if (cols.length === 3 && cols[0].binding.kind === "grouping" && cols[0].binding.dimension.startsWith("geo.") && isTime(cols[1]) && stat(cols[2])) {
-    const places: string[] = [];
-    for (const r of rows) {
-      const p = String(r[0]);
-      if (!places.includes(p)) places.push(p);
-      cells.set(key(p, String(r[1])), val(r[2]));
-    }
-    return { kind: a.kind, periodCol: cols[1], placeCol: cols[0], places, cells };
-  }
-  return null;
+    places = cols.slice(1).map((c, i) => (agencies.length === cols.length - 1 ? agencies[i].name : c.header.split(": ")[0]));
+    cells = rows.flatMap((r) => places.map((p, i): [string, string, number | null] => [p, String(r[0]), val(r[i + 1])]));
+    periodCol = cols[0]; placeCol = { binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" };
+  } else if (cols.length === 3 && cols[0].binding.kind === "grouping" && cols[0].binding.dimension.startsWith("geo.") && isTime(cols[1]) && stat(cols[2])) {
+    cells = rows.map((r) => [String(r[0]), String(r[1]), val(r[2])]);
+    periodCol = cols[1]; placeCol = cols[0]; places = [...new Set(cells.map((c) => c[0]))];
+  } else return null;
+  if (new Set(places).size !== places.length) return null;
+  // A period twice for one place is not a series: one of the two would be dropped silently, so null and the question keeps its path.
+  const map = new Map<string, number | null>();
+  for (const [p, period, v] of cells) { if (map.has(key(p, period))) return null; map.set(key(p, period), v); }
+  return { kind: a.kind, periodCol, placeCol, places, cells: map };
 }
 
 /**
