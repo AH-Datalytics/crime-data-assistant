@@ -743,11 +743,9 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   }
   for (const q of ["safest city in the us", "safest city in 2023", "most dangerous city in 2024"])
     assert.ok(declined(q).explanation.startsWith("There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate."), q);
-  // P172 (Jeff 2026-11-21, reversing P18): one state's clearance rate is answered; every state at once is not, and says what to ask.
+  // P172 (Jeff 2026-11-21, reversing P18): one state's clearance rate is answered, and every state ranked (P173) once a crime is named.
   {
-    const d = declined("clearance rates by state");
-    assert.equal(d.reason, "not_recorded_in_nibrs");
-    assert.match(d.explanation, /^A clearance rate for every state at once isn't available\./);
+    assert.notEqual(declined("clearance rates by state").reason, "not_recorded_in_nibrs", "no state-has-no-rate sentence any more");
     assert.equal((ask("What is the homicide clearance rate in Kansas?") as { about?: string }).about, "which period", "a state's clearance rate with no year asks the year");
   }
   // Not changed: a number asked with a trailing "why" is answered and the why declined; a state's NIBRS-only clearance rate keeps its own sentence.
@@ -1806,6 +1804,16 @@ assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_r
     // (2024 is 34.5: the stub's Austin did not report June 2024, so its other months are summed without it.)
     assert.deepEqual(by.delivered.table.rows.map((r) => r[1]), [34.6, 34.5, 34.6], JSON.stringify(by.delivered.table.rows));
     assert.ok(/^2023 to 2025 Murders Cleared \(%\) by Year, Texas$/.test(by.delivered.text[0]), by.delivered.text[0]);
+  }
+  // P173 (Jeff 2026-11-21): every state ranked, the offenses and agencies reporting beside each rate, no minimum.
+  for (const q of ["Which states have the highest murder clearance rate in 2025?", "murder clearance rate by state in 2025", "rank states by murder clearance rate in 2025"]) {
+    const rk = as(ask(q), "answer");
+    assert.deepEqual(rk.delivered.table.columns.map((c) => c.header), ["State", "Murders cleared (%)", "Offenses", "Agencies reporting"], q);
+    assert.equal(rk.delivered.text[0], "2025 Murders Cleared (%) by State", q);
+    const rates = rk.delivered.table.rows.map((r) => r[1] as number | null);
+    assert.ok(rates.length >= 50 && rates.every((v, i) => i === 0 || v === null || rates[i - 1] === null || (rates[i - 1] as number) >= v), "every state, highest first");
+    const texas = rk.delivered.table.rows.find((r) => r[0] === "Texas")!;
+    assert.deepEqual([texas[1], texas[2], texas[3]], [34.6, 312, 4], "Texas: the same figures as its own rate answer (stub data)");
   }
   const early = as(ask("Show the burglary clearance rate in Texas since 2000"), "answer");
   assert.ok(early.delivered.text.includes("NIBRS state figures start in 2017; 2000 through 2016 are outside them."), JSON.stringify(early.delivered.text));

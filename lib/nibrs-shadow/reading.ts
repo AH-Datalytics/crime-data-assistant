@@ -229,6 +229,8 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P173 (Jeff 2026-11-21): "murder clearance rates by state" is every state ranked by its clearance rate.
+  [/\b((?:[a-z]+\s+){0,2}?)clearance\s+rates?\s+(?:by|per|for\s+(?:each|every)|in\s+each)\s+state\b/gi, "rank states by $1clearance rate"],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
   [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
   [/\bfamily\s+violence\b/gi, "domestic violence by family members"],
