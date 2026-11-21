@@ -11,6 +11,8 @@
  *   ms      the service's own time for the question (no clock is read here)
  *   rows    the number of result rows when the response carries a table; digest: a short hash of the whole response (for comparing two runs or two builds)
  * Run at Idle priority, serial; `--timing` asks only the plain state and national one-year totals (the Texas/US per-measure raw timing table, with the matrix's state = Ohio).
+ * Cube on versus off (the matrix as a same-build equality check, no reference needed): run the whole matrix against a service started with the cube set and again against one without
+ * (two ENGINE_SERVICE_URL ports), then `--compare cube-on.jsonl cube-off.jsonl`: every id whose status or response digest (statements left out) differs is listed; exit code 1.
  * Summary: `npx tsx scripts/run-capability-matrix.ts --summary results.jsonl` prints answered / declined / excluded / service_error and coverage per measure, breakdown, scope and grain.
  */
 import crypto from "node:crypto";
@@ -23,6 +25,9 @@ const has = (k: string) => process.argv.includes(`--${k}`);
 const readJsonl = <T>(p: string): T[] => (fs.existsSync(p) ? fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as T) : []);
 const MATRIX = "scripts/fixtures/nibrs-capability-matrix.jsonl";
 
+/** The statements differ by design between a cube-on and a cube-off service; everything else in a response must not (same rule as scripts/test-nibrs-cube.ts). */
+const noSql = (k: string, v: unknown) => (k === "sql" || k === "sqls" ? undefined : v);
+
 function classify(r: unknown): Res["status"] {
   const k = (r as { kind?: string })?.kind;
   return k === "decline" ? "declined" : k === "answer" || k === "srs" || k === "historical" || k === "current" || k === "shr" ? "answered" : "declined";
@@ -31,6 +36,8 @@ function classify(r: unknown): Res["status"] {
 async function main(): Promise<void> {
   const sumPath = arg("summary");
   if (sumPath) return summary(sumPath);
+  const cmp = arg("compare");
+  if (cmp) return compare(cmp, process.argv[process.argv.indexOf("--compare") + 2]);
   const out = arg("out"); if (!out) throw new Error("--out <results.jsonl> is required");
   const url = process.env.ENGINE_SERVICE_URL ?? "http://127.0.0.1:8420", token = process.env.ENGINE_TOKEN ?? "";
   if (!token) throw new Error("ENGINE_TOKEN is not set (read it from the engine settings file on the machine that runs the service; never put it in a file in the repository)");
@@ -55,7 +62,7 @@ async function main(): Promise<void> {
         else {
           const resp = body.response ?? {};
           const table = (resp as { table?: { rows?: unknown[] } }).table;
-          res = { id: r.id, status: classify(resp), kind: String(resp.kind ?? ""), ms: body.ms, digest: crypto.createHash("sha256").update(JSON.stringify(resp)).digest("hex").slice(0, 12),
+          res = { id: r.id, status: classify(resp), kind: String(resp.kind ?? ""), ms: body.ms, digest: crypto.createHash("sha256").update(JSON.stringify(resp, noSql)).digest("hex").slice(0, 12),
             ...(table?.rows ? { rows: table.rows.length } : {}), ...(resp.kind === "decline" ? { reason: String(resp.reason ?? ""), note: String(resp.explanation ?? "").slice(0, 160) } : {}) };
         }
       } catch (e) { res = { id: r.id, status: "service_error", kind: "unreachable", note: String((e as Error).message).slice(0, 160) }; }
@@ -63,6 +70,22 @@ async function main(): Promise<void> {
     fs.appendFileSync(out, JSON.stringify(res) + "\n");
   }
   console.log(`asked ${asked} questions; results in ${out}`);
+}
+
+/** `--compare cube-on.jsonl cube-off.jsonl`: the whole matrix run against a service with the cubes on and one with them off; every id whose status or digest differs is a difference (same build, so none is expected). */
+function compare(a: string, b: string): void {
+  const rows = new Map(readJsonl<Row>(MATRIX).map((r) => [r.id, r]));
+  const off = new Map(readJsonl<Res>(b).map((r) => [r.id, r]));
+  let same = 0, only = 0; const diffs: string[] = [];
+  for (const x of readJsonl<Res>(a)) {
+    const y = off.get(x.id); if (!y) { only++; continue; }
+    if (x.status === "excluded") continue;
+    if (x.status === y.status && x.digest === y.digest) same++;
+    else diffs.push(`${x.id} ${rows.get(x.id)?.question ?? ""} :: on ${x.status}/${x.kind}/${x.digest ?? "-"} off ${y.status}/${y.kind}/${y.digest ?? "-"}`);
+  }
+  console.log(`compared: ${same} identical, ${diffs.length} different, ${only} only in the first file`);
+  for (const d of diffs.slice(0, 200)) console.log(d);
+  if (diffs.length) process.exitCode = 1;
 }
 
 function summary(path: string): void {
