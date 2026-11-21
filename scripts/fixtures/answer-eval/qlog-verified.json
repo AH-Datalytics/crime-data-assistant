@@ -7481,6 +7481,531 @@
    "batch": "nibrs-canon2-20261121",
    "date": "2026-11-21",
    "numbers": 9
+  },
+  "QL-hc-020460497c": {
+   "digest": "f7b514f4d3b1b036",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-hc-22ea73fcd0": {
+   "digest": "cdfbc2f0acc5ede0",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-hc-446b9cfa2a": {
+   "digest": "74366a26a948bffb",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-hc-4cef37c0c6": {
+   "digest": "449c2290dd80ca83",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 17
+  },
+  "QL-hc-67bd39c399": {
+   "digest": "cdfbc2f0acc5ede0",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-hc-7d445cfdaa": {
+   "digest": "45c31f7cf5d0906e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-hc-8f6ef12383": {
+   "digest": "90a16bcd6c9a0ce7",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 429
+  },
+  "QL-hc-b6c1dc34d7": {
+   "digest": "e7ca74c5bbc2ad2f",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 418
+  },
+  "QL-hc-c16d6f462f": {
+   "digest": "902b44431f4a8451",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 17
+  },
+  "QL-hc-dd24c67c83": {
+   "digest": "a06f2ada290b3352",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 60
+  },
+  "QL-hc-e53bef845e": {
+   "digest": "4d1a41ad85fddf4c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 261
+  },
+  "QL-hc-e638319154": {
+   "digest": "7a4645652f85fee4",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 25
+  },
+  "QL-nibrs-34d3a19b32": {
+   "digest": "b082f330ee16b954",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-nibrs-4cef37c0c6": {
+   "digest": "449c2290dd80ca83",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 17
+  },
+  "QL-hc-3bc7b3bc7b": {
+   "digest": "123fafca36efb780",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 321
+  },
+  "QL-hc-3bc7bb3cd3": {
+   "digest": "ce3ba74a9ad92faa",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 321
+  },
+  "QL-hc-3bc7bb6c1d": {
+   "digest": "e7ca74c5bbc2ad2f",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 418
+  },
+  "QL-hc-8f6ef8f6ef": {
+   "digest": "90a16bcd6c9a0ce7",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 429
+  },
+  "QL-hc-8f6efb6c1d": {
+   "digest": "e7ca74c5bbc2ad2f",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 418
+  },
+  "QL-hc-b6c1d3bc7b": {
+   "digest": "123fafca36efb780",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 321
+  },
+  "QL-hc-b6c1db6c1d": {
+   "digest": "e7ca74c5bbc2ad2f",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 418
+  },
+  "QL-hc-b6c1dfdc50": {
+   "digest": "123fafca36efb780",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 321
+  },
+  "QL-hc-c16d67d445": {
+   "digest": "45c31f7cf5d0906e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-hc-e638343c3f": {
+   "digest": "f8976ffda159cc42",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 25
+  },
+  "QL-hc-ebdc47d445": {
+   "digest": "45c31f7cf5d0906e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-hc-fdc503bc7b": {
+   "digest": "123fafca36efb780",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 321
+  },
+  "QL-nibrs-028b9c16d6": {
+   "digest": "902b44431f4a8451",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 17
+  },
+  "QL-ct-ce71b6141f": {
+   "digest": "3de6ccdabc111ffd",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 300
+  },
+  "QL-nibrs-32cd884119": {
+   "digest": "895c3631b367a072",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 6
+  },
+  "QL-nibrs-45eb1eaa5f": {
+   "digest": "2a8b5f252f8f44c6",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 4
+  },
+  "QL-nibrs-507b293d0a": {
+   "digest": "ffca925b493488b6",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 10
+  },
+  "QL-nibrs-722fe56cf2": {
+   "digest": "dcd2f30543c462f8",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 15
+  },
+  "QL-nibrs-8615bf5d6f": {
+   "digest": "937d4065054f188a",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-nibrs-8b14ff99a6": {
+   "digest": "b9101b7a3ddb8946",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 41
+  },
+  "QL-nibrs-a60687aaff": {
+   "digest": "4e5de8e904203b47",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 82
+  },
+  "QL-shr-075a9631a4": {
+   "digest": "4d2f57140f74ed3e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-shr-0b297bf5d8": {
+   "digest": "08e460b045d8c29c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 42
+  },
+  "QL-shr-1695132f9c": {
+   "digest": "c750c803814b31d8",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 34
+  },
+  "QL-shr-18c482e421": {
+   "digest": "0892aa35cec1995e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 8
+  },
+  "QL-shr-264fb81d70": {
+   "digest": "eb7e62b4dfdab16a",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 501
+  },
+  "QL-shr-388cbdf0d1": {
+   "digest": "63941ecf08c826fc",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-shr-395acf3f23": {
+   "digest": "cdeb7c05a0964529",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-shr-3afd646ec4": {
+   "digest": "2e0c5d99dfc22513",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-shr-3e4df67d16": {
+   "digest": "622393e6794cec3c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-shr-400d52eea7": {
+   "digest": "3045675cf1d27b84",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 504
+  },
+  "QL-shr-6372213a4c": {
+   "digest": "a5984b63f2cbb03e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 1
+  },
+  "QL-shr-6bf1633bed": {
+   "digest": "a56db9cba5ee414c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-shr-759c5ef475": {
+   "digest": "b40c6645121c2eba",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 7
+  },
+  "QL-shr-7bd08d613e": {
+   "digest": "426e48a73faaaec5",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 6
+  },
+  "QL-shr-9c59e27d1d": {
+   "digest": "f32fded21b73afd7",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 32
+  },
+  "QL-shr-a2a6df51ef": {
+   "digest": "eff5a4b8c0af54eb",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 32
+  },
+  "QL-shr-ca0c753071": {
+   "digest": "f821bd2ed481bcf2",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 35
+  },
+  "QL-shr-ce8899db4b": {
+   "digest": "8e54620c426fb110",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 41
+  },
+  "QL-shr-d0e0a67c52": {
+   "digest": "97d9dcbff03efedc",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 990
+  },
+  "QL-shr-d35d9eaade": {
+   "digest": "0a8329a9f3bc7c2e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 504
+  },
+  "QL-shr-eccd95acc2": {
+   "digest": "622393e6794cec3c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-shr-f7d5f3fc2b": {
+   "digest": "8a91cb5f6bfa9d0c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 24
+  },
+  "QL-shr-fd1eae2239": {
+   "digest": "f150115133df150c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 501
+  },
+  "QL-shr-fdc54d4a2d": {
+   "digest": "4d2f57140f74ed3e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-nibrs-4f73cff0ae": {
+   "digest": "e23a201afeeccf8a",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-shr-0b297d35d9": {
+   "digest": "0a8329a9f3bc7c2e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 504
+  },
+  "QL-shr-26e06d35d9": {
+   "digest": "0a8329a9f3bc7c2e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 504
+  },
+  "QL-shr-3afd6400d5": {
+   "digest": "3045675cf1d27b84",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 504
+  },
+  "QL-shr-440cd075a9": {
+   "digest": "4d2f57140f74ed3e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-shr-65db9a416e": {
+   "digest": "47bac6d8e60454b7",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 5
+  },
+  "QL-shr-6bf160b297": {
+   "digest": "08e460b045d8c29c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 42
+  },
+  "QL-shr-7884bfbb73": {
+   "digest": "407bf4c0048a0629",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-shr-7bd0881c4e": {
+   "digest": "92038b191e77c8b4",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 18
+  },
+  "QL-shr-879dc16951": {
+   "digest": "c750c803814b31d8",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 34
+  },
+  "QL-shr-9dffa075a9": {
+   "digest": "4d2f57140f74ed3e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-shr-adbcd075a9": {
+   "digest": "4d2f57140f74ed3e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-shr-c5a758c5dd": {
+   "digest": "54ff0f8e05dd281e",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 10
+  },
+  "QL-shr-cda3d6bf16": {
+   "digest": "a56db9cba5ee414c",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 12
+  },
+  "QL-shr-d35d93afd6": {
+   "digest": "2e0c5d99dfc22513",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 27
+  },
+  "QL-shr-f54389c59e": {
+   "digest": "f32fded21b73afd7",
+   "by": "runner-codex-blind",
+   "batch": "loop1-20261121",
+   "date": "2026-11-21",
+   "numbers": 32
   }
  }
 }
