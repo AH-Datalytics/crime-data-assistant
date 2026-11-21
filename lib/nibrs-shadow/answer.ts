@@ -34,7 +34,7 @@ import { NOT_YET, plainReaderExplanation } from "./wording";
 import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
-import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
+import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, pointsBack, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
@@ -1209,6 +1209,13 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   if ((r.kind as string) === "presentation") return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
   // A proposal returns before anything runs.
   if (r.kind === "propose") return { kind: "proposal", question: followUp, proposed: r.question, how: r.how, rewrite: r.question, rewriteKind: "propose" };
+  // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is read as a question of its own
+  // ("show me robberies and murders in the southwest" asked what it changes in the last question). Its first-turn answer or ask is given; when
+  // that would be a decline (words unread, a combination not offered) the question back about the last turn stays, as before.
+  if (r.kind === "ask" && !pointsBack(followUp) && followUp.trim().split(/\s+/).length >= 3) {
+    const own = shadowAnswer(followUp, deps);
+    if (own.kind !== "decline") return { ...own, rewrite: followUp, rewriteKind: "new" };
+  }
   if (r.kind === "ask") {
     // P69: uncertain, so ask; each option is a complete question, run as a new one. With none, the user rephrases. An
     // option is offered only when the reader reads it whole (Codex decline review 01: "...victims with a female offender"
@@ -1410,10 +1417,10 @@ function shrSeveral(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const columns = [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Agency" }, ...first.delivered.table.columns];
   const rows = answers.flatMap((a) => a.delivered.table.rows.map((r) => [shortAgency(agencyOf(a).label), ...r]));
   // The lines: the first title with every agency named, then each answer's other lines once (its own agency lines kept).
-  // The first title with every agency named: a title ends with its place; a sentence ("Chicago had 12 murders in 2024.") becomes the title of the agencies' table.
+  // The first title with every agency named: a title now begins with its place (Jeff 2026-11-21); a sentence ("Chicago had 12 murders in 2024.") becomes the title of the agencies' table.
   const t0 = first.delivered.text[0], label0 = agencyOf(first).label;
   const sentence = /^.+? had ([\d.,]+) (.+) in (.+)\.$/.exec(t0);
-  const title = t0.endsWith(`, ${label0}`) ? `${t0.slice(0, t0.length - label0.length)}${listed}`
+  const title = t0.startsWith(`${label0} `) ? `${listed}${t0.slice(label0.length)}` : t0.endsWith(`, ${label0}`) ? `${t0.slice(0, t0.length - label0.length)}${listed}`
     : sentence ? seriesTitle(sentence[3], sentence[2].replace(/ per 100,000 people$/, ""), "Agency", listed) : t0;
   const rest: string[] = [];
   for (const a of answers) for (const t of a.delivered.text.slice(1)) if (!rest.includes(t) && !/^Source: /.test(t)) rest.push(t);

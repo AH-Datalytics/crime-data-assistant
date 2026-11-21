@@ -4,7 +4,7 @@
  * Offline, no database.
  */
 import assert from "node:assert/strict";
-import { combineMonths, compare, pct1, rankAgencies, rate, rolling, rollup, round1, windowMonths, type MonthCell } from "../lib/nibrs-plan/transforms";
+import { combineMonths, compare, pct1, rankAgencies, rate, rolling, rollup, round1, truncatedTieSentence, windowMonths, type MonthCell } from "../lib/nibrs-plan/transforms";
 
 const months = (year: number, values: (number | null | "Z" | "C")[]): MonthCell[] => values.map((v, i) => ({
   ym: `${year}-${String(i + 1).padStart(2, "0")}`,
@@ -60,9 +60,23 @@ assert.deepEqual(rate({ value: 3404 + 4375, status: "VALUE" }, 413_066 + 702_767
 const xs = [{ name: "Cee", value: 5, known: true }, { name: "Bee", value: 5, known: true }, { name: "Aye", value: 9, known: true }, { name: "Dee", value: null, known: false }, { name: "Eee", value: 1, known: true }];
 assert.deepEqual(rankAgencies(xs, "top", 3).ranked.map((x) => x.name), ["Aye", "Bee", "Cee"]);
 assert.deepEqual(rankAgencies(xs, "top", 2).ranked.map((x) => x.name), ["Aye", "Bee", "Cee"], "a tie at the cut shows every place tied (coordinator 2026-11-06)");
-assert.deepEqual(rankAgencies(xs, "top", 2).tie, { position: 2, names: ["Bee", "Cee"], shown: 3 });
+assert.deepEqual(rankAgencies(xs, "top", 2).tie, { position: 2, names: ["Bee", "Cee"], shown: 3, value: 5, total: 2, truncated: false });
 assert.equal(rankAgencies(xs, "top", 3).tie, null, "a cut that falls between different values has no tie");
 assert.deepEqual(rankAgencies(xs, "bottom", null).ranked.map((x) => x.name), ["Eee", "Bee", "Cee", "Aye"]);
 assert.deepEqual(rankAgencies(xs, "top", 10).leftOut.map((x) => x.name), ["Dee"]);
+// P156 (Jeff 2026-11-19, hybrid): a tie past the limit is shown whole only when it adds no more than the limit; otherwise cut at the limit, in name order.
+const mk = (n: number, v: number, p: string) => Array.from({ length: n }, (_, i) => ({ name: p + String(i).padStart(3, "0"), value: v, known: true }));
+const few = [...mk(3, 9, "A"), ...mk(5, 4, "B"), ...mk(2, 1, "C")];
+assert.deepEqual(rankAgencies(few, "top", 5).ranked.map((x) => x.name), ["A000", "A001", "A002", "B000", "B001", "B002", "B003", "B004"], "5 tied at the 4th..8th place: 3 extra, no more than the limit of 5, so all shown");
+assert.equal(rankAgencies(few, "top", 5).tie?.truncated, false);
+const many = [...mk(2, 9, "A"), ...mk(25, 0, "B")];
+const cutMany = rankAgencies(many, "top", 5);
+assert.deepEqual(cutMany.ranked.map((x) => x.name), ["A000", "A001", "B000", "B001", "B002"], "25 tied at 0 with 2 above: cut at 5 in name order");
+assert.deepEqual(cutMany.tie, { position: 3, names: cutMany.tie!.names, shown: 5, value: 0, total: 25, truncated: true });
+assert.equal(truncatedTieSentence(cutMany.tie!, false), "25 agencies tie at 0; the first 5 by name are shown.");
+assert.equal(truncatedTieSentence({ total: 12, value: 3.44, shown: 20 }, true), "12 agencies tie at 3.4 per 100,000; the first 20 by name are shown.");
+// Exactly as many extra as the limit still shows all; one more cuts (limit 5, four above, then a tie that starts at the 5th place).
+assert.equal(rankAgencies([...mk(4, 9, "A"), ...mk(6, 3, "B")], "top", 5).tie?.truncated, false, "6 tied from the 5th place: 5 extra = the limit, all shown");
+assert.equal(rankAgencies([...mk(4, 9, "A"), ...mk(7, 3, "B")], "top", 5).tie?.truncated, true, "7 tied from the 5th place: 6 extra > the limit, cut at 5");
 
 console.log("nibrs transforms: totals, changes and rolling windows follow D6, P51, D17 and P55");

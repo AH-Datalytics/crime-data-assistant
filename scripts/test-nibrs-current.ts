@@ -144,7 +144,7 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   if (sev.kind === "current") {
     assert.deepEqual(sev.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Motor vehicle thefts"]);
     assert.deepEqual(sev.delivered.table.rows, [["Dallas", "2025-01", 7], ["Dallas", "2025-02", 8], ["Dallas", "2025-03", 9], ["New Orleans", "2025-01", null], ["New Orleans", "2025-02", null], ["New Orleans", "2025-03", null]]);
-    assert.equal(sev.delivered.text[0], "January 2025 to March 2025 Motor Vehicle Thefts by Month, Dallas, Texas and New Orleans, Louisiana");
+    assert.equal(sev.delivered.text[0], "Dallas, Texas and New Orleans, Louisiana Motor Vehicle Thefts Per Month, Jan-Mar 2025");
     assert.ok(sev.delivered.text.includes("No figure is available for January 2025, February 2025, March 2025 for New Orleans, Louisiana: shown blank, not zero."), JSON.stringify(sev.delivered.text));
     assert.ok(!sev.delivered.text.some((t) => /Dallas, Texas: shown blank/.test(t)));
     assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
@@ -170,7 +170,7 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   if (both.kind === "current") {
     assert.deepEqual(both.delivered.table.columns.map((c) => c.header), ["Place", "Month", "Murder rate per 100,000"]);
     assert.deepEqual(both.delivered.table.rows, [["Dallas", "2025-01", 1], ["Dallas", "2025-02", 2], ["Dallas", "2025-03", 3]]);
-    assert.deepEqual(both.delivered.text, ["January 2025 to March 2025 Murder Rate by Month, Dallas, Texas", "Crime Index has no population for New Orleans, Louisiana, so no rate is given for it.", "Source: Crime Index."]);
+    assert.deepEqual(both.delivered.text, ["Dallas, Texas Murder Rate Per Month, Jan-Mar 2025", "Crime Index has no population for New Orleans, Louisiana, so no rate is given for it.", "Source: Crime Index."]);
     assert.equal(both.question.statistic, "rate");
   }
   assert.equal(answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [nola, nola], from: "2025-01", to: "2025-03" }, b, rows).kind, "current-decline", "no place has a population");
