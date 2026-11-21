@@ -1,0 +1,366 @@
+{
+  "victim": {
+    "victim.race": {
+      "col": "CASE WHEN v.race IS NULL OR trim(v.race) = '' THEN 'U' ELSE v.race END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim.sex": {
+      "col": "CASE WHEN v.sex IS NULL OR trim(v.sex) = '' THEN 'U' ELSE v.sex END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim.ethnicity": {
+      "col": "CASE WHEN v.ethnicity IS NULL OR trim(v.ethnicity) = '' THEN 'U' ELSE v.ethnicity END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim.age": {
+      "col": "v.age",
+      "multi": false,
+      "age": true,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim_offender.relationship": {
+      "col": "r.offender_relationship",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(victim_offender) r ON r.data_year = v.data_year AND r.ori = v.ori AND r.incident_num = v.incident_num AND r.victim_seq = v.victim_seq AND r.key_occurrence = v.key_occurrence",
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim_circumstance.circumstance": {
+      "col": "vc.circumstance",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(victim_circumstance) vc ON vc.data_year = v.data_year AND vc.ori = v.ori AND vc.incident_num = v.incident_num AND vc.victim_seq = v.victim_seq AND vc.key_occurrence = v.key_occurrence",
+      "binned": null,
+      "binnedHour": null
+    },
+    "incident.hour": {
+      "col": "ih.incident_hour",
+      "multi": false,
+      "age": true,
+      "join": "LEFT JOIN READ(incident) ih ON ih.data_year = v.data_year AND ih.ori = v.ori AND ih.incident_num = v.incident_num",
+      "binned": "CASE WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Unknown' END",
+      "binnedHour": "CASE WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Unknown' END"
+    },
+    "offender.sex": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.sex IS NULL OR trim(f2.sex) = '' THEN 'U' ELSE f2.sex END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = v.data_year AND f2.ori = v.ori AND f2.incident_num = v.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.race": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.race IS NULL OR trim(f2.race) = '' THEN 'U' ELSE f2.race END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = v.data_year AND f2.ori = v.ori AND f2.incident_num = v.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.ethnicity": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.ethnicity IS NULL OR trim(f2.ethnicity) = '' THEN 'U' ELSE f2.ethnicity END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = v.data_year AND f2.ori = v.ori AND f2.incident_num = v.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.age": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f2.age IS NULL OR trim(f2.age) = '' THEN 'U' ELSE f2.age END END",
+      "multi": true,
+      "age": true,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = v.data_year AND f2.ori = v.ori AND f2.incident_num = v.incident_num",
+      "binned": "CASE WHEN f2.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f2.age IS NULL OR trim(f2.age) = '' OR f2.age = '00' THEN 'Unknown'\n      WHEN f2.age IN ('NN', 'NB', 'BB') THEN '0 to 17'\n      WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Outside the groups' END END",
+      "binnedHour": "CASE WHEN f2.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f2.age IS NULL OR trim(f2.age) = '' OR f2.age = '00' THEN 'Unknown'\n      WHEN f2.age IN ('NN', 'NB', 'BB') THEN 'Night'\n      WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Outside the groups' END END"
+    },
+    "victim_offender.offender_sex": {
+      "col": "CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.sex IS NULL OR trim(f3.sex) = '' THEN 'U' ELSE f3.sex END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(victim_offender) r ON r.data_year = v.data_year AND r.ori = v.ori AND r.incident_num = v.incident_num AND r.victim_seq = v.victim_seq AND r.key_occurrence = v.key_occurrence LEFT JOIN READ(offender) f3 ON f3.data_year = r.data_year AND f3.ori = r.ori AND f3.incident_num = r.incident_num AND f3.offender_seq = r.offender_number",
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim_offender.offender_race": {
+      "col": "CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.race IS NULL OR trim(f3.race) = '' THEN 'U' ELSE f3.race END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(victim_offender) r ON r.data_year = v.data_year AND r.ori = v.ori AND r.incident_num = v.incident_num AND r.victim_seq = v.victim_seq AND r.key_occurrence = v.key_occurrence LEFT JOIN READ(offender) f3 ON f3.data_year = r.data_year AND f3.ori = r.ori AND f3.incident_num = r.incident_num AND f3.offender_seq = r.offender_number",
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim_offender.offender_ethnicity": {
+      "col": "CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.ethnicity IS NULL OR trim(f3.ethnicity) = '' THEN 'U' ELSE f3.ethnicity END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(victim_offender) r ON r.data_year = v.data_year AND r.ori = v.ori AND r.incident_num = v.incident_num AND r.victim_seq = v.victim_seq AND r.key_occurrence = v.key_occurrence LEFT JOIN READ(offender) f3 ON f3.data_year = r.data_year AND f3.ori = r.ori AND f3.incident_num = r.incident_num AND f3.offender_seq = r.offender_number",
+      "binned": null,
+      "binnedHour": null
+    },
+    "victim_offender.offender_age": {
+      "col": "CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.age IS NULL OR trim(f3.age) = '' THEN 'U' ELSE f3.age END END",
+      "multi": true,
+      "age": true,
+      "join": "LEFT JOIN READ(victim_offender) r ON r.data_year = v.data_year AND r.ori = v.ori AND r.incident_num = v.incident_num AND r.victim_seq = v.victim_seq AND r.key_occurrence = v.key_occurrence LEFT JOIN READ(offender) f3 ON f3.data_year = r.data_year AND f3.ori = r.ori AND f3.incident_num = r.incident_num AND f3.offender_seq = r.offender_number",
+      "binned": "CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.age IS NULL OR trim(f3.age) = '' OR f3.age = '00' THEN 'Unknown'\n      WHEN f3.age IN ('NN', 'NB', 'BB') THEN '0 to 17'\n      WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Outside the groups' END END",
+      "binnedHour": "CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.age IS NULL OR trim(f3.age) = '' OR f3.age = '00' THEN 'Unknown'\n      WHEN f3.age IN ('NN', 'NB', 'BB') THEN 'Night'\n      WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(f3.age AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Outside the groups' END END"
+    },
+    "offense.clearance_type": {
+      "col": "CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = v.data_year AND ic.ori = v.ori AND ic.incident_num = v.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = v.data_year AND ca.ori = v.ori AND ca.incident_num = v.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense.clearance_method": {
+      "col": "CASE CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END WHEN 'arrest' THEN 'arrest' WHEN 'none' THEN 'none' ELSE 'exceptional' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = v.data_year AND ic.ori = v.ori AND ic.incident_num = v.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = v.data_year AND ca.ori = v.ori AND ca.incident_num = v.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense.clearance_status": {
+      "col": "CASE CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END WHEN 'none' THEN 'none' ELSE 'cleared' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = v.data_year AND ic.ori = v.ori AND ic.incident_num = v.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = v.data_year AND ca.ori = v.ori AND ca.incident_num = v.incident_num",
+      "binned": null,
+      "binnedHour": null
+    }
+  },
+  "offense": {
+    "offense.location_type": {
+      "col": "o.location_type",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense_weapon.weapon": {
+      "col": "w.weapon",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offense_weapon) w ON w.data_year = o.data_year AND w.ori = o.ori AND w.incident_num = o.incident_num AND w.offense_code = o.offense_code AND w.key_occurrence = o.key_occurrence",
+      "binned": null,
+      "binnedHour": null
+    },
+    "incident.hour": {
+      "col": "ih.incident_hour",
+      "multi": false,
+      "age": true,
+      "join": "LEFT JOIN READ(incident) ih ON ih.data_year = o.data_year AND ih.ori = o.ori AND ih.incident_num = o.incident_num",
+      "binned": "CASE WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Unknown' END",
+      "binnedHour": "CASE WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Unknown' END"
+    },
+    "offender.sex": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.sex IS NULL OR trim(f2.sex) = '' THEN 'U' ELSE f2.sex END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = o.data_year AND f2.ori = o.ori AND f2.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.race": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.race IS NULL OR trim(f2.race) = '' THEN 'U' ELSE f2.race END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = o.data_year AND f2.ori = o.ori AND f2.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.ethnicity": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.ethnicity IS NULL OR trim(f2.ethnicity) = '' THEN 'U' ELSE f2.ethnicity END END",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = o.data_year AND f2.ori = o.ori AND f2.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.age": {
+      "col": "CASE WHEN f2.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f2.age IS NULL OR trim(f2.age) = '' THEN 'U' ELSE f2.age END END",
+      "multi": true,
+      "age": true,
+      "join": "LEFT JOIN READ(offender) f2 ON f2.data_year = o.data_year AND f2.ori = o.ori AND f2.incident_num = o.incident_num",
+      "binned": "CASE WHEN f2.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f2.age IS NULL OR trim(f2.age) = '' OR f2.age = '00' THEN 'Unknown'\n      WHEN f2.age IN ('NN', 'NB', 'BB') THEN '0 to 17'\n      WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Outside the groups' END END",
+      "binnedHour": "CASE WHEN f2.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f2.age IS NULL OR trim(f2.age) = '' OR f2.age = '00' THEN 'Unknown'\n      WHEN f2.age IN ('NN', 'NB', 'BB') THEN 'Night'\n      WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(f2.age AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Outside the groups' END END"
+    },
+    "offense.clearance_type": {
+      "col": "CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = o.data_year AND ic.ori = o.ori AND ic.incident_num = o.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = o.data_year AND ca.ori = o.ori AND ca.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense.clearance_method": {
+      "col": "CASE CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END WHEN 'arrest' THEN 'arrest' WHEN 'none' THEN 'none' ELSE 'exceptional' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = o.data_year AND ic.ori = o.ori AND ic.incident_num = o.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = o.data_year AND ca.ori = o.ori AND ca.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense.clearance_status": {
+      "col": "CASE CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END WHEN 'none' THEN 'none' ELSE 'cleared' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = o.data_year AND ic.ori = o.ori AND ic.incident_num = o.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = o.data_year AND ca.ori = o.ori AND ca.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    }
+  },
+  "incident": {
+    "incident.hour": {
+      "col": "ih.incident_hour",
+      "multi": false,
+      "age": true,
+      "join": "LEFT JOIN READ(incident) ih ON ih.data_year = o.data_year AND ih.ori = o.ori AND ih.incident_num = o.incident_num",
+      "binned": "CASE WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Unknown' END",
+      "binnedHour": "CASE WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Unknown' END"
+    },
+    "offense.clearance_type": {
+      "col": "CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = o.data_year AND ic.ori = o.ori AND ic.incident_num = o.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = o.data_year AND ca.ori = o.ori AND ca.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense.clearance_method": {
+      "col": "CASE CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END WHEN 'arrest' THEN 'arrest' WHEN 'none' THEN 'none' ELSE 'exceptional' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = o.data_year AND ic.ori = o.ori AND ic.incident_num = o.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = o.data_year AND ca.ori = o.ori AND ca.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    },
+    "offense.clearance_status": {
+      "col": "CASE CASE WHEN ca.data_year IS NOT NULL THEN 'arrest' WHEN ic.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN ic.cleared_exceptionally ELSE 'none' END WHEN 'none' THEN 'none' ELSE 'cleared' END",
+      "multi": false,
+      "age": false,
+      "join": "LEFT JOIN READ(incident) ic ON ic.data_year = o.data_year AND ic.ori = o.ori AND ic.incident_num = o.incident_num LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM READ(arrestee)) ca ON ca.data_year = o.data_year AND ca.ori = o.ori AND ca.incident_num = o.incident_num",
+      "binned": null,
+      "binnedHour": null
+    }
+  },
+  "offender": {
+    "offender.sex": {
+      "col": "CASE WHEN f.offender_seq = '00' THEN 'U' ELSE CASE WHEN f.sex IS NULL OR trim(f.sex) = '' THEN 'U' ELSE f.sex END END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.race": {
+      "col": "CASE WHEN f.offender_seq = '00' THEN 'U' ELSE CASE WHEN f.race IS NULL OR trim(f.race) = '' THEN 'U' ELSE f.race END END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.ethnicity": {
+      "col": "CASE WHEN f.offender_seq = '00' THEN 'U' ELSE CASE WHEN f.ethnicity IS NULL OR trim(f.ethnicity) = '' THEN 'U' ELSE f.ethnicity END END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "offender.age": {
+      "col": "f.age",
+      "multi": false,
+      "age": true,
+      "join": null,
+      "binned": "CASE WHEN f.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f.age IS NULL OR trim(f.age) = '' OR f.age = '00' THEN 'Unknown'\n      WHEN f.age IN ('NN', 'NB', 'BB') THEN '0 to 17'\n      WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 0 AND 17 THEN '0 to 17' WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 18 AND 64 THEN '18 to 64' WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 65 AND 99 THEN '65 and over' ELSE 'Outside the groups' END END",
+      "binnedHour": "CASE WHEN f.offender_seq = '00' THEN 'Unknown' ELSE CASE WHEN f.age IS NULL OR trim(f.age) = '' OR f.age = '00' THEN 'Unknown'\n      WHEN f.age IN ('NN', 'NB', 'BB') THEN 'Night'\n      WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 0 AND 5 THEN 'Night' WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 6 AND 11 THEN 'Morning' WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 12 AND 17 THEN 'Afternoon' WHEN TRY_CAST(f.age AS INTEGER) BETWEEN 18 AND 23 THEN 'Evening' ELSE 'Outside the groups' END END"
+    }
+  },
+  "arrestee": {
+    "arrestee.race": {
+      "col": "CASE WHEN a.race IS NULL OR trim(a.race) = '' THEN 'U' ELSE a.race END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "arrestee.sex": {
+      "col": "CASE WHEN a.sex IS NULL OR trim(a.sex) = '' THEN 'U' ELSE a.sex END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "arrestee.ethnicity": {
+      "col": "CASE WHEN a.ethnicity IS NULL OR trim(a.ethnicity) = '' THEN 'U' ELSE a.ethnicity END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "arrestee.age": {
+      "col": "a.age",
+      "multi": false,
+      "age": true,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    }
+  },
+  "group_b_arrest": {
+    "group_b_arrest.race": {
+      "col": "CASE WHEN a.race IS NULL OR trim(a.race) = '' THEN 'U' ELSE a.race END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "group_b_arrest.sex": {
+      "col": "CASE WHEN a.sex IS NULL OR trim(a.sex) = '' THEN 'U' ELSE a.sex END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "group_b_arrest.ethnicity": {
+      "col": "CASE WHEN a.ethnicity IS NULL OR trim(a.ethnicity) = '' THEN 'U' ELSE a.ethnicity END",
+      "multi": false,
+      "age": false,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    },
+    "group_b_arrest.age": {
+      "col": "a.age",
+      "multi": false,
+      "age": true,
+      "join": null,
+      "binned": null,
+      "binnedHour": null
+    }
+  }
+}
