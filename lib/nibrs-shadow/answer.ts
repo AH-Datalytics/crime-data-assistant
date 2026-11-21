@@ -873,6 +873,8 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
   return { ...decl, alternative: { label: `Ask instead: "${question}"`, continuation: opened } };
 }
 
+/** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
+const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 let defaultDepth = 0;
 /**
@@ -925,6 +927,12 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     cur = option.continuation;
   }
   if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
+  // A Crime Index (or hate crime) figure has no breakdown by a person's age, race, sex or by weapon: a default that lands there for a question that asks
+  // one would answer without it, which is a wrong answer, so such a question stays an ask.
+  if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(question)) {
+    DEFAULT_MISSES.push({ site: "chain", why: "breakdown not in this source" });
+    return o0;
+  }
   const x = cur as ShadowOutcome & { delivered: { text: string[]; table: { rows: unknown[][] } }; buttons?: ShadowOption[] };
   const rows = x.delivered.table?.rows ?? [];
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
@@ -3068,7 +3076,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         if (trend) all = everyYear(deps);
         else { const o = deferHeavy("every", everyYear, deps); if (isDeferred(o) || !o.continuation) { DEFAULT_MISSES.push({ site: "period", why: "heavy" }); continue; } all = o.continuation; }
         if (all.kind === "shr") return all;
-        if (["answer", "srs", "historical", "current", "hate"].includes(all.kind)) {
+        if (["answer", "srs", "historical", "current", "hate"].includes(all.kind) && !(["srs", "historical", "current", "hate"].includes(all.kind) && CRIME_INDEX_BLIND.test(ledger0.question))) {
           const span = monthly ? `${monthName(`${start}-01`)} through ${monthName(release.lastMonth)}` : `${start} through ${lcy}`;
           const x = all as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
           const justYear = deferHeavy(`Just ${lcy}`, (d2) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d2, pins), deps);
