@@ -48,12 +48,12 @@ console.log("nibrs cube: the cube serves exactly its cell families; every other 
 
 // --- Grid once: the category sums read from the grid's (agency, year, category) rows.
 {
-  const row = (ori: string, y: number, n: number, k: string | null) => ["s", ori, y, n, null, null, null, null, k];
+  const row = (ori: string, y: number, n: number, k: string | null) => ["s", ori, y, n, null, null, null, null, k, n - 1];
   const rows = [row("A1", 2024, 5, "Under 18"), row("A2", 2024, 7, "Under 18"), row("A1", 2024, 2, null), row("A2", 2023, 4, "Unknown"), row("A1", 2023, 1, "Unknown"), row("A3", 2024, 9, "65+")];
-  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], null), [[2023, "Unknown", 5, 1], [2024, "65+", 9, 0], [2024, "Under 18", 12, 5], [2024, null, 2, 2]],
-    "summed over agencies and over the Consistent Reporting Agencies; ordered by year, then category, a missing category last");
+  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], null), [[2023, "Unknown", 5, 1, 3, 0], [2024, "65+", 9, 0, 8, 0], [2024, "Under 18", 12, 5, 10, 4], [2024, null, 2, 2, 1, 1]],
+    "summed over agencies and over the Consistent Reporting Agencies, with their incidents beside; ordered by year, then category, a missing category last");
   const headers = new Map<number, Set<string>>([[2023, new Set(["A1"])], [2024, new Set(["A1", "A3"])]]);
-  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], headers), [[2023, "Unknown", 1, 1], [2024, "65+", 9, 0], [2024, "Under 18", 5, 5], [2024, null, 2, 2]],
+  assert.deepEqual(categorySumsFromGrid(rows, ["A1"], headers), [[2023, "Unknown", 1, 1, 0, 0], [2024, "65+", 9, 0, 8, 0], [2024, "Under 18", 5, 5, 4, 4], [2024, null, 2, 2, 1, 1]],
     "an arrest counts only in a year in which its agency has a header in the place");
   assert.deepEqual(categorySumsFromGrid([], [], null), []);
 }
@@ -555,6 +555,9 @@ if ((CUBE || CODE_CUBE || OFFENSE_CUBE || WEAPON_CUBE) && ROOT && fs.existsSync(
     // NIBRS_CUBE_TEST_MIN_SERVED: how many questions must come from the cube (default 1); the runner sets it to the list's expected count.
     const minServed = Number(process.env.NIBRS_CUBE_TEST_MIN_SERVED ?? "1");
     let served = 0;
+    // NIBRS_CUBE_TEST_CONTINUE=1: keep going after a difference, collect them all, write them to NIBRS_CUBE_TEST_DIFF_FILE (default nibrs-cube-differences.json in the working folder) and fail at the end if there are any.
+    const cont = process.env.NIBRS_CUBE_TEST_CONTINUE === "1";
+    const differences: { question: string; cube: string; raw: string }[] = [];
     for (const q of questions) {
       const rawSql = executed.length;
       const raw = await shadowAnswer(q, mk(null));
@@ -562,11 +565,18 @@ if ((CUBE || CODE_CUBE || OFFENSE_CUBE || WEAPON_CUBE) && ROOT && fs.existsSync(
       const cub = await shadowAnswer(q, mk(cubeCfg));
       const usedCube = executed.slice(cubeMark).some((s) => /cube\/data_year=/.test(s));
       const noSql = (_k: string, v: unknown) => (_k === "sql" || _k === "sqls" ? undefined : v); // the statements differ by design; everything else must not
-      assert.equal(JSON.stringify(cub, noSql), JSON.stringify(raw, noSql), `cube and raw answer alike: ${q}`);
+      const a = JSON.stringify(cub, noSql), b = JSON.stringify(raw, noSql);
+      if (cont) { if (a !== b) differences.push({ question: q, cube: a.slice(0, 4000), raw: b.slice(0, 4000) }); }
+      else assert.equal(a, b, `cube and raw answer alike: ${q}`);
       if (usedCube) served++;
       console.log(`  ${usedCube ? "cube" : "raw "} ${raw.kind}: ${q} (${rawSql >= 0 ? "same" : ""})`);
     }
     console.log(`  ${served} of ${questions.length} questions read from the cube`);
+    if (cont) {
+      fs.writeFileSync(process.env.NIBRS_CUBE_TEST_DIFF_FILE ?? "nibrs-cube-differences.json", JSON.stringify({ questions: questions.length, served, differences }, null, 2));
+      console.log(`  ${differences.length} difference(s) between cube and raw`);
+      assert.equal(differences.length, 0, `${differences.length} question(s) differ between cube and raw (see the differences file)`);
+    }
     if (questions.length) assert.ok(served >= Math.max(1, minServed), `at least ${Math.max(1, minServed)} question(s) read from the cube (got ${served})`);
   };
   run().then(() => console.log("nibrs cube: cell-by-cell comparison done"), (e) => { console.error(e); process.exit(1); });

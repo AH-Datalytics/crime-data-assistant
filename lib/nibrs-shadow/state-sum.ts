@@ -65,17 +65,19 @@ export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crime
  */
 export function categorySumsFromGrid(rows: unknown[][], everySet: string[], headers: Map<number, Set<string>> | null): unknown[][] {
   const every = new Set(everySet);
-  const sums = new Map<string, { y: number; k: string | null; all: number; ev: number }>();
+  const sums = new Map<string, { y: number; k: string | null; all: number; ev: number; iAll: number; iEv: number }>();
   for (const r of rows) {
-    const ori = String(r[1]), y = Number(r[2]), k = r[8] === null ? null : String(r[8]), n = Number(r[3] ?? 0);
+    const ori = String(r[1]), y = Number(r[2]), k = r[8] === null ? null : String(r[8]), n = Number(r[3] ?? 0), ni = Number(r[9] ?? 0);
     if (headers && !headers.get(y)?.has(ori)) continue;
     const key = `${y}|${k}`;
-    const s = sums.get(key) ?? { y, k, all: 0, ev: 0 };
+    const s = sums.get(key) ?? { y, k, all: 0, ev: 0, iAll: 0, iEv: 0 };
     s.all += n;
-    if (every.has(ori)) s.ev += n;
+    s.iAll += ni;
+    if (every.has(ori)) { s.ev += n; s.iEv += ni; }
     sums.set(key, s);
   }
-  return [...sums.values()].sort((a, b) => a.y - b.y || (a.k === b.k ? 0 : a.k === null ? 1 : b.k === null ? -1 : a.k < b.k ? -1 : 1)).map((s) => [s.y, s.k, s.all, s.ev]);
+  // [year, category, sum of every agency, sum of the Consistent Reporting Agencies, incidents of every agency, incidents of the Consistent Reporting Agencies]
+  return [...sums.values()].sort((a, b) => a.y - b.y || (a.k === b.k ? 0 : a.k === null ? 1 : b.k === null ? -1 : a.k < b.k ? -1 : 1)).map((s) => [s.y, s.k, s.all, s.ev, s.iAll, s.iEv]);
 }
 /** Agency-years (agencies x years) up to which a category sum is read from one grid evaluation instead of two (answerStateSum). */
 const ONCE_LIMIT = 40_000;
@@ -129,8 +131,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
 
   // The monthly grid of every agency (compile.ts), as for several agencies.
   const m = plan.measures[0];
+  // P171: the incidents beside a clearance count (P66), summed with it.
+  const incStat = plan.statistics.find((x) => x.kind === "incidents");
   const sub: NibrsPlan = { ...plan, measures: [{ ...m, filters: undefined }], filters: [...plan.filters, ...(m.filters ?? [])], transforms: [],
-    groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }, ...catDims], statistics: [{ kind: "count", as: "n", measure: m.as }] };
+    groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }, ...catDims],
+    statistics: [{ kind: "count", as: "n", measure: m.as }, ...(incStat && catDims.length ? [{ kind: "incidents" as const, as: "ni", measure: m.as }] : [])] };
   const c = compilePlan(sub, { kind: "absolute", ...period }, { ...deps.target, agencies: oris });
   if (c.kind === "unsupported") return decline(NOT_YET, c.reason);
   for (const s of c.query.statements) if (!statements.includes(s)) statements.push(s);
@@ -163,11 +168,12 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const both = deps.execute(`WITH g AS MATERIALIZED (${c.query.sql}),
       m AS (SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM g GROUP BY ori, period),
       cov AS (${covSelect("m")}),
-      cat AS (SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n FROM g
+      cat AS (SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n${incStat ? ", sum(ni) AS ni" : ""} FROM g
         WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL)
-      SELECT 'c' AS part, ori, y, CAST(months AS BIGINT) AS a, CAST(rep AS BIGINT) AS b, CAST(repsum AS BIGINT) AS c, CAST(conflicts AS BIGINT) AS d, CAST(val AS BIGINT) AS e, CAST(NULL AS VARCHAR) AS g0 FROM cov
-      UNION ALL SELECT 's', ori, y, CAST(n AS BIGINT), NULL, NULL, NULL, NULL, g0 FROM cat`);
+      SELECT 'c' AS part, ori, y, CAST(months AS BIGINT) AS a, CAST(rep AS BIGINT) AS b, CAST(repsum AS BIGINT) AS c, CAST(conflicts AS BIGINT) AS d, CAST(val AS BIGINT) AS e, CAST(NULL AS VARCHAR) AS g0, CAST(NULL AS BIGINT) AS ni FROM cov
+      UNION ALL SELECT 's', ori, y, CAST(n AS BIGINT), NULL, NULL, NULL, NULL, g0, ${incStat ? "CAST(ni AS BIGINT)" : "CAST(NULL AS BIGINT)"} FROM cat`);
     covRows = both.filter((r) => r[0] === "c").map((r) => r.slice(1, 8));
+    // (the 's' rows keep their ninth column, the incidents)
     catRows = both.filter((r) => r[0] === "s");
   } else covRows = deps.execute(covSelect(`(${monthly})`));
   for (const r of covRows) {
@@ -302,20 +308,25 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const g = catDims[0].dimension, count = plan.statistics.find((x) => x.kind === "count")!, share = plan.statistics.find((x) => x.kind === "share");
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
     const sums2 = catRows ? sumsFromGrid(catRows) : deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
-        coalesce(sum(n) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0) AS n_every
+        coalesce(sum(n) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0) AS n_every,
+        ${incStat ? "sum(ni)" : "CAST(0 AS BIGINT)"} AS i_all,
+        ${incStat ? `coalesce(sum(ni) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0)` : "CAST(0 AS BIGINT)"} AS i_every
       FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
      ` : ""} WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
-    const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2]]);
+    // The query's rows are (year, category, all, every, incidents all, incidents every); the grid's, the same (categorySumsFromGrid).
+    const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2], every ? r[5] : r[4]]);
+    const incOut = plan.statistics.find((x) => x.kind === "incidents");
     const deliverView = (every: boolean, p: NibrsPlan) => {
       const sums = sumsFor(every).filter((r) => keptYears.includes(Number(r[0])));
       const cats = [...new Set(sums.map((r) => r[1] as string | null))];
       const total = (y: number) => { const b = byYear.find((x) => x.year === y)!; return every ? b.every.sum : b.sum; };
       const rows: unknown[][] = [];
       for (const y of keptYears) for (const k of cats) {
-        const n = Number(sums.find((r) => Number(r[0]) === y && r[1] === k)?.[2] ?? 0), den = total(y);
-        rows.push([...(yearG ? [String(y)] : []), k, n, "VALUE", ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);
+        const hit = sums.find((r) => Number(r[0]) === y && r[1] === k);
+        const n = Number(hit?.[2] ?? 0), den = total(y);
+        rows.push([...(yearG ? [String(y)] : []), k, n, "VALUE", ...(incOut ? [Number(hit?.[3] ?? 0), "VALUE"] : []), ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);
       }
-      const columns = [...(yearG ? ["period"] : []), g, count.as, `${count.as}_status`, ...(share ? [share.as, `${share.as}_status`] : [])];
+      const columns = [...(yearG ? ["period"] : []), g, count.as, `${count.as}_status`, ...(incOut ? [incOut.as, `${incOut.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
       const d = deliverRows(p, period, period.to, columns, rows, statements, deps.release.id, readings);
       // The state sum's coverage, in its words (Jeff 2026-11-01), after the headline.
       const span = yearSet && yearSet.length > 1 ? `in ${yearSet.join(", ")}` : `from ${monthName(period.from)} through ${monthName(period.to)}`;

@@ -47,8 +47,10 @@
  */
 import { cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
-import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import { FAMILIES, GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import cubeMeasures from "./cube-measures.json";
 import type { NibrsPlan } from "./plan";
+import { ATTRIBUTE_TABLE, type AttributeRow } from "./attribute-table";
 import { clearanceDims, peopleFacts, type AnswerStatement } from "./result";
 import type { ResolvedPeriod } from "./resolve";
 import { headerStates, postalStateSql } from "./state-codes";
@@ -71,7 +73,7 @@ export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "u
  * names (several agencies, combined, or a state's agencies). Totals, combined sums, rates and rankings are rolled from
  * the grid (lib/nibrs-plan/transforms.ts), so each agency-month keeps its own status (D6).
  */
-export type CompileTarget = { root: string; builtYears: number[]; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
+export type CompileTarget = { root: string; builtYears: number[]; /** Probe only (scripts/gen-cube-measure-checks.ts): lets every measure reach a cube so the generator can see which forms would. Never set in production. */ cubeAllMeasures?: boolean; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
 
 const CARJACK_VEHICLES = ["03", "05", "24", "28", "37"];
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -157,27 +159,35 @@ function clearanceCond(read: Read, a: string, dimension: string, values: string[
 const hourGroup = (a: string): Groupable => ({ col: "ih.incident_hour", age: true,
   join: (read) => `LEFT JOIN ${read("incident")} ih ON ${sameIncident("ih", a)}`,
   binned: (bins) => `CASE ${bins.map((b) => `WHEN TRY_CAST(ih.incident_hour AS INTEGER) BETWEEN ${b.from} AND ${b.to} THEN ${q(b.label)}`).join(" ")} ELSE 'Unknown' END` });
-const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
-  victim: { "victim.race": own(unknownAs("v.race")), "victim.sex": own(unknownAs("v.sex")), "victim.ethnicity": own(unknownAs("v.ethnicity")), "victim.age": age("v"),
-    "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
-    // Element 31 (coordinator 2026-11-04): up to two per victim, each counted once under each (categories_overlap).
-    "victim_circumstance.circumstance": { col: "vc.circumstance", multi: true, join: (read) => `LEFT JOIN ${read("victim_circumstance")} vc ON ${sameVictim("vc", "v")}` },
-    "incident.hour": hourGroup("v"),
-    ...offenderGroupings("v"), ...Object.fromEntries(OFFENDER_ATTRS.map((x) => [`victim_offender.offender_${x}`, pairAttr(x)])), ...clearance("v") },
-  offense: { "offense.location_type": own("o.location_type"),
-    "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
-    "incident.hour": hourGroup("o"), ...offenderGroupings("o"), ...clearance("o") },
-  incident: { "incident.hour": hourGroup("o"), ...clearance("o") },
-  // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted
-  // as one offender, whatever its blank fields hold; its attributes are Unknown (P86: one Unknown row).
-  offender: Object.fromEntries(OFFENDER_ATTRS.map((x) => {
-    const seq00 = (c: string) => `CASE WHEN f.offender_seq = '00' THEN ${x === "age" ? "'Unknown'" : "'U'"} ELSE ${c} END`;
-    return [`offender.${x}`, x === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(unknownAs(`f.${x}`)))];
-  })),
-  arrestee: { "arrestee.race": own(unknownAs("a.race")), "arrestee.sex": own(unknownAs("a.sex")), "arrestee.ethnicity": own(unknownAs("a.ethnicity")), "arrestee.age": age("a") },
-  // Arrests for one Group B offense (DUI, disorderly conduct ...): the standalone arrest's own columns (job AR6).
-  group_b_arrest: { "group_b_arrest.race": own(unknownAs("a.race")), "group_b_arrest.sex": own(unknownAs("a.sex")), "group_b_arrest.ethnicity": own(unknownAs("a.ethnicity")), "group_b_arrest.age": age("a") },
-};
+/**
+ * The grouping table, built from the attribute table (attribute-table.ts: data, one row per unit and dimension) with one builder per kind. Held byte-identical to the hand-written
+ * table it replaced by scripts/test-groupable-table.ts (general query model, step 1: no behaviour change).
+ */
+function groupableOf(r: AttributeRow): Groupable {
+  const c = r.column ?? "";
+  switch (r.kind) {
+    case "own": return r.age ? age(r.alias) : own(r.unknown ? unknownAs(`${r.alias}.${c}`) : `${r.alias}.${c}`);
+    case "hour": return hourGroup(r.alias);
+    case "offenders": return offenderAttr(r.alias, c as (typeof OFFENDER_ATTRS)[number]);
+    case "paired": return pairAttr(c as (typeof OFFENDER_ATTRS)[number]);
+    case "linked": {
+      const ca = r.childAlias ?? "", table = r.table ?? "";
+      return { col: `${ca}.${c}`, multi: true, join: (read) => `LEFT JOIN ${read(table)} ${ca} ON ${r.keys === "victim" ? sameVictim(ca, r.alias) : sameOffense(ca, r.alias)}` };
+    }
+    case "clearance": return { col: CLEARANCE_COL[r.dimension], join: clearanceJoin(r.alias) };
+    case "self": {
+      // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted as one offender, whatever its blank fields hold; its attributes
+      // are Unknown (P86: one Unknown row).
+      const seq00 = (x: string) => `CASE WHEN f.offender_seq = '00' THEN ${c === "age" ? "'Unknown'" : "'U'"} ELSE ${x} END`;
+      return c === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(unknownAs(`f.${c}`)));
+    }
+  }
+}
+export const GROUPABLE: Record<Entity, Record<string, Groupable>> = (() => {
+  const out: Record<Entity, Record<string, Groupable>> = { victim: {}, offense: {}, incident: {}, offender: {}, arrestee: {}, group_b_arrest: {} };
+  for (const r of ATTRIBUTE_TABLE) out[r.unit][r.dimension] = groupableOf(r);
+  return out;
+})();
 
 /**
  * Age in bins (P30): infants in the bin holding 1, 01-99 as numbers; "00" (an age recorded as unknown) and a blank (no
@@ -352,10 +362,12 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
  * arrest: "all_crime"). The cube is keyed by code list, so a measure with an extra condition inside its own statement (carjacking's stolen vehicle, domestic violence's
  * relationship and incident rules) would be read as the plain group that shares its codes: a wrong count, not a slow one. A measure is added here only with its own cube check.
  */
-// A plain measure that has not had its cell-by-cell cube check yet stays on raw statements (justifiable homicide, 09C: expected to equal the code cube's 09C row, never compared).
-const CUBE_NOT_CHECKED = new Set(["justifiable_homicide"]);
-const CUBE_PLAIN_MEASURES = new Set([...Object.keys(MEASURE_CODES).filter((k) => !CUBE_NOT_CHECKED.has(k)), "drug_equipment", "drug_crimes", "all_crime"]);
-export const cubeServesMeasure = (id: string): boolean => CUBE_PLAIN_MEASURES.has(id.split(".")[1] ?? "");
+// The list is a FILE (cube-measures.json, written by scripts/gen-cube-measure-checks.ts and kept in step with this router by scripts/test-cube-measure-guard.ts): a measure is on it only with
+// the questions that prove a cube statement is built for it and that the runner compares against raw; every measure the vocabulary knows is on it or in the file's `raw` list with a reason.
+const CUBE_APPROVED = new Set(Object.keys(cubeMeasures.approved));
+export const cubeServesMeasure = (id: string): boolean => CUBE_APPROVED.has(id.split(".")[1] ?? "");
+/** Every measure name the vocabulary knows (the codes of MEASURE_CODES and EXTRA_CODES, the special families and all_crime), for the guard test: each must be classified in cube-measures.json. */
+export const knownMeasureNames = (): string[] => [...new Set([...Object.keys(MEASURE_CODES), ...Object.keys(EXTRA_CODES), ...FAMILIES, "all_crime"])].sort();
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"],
   // P82 (decided 2026-11-01): the crimes of domestic violence, counted by victim.
@@ -405,8 +417,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (!grid) {
     if (plan.geography.places.length !== 1) return no("v0 compiles one place");
     if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come later`);
-  } else if (plan.groupings[0]?.dimension !== "time.month" || plan.groupings.slice(1).some((g) => g.dimension.startsWith("time.")) || plan.groupings.length > 2 || plan.statistics.length !== 1)
-    // A monthly grid of one count, by at most one category (coordinator 2026-11-04: a state or national sum by category).
+  } else if (plan.groupings[0]?.dimension !== "time.month" || plan.groupings.slice(1).some((g) => g.dimension.startsWith("time.")) || plan.groupings.length > 2
+    || !(plan.statistics.length === 1 || (plan.statistics.length === 2 && plan.statistics[1].kind === "incidents" && plan.groupings.length === 2)))
+    // A monthly grid of one count, by at most one category (coordinator 2026-11-04: a state or national sum by category), with its
+    // incidents beside it (P171, a state's clearance by type: P66).
     return no("v0 compiles several agencies as a monthly grid of one count, by at most one category");
   // A national grid (about 17,000 agencies) names them once, in the first CTE (GRID), and every other use reads that CTE: the list is about
   // 230 KB, and four copies made a statement of 1 MB that DuckDB spent more than a second parsing. A state's grid (under BIG_LIST agencies) stays an
@@ -512,7 +526,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "a")} AND w2.offense_code IN (${list(codes)}) AND ${weaponIn("w2", values)})`);
       else if (on === "offense_weapon offense_weapon.weapon victim victim")
         // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
-        // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.
+        // codes). A victim names its connected offense by code only (NIBRS data element 24; the victim_offense row's key_occurrence is the VICTIM's numbering, not an offense
+        // occurrence), so any segment of that code in the incident counts. That is exact while an incident holds at most one offense segment per code: scripts/check-release-occurrence.py
+        // fails a release in which a code repeats (offense or offense_weapon key_occurrence > 1), and none of the 2017-2026 canon2-20261118-host years does.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "vo")} AND w2.offense_code = vo.connected_offense AND ${weaponIn("w2", values)})`);
       else if (on === "offense offense.offense incident arrestee")
         // Increment 6: an arrest on an incident that has an offense with one of the codes.
@@ -562,7 +578,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
   // (carjacking, domestic violence, any later one) is never answered from the cube row of the group whose code list it happens to share.
-  const cubeCfg = cubeWanted && cubeServesMeasure(m.id) ? cubeWanted : null;
+  const cubeCfg = cubeWanted && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;

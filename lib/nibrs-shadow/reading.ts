@@ -207,6 +207,17 @@ const PHRASES: [RegExp, string][] = [
   [/\bv(?:lolent|ilont|iolant|ilolent)\b/gi, (m: string) => (m[0] === "V" ? "Violent" : "violent")] as unknown as [RegExp, string],
   [/\bckearance\b/gi, (m: string) => (m[0] === "C" ? "Clearance" : "clearance")] as unknown as [RegExp, string],
   [/\bmoter(\s+vehicle)/gi, (m: string, v: string) => `${m[0] === "M" ? "Motor" : "motor"}${v}`] as unknown as [RegExp, string],
+  // Reader class (census 2026-11-21, real asks): small words and slips the log shows. "how many murders occurred in Colorado" (spelled
+  // "ocurred", "occured", "occurredin") is "murders in Colorado"; "how mnay" is "how many"; "sincce" is "since"; "for year 2026" is "in 2026";
+  // "retail theft" is shoplifting; "larceny from auto" is theft from a motor vehicle; "violent crime and property trends" is violent crime and property crime.
+  [/\b(?:have\s+|has\s+|had\s+)?(?:occurred|occured|ocurred|occurrd|occurrred)\s*in\b/gi, "in"],
+  [/\bhow\s+(?:mnay|mny|manny|mamy)\b/gi, "how many"],
+  [/\bs(?:incce|icne|inec|ince(?=e))\b/gi, "since"],
+  [/\bfor\s+year\s+((?:19|20)\d{2})\b/gi, "in $1"],
+  [/\bmassachuss?ett?s\b|\bmassachusetes\b|\bmassachussetts\b|\bmasachusetts\b/gi, "Massachusetts"],
+  [/\bretail\s+thefts?\b/gi, "shoplifting"],
+  [/\blarcen(?:y|ies)\s+(?:from|of)\s+(?:an?\s+)?(?:auto|autos|motor\s+vehicles?|vehicles?|cars?)\b/gi, "theft from motor vehicle"],
+  [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
