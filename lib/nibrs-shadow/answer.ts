@@ -2009,6 +2009,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
     const nationDefault = deps.noDefaults ? null : withDefault(nationOption, "No place was named, so the United States is shown.", placeButtons, "place");
     if (nationDefault) return nationDefault;
+    // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
+    // decline, as with a place named, never an ask for a place that would answer without the peers.
+    if (!isDeferred(nationOption) && nationOption.continuation?.kind === "decline" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "peer"))
+      return nationOption.continuation;
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [nationOption, ...placeButtons] };
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).

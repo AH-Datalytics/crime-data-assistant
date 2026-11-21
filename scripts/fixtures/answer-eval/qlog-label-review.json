@@ -11091,14 +11091,9 @@
 "QL-hist-c4be24fd9f": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-hist-c4d9809764": {
@@ -12194,14 +12189,9 @@
 "QL-hist-f917d91ae4": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-hist-f98e3ce3b0": {
@@ -16041,12 +16031,11 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-6d7c1094d9": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Theft from motor vehicles requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline"
 }
 },
 "QL-nibrs-6da327da6f": {
@@ -20086,13 +20075,9 @@
 "QL-nibrs-f11ff6b138": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-nibrs-f14c0b2f6c": {

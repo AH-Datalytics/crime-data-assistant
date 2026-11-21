@@ -910,7 +910,12 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
     // Both crime and place missing: the place is asked first (Jeff 2026-11-14); a place named asks the crime.
-    for (const q of ["national crime scorecard", "Crime trends compared to similar cities"]) assert.equal((ask(q) as { about?: string }).about, q.startsWith("national") ? "which kind of crime" : "which place", q);
+    assert.equal((ask("national crime scorecard") as { about?: string }).about, "which kind of crime");
+    // Peers with no place named are declined for the peers, never asked for a place first (P187, no partial answers).
+    for (const q of ["Crime trends compared to similar cities", "murders compared to peer cities"]) {
+      const o = ask(q);
+      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    }
     // The shootings ask never leaves out an average (Codex 01.2).
     assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, SENT);
     // A question about what data there is is never asked about a crime instead (Codex 01.4: "do we have").

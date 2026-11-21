@@ -38704,24 +38704,16 @@
    "question": "Show me the crime data for Jersey Village, Texas in comparisson to similar agencies in Size in Harris County, Texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -42886,24 +42878,16 @@
    "question": "How does Philadelphia'homicide decline compare to the national average and peer city average?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -55936,20 +55920,16 @@
    "question": "Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Theft from motor vehicles requires NIBRS."
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -69588,23 +69568,16 @@
    "question": "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
