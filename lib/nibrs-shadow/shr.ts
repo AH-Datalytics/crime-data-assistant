@@ -135,6 +135,9 @@ const CIRCUMSTANCE_OF: Record<string, string[]> = { "04": ["46"], "05": ["47"], 
 const SHR_WEAPON_CODES = new Set(["11", "12", "13", "14", "15", "20", "30", "40", "50", "60", "65", "70", "85"]);
 /** NIBRS's other family members (other, grandparent, grandchild, stepsibling) together are SHR's "other family". */
 const OTHER_FAMILY = ["OF", "GP", "GC", "SS"];
+/** P82 and D20: the relationships of domestic violence (intimate partner, family or household), and the ones Homicide Reports have no code for. */
+const DOMESTIC_RELATIONSHIPS = new Set(["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"]);
+const NOT_RECORDED_RELATIONSHIP: Record<string, string> = { CF: "a child of a boyfriend or girlfriend", BE: "a babysittee", FP: "a foster parent", FC: "a foster child", CO: "a cohabitant" };
 /** Jeff 2026-11-15: the one sentence said when the intimate partner set is asked and Homicide Reports can't hold part of it. */
 const NO_EX_PARTNERS = "This data source does not record ex-boyfriend and ex-girlfriend relationships.";
 function codesOf(dim: ShrDim, values0: readonly (string | number)[]): string[] | null {
@@ -229,7 +232,20 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
       continue;
     }
     if (f.op !== "in" || !f.values?.length) return { why: "this condition" };
-    const codes = codesOf(dim, f.values);
+    let asked = f.values;
+    // P169 (Jeff 2026-11-19): the domestic sets (intimate partner, family or household) hold relationships Homicide Reports do not record; those
+    // are left out and the answer says which, never a decline of the whole question.
+    if (dim === "relationship") {
+      const set = asked.map(String);
+      const lacking = set.filter((v) => !(v in RELATIONSHIP_OF) && !OTHER_FAMILY.includes(v));
+      if (lacking.length && lacking.length < set.length && set.every((v) => DOMESTIC_RELATIONSHIPS.has(v))) {
+        asked = set.filter((v) => !lacking.includes(v));
+        const names = lacking.map((v) => NOT_RECORDED_RELATIONSHIP[v]).filter(Boolean);
+        const note = `Homicide Reports do not record ${names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0]}, so those relationships are not counted.`;
+        if (names.length && !notes.includes(note)) notes.push(note);
+      }
+    }
+    const codes = codesOf(dim, asked);
     if (!codes) return { why: "a code Homicide Reports record differently" };
     if (dim === "relationship" && f.values.map(String).includes("XR") && !notes.includes(NO_EX_PARTNERS)) notes.push(NO_EX_PARTNERS);
     // A justifiable homicide asked for (a felon killed by police or a citizen) is counted as asked (S4).
@@ -523,7 +539,15 @@ export function filterWords(f: ShrFilter): string {
   const names = f.codes!.map((c) => (labels[c] ?? c).toLowerCase());
   const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0];
   if (f.dim === "weapon") return f.codes!.every((c) => ["11", "12", "13", "14", "15"].includes(c)) && f.codes!.length === 5 ? "with a firearm" : `with a weapon recorded as ${list}`;
-  if (f.dim === "relationship") return `where the victim's relationship to the offender was ${list}`;
+  if (f.dim === "relationship") {
+    // P169: the domestic sets in plain words.
+    const same = (set: string[]) => f.codes!.length === set.length && set.every((c) => f.codes!.includes(c));
+    const partner = ["HU", "WI", "CH", "CW", "BF", "GF", "XH", "XW", "HO"], family = ["OF", "MO", "FA", "SO", "DA", "BR", "SI", "SF", "SM", "SS", "SD", "IL"];
+    if (same([...partner, ...family])) return "where the victim was an intimate partner or a family member of the offender";
+    if (same(partner)) return "where the victim was an intimate partner of the offender";
+    if (same(family)) return "where the victim was a family member of the offender";
+    return `where the victim's relationship to the offender was ${list}`;
+  }
   if (f.dim === "circumstance") return `where the circumstance was ${list}`;
   return `where the ${f.dim.startsWith("victim") ? "victim" : "offender"}'s ${f.dim.split(".")[1]} was ${list}`;
 }
