@@ -115,7 +115,7 @@ export function typedChartConfig(columns: string[], rows: Record<string, unknown
  * - years read "2025" or "2018 to 2025"; a single month reads "January 2025".
  */
 const TITLE_PLURAL: Record<string, string> = {
-  carjacking: "Carjackings", murder: "Murders", homicide: "Homicides", homicide_all: "All homicides", robbery: "Robberies", burglary: "Burglaries", rape: "Rapes",
+  carjacking: "Carjackings", murder: "Murders", homicide: "Homicides", homicide_all: "All homicides", justifiable_homicide: "Justifiable Homicides", robbery: "Robberies", burglary: "Burglaries", rape: "Rapes",
   aggravated_assault: "Aggravated Assaults", simple_assault: "Simple Assaults", motor_vehicle_theft: "Motor Vehicle Thefts", theft: "Thefts",
   arson: "Arsons", sex_offense: "Sex Offenses", shoplifting: "Shoplifting Offenses", violent_crime: "Violent Crimes", property_crime: "Property Crimes",
 };

@@ -71197,19 +71197,24 @@
    "question": "What is the total number of gun homicides in St. Louis County 2026 year-to-date?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which St Louis County"
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
     ],
-    "about": "which St Louis County"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Missouri and Minnesota have qualifying counties."
+    "reviewed_by": "jeff-2026-11-20",
+    "notes": "P28: Jeff 2026-11-20, St. Louis County uses Missouri"
    }
   },
   {

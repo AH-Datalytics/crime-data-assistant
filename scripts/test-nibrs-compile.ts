@@ -216,12 +216,13 @@ assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024])
   const askPlan = (id: string, unit: "victim" | "incident" | "offense" | "arrest") => ({ ...X.H2, timeBasis: unit === "arrest" ? "arrest_date" as const : X.H2.timeBasis, measures: [{ id, unit, as: "m" }], statistics: [{ kind: "count" as const, as: "count", measure: "m" }] });
   const sqlOf = (id: string, unit: "victim" | "incident" | "offense" | "arrest") => { const r = compilePlan(askPlan(id, unit), year(2025), tc); return r.kind === "query" ? r.query.sql : `unsupported: ${(r as { reason?: string }).reason ?? r.kind}`; };
   assert.ok(sqlOf("victims.person_crimes", "victim").includes("/cubes/"), "control: a person-crimes victim count reads the cube");
-  for (const [id, unit] of [["victims.domestic_violence", "victim"]] as const) {
+  for (const [id, unit] of [["victims.domestic_violence", "victim"], ["incidents.domestic_violence", "incident"], ["offenses.domestic_violence", "offense"], ["arrests.domestic_violence", "arrest"]] as const) {
     const sql = sqlOf(id, unit);
     assert.ok(!sql.startsWith("unsupported"), `${id}: ${sql}`);
     assert.ok(!sql.includes("/cubes/"), `${id} must never read a cube`);
     assert.ok(sql.includes("victim_offender") && /connected_offense/.test(sql), `${id} keeps the P82 raw statement`);
   }
+  // The new measures of the other capability PRs need their own cube-on check on a real agency (runner): justifiable homicide and the weapon forms read the cube only as their own cell.
 }
 
 console.log("nibrs compile v0: agency-level forms compile; the rest refuse with a reason");
