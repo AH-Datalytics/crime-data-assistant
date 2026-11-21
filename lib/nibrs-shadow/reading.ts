@@ -234,6 +234,9 @@ const PHRASES: [RegExp, string][] = [
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:private\s+)?(?:civilians?|citizens?)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:the\s+)?(?:police|officers|law\s+enforcement)\b/gi, "$1 by circumstance"],
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
+  // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
+  [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
+  [/\bfamily\s+violence\b/gi, "domestic violence by family members"],
   // P160 (Jeff 2026-11-19): a person's detail written as a noun phrase is that breakdown: "murder victim race in Houston" is
   // "murder victims by race in Houston", "homicide offender race" is "homicide offenders by race"; "victim demographics by
   // race" is "victims by race"; "the racial breakdown of murder victims" is "murder victims by race"; "homicide circumstances"
