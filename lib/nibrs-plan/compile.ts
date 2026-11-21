@@ -601,8 +601,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN ${
         // Arrests (Jeff 2026-11-12, "Yes, count them"): a month's status describes its crime reports, not its arrests; an
         // arrest dated in a month reported as zero crimes or not reported (an arrest on an older incident, say) is real
-        // and counted, not a conflict. Crimes keep the conflict rule.
-        isArrest ? "'VALUE'" : "'EVIDENCE_CONFLICT'"}${anyArrest ? `
+        // and counted, not a conflict. Crimes too (Jeff 2026-11-21, adopting Savant's rule, P183): a month with offense rows counts them
+        // whatever its status flag says (a zero report or unknown flag with rows is a VALUE, about 0.3% of agency-months); a zero flag with no
+        // rows stays a gap (the REPORTED_ZERO and UNKNOWN branches below).
+        "'VALUE'"}${anyArrest ? `
            WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN ${
         // One agency (Jeff 2026-11-16): a month reported as zero crimes is NOT reported: left out, blank, never 0. A state or
