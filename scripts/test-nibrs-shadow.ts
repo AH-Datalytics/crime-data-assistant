@@ -523,7 +523,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       const o = as(shadowAnswer(q, wdeps), "shr");
       assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Victim's race", "Male", "Female"], q);
       assert.deepEqual(o.delivered.table.rows, [["White", 3, 0], ["Black", 5, 2]], q);
-      assert.equal(o.delivered.text[0], "2023 Murder Victims by The Victims' Race and the Victims' Sex, Houston, Texas");
+      assert.equal(o.delivered.text[0], "Houston, Texas Murder Victims by The Victims' Race and the Victims' Sex, 2023");
     }
     // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
     assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
@@ -537,7 +537,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "what weapons were used in murders in Houston in 2023"]) {
       const o = as(shadowAnswer(q, gdeps), "shr");
       assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder victims", "Share (%)"], q);
-      assert.ok(/ by Weapon, Houston, Texas$/.test(o.delivered.text[0]), o.delivered.text[0]);
+      assert.ok(/^Houston, Texas .* by Weapon, 2023$/.test(o.delivered.text[0]), o.delivered.text[0]);
       if (!/weapons were used/.test(q)) assert.equal(o.delivered.text[1], "Firearms (handguns, rifles, shotguns, other guns and firearms of a type not stated) are 80% of the murder victims.", q);
     }
     {
