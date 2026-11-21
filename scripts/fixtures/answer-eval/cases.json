@@ -26576,7 +26576,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Murders in the United States in August 2026",
+   "question": "Murders in the United States in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26594,8 +26594,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26612,7 +26612,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V173 us all 2026-08 murder_total"
+     "source": "nibrs-model V173 us all 2026-09 murder_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26636,7 +26636,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Rapes in the United States in August 2026",
+   "question": "Rapes in the United States in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26654,8 +26654,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26672,11 +26672,11 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V173 us all 2026-08 rape_total"
+     "source": "nibrs-model V173 us all 2026-09 rape_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
-     "names the agencies with no figure, left out of the total (14 of 547)",
+     "names the agencies with no figure, left out of the total (13 of 588)",
      "names its source at the end"
     ]
    },
@@ -26716,7 +26716,7 @@
      ],
      "period": {
       "from": "2026-01",
-      "to": "2026-08"
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26731,7 +26731,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V173 us all 2026-08 murder_ytd"
+     "source": "nibrs-model V173 us all 2026-09 murder_ytd"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26755,7 +26755,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Robberies in the Northeast in August 2026",
+   "question": "Robberies in the Northeast in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26815,8 +26815,8 @@
      ],
      "combine": "combined",
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26833,7 +26833,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V174 noe all 2026-08 robbery_total"
+     "source": "nibrs-model V174 noe all 2026-09 robbery_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26857,7 +26857,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Murders in the Midwest in August 2026",
+   "question": "Murders in the Midwest in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26932,8 +26932,8 @@
      ],
      "combine": "combined",
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -26950,7 +26950,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V174 mdw all 2026-08 murder_total"
+     "source": "nibrs-model V174 mdw all 2026-09 murder_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -26974,7 +26974,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Violent crime in Tennessee in August 2026",
+   "question": "Violent crime in Tennessee in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -26993,8 +26993,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -27011,7 +27011,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V175 tn all 2026-08 violent_total"
+     "source": "nibrs-model V175 tn all 2026-09 violent_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -27035,7 +27035,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Property crime in Texas in August 2026",
+   "question": "Property crime in Texas in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -27054,8 +27054,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -27072,7 +27072,7 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V175 tx all 2026-08 property_total"
+     "source": "nibrs-model V175 tx all 2026-09 property_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
@@ -27096,7 +27096,7 @@
    },
    "tab": "current",
    "setup": [],
-   "question": "Rapes in Alabama in August 2026",
+   "question": "Rapes in Alabama in September 2026",
    "policy": [
     "P01",
     "P90",
@@ -27115,8 +27115,8 @@
       }
      ],
      "period": {
-      "from": "2026-08",
-      "to": "2026-08"
+      "from": "2026-09",
+      "to": "2026-09"
      },
      "measures": [
       {
@@ -27133,11 +27133,11 @@
     },
     "values": {
      "status": "verified",
-     "source": "nibrs-model V175 al all 2026-08 rape_total"
+     "source": "nibrs-model V175 al all 2026-09 rape_total"
     },
     "statements": [
      "names the Consistent Reporting Agencies it counts and the people they cover",
-     "says no figure is available for August 2026 (never zero)",
+     "names the agencies with no figure, left out of the total (2 of 3)",
      "names its source at the end"
     ]
    },
