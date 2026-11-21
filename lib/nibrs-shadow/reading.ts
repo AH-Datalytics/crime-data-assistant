@@ -215,9 +215,6 @@ const PHRASES: [RegExp, string][] = [
   [/\bs(?:incce|icne|inec|ince(?=e))\b/gi, "since"],
   [/\bfor\s+year\s+((?:19|20)\d{2})\b/gi, "in $1"],
   [/\bmassachuss?ett?s\b|\bmassachusetes\b|\bmassachussetts\b|\bmasachusetts\b/gi, "Massachusetts"],
-  // "2026 year-to-date", "in 2026 YTD", "year to date 2026": the year so far ("so far in 2026"), one period, not a year and a to-date word.
-  [/\b(?:in\s+|for\s+)?((?:19|20)\d{2})\s+(?:year[-\s]to[-\s]date|ytd)\b/gi, "so far in $1"],
-  [/\b(?:year[-\s]to[-\s]date|ytd)\s+(?:for\s+|in\s+|of\s+)?((?:19|20)\d{2})\b/gi, "so far in $1"],
   [/\bretail\s+thefts?\b/gi, "shoplifting"],
   [/\blarcen(?:y|ies)\s+(?:from|of)\s+(?:an?\s+)?(?:auto|autos|motor\s+vehicles?|vehicles?|cars?)\b/gi, "theft from motor vehicle"],
   [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
