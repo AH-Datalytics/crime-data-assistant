@@ -2778,4 +2778,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
   assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
 }
+// P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
+{
+  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
+  assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
+  const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
+  assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
+  assert.ok(gunViolent.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "victim"));
+  assert.ok(gunViolent.delivered.text.some((t) => /^Counts NIBRS crimes against persons: /.test(t)), JSON.stringify(gunViolent.delivered.text));
+  // A crime already counted by offense, and the murder path, are left as they were.
+  assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
