@@ -45,7 +45,7 @@ function csvRows(text) {
 }
 const POLICY = path.resolve(__dirname, "..", "docs", "policy", "nibrsai-answer-policy.csv");
 {
-  const rows = csvRows(fs.readFileSync(POLICY, "utf8"));
+  const rows = csvRows(require("./lib/policy-rows.cjs").policyCsv().replace(/^﻿/, ""));
   const head = rows[0];
   const cols = ["proposed behavior", "exact default or choices offered"].map((n) => head.indexOf(n));
   if (cols.includes(-1)) throw new Error("self-test: the policy file's columns changed: " + head.join(" | "));

@@ -1,0 +1,12 @@
+{
+  "id": "P21",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What happened in the shooting on Main Street last Friday?\" or a named person",
+  "what the app does today": "No rule found.",
+  "proposed behavior": "Decline: the data has no names, addresses or case narratives. Offer the count of that offense for the city and month.",
+  "exact default or choices offered": "Alternative: offense count, same city and month.",
+  "why": "Incident details are in no source.",
+  "status": "Decided 2026-10-28 (Jeff: yes, decline)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

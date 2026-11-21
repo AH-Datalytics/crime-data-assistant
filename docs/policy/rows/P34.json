@@ -1,0 +1,12 @@
+{
+  "id": "P34",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Serious crime in Denver\", \"major crime\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Ask violent crime, property crime or both, as for the bare word \"crime\" (D09).",
+  "exact default or choices offered": "Choices: violent crime; property crime; both.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 11 \"yes to both\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

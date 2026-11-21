@@ -1,0 +1,12 @@
+{
+  "id": "P148",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"denver colorado crime data for the last three years by month\", \"Denver overall crime per month\", \"Denver all crimes by month\"",
+  "what the app does today": "Asked which kind of crime, or declined (\"Violent and property crime totals are whole years only.\"), or NIBRS's every offense for \"overall\".",
+  "proposed behavior": "\"Crime\", \"overall crime\" or \"all crimes\" by month for one agency is Current Trends' violent crime and property crime beside their sum, the Part I total: a Title Case title (\"October 2023 to September 2026 Crime by Month, Denver, Colorado\"), the agency line, then the Source line; columns Month, Violent crime, Property crime, Part I crime. Part I crime is blank when either part is blank, and each blank part is named (\"No figure is available for March 2026 for Violent crime: shown blank, not zero.\"). Counts only: the rate, a state or the nation, and several places are not in this answer.",
+  "exact default or choices offered": "The title, notes only for blank months, then the Source line.",
+  "why": "Jeff 2026-11-18 (through the coordinator): \"denver crime by month should come from current trends data\"; three columns; \"overall\" is property and violent combined.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P148\")."
+}

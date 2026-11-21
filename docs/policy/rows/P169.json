@@ -1,0 +1,12 @@
+{
+  "id": "P169",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"domestic homicides in Texas since 2000\", \"domestic murders in New Orleans per year\", \"Show domestic homicide trends nationally since 2000\"",
+  "what the app does today": "Declined (\"Crime Index's figures for this crime don't answer this question as it's asked\") or \"I couldn't tell what this question asks for\".",
+  "proposed behavior": "A domestic homicide or murder is a homicide whose victim was an intimate partner (spouse, ex-spouse, boyfriend or girlfriend, ex-boyfriend or ex-girlfriend, same-sex partner) or a family or household member (child, parent, sibling, other family, stepchild, stepparent, grandparent, grandchild, in-law, stepsibling, foster parent, foster child, cohabitant, child of a boyfriend or girlfriend, babysittee), from Homicide Reports, with the relationship of the record's first offender (S5). Homicide Reports have no code for ex-boyfriend or ex-girlfriend, a child of a boyfriend or girlfriend, a babysittee, a foster parent, a foster child or a cohabitant: the answer says so in one sentence and counts the rest.",
+  "exact default or choices offered": "The homicide or murder count (or by year) with the relationship set, and the sentences naming the relationships the source does not record.",
+  "why": "Jeff 2026-11-19 (through the coordinator): the same family and partner set as P82; the answer says which relationship codes Homicide Reports does not carry.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P169\")."
+}

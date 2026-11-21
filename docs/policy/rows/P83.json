@@ -1,0 +1,12 @@
+{
+  "id": "P83",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Gun violence in Memphis in 2024\" (declined by P31)",
+  "what the app does today": "Declined with the note and a generic example.",
+  "proposed behavior": "Still declined with P31's note; the next step is a button for the same question as gun crime (\"Gun crime in Memphis in 2024\").",
+  "exact default or choices offered": "Decline with a \"Gun crime in ...\" button.",
+  "why": "The nearest answerable question, as every decline's next step (P74 and Jeff's every-decline rule).",
+  "status": "Decided 2026-11-01 (Jeff: \"yes\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

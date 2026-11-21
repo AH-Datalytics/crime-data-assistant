@@ -1,0 +1,12 @@
+{
+  "id": "P27",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Where were robberies highest in 2024?\" (\"where\" with no kind of place)",
+  "what the app does today": "Asks which level is meant (states, cities, or individual agencies) and asks again until answered.",
+  "proposed behavior": "Ask once, with three buttons. A named place or a named level (\"which state\", \"cities\") settles it without asking.",
+  "exact default or choices offered": "Choices: states; cities; individual agencies.",
+  "why": "Each level gives a different ranking with a different winner.",
+  "status": "Decided 2026-10-28 (Jeff: yes)",
+  "test cases": "GC-003; labeled cases with \"where\""
+}

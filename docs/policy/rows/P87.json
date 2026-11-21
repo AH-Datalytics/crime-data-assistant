@@ -1,0 +1,12 @@
+{
+  "id": "P87",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Carjackings in Texas in 2024\" (a state or national sum), amending P85's coverage columns",
+  "what the app does today": "The table always has \"Agencies reporting\" (or \"Consistent Reporting Agencies\") and \"Population covered\" columns.",
+  "proposed behavior": "The two coverage columns are shown only when the question asks for the agencies reporting (\"..., with the number of agencies reporting\"); otherwise the table is the figure alone. The figures are still carried with the answer, and the Consistent Reporting Agencies view names its agencies in its first sentence.",
+  "exact default or choices offered": "Coverage columns on request.",
+  "why": "The columns crowded every state answer; the one-sentence note and the Consistent Reporting Agencies offer say what a reader needs.",
+  "status": "Decided 2026-11-01 (Jeff, through the coordinator: \"coverage columns only on request\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

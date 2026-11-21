@@ -1,0 +1,12 @@
+{
+  "id": "D33",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Per capita rate of officers in New York City and Chicago since 1930\" (a staffing rate for a year whose rate the build does not publish: Chicago 1984)",
+  "what the app does today": "Derives the rate from the published sworn count and population (Chicago 1984: 11,960 / 3,012,524 x 100,000 = 397.0).",
+  "proposed behavior": "Keep it: a staffing rate is derived from count and population when the build has none.",
+  "exact default or choices offered": "Rate per 100,000 (or per 1,000 when asked) = count / population x the base, rounded as the published rates are.",
+  "why": "Jeff 2026-11-13: \"Yes\" (the derived value sits between the published 1983 417.2 and 1985 395.9).",
+  "status": "Decided (Jeff 2026-11-13)",
+  "test cases": "QL-hist-f63c774a7e"
+}

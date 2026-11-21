@@ -1,0 +1,12 @@
+{
+  "id": "D18",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Counting units",
+  "what the app does today": "Crimes against persons are counted by victim, property crimes by offense, violent crime as the FBI counts it.",
+  "proposed behavior": "Keep.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "Counting person crimes by offense undercounts by about a fifth.",
+  "status": "Decided (standing project rule, in force before 2026-10-28)",
+  "test cases": "correctness cases: Houston murder victims; Memphis carjackings"
+}

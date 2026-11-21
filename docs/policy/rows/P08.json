@@ -1,0 +1,12 @@
+{
+  "id": "P08",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Which large US city had the highest violent crime rate in 2023?\"",
+  "what the app does today": "Answered by whichever tab is open. Current Trends covers about 700 agencies; NIBRS its reporters; Historical (FBI annual data) the most.",
+  "proposed behavior": "\"Large\" or \"big\" city means a population of 250,000 or more, stated in the answer. The source follows P01 (completed years: Historical; the current year: Current Trends, naming its sample).",
+  "exact default or choices offered": "\"Large\" or \"big\" city: a population of 250,000 or more.",
+  "why": "The cutoff decides which cities are compared, so it has one fixed meaning, named in the answer.",
+  "status": "Decided 2026-10-28 (Jeff: large or big means 250,000+)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts, scripts/test-nibrs-shadow.ts."
+}
