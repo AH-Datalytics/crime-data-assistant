@@ -9,7 +9,8 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/nibrs/current
 EnvironmentFile=/opt/nibrs/engine/engine.env
-ExecStart=/usr/bin/node /opt/nibrs/current/services/engine/dist/main.cjs
+# The bundle is built in the deployed release and copied to a path that does not move with each release (docs/runbooks/engine-service.md); WorkingDirectory stays the release, where the fixtures are.
+ExecStart=/usr/bin/node /opt/nibrs/engine/dist/main.cjs
 Restart=on-failure
 RestartSec=5
 # Caps: the engine must never take the site down. MemoryMax kills the engine inside its own cgroup; no swap for it; the site wins every contention.
