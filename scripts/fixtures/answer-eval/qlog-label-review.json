@@ -2658,13 +2658,10 @@
 "QL-ct-6839863e6c": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-ct-6857db5c72": {
@@ -8736,13 +8733,10 @@
 "QL-hist-5b8584137e": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-hist-5b8ade42d5": {
@@ -9609,13 +9603,10 @@
 "QL-hist-81df62c2e3": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-hist-82abcdbbd2": {
@@ -11332,13 +11323,10 @@
 "QL-hist-ceef4ff63b": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-hist-cf166a564d": {
@@ -12886,13 +12874,10 @@
 "QL-nibrs-0d8d1b2bb0": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-nibrs-0da45d83fb": {
@@ -14455,13 +14440,10 @@
 "QL-nibrs-40ae929d8d": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-nibrs-40b454dfa1": {
@@ -17243,15 +17225,7 @@
 },
 "QL-nibrs-8fec1574a4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
-"expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
-}
+"by": "codex-second-1"
 },
 "QL-nibrs-8fef7ac44a": {
 "status": "reviewed",
@@ -20572,13 +20546,10 @@
 "QL-shr-08c0555a78": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-shr-0973f98d14": {
@@ -22881,13 +22852,10 @@
 "QL-shr-9d31a7479c": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "clarify",
+"about": "crime"
 }
 },
 "QL-shr-9d330706ed": {
@@ -27535,13 +27503,9 @@
 "QL-hist-cf2bce7545": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline"
 }
 },
 "QL-hist-d036d96228": {

@@ -8880,23 +8880,19 @@
    "question": "What are clearance rates in Harris county, tx",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -29992,23 +29988,19 @@
    "question": "Washington DC clearance rate",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -33296,23 +33288,19 @@
    "question": "National clearance rates 1960 to 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -39580,23 +39568,19 @@
    "question": "what are clearance rates in harris county",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -45124,23 +45108,19 @@
    "question": "What the average number of cases cleared vs reported for each state",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -50581,23 +50561,19 @@
    "question": "Give me the number of clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -59909,23 +59885,20 @@
    "question": "Break down the exceptional clearances in Newark by type",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -71234,23 +71207,19 @@
    "question": "clearance rates in Chicago",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -78284,23 +78253,19 @@
    "question": "Clearance rates in Anne Arundel county md",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
    }
   },
   {
@@ -98306,23 +98271,16 @@
    "question": "how does the clearance rate for violent crime in albuquerque compare to the national average and other comparable cities",
    "previous": "can i see violent crime clearance rate in albuquerque new mexico since 2023",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {

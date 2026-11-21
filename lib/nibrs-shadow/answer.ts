@@ -858,6 +858,8 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
 }
 
 /** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
+/** A clearance question (P182's exception): a clearance rate, offenses cleared, clearances by type, cleared by arrest or exception. */
+const CLEARANCE_WORDS = /\bclear(?:ance|ances|ed|ing)?\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 let defaultDepth = 0;
@@ -902,7 +904,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       years = true;
       more.push({ label: "Another year", entry: "which year" });
     } else if (c.about === "which kind of crime") {
-      option = find(/^Both$/);
+      // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
+      option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
