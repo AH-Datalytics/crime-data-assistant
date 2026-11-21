@@ -257,7 +257,7 @@ const PHRASES: [RegExp, string][] = [
   // uncleared); "exceptional clearances by type" is the exceptional types; "exceptional means" alone is the exception.
   [/,?\s*\b(?:were\s+|was\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional\s+means|exception|exceptional\s+clearance)\b/gi, " by clearance type"],
   [/\bexceptional\s+((?:[a-z]+\s+){0,1}?)clearances?\b/gi, "$1cleared by exception"],
-  [/(\bcleared\s+by\s+exception\b[^?.]*?)\b(?:per|by)\s+year\s+and\s+type\b/gi, "$1by year and clearance type"],
+  [/(\bcleared\s+by\s+exception\b[^?.]*?)\b(?:per|by)\s+year\s+and\s+type\b/gi, "$1by type by year"],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
   [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
   [/\bfamily\s+violence\b/gi, "domestic violence by family members"],
