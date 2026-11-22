@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, distance, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -1027,6 +1027,19 @@ function scorecardOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const places = own.filter((p) => p.concept === "place");
   const word = (p: Part) => /^score[ \t-]*cards?$/i.test(p.text.trim());
   const other = own.filter((p) => p.concept !== "place" && p.state !== "context" && !(p.concept === "measure" && p.value === "unspecified") && !(p.state === "not-interpreted" && word(p)));
+  // A misspelled place ("Toldeo scorecard"): only when no place was read and exactly one large place is one edit from one word.
+  if (!places.length) {
+    const fixes = new Map<string, string>();
+    for (const w of own.filter((p) => p.concept === "unrecognized").flatMap((p) => p.text.split(/\s+/)).map((w) => w.replace(/[?.!,]+$/, "")).filter((w) => w.length >= 4 && !/^(?:score|scores|card|cards|scorecards?|crimes?)$/i.test(w))) {
+      const near = nearestPlaceName(deps.places, w);
+      if (near && distance(near.toLowerCase(), w.toLowerCase()) <= 1) fixes.set(w, near);
+    }
+    if (fixes.size === 1) {
+      const [w, near] = [...fixes][0];
+      const at = new RegExp(String.raw`(?<![A-Za-z])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`);
+      if (at.test(question)) { const fixed = scorecardOf(question.replace(at, near), deps); if (fixed) return fixed; }
+    }
+  }
   if (places.length > 1 || other.length || flags(read.ledger).comparison) return null;
   const hb = deps.historical;
   const value = places.length ? String(places[0].value ?? "") : "national";

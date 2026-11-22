@@ -85,7 +85,7 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
 }
 
 /** Edit distance with adjacent transposition (optimal string alignment). */
-function distance(a: string, b: string): number {
+export function distance(a: string, b: string): number {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
   for (let j = 1; j <= b.length; j++) d[0][j] = j;
   for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
