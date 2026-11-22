@@ -3019,6 +3019,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P196 (Jeff 2026-11-22, "Any 2+ places"): every answer with a city named beside other places names the agency it used.
+{
+  const o = ask("murder clearance by type in 2025 in Houston and Los Angeles") as { kind: string; delivered?: { text: string[] } };
+  if (o.kind === "answer") assert.ok(o.delivered!.text.includes("Los Angeles is read as the Los Angeles Police Department."), o.delivered!.text.join(" | "));
+  // Each city with a county agency of the name (Houston County, Dallas County) names the police department it used.
+  const dh = (ask("murder clearance by type in 2025 in Houston and Dallas") as { delivered?: { text: string[] } }).delivered?.text ?? [];
+  assert.ok(dh.includes("Dallas is read as the Dallas Police Department.") && dh.includes("Houston is read as the Houston Police Department."), dh.join(" | "));
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.

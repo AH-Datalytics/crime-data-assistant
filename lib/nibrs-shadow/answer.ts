@@ -957,10 +957,28 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
  * P188 (Jeff 2026-11-21): a loose word read as the meaning he decided ("current" is the latest complete year, "up" is the trend over five
  * years) is said in the answer: one note line for each, just before the source line, whichever source answered.
  */
+/**
+ * A city named beside other places is its police department, never asked about beside the county's sheriff (P196, Jeff 2026-11-22: "Any 2+ places"):
+ * the answer names the agency it used ("Los Angeles is read as the Los Angeles Police Department."), for a name the county's agency also bears.
+ */
+function listedAgencyNotes(ledger: RequestLedger, deps: ShadowDeps): string[] {
+  const places = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
+  if (places.length < 2 || !deps.places) return [];
+  const out: string[] = [];
+  for (const p of places) {
+    if (!/^(?:city|ambiguous):/.test(p.value ?? "")) continue;
+    const r = resolvePlace(deps.places, p.value!, p.text, true);
+    if (r.kind !== "agency" || r.agency.kind !== "city") continue;
+    const sameName = (deps.places.byName.get(r.agency.name.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()) ?? []).some((a) => a.kind === "county" && a.state === r.agency.state);
+    if (sameName) out.push(`${p.text.trim().replace(/[,\s]+$/, "")} is read as the ${agencyName(deps.places, r.agency.ori)}.`);
+  }
+  return out;
+}
 function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
   const del = (o as { delivered?: { text?: unknown } }).delivered;
   if (!del || !Array.isArray(del.text)) return o;
-  const said = [...new Set((readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence))];
+  const read = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth);
+  const said = [...new Set([...(read.readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence), ...listedAgencyNotes(read.ledger, deps)])];
   if (!said.length) return o;
   const text = del.text as string[];
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
