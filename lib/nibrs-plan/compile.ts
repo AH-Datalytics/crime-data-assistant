@@ -640,11 +640,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     ...(cube?.totalSql ? [`totals AS (${cube.totalSql})`, `scoped_t AS (SELECT * FROM totals u WHERE ${inScope})`] : []),
     // Every month of the period, so a month with no rows still gets a status.
     `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? (bigGrid ? ` CROSS JOIN ${GRID} a` : ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a`) : ""} WHERE TRUE${inYears("ym")})`,
-    // P51/P121 (coordinator 2026-11-22, QL-ct-f960533ecf): a month "reported" only through Group B arrest rows (no Group A row: Miami
-    // FL0130600 in 2021) did not report its crimes, so for a crime counted from Group A segments it is unknown (blank, with the gap
-    // sentence), never a 0. Arrests keep the flag: a Group B arrest is that month's arrest report.
+    // P51/P121 (coordinator 2026-11-22, QL-ct-f960533ecf): a month "reported" only through Group B arrest rows (no Group A row and no zero
+    // report: Miami FL0130600 in 2021) did not report its crimes, so for a crime counted from Group A segments it is unknown (blank, with the
+    // gap sentence), never a 0. A month with the agency's zero report (zero_flag Y, 767 such months with Group B rows) did report: kept as
+    // before. Arrests keep the flag: a Group B arrest is that month's arrest report.
     `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, ${isArrest ? "status"
-      : "CASE WHEN status = 'REPORTED_CRIMES' AND coalesce(group_a_rows, 0) = 0 THEN 'UNKNOWN' ELSE status END AS status"}
+      : "CASE WHEN status = 'REPORTED_CRIMES' AND coalesce(group_a_rows, 0) = 0 AND coalesce(zero_flag, 'N') <> 'Y' THEN 'UNKNOWN' ELSE status END AS status"}
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
     `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, ${nUnits} AS n, ${nIncidents} AS ni FROM ${cube?.totalSql ? "scoped_t" : "scoped"} u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,

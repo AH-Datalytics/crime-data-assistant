@@ -498,7 +498,7 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
     // The agency's first reported NIBRS month, never before the release's first.
     let nFirst: string | null = rel.firstMonth;
     try {
-      const r = deps.execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND (status = 'REPORTED_ZERO' OR (status = 'REPORTED_CRIMES' AND coalesce(group_a_rows, 0) > 0))`)[0]?.[0];
+      const r = deps.execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND (status = 'REPORTED_ZERO' OR (status = 'REPORTED_CRIMES' AND (coalesce(group_a_rows, 0) > 0 OR zero_flag = 'Y')))`)[0]?.[0];
       const n = Number(r);
       // No reported month at all: the agency has no monthly NIBRS figures to offer (Codex span review 06.4).
       if (r === null || r === undefined) nFirst = null;
