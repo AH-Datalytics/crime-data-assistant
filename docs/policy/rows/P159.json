@@ -1,0 +1,12 @@
+{
+  "id": "P159",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"carjackings per month in Houston from 2019\", \"Texas aggravated assaults per year 2015 to 2025\", \"rolling 12-month murders in Chicago\", \"robberies by weapon in Texas in 2024\", \"murders in Dallas, Houston and Austin per year\", \"the 10 cities with the most murders in 2024\", \"murders in the United States per year\"",
+  "what the app does today": "The title read: the period first, then what is counted, then the grouping and the place, for example \"January 2019 through October 2026 Carjacking Offenses by Month, Houston, Texas\".",
+  "proposed behavior": "A title is: PLACE, OFFENSE, PERIOD, TIMEFRAME. The place first (\"Houston, Texas\", \"Texas\", \"United States\"; several places joined as they are named), then what is counted in Title Case (\"Carjackings\", \"Robberies\", \"Murder Rate\"), then the period as the series runs (\"Per Month\", \"Per Year\", \"Per Quarter\", \"Rolling Over 12 Months\", \"Rolling Average Over 12 Months\") or, for a breakdown or a ranking, \"by\" and the grouping (\"by Weapon\", \"by City\", \"by Agency\"), then a comma and the timeframe, short: \"2024\", \"2019-2026\", \"Jan-Oct 2026\", \"Jan 2019-Oct 2026\", \"Year to Date 2026\". A population floor or a count of cities sits before the timeframe (\"Texas Murder Rate by City, Population 100,000 or More, 2024\"). The same title shape for every source and every answer type.",
+  "exact default or choices offered": "Examples: \"Houston, Texas Carjackings Per Month, 2019-2026\"; \"Texas Aggravated Assaults Per Year, 2015-2025\"; \"Chicago, Illinois Murders Rolling Over 12 Months, 2018-2026\"; \"Chicago, Illinois Robberies by Weapon, 2024\"; \"Texas Murder Rate by City, Population 100,000 or More, 2024\"; \"United States Murders Per Year, 2015-2025\"; \"Cleveland, Ohio Murders Per Month, Year to Date 2026\".",
+  "why": "Jeff 2026-11-21 (typed, through the coordinator, after seeing the live engine): \"It should be a title! Houston, Texas Carjackings Per Month, 2019-2026. Place, Offense, Period (per month, per year, rolling over 12 months, etc), timeframe.\"",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P159\")."
+}

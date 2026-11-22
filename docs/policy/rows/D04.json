@@ -1,0 +1,12 @@
+{
+  "id": "D04",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "A series with missing years, or a period outside the data",
+  "what the app does today": "Names gaps and states coverage on most paths.",
+  "proposed behavior": "Name missing years as missing, and state where the data starts and ends.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "A gap must never read as zero.",
+  "status": "Decided 2026-09-06 (frozen rule 4)",
+  "test cases": "GC-010, GC-040, GC-041, GC-042, GC-043, GC-044, GC-046, GC-047, GC-048, GC-088"
+}

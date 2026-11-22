@@ -1,0 +1,12 @@
+{
+  "id": "D22",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What share of Florida is covered by NIBRS?\"",
+  "what the app does today": "Share of agency population reporting 6 or more months.",
+  "proposed behavior": "Share of the population covered by reporting agencies, month by month, as the FBI computes it.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "coverage comparison with FBI figures, 10 states"
+}

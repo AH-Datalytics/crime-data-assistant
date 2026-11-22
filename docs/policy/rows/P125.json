@@ -1,0 +1,12 @@
+{
+  "id": "P125",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders by state in 2024\", \"Murder rates 1960 to 2024, broken down by all 50 states\", \"trends in murder by state\" (a Part I crime, or violent or property crime, for every state)",
+  "what the app does today": "Asked which place, or declined \"This kind of answer doesn't list every place\".",
+  "proposed behavior": "A Part I crime, or violent or property crime, by state (also said \"for each state\", \"for every state\", \"in all 50 states\", \"per state\", \"state by state\") comes from Crime Index's state figures: the 50 states, from 1960, without the District of Columbia. One year is the table State | figure, highest first. Years named, or a trend with none, is one long table State | Year | figure, ordered by state and year, with no chart (over a thousand rows). No year and no trend asks the year (P06). A detail only NIBRS records (a weapon, a drug, carjacking) by state keeps today's handling.",
+  "exact default or choices offered": "One year: State | figure. Years named or a trend: State | Year | figure, no chart. No year: ask which year.",
+  "why": "Jeff 2026-11-16 (through the coordinator): \"long table State | Year | Rate when the span is named (chart off); a single year gets the plain State | Rate table.\"",
+  "status": "Decided 2026-11-16 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (the block \"By state\")."
+}

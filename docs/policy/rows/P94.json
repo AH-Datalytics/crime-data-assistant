@@ -1,0 +1,12 @@
+{
+  "id": "P94",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murders rolling over 6 months\", \"3-month rolling average\", \"rolling average\" (no length)",
+  "what the app does today": "Only a rolling 12-month total was read; other lengths and averages were declined.",
+  "proposed behavior": "A rolling window of the length the question names (months or years: 3, 6, 12, 24 ...) is computed at that length: a total, or, when an average is asked, the window's total divided by its months, labeled as an average and never shown as the total. With no length named, ask which length.",
+  "exact default or choices offered": "Length named: that length. Average named: the average per month (with the total beside a single figure). No length: ask, buttons 3, 6 and 12 months and another length.",
+  "why": "A window's length and whether it is a sum or an average change every number.",
+  "status": "Decided 2026-11-05 (Jeff: \"rolling shouldn't just be 12 months\"; \"Ask which length\"; \"Answer the average\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

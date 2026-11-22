@@ -1,0 +1,12 @@
+{
+  "id": "P30",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Juvenile victims\", \"crimes by teens\", \"children\", \"elderly victims\", \"young adults\"",
+  "what the app does today": "Not defined; age groups differ by path.",
+  "proposed behavior": "Youth means under 18. Juvenile, teen, minor, child and kid: see P120 (victims) and P107 (offenders). Elderly and seniors mean 65 and older. \"Young adults\" has no fixed range: ask which ages, with buttons.",
+  "exact default or choices offered": "Youth: under 18; juvenile, teen, minor, child and kid: see P120; 65 and older; young adults: ask for an age range.",
+  "why": "One word, one age range, on every source; a range with no common meaning is asked about.",
+  "status": "Decided 2026-10-29 (Jeff: 1 yes, 2 yes, 3 yes, 4 \"decline, ask for an age range\"); juvenile, teen, minor, child and kid amended by P120 (2026-11-16)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-compile.ts."
+}

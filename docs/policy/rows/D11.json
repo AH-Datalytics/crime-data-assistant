@@ -1,0 +1,12 @@
+{
+  "id": "D11",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Rape counts across 2013, when the FBI broadened the definition",
+  "what the app does today": "Not consistently implemented.",
+  "proposed behavior": "Mention the 2013 change only when asked directly and the period crosses 2013.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 11)",
+  "test cases": "GC-046, GC-047, GC-085, GC-086, GC-087, GC-088"
+}

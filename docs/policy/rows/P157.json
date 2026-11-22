@@ -1,0 +1,12 @@
+{
+  "id": "P157",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"make it a bar chart\", \"create a bar chart\", \"add labels\", \"Label the columns on the chart\", \"sort by value\", \"change the colors to red\", \"make it a pie chart\", \"show linear regression line for this data\", \"make the left Y-axis property crime\", \"add a line for 2020\"",
+  "what the app does today": "Marker requests were declined with their own sentence; chart-type, labels, sort and color edits returned the previous answer unchanged with nothing said (P69's presentation path); a regression line or an axis request was asked what it changes.",
+  "proposed behavior": "Any request to change a chart is declined in one sentence, whatever the change: a date marker or annotation, a trend or regression line, axes, a reference line, shading, a chart title or font, and the chart type, labels, legend, gridlines, colors or sort: \"Changing a chart this way isn't available here. The table can be sorted by clicking a column heading.\" The data question is not answered again. The only control named is the table's column-heading sort; the chart and table switch is not named (not verified on the live page). This supersedes the statement in P69 that the page's chart controls handle presentation edits (no such controls exist), and replaces the marker sentence of P153.",
+  "exact default or choices offered": "The one sentence, with no button.",
+  "why": "Jeff 2026-11-19 (typed card answers, through the coordinator): generic, not one sentence per kind; fold the marker sentence; decline everything including bar chart, labels, sort and colors; the second sentence names only the table sort.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P157\")."
+}

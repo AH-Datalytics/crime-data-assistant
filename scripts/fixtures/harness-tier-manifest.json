@@ -2769,7 +2769,7 @@
       "databases": [],
       "seed_profile": "empty",
       "requires": [],
-      "note": "answer policy rows are never lost in a merge: every row id of docs/policy/nibrsai-answer-policy.csv is listed in scripts/fixtures/policy-row-ids.txt and the check fails on a deleted, unlisted or duplicate row; reads two files, no database, no model, no network"
+      "note": "answer policy rows are never lost in a merge: every row is its own file (docs/policy/rows/<id>.json), every id is listed in scripts/fixtures/policy-row-ids.txt, and the check fails on a deleted, unlisted, duplicate or malformed row; reads the row files and the list, no database, no model, no network"
     },
     {
       "id": "test-no-residents",

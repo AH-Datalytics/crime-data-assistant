@@ -1,0 +1,12 @@
+{
+  "id": "P167",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"violent crime with a firearm in Texas 2024\", \"show me violent crimes involving use of a firearm in Mississippi in 2025\"",
+  "what the app does today": "Declined (\"measure violent_crime.ucr has no executable definition\") as \"I can't answer this combination\".",
+  "proposed behavior": "Violent crime with a firearm (or another weapon) is NIBRS crimes against persons with the weapon on the victim's offense, counted by victim. The answer says which crimes are counted (\"Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.\"), so it is not mistaken for the four crimes of the FBI's violent crime used elsewhere.",
+  "exact default or choices offered": "The crimes-against-persons count with the weapon, and the one sentence naming the crimes.",
+  "why": "Jeff 2026-11-19 (through the coordinator): the wider set, not the FBI four, with the crimes named in the answer.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P167\")."
+}

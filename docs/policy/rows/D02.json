@@ -1,0 +1,12 @@
+{
+  "id": "D02",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Crime in my neighborhood\", a ZIP code or a police beat",
+  "what the app does today": "Declined on every tab.",
+  "proposed behavior": "Say plainly that the data stops at the agency level, and stop.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "No source has data below the agency.",
+  "status": "Decided 2026-09-06 (frozen rule 2)",
+  "test cases": "GC-011, GC-012, GC-013, GC-014, GC-015, GC-016, GC-017, GC-018, GC-019, GC-020, GC-021, GC-022, GC-079"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "D30",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Naming the source",
+  "what the app does today": "Some answers name their source, in different places.",
+  "proposed behavior": "Every answer ends with a statement of its source (and, where it applies, its coverage): the source statement comes last.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "The reader should always know whose numbers they are reading, and where to find it.",
+  "status": "Decided 2026-10-28 (Jeff, in this review)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}
