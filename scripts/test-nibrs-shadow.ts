@@ -7,7 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
@@ -179,6 +179,7 @@ function gridRows(sql: string): unknown[][] {
 const deps: ShadowDeps = {
   places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
   target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: stub,
+  noDefaults: true, // these tests exercise the asks themselves; the defaults (P180 to P182) have their own block at the end
 };
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
@@ -912,7 +913,12 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
     // Both crime and place missing: the place is asked first (Jeff 2026-11-14); a place named asks the crime.
-    for (const q of ["national crime scorecard", "Crime trends compared to similar cities"]) assert.equal((ask(q) as { about?: string }).about, q.startsWith("national") ? "which kind of crime" : "which place", q);
+    assert.equal((ask("national crime scorecard") as { about?: string }).about, "which kind of crime");
+    // Peers with no place named are declined for the peers, never asked for a place first (P187, no partial answers).
+    for (const q of ["Crime trends compared to similar cities", "murders compared to peer cities"]) {
+      const o = ask(q);
+      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    }
     // The shootings ask never leaves out an average (Codex 01.2).
     assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, SENT);
     // A question about what data there is is never asked about a crime instead (Codex 01.4: "do we have").
@@ -2826,6 +2832,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/per 100,000 people in 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
   }
 }
+// 284's re-gate: a follow-up's default guards read what was typed and asked before, not only the rewrite. "compare with statewide ..." rewrites to
+// the state alone, and "Durham, North Carolina and population" leans on a larceny-from-motor-vehicle question: neither is answered in part by a default.
+{
+  const gd = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  // (A pin of the outcome: with no stub data the default never lands here; the real-data check is the 1,242 follow-up labels, where only these two change.)
+  const cmp = shadowFollowUp("countywide total", "compare with statewide violent crime rate in maryland", gd);
+  assert.equal(cmp.kind, "clarify", JSON.stringify(cmp).slice(0, 300));
+  const pop = shadowFollowUp("Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size", "Durham, North Carolina and population", gd);
+  assert.ok(!["srs", "historical", "current"].includes(pop.kind), JSON.stringify(pop).slice(0, 300));
+}
 // P10 (Jeff 2026-11-16): "all homicides" as a plain count is Crime Index (murders by year, nothing else); with a breakdown of anything
 // it is Homicide Reports, and justifiable homicides are counted and said so.
 {
@@ -2885,6 +2901,35 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const gun = as(ask("Firearm carjackings per month in Houston since 2019"), "answer");
   assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
   assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
+}
+// P180 to P182 (Jeff 2026-11-21): a missing place, period or kind of crime is filled with its default, said, with buttons; an ask whose default
+// cannot answer now stays an ask. Tested on synthetic asks (no data): the wrapper reads only the ask's options and their continuations.
+{
+  const answerOf = (years: string[]): ShadowOutcome => ({ kind: "srs", delivered: { table: { columns: [], rows: years.map((y) => [y, 1]) }, text: ["Title", "Source: Crime Index."] } }) as unknown as ShadowOutcome;
+  const ask = (about: string, question: string, options: { label: string; continuation?: ShadowOutcome; entry?: string }[]): ShadowOutcome => ({ kind: "clarify", about, question, options }) as unknown as ShadowOutcome;
+  const live = { ...deps, noDefaults: false };
+  const text = (o: ShadowOutcome) => (o as unknown as { delivered: { text: string[] } }).delivered.text;
+  // No place: the United States, said, with buttons for a state and an agency.
+  const place = applyDefaults("murder rate in 2024", ask("which place", "murder rate in 2024", [{ label: "The United States", continuation: answerOf(["2024"]) }, { label: "A state", entry: "which state" }]), live);
+  assert.equal(place.kind, "srs");
+  assert.deepEqual(text(place), ["Title", "No place was named, so the United States is shown.", "Source: Crime Index."]);
+  assert.deepEqual((place as unknown as { buttons: { label: string }[] }).buttons.map((b) => b.label), ["A state", "A city or agency"]);
+  // No period: every year, said with its span; a ranking: the latest complete year.
+  const years = applyDefaults("murders in Philadelphia", ask("which period", "murders in Philadelphia", [{ label: "Every year available", continuation: answerOf(["1960", "1961", "2025"]) }, { label: "Another year", entry: "which year" }]), live);
+  assert.equal(text(years)[1], "No years were given, so every year in the data is shown: 1960 through 2025.");
+  const ranking = applyDefaults("Top 10 cities for homicide rate", ask("which period", "Top 10 cities for homicide rate", [{ label: "The latest complete year (2025)", continuation: answerOf(["x"]) }, { label: "Another year", entry: "which year" }]), live);
+  assert.equal(text(ranking)[1], "No year was given, so the latest complete year, 2025, is shown.");
+  // No kind of crime: violent and property crime.
+  const crime = applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime" }, { label: "Both", continuation: answerOf(["2024"]) }]), live);
+  assert.equal(text(crime)[1], "No kind of crime was named, so violent crime and property crime are shown.");
+  // Place, then period, then crime in one chain: three notes in that order.
+  const chain = applyDefaults("crime trends", ask("which place", "crime trends", [{ label: "The United States", continuation: ask("which period", "crime trends", [{ label: "Every year available", continuation: ask("which kind of crime", "crime trends", [{ label: "Both", continuation: answerOf(["2023", "2024"]) }]) }]) }]), live);
+  assert.equal(text(chain).length, 5, JSON.stringify(text(chain)));
+  // Stays an ask: the default is a decline, there is no default option, noDefaults is set.
+  const decline = { kind: "decline", reason: "unsupported_capability", explanation: "x", alternative: null } as unknown as ShadowOutcome;
+  assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: decline }]), live).kind, "clarify");
+  assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "A state", entry: "which state" }]), live).kind, "clarify");
+  assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: answerOf(["2024"]) }]), { ...deps, noDefaults: true }).kind, "clarify");
 }
 // P190 (Jeff 2026-11-21, reader class): small words and slips read as the question they are, never "I didn't understand".
 {
