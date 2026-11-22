@@ -532,7 +532,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
   }
   // Element 33 (Jeff 2026-11-22, "every type, with a note"): each type counts every victim who has it.
-  if (cats.includes("victim_injury.injury")) text.push("A victim can have several injury types, so the rows can add up to more than the number of victims.");
+  if (cats.includes("victim_injury.injury")) {
+    text.push("A victim can have several injury types, so the rows can add up to more than the number of victims.");
+    // 2025.0 NIBRS User Manual, data element 33: collected only for individual victims of 100, 09A-C, 11A-D, 120, 13A, 13B, 210, 64A and 64B.
+    text.push("Injury type is recorded only for individual victims of kidnapping, murder and manslaughter, sex offenses, robbery, assault, extortion and human trafficking.");
+  }
   if (held.length) {
     const when1= (p: string) => (/^\d{4}-\d{2}$/.test(p) ? monthName(p) : /^\d{4}-Q\d$/.test(p) ? `Q${p.slice(6)} ${p.slice(0, 4)}` : p);
     const counts = held.map((h, i) => `${fmt(h.n)}${i === 0 ? ` ${one(h.n, what)}` : ""}${h.period && ip >= 0 ? ` in ${when1(h.period)}` : ""}`);

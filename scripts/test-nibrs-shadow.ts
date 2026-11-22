@@ -2076,6 +2076,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       const d = deliver(inj.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("N", 120), row("M", 80), row("B", 9)], [], "r", [], null);
       assert.deepEqual(d.table.rows.map((r) => r[0]), ["None", "Apparent minor injury", "Apparent broken bones"]);
       assert.ok(d.text.includes("A victim can have several injury types, so the rows can add up to more than the number of victims."), JSON.stringify(d.text));
+      assert.ok(d.text.includes("Injury type is recorded only for individual victims of kidnapping, murder and manslaughter, sex offenses, robbery, assault, extortion and human trafficking."), JSON.stringify(d.text));
       assert.ok(inj.delivered.answerStatements.includes("categories_overlap"));
       assert.deepEqual(Object.keys(INJURY).sort(), ["B", "G", "I", "L", "M", "N", "O", "T", "U"]);
       assert.equal(INJURY.G, "Gunshot wound");   // added by the 2025.0 technical specification; 51 victims in 2024
