@@ -2583,6 +2583,15 @@
       "note": "The executor's temp directory: removed when the executor closes, is killed at its time limit or the program ends (a killed national query left 8-12 GB behind); the sweep removes only old folders no live process owns, never anything but this code's own files. Uses the harness Python's duckdb; the executor part is skipped with none."
     },
     {
+      "id": "test-scorecard-workers",
+      "tier": "F",
+      "script": "scripts/test-scorecard-workers.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The scorecard's shard launcher (scripts/scorecard-shards.cjs, run-qlog-scorecard.ts --workers N) with real child processes: shards that finish; a shard that stalls once is stopped by the watchdog (its process tree), the question it was on is recorded as an error and it resumes after it; a shard that keeps stalling is given up after its restarts; a shard that fails is a bad shard, not a stall. Offline: fake shards, no data, no DuckDB."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",
@@ -2608,6 +2617,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "Current Trends in the new engine (P90, P91, decisions A-C): agency months, consistent group sums, cumulative totals never complete over unknown months; a stub executor stands in for DuckDB over the build, which is checked when present"
+    },
+    {
+      "id": "test-scorecard",
+      "tier": "F",
+      "script": "scripts/test-scorecard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The crime scorecard in the new engine (P215): agency, state and national cards from a tiny Crime Index fixture in temp parquet, blank change never 0.0, clearance never clamped, no clearance column above an agency, cards more than three years stale refused; needs the local Python with duckdb, skips without it"
     },
     {
       "id": "test-nibrs-shr",

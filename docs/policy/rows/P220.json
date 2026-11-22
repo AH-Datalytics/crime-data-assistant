@@ -1,0 +1,12 @@
+{
+  "id": "P220",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Break down hate crimes by bias category in 2023\", \"What are the most common offenses in hate crimes?\", \"most common bias motivation for hate crimes in Philadelphia in 2024\", \"What types of hate crimes occur at schools and universities?\"",
+  "what the app does today": "P117 said a breakdown is not answered; the labels expect answers.",
+  "proposed behavior": "A hate crime breakdown is built from the hate crime data (never NIBRS, P117): by bias category (race or ethnicity, religion, sexual orientation, disability, gender and gender identity), by offense, or by location, as a table of counts and shares ranked highest first, incidents counted once (P117). \"Most common\" is the top row of that table, named in the title (\"Most Common Bias Category in Hate Crimes, Philadelphia, 2024: Anti-Black\"), with the full table beneath. \"What types\" at a location (\"at schools and universities\") is the offense or bias breakdown of the incidents there. \"Most common hate crime victim\" asks which characteristic (bias category) is meant and keeps its clarify. A rate and a compare are still not answered. No period named is the latest complete year as a ranking (P181).",
+  "exact default or choices offered": "The ranked table with counts and shares; \"most common\" names the top row in the title.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine (hate crime path, with its PR 304)",
+  "test cases": "Labels QL-hc-40d8e83de7, QL-hc-16da540d8e, QL-hc-08970dcba5, QL-hc-b8a12044a1, QL-nibrs-9740bae353, QL-nibrs-ccf6ff3dfd (answers) and QL-hc-f54ed84688 (clarify)."
+}

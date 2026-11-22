@@ -4,7 +4,7 @@
  *
  *   npx tsx scripts/run-qlog-scorecard.ts --labels <labels_local.json> --progress <outcomes.jsonl> [--root <canonical>]
  *     [--historical <crime index build>] [--python <python with duckdb>] [--limit N] [--report]
- *     [--workers N] [--sql-cache <dir>] [--spot] [--compare <outcomes.jsonl>]
+ *     [--workers N] [--shard-stall-min M] [--first N] [--sql-cache <dir>] [--spot] [--compare <outcomes.jsonl>]
  *
  * --labels: the labels with each question's text, either the repo's scripts/fixtures/answer-eval/qlog-labels.json
  * ({about, labels: [...]}) or a local array of the same labels (labels_local_v17.json: the same 4,379). The file's
@@ -22,8 +22,18 @@
  *   - Runs are one process at a time. The full run is on dev after merges, overnight or when the laptop is idle, never
  *     while another build is running (Jeff, 2026-11-07). A query past the time limit is retried once on a fresh process
  *     with three times the limit, so load alone doesn't make an error.
- *   - --workers N (off, unused): N shards at once. It was 23 min vs 60 for the full run, but one shard hung (2026-11-07)
- *     and the cause wasn't found; a per-shard watchdog is where to start if it comes back.
+ *   - --workers N (default 1: one process): N shards at once, shard i running labels i, i+N, ... with its own DuckDB process,
+ *     progress file and cache file (23 min against 60 for the full run on 2026-11-07, N = 4). One shard hung that day and the
+ *     cause wasn't found, so scripts/scorecard-shards.cjs watches each shard: no new outcome for --shard-stall-min minutes
+ *     (default 20) and its process tree is stopped; the question it was on is recorded as an error and the shard resumes after
+ *     it (twice at most, then the run says it is incomplete). DuckDB's memory and threads are split across the shards unless
+ *     a flag or the SCORECARD_DUCKDB_* variables name them. The outcomes do not depend on N: the same labels give the same
+ *     outcomes, folded into --progress in the labels' order, and "outcomes digest" (below the counts) is one hash of every
+ *     outcome without its timing: equal digests are equal runs (test: scripts/test-scorecard-workers.ts).
+ *     Measured 2026-11-22 (12 cores, 32 GB, Idle priority, no SQL cache, all 3,709 labels): one process 1,905 s, four workers 1,621 s, the
+ *     same digest. The gain is small because 34 national questions take over 10 s each (1,063 of the 1,895 s) and four of them at once run
+ *     5 to 8 times slower each: 612 s of work was the most any shard had, 1,621 s was what it took (the cause, disk or memory, is not
+ *     isolated). Not measured yet: a warm --sql-cache, or any N but 4 on a full run; first 1,500 labels: one process 162 s, four workers 103 s.
  *   - --compare <outcomes.jsonl> lists every question whose outcome differs from that run's (dev's), for the PR.
  *
  * Buckets (one per label):
@@ -46,6 +56,7 @@
  */
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
@@ -232,7 +243,10 @@ function spotSet(ls: Label[]): Label[] {
   const tabs = [...new Set(ls.map((l) => l.tab))].sort();
   return tabs.flatMap((t) => ls.filter((l) => l.tab === t && l.expected.outcome !== "exclude").sort((a, b) => h(a.id).localeCompare(h(b.id))).slice(0, 40));
 }
-const labels = SPOT ? spotSet(allLabels) : allLabels;
+// --first N: only the first N scored labels of the file are the run (every shard sees the same N; --limit is per process, so it is not the same thing under --workers).
+const FIRST = Number(arg("--first", "0")) || 0;
+const firstN = (ls: Label[]) => { let n = 0; return ls.filter((l) => l.expected.outcome === "exclude" || ++n <= FIRST); };
+const labels = FIRST ? firstN(SPOT ? spotSet(allLabels) : allLabels) : SPOT ? spotSet(allLabels) : allLabels;
 const readProgress = (file: string, into: Map<string, Got | null>) => {
   if (!fs.existsSync(file)) return;
   for (const line of fs.readFileSync(file, "utf8").split("\n")) {
@@ -259,18 +273,19 @@ const limit = Number(arg("--limit", "0")) || Infinity;
 let shardFailed = false;
 if (WORKERS > 1 && !SHARD) {
   // N shards at once, each this script on every Nth label with its own DuckDB process, progress file and cache file.
-  const own = new Set(["--workers", "--progress", "--report", "--compare"]);
+  const own = new Set(["--workers", "--progress", "--report", "--compare", "--shard-stall-min"]);
   const rest: string[] = [];
   for (let i = 2; i < process.argv.length; i++) {
     if (own.has(process.argv[i])) { if (process.argv[i] !== "--report") i++; continue; }
     rest.push(process.argv[i]);
   }
-  const cmds = Array.from({ length: WORKERS }, (_, i) => [process.execPath, ...process.execArgv, process.argv[1], ...rest, "--progress", shardFile(i), "--shard", `${i}/${WORKERS}`, "--done-from", PROGRESS]);
-  const launcher = `const { spawn } = require("node:child_process");
-const cmds = JSON.parse(process.argv[1]);
-let left = cmds.length, bad = 0;
-for (const [cmd, ...a] of cmds) spawn(cmd, a, { stdio: "inherit" }).on("exit", (c) => { if (c) bad++; if (--left === 0) process.exit(bad ? 1 : 0); });`;
-  const r = spawnSync(process.execPath, ["-e", launcher, JSON.stringify(cmds)], { stdio: "inherit" });
+  // DuckDB's memory and threads are for the whole run: split across the shards unless named (N shards at the single-process default of 4 GB each would not fit a 16 GB laptop).
+  const split: string[] = [];
+  if (!rest.includes("--duckdb-memory") && !process.env.SCORECARD_DUCKDB_MEMORY) split.push("--duckdb-memory", `${Math.max(1, Math.floor((os.totalmem() / 2 ** 30) * 0.6 / WORKERS))}GB`);
+  if (!rest.includes("--duckdb-threads") && !process.env.SCORECARD_DUCKDB_THREADS) split.push("--duckdb-threads", String(Math.max(1, Math.floor(os.cpus().length / WORKERS))));
+  const cmds = Array.from({ length: WORKERS }, (_, i) => [process.execPath, ...process.execArgv, process.argv[1], ...rest, ...split, "--progress", shardFile(i), "--shard", `${i}/${WORKERS}`, "--done-from", PROGRESS]);
+  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, restarts: 2 };
+  const r = spawnSync(process.execPath, [path.join(__dirname, "scorecard-shards.cjs"), JSON.stringify(cfg)], { stdio: "inherit" });
   for (let i = 0; i < WORKERS; i++) readProgress(shardFile(i), done);
   if (r.status !== 0) { shardFailed = true; console.log("a shard stopped early; run again to finish (done questions are kept)"); }
 }
@@ -279,9 +294,10 @@ if (!SHARD) {
   const shards = Array.from({ length: 64 }, (_, i) => shardFile(i)).filter((f) => fs.existsSync(f));
   if (shards.length) {
     const have = new Map<string, Got | null>(); readProgress(PROGRESS, have);
-    const add = [...done].filter(([id]) => !have.has(id)).map(([id, g]) => JSON.stringify({ id, got: g }) + "\n").join("");
+    // In the labels' order, so a run's progress file does not depend on how many shards made it.
+    const add = labels.filter((l) => done.has(l.id) && !have.has(l.id)).map((l) => JSON.stringify({ id: l.id, got: done.get(l.id) }) + "\n").join("");
     fs.appendFileSync(PROGRESS, add);
-    for (const f of shards) fs.unlinkSync(f);
+    for (const f of shards) { fs.unlinkSync(f); if (fs.existsSync(`${f}.current`)) fs.unlinkSync(`${f}.current`); }
   }
 }
 
@@ -291,6 +307,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
   if (ran >= limit || !mine(i)) return;
   if (done.has(l.id) || l.expected.outcome === "exclude") return;
   const t = Date.now();
+  if (SHARD) fs.writeFileSync(`${PROGRESS}.current`, l.id);
   const once = () => (l.kind === "follow-up" && l.previous ? shadowFollowUp(l.previous, l.question, deps) : shadowAnswer(l.question, deps));
   let g: Got | null;
   try {
@@ -325,6 +342,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
     g = { kind: "error", source: null, reason: String(e).slice(0, 120), ms: Date.now() - t };
   }
   fs.appendFileSync(PROGRESS, JSON.stringify({ id: l.id, got: g }) + "\n");
+  if (SHARD) fs.writeFileSync(`${PROGRESS}.current`, "");
   done.set(l.id, g);
   if (++ran % 100 === 0) console.log(`${SHARD ? `shard ${SHARD[0]}: ` : ""}${ran} run (${done.size} of ${labels.length} labels done)${cacheOut ? `; queries from the cache ${hits}, from DuckDB ${misses}` : ""}`);
 });
@@ -359,6 +377,12 @@ const incomplete = all.notRun > 0 || shardFailed;
 const gate = incomplete ? `NOT JUDGED: the run is incomplete (${all.notRun} questions not run${shardFailed ? ", a shard failed" : ""})`
   : all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
 console.log(`hard gate (wrong answers = 0): ${gate}`);
+// One hash of every scored label's outcome in the labels' order, without its timing: two runs with the same digest made the same outcomes, whatever --workers was.
+{
+  const h = createHash("sha256");
+  for (const l of scored) { const g = done.get(l.id) ?? null; h.update(`${l.id}\t${JSON.stringify(g ? { ...g, ms: 0 } : null)}\n`); }
+  console.log(`outcomes digest: ${h.digest("hex")} (${scored.length} labels, ${Math.round(scored.reduce((a, l) => a + (done.get(l.id)?.ms ?? 0), 0) / 1000)} s of question time)`);
+}
 if (READINGS) {
   // The Gemini reader's questions, by what happened: used (and the bucket it reached), or refused and why.
   const via = new Map<string, number>();

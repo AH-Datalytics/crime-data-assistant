@@ -1,0 +1,12 @@
+{
+  "id": "P223",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"I'm looking for the firearm arrests not weapons violation\", \"Show me national tend in violent crimes (excluding sexual offenses)\", \"Excluding homicides, show me the current trends in DC crime data\"",
+  "what the app does today": "Answered for the crime group or asked.",
+  "proposed behavior": "\"Excluding X\", \"not X\", \"other than X\" and \"without X\" remove the named offense or offense group from the set asked for, and the title names what was left out (\"Violent Crime Excluding Sexual Offenses\"). The set is the offense codes of the group less the codes of X; \"weapons violation\" is the weapon law violations (520), \"sexual offenses\" the sex offense codes. An exclusion the app cannot map to offense codes is asked, naming the word.",
+  "exact default or choices offered": "The figures for the set without the excluded offenses, the exclusion in the title.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine with Capability's reader words",
+  "test cases": "Labels QL-nibrs-7ca317435a, QL-hist-f71d2a7b67, QL-nibrs-3615ec14ac, QL-nibrs-6fd5135285, QL-shr-e801b06823."
+}

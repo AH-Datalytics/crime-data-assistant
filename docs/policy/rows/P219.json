@@ -1,0 +1,12 @@
+{
+  "id": "P219",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"how many aggravated assault incidents involve multiple victims?\", \"how many incidents involved a firearm and 4 or more victims\"",
+  "what the app does today": "Not defined: asked or declined.",
+  "proposed behavior": "\"Multiple victims\" means two or more victims in the incident. The answer is from NIBRS: the incidents of the named crime with that many victims, as a count with its share of that crime's incidents beside it (\"N or more victims\" when a number is named). A crime detail that only NIBRS holds with a victim count per incident (a firearm and four or more victims) is NIBRS, not Homicide Reports (P53). One place and period as for any count (P180, P181).",
+  "exact default or choices offered": "The count of incidents with two or more victims, the share of the crime's incidents, then the Source line.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+  "test cases": "Labels QL-nibrs-4deeaaa4e0 (answer nibrs) and QL-nibrs-72d1e3dfee (to NIBRS, with Model)."
+}
