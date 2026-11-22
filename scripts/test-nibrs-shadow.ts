@@ -2349,6 +2349,14 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   if (placed.kind === "answer") assert.equal(placed.delivered.text[1], "The place is from your last question.");
   const ranked = shadowFollowUp("Shoplifting in Memphis in 2023", "top 10 cities for robberies in 2024", deps);
   assert.ok(!/Memphis/.test(String(ranked.rewrite ?? "")), String(ranked.rewrite));
+  // PR 312 gate: one year is not carried into a turn asking for years; a previous turn that is not a data question gives nothing; "nationally"
+  // keeps the nation.
+  const perYear = shadowFollowUp("Shoplifting in Memphis in 2023", "carjackings per year in Detroit", deps);
+  assert.ok(!/2023/.test(String(perYear.rewrite ?? "")), String(perYear.rewrite));
+  const meta = shadowFollowUp("remove 2025 as it has missing data", "compare carjackings in Memphis and Nashville", deps);
+  assert.ok(!/2025/.test(String(meta.rewrite ?? "")), String(meta.rewrite));
+  const nation = shadowFollowUp("Shoplifting in Memphis in 2023", "carjackings nationally since 2021", deps);
+  assert.ok(!/Memphis/.test(String(nation.rewrite ?? "")), String(nation.rewrite));
   // A turn that points back stays a follow-up.
   assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
   // Codex review 1: a comparison is never answered as a single place; it stays on the follow-up path (asked or proposed).

@@ -1290,7 +1290,7 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     // murders 2020-2025"): follow-up #1 (Jeff 2026-11-21) carries the period over, says so, and offers the question as typed. Before, it was
     // only offered.
     const year = Number(deps.release.lastMonth.slice(0, 4));
-    const prevPeriod = readQuestion(previous, year).ledger.parts.find((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized")?.text.trim();
+    const prevPeriod = carryablePeriod(previous, followUp, year);
     const ownPeriod = readQuestion(followUp, year).ledger.parts.some((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized");
     const withPeriod = !ownPeriod && prevPeriod ? `${followUp.trim().replace(/[?.!]+$/, "")} ${prevPeriod}` : null;
     const other = r0.kind === "rewrite" && norm(r0.question) !== norm(followUp) ? r0.question : withPeriod;
@@ -1338,6 +1338,22 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
 }
 
 const RANKING_WORDS = /\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best|largest|biggest|smallest)\b/i;
+// "knife murders nationally" names the nation in words the reader doesn't take as a place (PR 312 gate); the previous place is not carried.
+const NATIONAL_WORDS = /\b(?:national(?:ly)?|nation\s*wide|united states|usa|(?:in|across) the (?:country|nation))\b|\bu\.s\./i;
+const YEAR_SERIES =/\b(?:per|by|each|every)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[- ](?:by|over)[- ]year\b|\btrend\b/i;
+/**
+ * The previous question's period, when follow-up #1 may carry it (PR 312 gate): the previous turn must be a data question (its own crime;
+ * not "remove 2025 as it has missing data" or "why does county only exist ... around the 60s and 70s"), and one year is not carried into
+ * a turn asking for years ("murders per year in Kansas City" after "... cities of 250k or more in 2025").
+ */
+function carryablePeriod(previous: string, followUp: string, year: number): string | null {
+  const parts = readQuestion(previous, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  if (!parts.some((p) => p.concept === "measure")) return null;
+  const t = parts.find((p) => p.concept === "period")?.text.trim();
+  if (!t) return null;
+  const oneYear = (t.match(/\b\d{4}\b/g) ?? []).length === 1 && !/\b(?:since|from|past|last|through|to|until|after)\b|[-–]/i.test(t);
+  return oneYear && YEAR_SERIES.test(followUp) ? null : t;
+}
 /**
  * Follow-up #1 (Jeff 2026-11-21): a follow-up read as its own question, with its own crime, that leaves out the place or the period gets them
  * from the previous question when that one named them. A follow-up across places (a ranking, "cities", "agencies") keeps its own reading: the
@@ -1349,10 +1365,10 @@ function carryOver(previous: string, followUp: string, deps: ShadowDeps): Follow
   const read = (q: string) => readQuestion(q, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
   const mine = read(followUp), prev = read(previous);
   const has = (c: string) => mine.some((p) => p.concept === c);
-  if (!has("measure")) return null;
+  if (!has("measure") || !prev.some((p) => p.concept === "measure")) return null;
   const add: string[] = [], what: ("place" | "period")[] = [];
-  const place = prev.find((p) => p.concept === "place"), period = prev.find((p) => p.concept === "period");
-  if (place && !has("place") && !has("entity") && !RANKING_WORDS.test(followUp)) {
+  const place = prev.find((p) => p.concept === "place"), period = carryablePeriod(previous, followUp, year) ? prev.find((p) => p.concept === "period") : undefined;
+  if (place && !has("place") && !has("entity") && !RANKING_WORDS.test(followUp) && !NATIONAL_WORDS.test(followUp)) {
     const t = place.text.trim();
     add.push(/^(?:in|for|across)\b/i.test(t) ? t : `in ${t}`);
     what.push("place");
