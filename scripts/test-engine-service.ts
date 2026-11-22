@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { crimeIndexBuilder } from "../lib/engine-service/sources";
+import { crimeIndexBuilder, shrBuilder } from "../lib/engine-service/sources";
 import { asSourceTab, SOURCE_TABS } from "../lib/nibrs-shadow/source-description";
 import type { AddressInfo } from "node:net";
 import type { ShadowDeps, ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -243,7 +243,20 @@ function fakes() {
   assert.ok(bad.answer(req("q", { tab: "nibrs" })).ok, "nibrs keeps answering when the Crime Index folder is bad");
   assert.match(String((bad.info().sources as Record<string, string>).crimeIndex), /^failed: there is no Crime Index manifest/);
   bad.close();
-  // info() alone tries every configured source, and a broken folder is not hammered inside its pause.
+  // piece 3: Homicide Reports builder reads the manifest's "shr" key.
+  const sd = mkdtempSync(path.join(tmpdir(), "shr-"));
+  assert.throws(() => shrBuilder(sd, { execute: exec }), /no Homicide Reports manifest\.json/);
+  writeFileSync(path.join(sd, "manifest.json"), JSON.stringify({ shr: { release_id: "bad" } }));
+  assert.throws(() => shrBuilder(sd, { execute: exec }), /"shr" key must hold/, "a malformed key is refused with the reason");
+  writeFileSync(path.join(sd, "manifest.json"), JSON.stringify({ shr: { release_id: "shr-20261101-1", latest_month: "2025-12", cde_update_date: "2026-11-01", crosswalk_release: "cw-1", source_count: 53 } }));
+  const sb = shrBuilder(sd, { execute: exec });
+  assert.deepEqual(sb.releases, { shr: "shr-20261101-1" });
+  const both = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: dir, ENGINE_SHR_ROOT: sd }), { ...hooks, answerOutcome: (_r, d) => { seen.push({ tab: d.tab, hist: !!d.historical, cur: !!d.shr }); return { kind: "decline", reason: "x", about: "x" } as unknown as ShadowOutcome; } });
+  assert.deepEqual(both.info().tabs, ["nibrs", "historical", "current", "shr"]);
+  const sr = both.answer(req("q", { tab: "shr" })); assert.ok(sr.ok && sr.release === "shr-20261101-1");
+  assert.ok(seen[seen.length - 1].cur, "a Homicide Reports question gets the shr source");
+  assert.deepEqual(both.info().sources, { crimeIndex: "loaded", shr: "loaded" });
+  both.close();  // info() alone tries every configured source, and a broken folder is not hammered inside its pause.
   let tries = 0, clock = 0;
   const live = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: "/nowhere" }), { base: hooks.base, now: () => clock, sources: { crimeIndex: () => { tries++; throw new Error("boom"); } } });
   assert.equal((live.info() as { base: string }).base, "loaded");

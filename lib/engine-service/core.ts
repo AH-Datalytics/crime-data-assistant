@@ -15,7 +15,7 @@ import { loadPlaceIndex } from "../nibrs-shadow/places";
 import { follow, toPreview } from "../nibrs-shadow/preview";
 import { loadNibrsRelease } from "../nibrs-shadow/release";
 import type { EngineRequest, EngineResult } from "./protocol";
-import { crimeIndexBuilder } from "./sources";
+import { crimeIndexBuilder, shrBuilder } from "./sources";
 
 /** The data folders of the sources. `nibrs` is the base every question needs (the release, the places, the target); the others are added to it. */
 export type SourceId = "nibrs" | "crimeIndex" | "shr" | "hate";
@@ -50,8 +50,8 @@ export type Core = { answer(req: EngineRequest): EngineResult; info(): Record<st
 /** What a source adds to the engine's dependencies, and the release id each of its tabs reports. */
 export type SourceBuild = { deps: Partial<ShadowDeps>; releases: Partial<Record<SourceTab, string>> };
 export type SourceBuilder = (root: string, ctx: { execute: ShadowDeps["execute"] }) => SourceBuild;
-/** The builders for the sources besides nibrs; each source's own piece registers its builder here (lib/engine-service/sources.ts). Crime Index so far. */
-export const SOURCE_BUILDERS: Partial<Record<Exclude<SourceId, "nibrs">, SourceBuilder>> = { crimeIndex: crimeIndexBuilder };
+/** The builders for the sources besides nibrs; each source's own piece registers its builder here (lib/engine-service/sources.ts). Crime Index and Homicide Reports so far. */
+export const SOURCE_BUILDERS: Partial<Record<Exclude<SourceId, "nibrs">, SourceBuilder>> = { crimeIndex: crimeIndexBuilder, shr: shrBuilder };
 /** A source that failed to load is tried again no sooner than this. */
 const RETRY_MS = 30_000;
 /** Test seams: replace the engine call (an outcome for the question) so the adapter can be tested without data; supply source builders and a clock. */
