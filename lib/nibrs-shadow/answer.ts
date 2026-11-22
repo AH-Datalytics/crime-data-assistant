@@ -1278,7 +1278,9 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
       const at = new RegExp(String.raw`(?<![A-Za-z])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`);
       if (!near || !at.test(question)) continue;
       const continuation = shadowAnswer(question.replace(at, near), deps);
-      if (runsNow(continuation)) { offer = { label: near, continuation }; break; }
+      // The button names the place with its state ("Toledo, Ohio": did you mean it?), the city of that name with the most people.
+      const top = (deps.places.byName.get(near.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()) ?? []).filter((a) => a.kind === "city").sort((a, z) => z.population - a.population)[0];
+      if (runsNow(continuation)) { offer = { label: top ? agencyLabel(top) : near, continuation }; break; }
     }
   }
   const base = withNextStep(everyBreakdown(question, nibrsHasNoReports(fromLedger(ledger, { ...deps, asked: deps.asked ?? question }), ledger, deps)), ledger, deps, question);
