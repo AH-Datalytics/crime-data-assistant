@@ -1,0 +1,12 @@
+{
+  "id": "P228",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders of women in phialdelphia by year since 2010\", \"carjackings in phialdelphia\", \"batlimore murders per month\", \"homicides in baltmore 2000 to present\"",
+  "what the app does today": "A misspelled place is read as an unknown word, or asked about, or read as the nearest place with no word about it.",
+  "proposed behavior": "A misspelled LARGE place after \"in\" with no state named still ANSWERS when exactly one large place (100,000 people or more, P28's floor) is within a slip of the typed name (one letter added, dropped, changed, or two letters swapped), and the reading note names the city used (\"Philadelphia, PA is shown.\"). When two or more places are that close, or the match is a smaller place, or the name could be a city and a county of the same name, the app asks which, with a button for each (P28): \"batlimore\" asks, because the Baltimore city police and the Baltimore County police both match. A word that is a place's name for another reason (a state, an offense, a month) is never read as a place typo. A typo before a word other than \"in\" (a scorecard, a ranking) follows its own row; this row covers the place after \"in\".",
+  "exact default or choices offered": "One close large place: the answer, with the city named in the reading note. Several or a small one: the ask, a button for each.",
+  "why": "Jeff 2026-11-22 (through the coordinator): \"a misspelled large place after in answers when exactly one large place is that close, and the reply names the city used; smaller or ambiguous places ask\".",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine (PR 375 keeps and tests it)",
+  "test cases": "Labels QL-ct-6e7031ecc9 (and its hist, nibrs and shr copies, \"phialdelphia\", answers); QL-ct-7290e8aa75 and QL-hist-3baee2f440 (\"batlimore\", \"baltmore\", clarify which Baltimore)."
+}
