@@ -48,6 +48,7 @@
 import { cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
 import { FAMILIES, GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import { CRIME_MONTH_STATUS } from "./month-status";
 import cubeMeasures from "./cube-measures.json";
 import type { NibrsPlan } from "./plan";
 import { ATTRIBUTE_TABLE, type AttributeRow } from "./attribute-table";
@@ -642,10 +643,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? (bigGrid ? ` CROSS JOIN ${GRID} a` : ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a`) : ""} WHERE TRUE${inYears("ym")})`,
     // P51/P121 (coordinator 2026-11-22, QL-ct-f960533ecf): a month "reported" only through Group B arrest rows (no Group A row and no zero
     // report: Miami FL0130600 in 2021) did not report its crimes, so for a crime counted from Group A segments it is unknown (blank, with the
-    // gap sentence), never a 0. A month with the agency's zero report (zero_flag Y, 767 such months with Group B rows) did report: kept as
-    // before. Arrests keep the flag: a Group B arrest is that month's arrest report.
-    `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, ${isArrest ? "status"
-      : "CASE WHEN status = 'REPORTED_CRIMES' AND coalesce(group_a_rows, 0) = 0 AND coalesce(zero_flag, 'N') <> 'Y' THEN 'UNKNOWN' ELSE status END AS status"}
+    // gap sentence), never a 0. A month with the agency's zero report (zero_flag Y, about 767 such months with Group B rows) did report a zero:
+    // REPORTED_ZERO, blank like any zero report (the independent review of PR 347; month-status.ts). Arrests keep the flag: a Group B arrest is
+    // that month's arrest report.
+    `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, ${isArrest ? "status" : `${CRIME_MONTH_STATUS} AS status`}
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
     `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, ${nUnits} AS n, ${nIncidents} AS ni FROM ${cube?.totalSql ? "scoped_t" : "scoped"} u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,

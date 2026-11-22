@@ -144,11 +144,15 @@ write("offense", 2025, O, [
     ("XX0000000", "MAR-1", "20250305", "240", 2, "20"),
 ])
 write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1, "20")])  # a January 2025 incident in the 2026 file
-S = ["ori", "month", "status"]
-write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)] + [("ZZ0000000", 1, "REPORTED_CRIMES")])
-write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
-    + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
-write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
+# agency_month_status carries the evidence columns the compiler reads (Model's build): a REPORTED_CRIMES month has Group A rows, a REPORTED_ZERO month
+# the zero report, an UNKNOWN month neither (a release without them fails in the compiler's SQL with a Binder Error naming the column).
+S = ["ori", "month", "status", "group_a_rows", "group_b_rows", "zero_flag", "ab_flag"]
+def st(rows):
+    return [(o, m, s_, 1 if s_ == "REPORTED_CRIMES" else 0, 0, "Y" if s_ == "REPORTED_ZERO" else "N", "Y" if s_ == "REPORTED_CRIMES" else "N") for (o, m, s_) in rows]
+write("agency_month_status", 2024, S, st([("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)] + [("ZZ0000000", 1, "REPORTED_CRIMES")]))
+write("agency_month_status", 2025, S, st([("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
+    + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)]))  # YY: all of 2025 reported zero
+write("agency_month_status", 2026, S, st([("XX0000000", 1, "REPORTED_CRIMES")]))
 # Arrests (Jeff 2026-11-12, "Yes, count them"): an arrest in a month reported as zero crimes (January) or not reported
 # (April, an arrest in the 2026 file) is counted, not a conflict; an M segment is left out (P68).
 A = ["ori", "incident_num", "arrestee_seq", "key_occurrence", "arrest_date", "arrest_offense", "multiple_arrestee_indicator", "age"]
@@ -169,9 +173,9 @@ write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occur
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
-// February: crimes reported, none of this kind: a known 0 (P51).
+// January: a zero report with an offense row in it counts the row (P183, Jeff 2026-11-21: rows win over the flag for crimes). February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
+  ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.

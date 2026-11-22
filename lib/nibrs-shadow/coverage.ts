@@ -9,6 +9,7 @@
  * An agency counts as reporting a year when it reported at least one month of it; the count of agencies that reported every
  * month is shown beside it.
  */
+import { CRIME_MONTH_REPORTED } from "../nibrs-plan/month-status";
 import type { ResultTable } from "../nibrs-plan/result";
 import { fmt, monthName } from "./deliver";
 import { STATE_NAMES } from "./places";
@@ -83,7 +84,8 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
 
 const ams = (root: string) => `read_parquet('${root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true)`;
 const ay = (root: string) => `read_parquet('${root.replace(/'/g, "''")}/agency_year/**/*.parquet', hive_partitioning = 1)`;
-const REPORTED = "status IN ('REPORTED_CRIMES', 'REPORTED_ZERO')";
+// The same rule as the crime counts (month-status.ts): a month with only Group B arrest rows did not report its crimes.
+const REPORTED = CRIME_MONTH_REPORTED;
 const years = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const lastYearOf = (r: CoverageRelease) => Number(r.lastMonth.slice(0, 4));
 const firstYearOf = (r: CoverageRelease) => Number(r.firstMonth.slice(0, 4));
