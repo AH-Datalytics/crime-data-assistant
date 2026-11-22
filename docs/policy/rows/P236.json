@@ -1,0 +1,12 @@
+{
+ "id": "P236",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Compare violent crimes clearance from nibrs and ucr\"",
+ "what the app does today": "Answers from one source only, with no side-by-side of the two clearance measures.",
+ "proposed behavior": "A question that asks to compare clearance from NIBRS and UCR shows both side by side: the Historical (UCR) annual national clearance rate and the NIBRS clearance, for the crime asked, nation by default (P180), latest complete year (P181). Each figure carries its own source line and a one-sentence definition note: the UCR rate is the offenses cleared as a share of offenses reported in the year, and the NIBRS figure is the clearances recorded in NIBRS for the same crime and year (as the app defines clearance elsewhere). The two are shown as separate figures and are never combined or averaged; where the two sources cover different agencies, the note says so in one short sentence. A year with no figure in one source shows that source as not available, never 0.",
+ "exact default or choices offered": "A two-row table, UCR (Historical) and NIBRS, with the clearance for the crime and year, the one-sentence definition for each, and each Source line.",
+ "why": "Jeff 2026-11-22 (card through the coordinator): show the UCR and NIBRS clearance side by side, with a one-sentence definition note for each.",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+ "test cases": "Label QL-ct-8473882fe3 (answer: UCR and NIBRS violent crime clearance side by side; expected values to be set from the build)."
+}
