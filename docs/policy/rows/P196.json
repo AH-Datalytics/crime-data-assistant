@@ -1,0 +1,12 @@
+{
+  "id": "P196",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders cleared by clearance type in 2025 in these cities: Chicago, IL, Los Angeles, CA, Houston, TX\"",
+  "what the app does today": "Asked which Los Angeles (the police department or the County Sheriff's Department) for the listed city.",
+  "proposed behavior": "A city named in a list of places (two or more) is that city's police department: no ask beside the county sheriff. The answer names the agency used (the row or the Reported by line says \"Los Angeles Police Department\"). A place named as a county or a sheriff stays the county; one place alone still asks (P28).",
+  "exact default or choices offered": "No ask; the police department, named in the answer.",
+  "why": "Jeff 2026-11-22 (Option B, through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P196\")."
+}

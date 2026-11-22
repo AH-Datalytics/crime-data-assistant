@@ -157,7 +157,7 @@ export function candidateLabel(c: Candidate, all: Candidate[], idx?: PlaceIndex)
  * only when the words say more than the name.
  */
 const REQUEST_WORD = /^(?:just|only|show|me|compare|using|use|calculate|give|tell|get|find|list|display|plot|chart|graph|see|view|what|about|data|now|please|also|then|so|ok|okay)\s+\S/i;
-export function resolvePlace(idx: PlaceIndex, value: string, text: string): PlaceResolution {
+export function resolvePlace(idx: PlaceIndex, value: string, text: string, listed = false): PlaceResolution {
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
   let name = (m[2] ?? m[4]).trim();
@@ -182,7 +182,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   // "LAPD" is the Los Angeles Police Department: the department's own initials name the city agency (2026-10-23 fix).
   // "The city of San Diego" names the city, not the county's sheriff: P16 (a city name means the city's principal police agency) settles
   // the city-or-county ask of P28, which asks only when the wording leaves the readings open.
-  const cityOf = /^(?:the )?city of /.test(key(text)) && !countyNamed;
+  // A city named in a list of places is its principal police agency too (P196, Jeff 2026-11-22: "Los Angeles" in a list of cities).
+  const cityOf = (/^(?:the )?city of /.test(key(text)) || (listed && !/\bsheriff/.test(key(text)))) && !countyNamed;
   if (/ city$|\bpolice\b/.test(key(text)) || key(text) === "lapd" || cityOf) {
     const cities = pool.filter((a) => a.kind === "city");
     // A large county police department of the name in another state is another "<name> police" ("Arlington Police

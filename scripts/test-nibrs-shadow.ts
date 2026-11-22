@@ -282,6 +282,11 @@ assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city
 assert.equal(ori(at("ambiguous:San Diego", "City of San Diego, California")), "CA0371100");
 assert.equal(ori(at("ambiguous:Los Angeles", "the city of Los Angeles")), "CA0194200");
 assert.equal(ori(at("ambiguous:St. Louis", "City of St. Louis")), "MOSPD0000");
+// P196 (Jeff 2026-11-22): a city named in a list of places is the city's police department, never the city-or-county ask.
+assert.equal(ori(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", true)), "CA0194200");
+assert.equal(ori(resolvePlace(places, "city:Los Angeles:", "Los Angeles", true)), "CA0194200");
+assert.equal(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", false).kind, "ask", "one place alone still asks");
+assert.equal(ori(resolvePlace(places, "county:Los Angeles County:CA", "Los Angeles County", true)), "CA0190000", "a county named stays the county");
 assert.deepEqual(named(at("ambiguous:San Diego", "San Diego, California")), ["San Diego Police Department", "San Diego County Sheriff's Office"]);
 assert.equal(at("ambiguous:Kansas City", "city of Kansas City").kind, "ask", "two states have a Kansas City");
 assert.equal(ori(at("county:St. Louis County:MO", "St. Louis County")), "MO0950000", "a county named stays the county");
