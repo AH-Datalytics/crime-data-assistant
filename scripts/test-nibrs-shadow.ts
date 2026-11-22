@@ -1314,6 +1314,12 @@ for (const q of ["violent crimes by offender race in Detroit in 2023", "violent 
     assert.equal(d.explanation, `This isn't available: property crime in the United States broken down by victim age takes too long to count here. Ask for one state, for example "property crimes by victim age in Texas in 2024", or for one agency.`, q);
     assert.ok(!/\byet\b/.test(d.explanation));
   }
+  // F4 of the independent review of PR 331: the sentence names the person whose age was asked, never the victim's for an offender's.
+  {
+    const d = as(ask("crimes against property by offender age in the United States in 2024"), "decline");
+    assert.match(d.explanation, /broken down by offender age takes too long to count here\. Ask for one state, for example "property crimes by offender age in Texas in 2024"/);
+    assert.ok(!/victim age/.test(d.explanation), d.explanation);
+  }
 }
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
@@ -2955,6 +2961,24 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Place, then period, then crime in one chain: three notes in that order.
   const chain = applyDefaults("crime trends", ask("which place", "crime trends", [{ label: "The United States", continuation: ask("which period", "crime trends", [{ label: "Every year available", continuation: ask("which kind of crime", "crime trends", [{ label: "Both", continuation: answerOf(["2023", "2024"]) }]) }]) }]), live);
   assert.equal(text(chain).length, 5, JSON.stringify(text(chain)));
+  // Independent review of PR 331: never answer without the asked breakdown (F1), the latest complete year is for a ranking only (F2), no button twice (F3).
+  {
+    const nibrs = (groupings: string[], buttons: { label: string }[] = []): ShadowOutcome => ({ kind: "answer", plan: { groupings: groupings.map((dimension) => ({ dimension })) }, buttons,
+      delivered: { table: { columns: [], rows: [["2017", 1], ["2025", 1]] }, text: ["Title", "Source: FBI NIBRS."] } }) as unknown as ShadowOutcome;
+    // F1: "arrests by age in Houston" answered as "Arrests Per Year" (the every-year rebuild lost the age) stays an ask; with the age kept it answers.
+    const lost = applyDefaults("arrests by age in Houston", ask("which period", "arrests by age in Houston", [{ label: "Every year available", continuation: nibrs(["time.year"]) }]), live);
+    assert.equal(lost.kind, "clarify", "an answer without the asked breakdown is not a default");
+    assert.equal(applyDefaults("arrests by age in Houston", ask("which period", "arrests by age in Houston", [{ label: "Every year available", continuation: nibrs(["time.year", "arrestee.age"]) }]), live).kind, "answer");
+    assert.equal(applyDefaults("robbery by weapon type in Houston", ask("which period", "robbery by weapon type in Houston", [{ label: "Every year available", continuation: nibrs(["time.year"]) }]), live).kind, "clarify");
+    assert.equal(applyDefaults("robbery by weapon type in Houston", ask("which period", "robbery by weapon type in Houston", [{ label: "Every year available", continuation: nibrs(["time.year", "offense_weapon.weapon"]) }]), live).kind, "answer");
+    // No breakdown asked: a plain every-year answer is still the default.
+    assert.equal(applyDefaults("robberies in Houston", ask("which period", "robberies in Houston", [{ label: "Every year available", continuation: nibrs(["time.year"]) }]), live).kind, "answer");
+    // F2: a question that is not a ranking never gets the latest complete year (P181: no period is every year); the ask stays. A ranking does.
+    assert.equal(applyDefaults("robbery by weapon type in the United States", ask("which period", "robbery by weapon type in the United States", [{ label: "The latest complete year (2025)", continuation: nibrs(["time.year", "offense_weapon.weapon"]) }, { label: "Another year", entry: "which year" }]), live).kind, "clarify");
+    // F3: the buttons the answer already has are not added again.
+    const dup = applyDefaults("robberies", ask("which place", "robberies", [{ label: "The United States", continuation: nibrs(["time.year"], [{ label: "A state" }, { label: "A city or agency" }]) }]), live);
+    assert.deepEqual((dup as unknown as { buttons: { label: string }[] }).buttons.map((b) => b.label), ["A state", "A city or agency"]);
+  }
   // Stays an ask: the default is a decline, there is no default option, noDefaults is set.
   const decline = { kind: "decline", reason: "unsupported_capability", explanation: "x", alternative: null } as unknown as ShadowOutcome;
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: decline }]), live).kind, "clarify");

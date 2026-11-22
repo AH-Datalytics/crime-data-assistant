@@ -370,6 +370,8 @@ const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route"
  * decline is the same; only when the heavy statements run.
  */
 const HEAVY_STATEMENT = 100_000;
+/** A question that ranks has one year (the latest complete year is its default, Jeff 2026-11-21); any other question without a period is every year (P181). */
+const ONE_YEAR_RANKING = /\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i;
 const DEFERRED = new WeakSet<object>();
 /** A button whose answer is built when first read (the walkers that only decide whether a button runs must not read it). */
 export const isDeferred = (x: ShadowOption): boolean => DEFERRED.has(x);
@@ -900,7 +902,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
       option = find(/^Every year available$/);
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
-      if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
+      if (!option && !ONE_YEAR_RANKING.test(c.question)) {
         defaultDepth++;
         try {
           // Built against the heavy-statement probe; a deferred (national) series is then built for real: P170's every year is an answer, not
@@ -909,8 +911,10 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
           if (o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
-      // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
-      if (!option) {
+      // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year. Never for another question (P181: no period is
+      // every year): when its every-year answer cannot be built, the ask stays (F2 of the independent review of PR 331: a breakdown answered 2025 only, with two
+      // notes saying both things).
+      if (!option && ONE_YEAR_RANKING.test(c.question)) {
         const latest = find(/^The latest complete year \((\d{4})\)$/);
         if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
       }
@@ -930,6 +934,14 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   }
   if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
   const typed = deps.guardText ? `${question}\n${deps.guardText}` : question;
+  // F1 (independent review of PR 331, also on dev: "arrests by age in Houston" became "Arrests Per Year"): the question asked a breakdown, and a default whose
+  // answer has none is a different question answered. The every-year rebuild works from the ask's text, which can lose it; the plan says what was kept.
+  const askedRead = cur.kind === "answer" ? readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth) : null;
+  // A person's attribute ("arrests by age") is read out of the words into `people`, so the ledger has no breakdown part for it: both count as asked.
+  if (askedRead && (askedRead.ledger.parts.some((p) => p.clause === 0 && p.concept === "breakdown") || askedRead.people?.by)) {
+    const kept = (cur as unknown as { plan?: { groupings?: { dimension: string }[] } }).plan?.groupings?.some((g) => !/^(?:time|geo)\./.test(g.dimension));
+    if (!kept) { DEFAULT_MISSES.push({ site: "chain", why: "the asked breakdown is not in the answer" }); return o0; }
+  }
   // A Crime Index (or hate crime) figure has no breakdown by a person's age, race, sex or by weapon: a default that lands there for a question that asks
   // one would answer without it, which is a wrong answer, so such a question stays an ask.
   if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(typed)) {
@@ -952,7 +964,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const say = [...new Set(notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`)))].filter((s) => !x.delivered.text.includes(s));
   const text = [x.delivered.text[0], ...say, ...x.delivered.text.slice(1)];
   void years;
-  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
+  const have = new Set((x.buttons ?? []).map((b) => b.label));
+  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons.filter((b, i) => !have.has(b.label) && buttons.findIndex((o) => o.label === b.label) === i)] } as ShadowOutcome;
 }
 /**
  * P188 (Jeff 2026-11-21): a loose word read as the meaning he decided ("current" is the latest complete year, "up" is the trend over five
@@ -3452,7 +3465,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // declined for any period (Jeff 2026-11-15: "Drop yet. We can either figure out how to do that or not."); a state or an agency answers.
   if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.against_property$/.test(m.id))
     && checked.groupings.some((g) => !g.dimension.startsWith("time.")))
-    return decline("unsupported_capability", `This isn't available: property crime in the United States broken down by victim age takes too long to count here. Ask for one state, for example "property crimes by victim age in Texas in 2024", or for one agency.`);
+    return decline("unsupported_capability", `This isn't available: property crime in the United States broken down by ${checked.groupings.some((g) => g.dimension.startsWith("offender.")) ? "offender" : "victim"} age takes too long to count here. Ask for one state, for example "property crimes by ${checked.groupings.some((g) => g.dimension.startsWith("offender.")) ? "offender" : "victim"} age in Texas in 2024", or for one agency.`);
   // The same for violent crime by a person's age, nationally over several years (BD3: 2017-2025 by victim age ran DuckDB out of
   // memory): the arrest sentence's pattern, one year offered in words, never run in advance.
   if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.person_crimes$/.test(m.id))
