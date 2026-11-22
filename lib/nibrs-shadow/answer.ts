@@ -860,6 +860,10 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
 /** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
 /** A clearance question (P182's exception): a clearance rate, offenses cleared, clearances by type, cleared by arrest or exception. */
 const CLEARANCE_WORDS = /\bclear(?:ance|ances|ed|ing)?\b/i;
+/** NIBRS named, or an offense only NIBRS holds: a default never answers these from the Crime Index or Current Trends. */
+const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bshoplift\w*|\bsimple assaults?\b|\bintimidation\b|\bdrugs?\b|\bnarcotic\w*|\bdui\b|\bdwi\b|\barrest\w*|\bkidnap\w*|\bfraud\w*|\bvandal\w*|\bprostitut\w*|\btrafficking\b/i;
+/** A question that points back at an answer that isn't there: never answered in part by a default. */
+const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:cities|agencies|places|states|counties|departments)\b|^\s*(?:compare[ds]?|comparison)\s+(?:it\s+|that\s+|this\s+)?(?:to|with|against)\b|^\s*(?:vs\.?|versus)\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 let defaultDepth = 0;
@@ -921,6 +925,14 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     DEFAULT_MISSES.push({ site: "chain", why: "breakdown not in this source" });
     return o0;
   }
+  // 284's final gate: a question that names NIBRS or a NIBRS-only offense ("in NIBRS", "larceny from motor vehicle") is never answered from the Crime
+  // Index or Current Trends by a default (the every-year reading can route there), and a question that points back at an answer that isn't there
+  // ("Compare to Tulsa murders", "Other large cities and violent crime", "compare with statewide ...") is never answered in part.
+  if (["srs", "historical", "current"].includes(cur.kind) && NIBRS_ONLY.test(question)) {
+    DEFAULT_MISSES.push({ site: "chain", why: "NIBRS named or NIBRS-only offense" });
+    return o0;
+  }
+  if (POINTS_BACK.test(question)) { DEFAULT_MISSES.push({ site: "chain", why: "points back" }); return o0; }
   const x = cur as ShadowOutcome & { delivered: { text: string[]; table: { rows: unknown[][] } }; buttons?: ShadowOption[] };
   const rows = x.delivered.table?.rows ?? [];
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");

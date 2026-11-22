@@ -3855,8 +3855,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "rtci",
     "source_any": [
+     "rtci",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -3870,7 +3871,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -5993,8 +5994,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -6008,7 +6010,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -7550,8 +7552,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -7565,7 +7568,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -9764,8 +9767,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -9779,7 +9783,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -12032,8 +12036,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "rtci",
     "source_any": [
+     "rtci",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -12047,7 +12052,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -14533,9 +14538,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
+     "rtci",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -14549,7 +14554,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -23347,8 +23352,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -23362,7 +23368,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -24217,8 +24223,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -24232,7 +24239,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -24882,8 +24889,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -24897,7 +24905,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -27817,8 +27825,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -27832,7 +27841,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -30453,20 +30462,24 @@
    "question": "Baltimore police staffing",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -31317,8 +31330,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -31332,7 +31346,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -31450,8 +31464,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -31465,7 +31480,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -31629,8 +31644,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -31644,7 +31660,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -34795,8 +34811,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -34810,7 +34827,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -35870,8 +35887,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -35885,7 +35903,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -36135,8 +36153,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -36150,7 +36169,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -37584,8 +37603,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -37599,7 +37619,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -38412,19 +38432,24 @@
    "question": "Assault in North Carolina",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "simple or aggravated assault",
-    "about_any": [
-     "simple or aggravated assault"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -39698,8 +39723,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -39713,7 +39739,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -41269,8 +41295,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -41284,7 +41311,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -42885,8 +42912,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -42900,7 +42928,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -48415,8 +48443,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "rtci",
     "source_any": [
+     "rtci",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -48430,7 +48459,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -50874,8 +50903,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -50889,7 +50919,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -51472,8 +51502,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -51487,7 +51518,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -52783,8 +52814,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -52798,7 +52830,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -54675,8 +54707,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -54690,7 +54723,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -64071,8 +64104,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -64086,7 +64120,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -64261,8 +64295,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -64276,7 +64311,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -68166,8 +68201,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -68181,7 +68217,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -75905,8 +75941,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -75920,7 +75957,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -78026,8 +78063,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -78041,7 +78079,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -80859,8 +80897,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -80874,7 +80913,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -88882,9 +88921,9 @@
    "previous": "What are the safest cities in america",
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
+     "rtci",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -88898,7 +88937,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -92986,8 +93025,9 @@
    "previous": "Don't you have 2025 data?",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -93001,7 +93041,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -95110,8 +95150,9 @@
    "previous": "national murder clearance rate since 1960",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -95125,7 +95166,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {
@@ -96098,8 +96139,9 @@
    "previous": "National robbery clearance rate since 1960",
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
+     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -96113,7 +96155,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
    }
   },
   {

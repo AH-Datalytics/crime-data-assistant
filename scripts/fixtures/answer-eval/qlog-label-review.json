@@ -1128,11 +1128,12 @@
 "QL-ct-2971127fb4": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "rtci",
 "source_any": [
+"rtci",
 "nibrs"
 ]
 }
@@ -1754,11 +1755,12 @@
 "QL-ct-49902c69a7": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -2261,11 +2263,12 @@
 "QL-ct-5b14c76028": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -2923,11 +2926,12 @@
 "QL-ct-6f02312720": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -3629,11 +3633,12 @@
 "QL-ct-8ac85de938": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "rtci",
 "source_any": [
+"rtci",
 "nibrs"
 ]
 }
@@ -4372,12 +4377,12 @@
 "QL-ct-ad603f5854": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "historical",
+"source": "rtci",
 "source_any": [
-"historical",
+"rtci",
 "nibrs"
 ]
 }
@@ -6943,11 +6948,12 @@
 "QL-hist-06bf4f7494": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -7166,11 +7172,12 @@
 "QL-hist-1051a11748": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -7348,11 +7355,12 @@
 "QL-hist-18271ba6f5": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -8149,11 +8157,12 @@
 "QL-hist-3efb6dd05a": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -8836,14 +8845,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-6031946974": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-21",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -9061,11 +9071,12 @@
 "QL-hist-683a17dab6": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -9098,11 +9109,12 @@
 "QL-hist-6a3ed21ef8": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -9130,11 +9142,12 @@
 "QL-hist-6c79c6f503": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -10001,11 +10014,12 @@
 "QL-hist-962eb80e59": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -10345,11 +10359,12 @@
 "QL-hist-a2f87f1758": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -10401,11 +10416,12 @@
 "QL-hist-a77b1e8f7c": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -10788,11 +10804,12 @@
 "QL-hist-b8b361a3d6": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -11028,10 +11045,14 @@
 "QL-hist-c12616f395": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
-"outcome": "clarify",
-"about": "simple or aggravated assault"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
 }
 },
 "QL-hist-c13647e676": {
@@ -11353,11 +11374,12 @@
 "QL-hist-cf6e782d06": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -11781,11 +11803,12 @@
 "QL-hist-e514f187b2": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -12185,11 +12208,12 @@
 "QL-hist-f98e3ce3b0": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -13823,11 +13847,12 @@
 "QL-nibrs-2971127fb4": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "rtci",
 "source_any": [
+"rtci",
 "nibrs"
 ]
 }
@@ -14536,11 +14561,12 @@
 "QL-nibrs-42d415dae4": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -14738,11 +14764,12 @@
 "QL-nibrs-48c07664fb": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -15127,11 +15154,12 @@
 "QL-nibrs-513b2b2145": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -15701,11 +15729,12 @@
 "QL-nibrs-62fc236175": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -18426,11 +18455,12 @@
 "QL-nibrs-b8ecdfef90": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -18488,11 +18518,12 @@
 "QL-nibrs-bbeef735a6": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -19666,11 +19697,12 @@
 "QL-nibrs-e3ad1aafdd": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -22067,11 +22099,12 @@
 "QL-shr-66dee78a0a": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -22788,11 +22821,12 @@
 "QL-shr-990fb6dc8a": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -23705,11 +23739,12 @@
 "QL-shr-c8538da991": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -25682,12 +25717,12 @@
 "QL-ct-c05e016e6c": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "historical",
+"source": "rtci",
 "source_any": [
-"historical",
+"rtci",
 "nibrs"
 ]
 }
@@ -26493,11 +26528,12 @@
 "QL-hist-2976c0b556": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -26905,11 +26941,12 @@
 "QL-hist-6b6bde514f": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
@@ -27089,11 +27126,12 @@
 "QL-hist-92434b8610": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler",
 "expected": {
 "outcome": "answer",
-"source": "nibrs",
+"source": "historical",
 "source_any": [
+"historical",
 "nibrs"
 ]
 }
