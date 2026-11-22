@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Which states have the highest murder clearance rate in 2024?\", \"rank states by burglary clearance rate in 2023\", \"murder clearance rate by state in 2024\"",
   "what the app does today": "Declined (\"This isn't available: rankings\"; \"A clearance rate for every state at once isn't available\").",
-  "proposed behavior": "Every state is ranked by its clearance rate for one year, highest first, with no minimum: a table State, clearance rate, offenses, agencies reporting. Each state's rate is its own P172 answer (the offenses cleared over the offenses reported, summed over the agencies that reported that year). A state with no reporting agency is not listed; a span of years or part of a year is declined (ask one year).",
+  "proposed behavior": "Every state is ranked by its clearance rate for one year, highest first, with no minimum: a table State, clearance rate, offenses, agencies reporting. Each state's rate is its own P172 answer (the offenses cleared over the offenses reported, summed over the agencies that reported that year). A state with no reporting agency is not listed; part of a year is declined (ask one year). Several years answer a full ranking for each year, stacked (State | Year | clearance rate | offenses | agencies reporting; every state ranked highest first within its year), never pooled (Jeff 2026-11-22: \"a full ranking for each year, stacked\"; long tables are fine).",
   "exact default or choices offered": "The table, the title with the year, the agencies line, then the Source line.",
   "why": "Jeff 2026-11-21 (through the coordinator): rank every state, no minimum, the offenses and the agencies reporting beside each rate, the latest complete year by default.",
-  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator); several years answer a full ranking for each year, decided 2026-11-22 (Jeff, option 1)",
   "test cases": "scripts/test-nibrs-shadow.ts (\"P173\")."
 }
