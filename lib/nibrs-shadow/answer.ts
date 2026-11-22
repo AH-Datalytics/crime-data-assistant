@@ -1263,6 +1263,10 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
   // P157: a request to change a chart (a marker, a line, axes) is declined with the one chart sentence, not asked about the last question.
   if (isChartEdit(followUp)) return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
+  // The same question sent again (follow-ups #5, coordinator 2026-11-21: 77 real turns) is a first question: the same answer or ask as before,
+  // never "what does this change".
+  const same = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (same(followUp) && same(followUp) === same(previous)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
   // "Is it getting better?" (Jeff 2026-11-18): a verdict is not given; the decline says so and offers a comparison built from the previous
   // question, the latest complete year against the year before.
   if (JUDGEMENT.test(followUp)) {
