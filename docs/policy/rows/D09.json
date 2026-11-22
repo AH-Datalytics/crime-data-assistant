@@ -7,6 +7,6 @@
   "proposed behavior": "Keep.",
   "exact default or choices offered": "Choices: violent crime; property crime; both.",
   "why": "\"Crime\" alone has no single count.",
-  "status": "Decided 2026-09-06 (frozen rule 9)",
+  "status": "Superseded by P182 (2026-11-21: \"crime\" with no kind named is violent crime and property crime, with a note); Decided 2026-09-06 (frozen rule 9)",
   "test cases": "GC-056, GC-075, GC-076, GC-077, GC-078, GC-117"
 }

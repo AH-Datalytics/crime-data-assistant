@@ -18918,12 +18918,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-c4945e9c9d": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 declines cases, although prosecutor-declined clearance itself is recorded.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P47: \"cases\" is declined, as not a NIBRS term; P203 covers a share of one type, not a count per state. The decline may offer the question with offenses (P66) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"reason": "\"cases\" is not a NIBRS term (P47)"
 }
 },
 "QL-nibrs-c4cecf2f76": {
@@ -19888,12 +19888,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-e8fd44815b": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 gives one clearance type per figure; by state and by each exceptional type is a second breakdown it does not cover; the decline may offer one type at a time By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"reason": "a state's clearance share is one clearance type at a time; by state and by every exceptional type at once is a second breakdown (P203)"
 }
 },
 "QL-nibrs-e9d606a061": {

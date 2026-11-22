@@ -7,6 +7,6 @@
   "proposed behavior": "State totals use the state's agencies from the national sample, built the same way; in the rebuild only.",
   "exact default or choices offered": "Not applicable.",
   "why": "",
-  "status": "Decided 2026-10-28 (rebuild only)",
+  "status": "Decided 2026-10-28 (rebuild only); narrowed by P155: before 2025 a state total uses the agencies with a figure in every month of the span asked (cleanup 2026-11-22), audit C22",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

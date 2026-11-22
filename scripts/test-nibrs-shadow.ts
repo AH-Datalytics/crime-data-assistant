@@ -2368,6 +2368,19 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(!/Memphis/.test(String(nation.rewrite ?? "")), String(nation.rewrite));
   // A turn that points back stays a follow-up.
   assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
+  // Follow-up #4 (P197): a short reply to the app's own ask is the button pressed, or the asked-for part filled in.
+  {
+    const asked = ask("What's the assault trend in New York over the past 5 years?") as { about?: string; options?: { label: string }[] };
+    assert.equal(asked.about, "which New York");
+    const pick = asked.options![0];
+    assert.ok(pick, JSON.stringify(asked).slice(0, 300));
+    const named = shadowFollowUp("What's the assault trend in New York over the past 5 years?", pick.label, deps);
+    assert.equal(named.rewrite, `What's the assault trend in ${pick.label} over the past 5 years`, String(named.rewrite));
+    const n = asked.options!.indexOf(pick) + 1;
+    assert.equal(shadowFollowUp("What's the assault trend in New York over the past 5 years?", `${n} please`, deps).rewrite, named.rewrite);
+    // Not a reply: a comparison, or a question of its own.
+    assert.notEqual(shadowFollowUp("What's the assault trend in New York over the past 5 years?", "compare this to Raleigh", deps).rewrite, "What's the assault trend in New York over the past 5 years in Raleigh");
+  }
   // Codex review 1: a comparison is never answered as a single place; it stays on the follow-up path (asked or proposed).
   for (const f of ["How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?"]) {
     const cmp = shadowFollowUp("Shoplifting in Memphis in 2024", f, deps);
@@ -3014,6 +3027,26 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("What jurisdictions had the highest murder rates in 2024?"), "What cities had the highest murder rates in 2024?");
+  assert.ok(/jurisdictions/.test(rd("which jurisdictions are included in homicide reports")), "not a ranking");
+  assert.equal(rd("What cities (250k+) had the worst murder clearance rate in 2024?"), "What cities (250k+) had the lowest murder clearance rate in 2024?");
+  assert.equal(rd("worst murder rate for cities 250k+"), "highest murder rate for cities 250k+");
+  assert.equal(rd("What are the three cities with the highest murder rate?"), "What are top 3 cities with the highest murder rate?");
+  assert.equal(rd("What five cities are currently experiencing the greatest number of homicides?"), "What top 5 cities with the most homicides?");
+  assert.equal(rd("Give me a list of the 10 cities with the highest annual murder rate in 2024"), "Give me a list of the 10 cities with the highest murder rate in 2024");
+  assert.equal(rd("the five boroughs of New York"), "the five boroughs of New York", "not a ranking");
+}
+// P204 (Jeff 2026-11-22): "highlight", "show me", "give me" opening a question and "major" before a crime word are filler.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("Highlight major crime trends in the city of Dallas since 2022"), "crime trends in the city of Dallas since 2022");
+  assert.equal(rd("Give me major violent crime in Houston in 2024"), "Give me violent crime in Houston in 2024");
+  assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
+  assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
@@ -3076,6 +3109,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
   const names = byState.delivered.table.rows.map((r) => String(r[0]));
   assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+  // P180: no place named is the United States, with the note and the place buttons; "by state" needs neither.
+  const liveAsk = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  const noPlace = as(liveAsk("what share of murders were cleared by exception in 2025?"), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(/^In the United States in 2025, [\d.]+% of the murders reported were cleared by exceptional means/.test(noPlace.delivered.text[0]), noPlace.delivered.text[0]);
+  assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
+  assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
+  // The national clearance share is exempt from the heavy-statement deferral (coordinator 2026-11-22), so a tiny limit still answers it.
+  assert.equal(shadowAnswer("what share of murders were cleared by exception in 2025?", { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
+  const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
+  assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));
 }
 // P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
 // not cleared), never summed.

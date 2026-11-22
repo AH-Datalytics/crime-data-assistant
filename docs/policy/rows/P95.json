@@ -2,7 +2,7 @@
   "id": "P95",
   "topic": "Already decided",
   "decision needed": "None: already decided",
-  "situation (example wording)": "\"Homicide victims in Detroit by age\", \"firearm homicides in NYC in 2024\" (homicide in NIBRS)",
+  "situation (example wording)": "\"Homicide victims in Detroit by age\", \"firearm homicides in NYC in 2024\" (Homicide Reports for a detail, P53)",
   "what the app does today": "Homicide counted murder and nonnegligent manslaughter (09A) only, the same as murder.",
   "proposed behavior": "See P10.",
   "exact default or choices offered": "See P10.",

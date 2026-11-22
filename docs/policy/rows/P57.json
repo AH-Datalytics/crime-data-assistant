@@ -4,7 +4,7 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Murder clearance rate in Memphis in 2024\" (a Part I offense, a completed year)",
   "what the app does today": "NIBRS clearances are refused in the slice.",
-  "proposed behavior": "A Part I offense's clearance rate for a completed year comes from the Crime Index historical clearances data (the FBI annual method), not computed from NIBRS (routing, as P53). The current year's clearance rate (an agency, a state or the nation) is computed from NIBRS (P129): the offenses cleared over the offenses reported in the months the data holds, rate only, the months said; a state or the nation counts only the Consistent Reporting Agencies and says so. Not decided: clearance for NIBRS-only offenses; no method is assumed for those.",
+  "proposed behavior": "A Part I offense's clearance rate for a completed year comes from the Crime Index historical clearances data (the FBI annual method), not computed from NIBRS (routing, as P53). The current year's clearance rate (an agency, a state or the nation) is computed from NIBRS (P129): the offenses cleared over the offenses reported in the months the data holds, rate only, the months said; a state or the nation counts only the Consistent Reporting Agencies and says so. A NIBRS-only offense: counts follow P64 (the NIBRS method, said); a state's rate for one stays declined (P172).",
   "exact default or choices offered": "Source: the Crime Index historical clearances.",
   "why": "",
   "status": "Decided 2026-10-29 (Jeff: \"the clearance rate of a part I offense for a historical year is in the crime index historical database and should be calculated on that\")",
