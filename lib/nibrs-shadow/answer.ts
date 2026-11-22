@@ -1421,6 +1421,9 @@ function replyToAsk(previous: string, followUp: string, deps: ShadowDeps): Follo
   let asked: ReturnType<typeof shadowAnswer>;
   try { asked = shadowAnswer(previous, { ...deps, execute: () => [] }); } catch { return null; }
   if (asked.kind !== "clarify" || !asked.question.trim()) return null;
+  // It was an ask: read it again with the real executor, since its buttons carry the continuations that the data builds.
+  asked = shadowAnswer(previous, deps);
+  if (asked.kind !== "clarify" || !asked.question.trim()) return null;
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(REPLY_FILLER, " ").replace(/\s+/g, " ").trim();
   const t = norm(followUp);
   const pressable = asked.options.filter((o) => !o.entry && !o.otherSource && (o.question || "continuation" in o));
