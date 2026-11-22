@@ -322,7 +322,10 @@ export function recordContext(ledger: RequestLedger): void {
   for (const { rule, pattern } of OPENERS) {
     const m = pattern.exec(q);
     if (m && m[0].trim()) {
-      const len = m[0].replace(/\s+$/, "").length;
+      let len = m[0].replace(/\s+$/, "").length;
+      // "Show me the city of Houston ...": the article belongs to the place ("the city of Houston"), which the place
+      // reader needs whole; the opener keeps only "Show me".
+      if (/\bthe$/i.test(m[0].replace(/\s+$/, "")) && /^\s*city\s+of\b/i.test(q.slice(m.index + m[0].length))) len = m[0].replace(/\s+$/, "").replace(/\s*\bthe$/i, "").length;
       if (ledger.record({ concept: "opener", span: [m.index, m.index + len], rule, state: "context" })) break;
     }
   }

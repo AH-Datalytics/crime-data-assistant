@@ -3047,6 +3047,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
   assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
 }
+// QL-hist-b40ff70aab: an opener such as "Show me" must leave "the" with "city of X", or the place is not read and the
+// question asks "which place". Every opener that ends in an article gets the same reading as the bare question.
+{
+  const bare = ask("The city of Los Angeles murder rate in 2024");
+  for (const opener of ["Show me", "What is", "Can I see", "I want", "Let's look at", "Give me", "Tell me", "Please show me"]) {
+    const q = `${opener} the city of Los Angeles murder rate in 2024`;
+    const r = ask(q);
+    assert.equal(r.kind, bare.kind, `${q}: ${r.kind} (bare: ${bare.kind})`);
+    assert.notEqual(r.kind, "clarify", q);
+  }
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
