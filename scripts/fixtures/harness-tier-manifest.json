@@ -2565,6 +2565,15 @@
       "note": "Crime in a place over time: the nine per-measure answers (violent and property crime, the seven Part I offenses) become one table of one source, by year or month, for one place or several (side by side or long); Part I is their sum for counts and is omitted for rates; a blank cell stays blank; notes are said once or merged; anything else is null and keeps its path; the chart is violent and property crime (violent only for several places). Offline."
     },
     {
+      "id": "test-crime-both",
+      "tier": "F",
+      "script": "scripts/test-crime-both.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P182 for two or more places: with no kind of crime named, the violent crime and property crime answers are lined up as one table (a total by place, or a period series with Place and Year), a rate headed per 100,000, a blank cell kept blank; never two sources or two shapes (null keeps the path). Offline."
+    },
+    {
       "id": "test-groupable-table",
       "tier": "F",
       "script": "scripts/test-groupable-table.ts",
