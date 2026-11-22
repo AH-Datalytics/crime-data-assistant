@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, agencySources, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -2687,7 +2687,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline("unsupported_capability", `Historical counts ${historicalCounts(sp.measures[0])}, not ${sp.unit}. NIBRS counts ${sp.unit} for the agencies that report to it.`,
         { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs, role: "other_source", targetSource: "nibrs" } });
     }
-    if (agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
+    // P01: an agency missing from Historical (Crime Index) goes to NIBRS, labelled as the agency's own reported figures. One agency of several
+    // missing sends them all, so the answer is one source (P14). An agency the index records no sources for keeps this path, as before.
+    const allInCrimeIndex = agencies.every((a) => a?.kind !== "agency" || (agencySources(deps.places, a.ori) ?? ["crime_index"]).includes("crime_index"));
+    if (agencies.length && agencies.every((a) => a?.kind === "agency") && allInCrimeIndex && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
       && historicalUnitFits(sp.measures[0], sp.unit) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")
       && !currentClearance(sp, Number(release.lastMonth.slice(0, 4)))
       && !(partYear(sp, flags(ledger0).comparison) && !ANNUAL_ONLY.has(sp.measures[0]))) {
@@ -2713,6 +2716,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
         agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, list.map((a) => a.ori), ledger0.question) ? { agencyNote: sheriffNote(deps, list.map((a) => a.ori), ledger0.question) } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
+      // Jeff 2026-11-22 ("Answer from NIBRS"): one agency's count for one year the Crime Index has blank (Pontiac, Michigan robberies 2024) is
+      // answered from NIBRS, said as the agency's NIBRS report. A series never mixes sources (P14), so only a single year; months are P113's.
+      // A rate too (coordinator 2026-11-22, Jeff's population rule, PR 297): NIBRS's own rate over the agency's own NIBRS population; the NIBRS
+      // answer itself declines when that population is 0 or null, and then so does this one.
+      const oneYear = list.length === 1 && yrs[0] === yrs[1] && !reachesNow && !(sp.grain === "year" || openSpan(sp)) && !cmp && (sp.statistic === "count" || sp.statistic === "rate");
+      if (oneYear && /^Crime Index has no /.test(r.explanation) && !deps.checkingOffer) {
+        const viaNibrs = shadowAnswer(`${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`, deps);
+        if (viaNibrs.kind === "answer" && viaNibrs.delivered.table.rows.some((row) => row.some((c) => typeof c === "number"))) {
+          const why = `${r.explanation.replace(/: not available in this data\.?$/, "")}, so this is the ${agencyName(deps.places, list[0].ori)}'s own NIBRS report.`;
+          const text = viaNibrs.delivered.text;
+          return { ...viaNibrs, delivered: { ...viaNibrs.delivered, text: [text[0], why, ...text.slice(1)] } };
+        }
+      }
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
   }
@@ -2829,7 +2845,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A month, quarter or part-year question goes to NIBRS, the source with monthly grain (coordinator 2026-11-02); the
   // Crime Index builds are annual. (Current Trends, monthly too, is settled with Jeff when it is built.)
   const months = d.spec.type === "series" && partYear(d.spec, flags(ledger0).comparison);
-  if (!flags(ledger0).nibrsAsked && !flags(ledger0).shrAsked && !flags(ledger0).consistent && !months && asked.some((x) => PART_ONE.has(x))) {
+  // P01's own exception (coordinator 2026-11-22): agencies of which one is missing from Historical (Crime Index) are answered from NIBRS, as
+  // the agencies' own reported figures (Deltona, Florida; Port Jefferson, New York). Not a place the index records no sources for.
+  const placesNow = [...resolved.values()];
+  const notInCrimeIndex = placesNow.length > 0 && placesNow.every((p) => p?.kind === "agency")
+    && placesNow.some((p) => p?.kind === "agency" && !(agencySources(deps.places, p.ori) ?? ["crime_index"]).includes("crime_index"));
+  if (!flags(ledger0).nibrsAsked && !flags(ledger0).shrAsked && !flags(ledger0).consistent && !months && !notInCrimeIndex && asked.some((x) => PART_ONE.has(x))) {
     const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
     // Plain words, and no source that isn't loaded (coordinator 2026-11-02, after Jeff's "Memphis murders since 1930"):
     // with the Crime Index build, its figures don't answer this question as asked; without it, only NIBRS is here. The

@@ -84,6 +84,18 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   return { byName, names, returnA };
 }
 
+const BY_ORI = new WeakMap<PlaceIndex, Map<string, Agency>>();
+/** The builds an agency is in ("nibrs", "crime_index"), from the place index; null when the index does not know the ORI (or records no sources). */
+export function agencySources(index: PlaceIndex, ori: string): string[] | null {
+  let m = BY_ORI.get(index);
+  if (!m) {
+    m = new Map();
+    for (const xs of index.byName.values()) for (const a of xs) m.set(a.ori, a);
+    BY_ORI.set(index, m);
+  }
+  return m.get(ori)?.sources ?? null;
+}
+
 /** Edit distance with adjacent transposition (optimal string alignment). */
 function distance(a: string, b: string): number {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
