@@ -61,6 +61,7 @@ import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearan
 import { answerClearanceShare } from "./clearance-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { composeBoth } from "./crime-both";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -2018,7 +2019,29 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
     const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
       { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
-    const options = kinds.map((k) => deferHeavy(k.label, (d) => fromLedger(filledAll(ledger, "measure", k.measures), d, pins), deps));
+    // P182 for two or more places: "Both" is the violent crime answer and the property crime answer lined up (crime-both.ts), as the compiler has
+    // no two-measure statement for several places; when they do not line up, the plain "Both" is kept (declined as before).
+    const severalPlaces = clause0("place").length >= 2;
+    const options = kinds.map((k) => deferHeavy(k.label, (d) => {
+      const both = k.measures.length === 2 && severalPlaces ? (() => {
+        // No period named: each part's "Every year available" (the series), as the default would take.
+        let everyYear = false;
+        const part = (m: string[]) => {
+          const o = fromLedger(filledAll(ledger, "measure", [m]), d, pins);
+          const yrs = o.kind === "clarify" && o.about === "which period" ? o.options.find((x) => /^Every year/.test(x.label))?.continuation : undefined;
+          if (yrs) everyYear = true;
+          return yrs ?? o;
+        };
+        const [v, pr] = k.measures.map(part);
+        const c = ["current", "historical", "srs"].includes(v.kind) && v.kind === pr.kind ? composeBoth(v as never, pr as never) as (ShadowOutcome & { delivered: { table: { rows: unknown[][] }; text: string[] } }) | null : null;
+        if (c && everyYear) {
+          const ys = c.delivered.table.rows.map((r) => String(r[1])).sort();
+          c.delivered.text.splice(1, 0, `No years were given, so every year in the data is shown: ${ys[0]} through ${ys[ys.length - 1]}.`);
+        }
+        return c;
+      })() : null;
+      return both ?? fromLedger(filledAll(ledger, "measure", k.measures), d, pins);
+    }, deps));
     const runnable = options.filter(optionRuns);
     if (!runnable.length) {
       const d0 = options[0].continuation!;
