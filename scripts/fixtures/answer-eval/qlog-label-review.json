@@ -15218,11 +15218,11 @@
 },
 "QL-nibrs-5279fe41af": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-22",
+"why": "P218 (Jeff 2026-11-22): pop_group stays declined, the app does not define population groups; the whole question is declined, no partial answer (P187), the offer of population and ORI without the group is an offer only. By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "answer",
-"source": "historical"
+"outcome": "decline",
+"reason": "population groups (pop_group) aren't defined here (P218)"
 }
 },
 "QL-nibrs-52cf3bd087": {
@@ -19639,11 +19639,11 @@
 },
 "QL-nibrs-df21c84f95": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-22",
+"why": "P218 (Jeff 2026-11-22): pop_group stays declined, the app does not define population groups; the whole question is declined, no partial answer (P187), the offer of population and ORI without the group is an offer only. By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "population groups (pop_group) aren't defined here (P218)"
 }
 },
 "QL-nibrs-df265f32c3": {

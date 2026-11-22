@@ -31,6 +31,7 @@ const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't al
 import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
 import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
+import { withoutCsvWords } from "../lib/nibrs-shadow/ori";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
 {
   const monthCols = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Place" }, { binding: { kind: "grouping", dimension: "time.month" }, header: "Month" },
@@ -3213,5 +3214,40 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/cleared by exception by type by year/.test(readQuestion(q, 2026, "2026-09").text), q);
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
+}
+// P218 (agency IDs), P216 (scatter plot), P217 (CSV words and "can I download this?"), Jeff 2026-11-22.
+{
+  const ask2 = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  const text = (q: string) => (ask2(q) as unknown as { delivered: { text: string[] } }).delivered.text;
+  // Both ways: the agency from its ID (a short ID that begins one agency's too), and the ID from the agency.
+  assert.deepEqual(text("What agency is ORI TXHPD0000?").slice(0, 1), ["ORI TXHPD0000 is the Houston Police Department, in Houston, Texas."]);
+  assert.deepEqual(text("what agency is ori TXHPD00").slice(0, 1), ["ORI TXHPD0000 is the Houston Police Department, in Houston, Texas."]);
+  assert.match(text("What agency is ORI NJ0225500?")[0], /^ORI NJ0225500 is the .+, in New Jersey\.$/, "an agency the place index does not hold: its FBI name and state");
+  assert.deepEqual(text("What is the ORI for Houston?").slice(0, 1), ["The ORI (agency ID) of the Houston Police Department is TXHPD0000."]);
+  assert.match(text("nypd's ori")[0], /^The ORI \(agency ID\) of the New York City Police Department is NY0303000\.$/);
+  // An unknown ID and a population group are declined, the ID named.
+  assert.equal(as(ask2("firearm murders for ORI ZZ00000 since 2018"), "decline").explanation, "No agency has the ID ZZ00000.");
+  assert.equal(as(ask2("How many agencies in Houston TX have pop_group starting with 1? Show ori, population, pop_group for year 2024"), "decline").explanation, "This isn't available: population groups (pop_group) aren't defined here.");
+  // An ID as the place of any question is that agency, said in a note before the source line.
+  const withOri = ask2("carjackings in ORI TXHPD0000 in 2023") as unknown as { kind: string; delivered: { text: string[] } };
+  assert.equal(withOri.kind, "answer", JSON.stringify(withOri).slice(0, 200));
+  assert.ok(withOri.delivered.text.includes("ORI TXHPD0000 is the Houston Police Department."), JSON.stringify(withOri.delivered.text));
+  assert.ok(/^Source/.test(withOri.delivered.text.at(-1)!));
+  // A scatter plot is declined in one sentence, the two questions offered separately (never a chart).
+  const sc = as(ask2("give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more"), "decline");
+  assert.equal(sc.explanation, "This isn't available: a scatter plot, and a crime rate beside staffing in one table.");
+  assert.deepEqual([sc.alternative?.question, ...(sc.more ?? []).map((m) => m.question)], ["violent crime rate per 100k in 2024 in cities of 250k or more", "officers per 100k in 2024 in cities of 250k or more"]);
+  // "Can I download this?": one sentence. A CSV or spreadsheet of a figure is that figure's table, the request words dropped.
+  for (const q of ["Can I download this?", "can i download this by state?"]) assert.deepEqual(text(q), ["This table can be downloaded as a CSV."], q);
+  assert.equal(withoutCsvWords("can you give a spreadsheet of murder rate per 100k for every state per year since 1960?"), "murder rate per 100k for every state per year since 1960?");
+  assert.equal(withoutCsvWords("a csv of 12 month annualized homicide indexed to january 2018"), "12 month annualized homicide indexed to january 2018");
+  assert.equal(withoutCsvWords("in the csv below"), null);
+  const csvTable = as(ask2("a csv of carjackings in Houston in 2023"), "answer");
+  const plainTable = as(ask2("carjackings in Houston in 2023"), "answer");
+  assert.deepEqual(csvTable.delivered.table.rows, plainTable.delivered.table.rows, "the table is the answer");
+  assert.deepEqual(csvTable.delivered.text.filter((t) => t !== "This table can be downloaded as a CSV."), plainTable.delivered.text, "plus the one download line, before the source line");
+  assert.equal(csvTable.delivered.text.at(-2), "This table can be downloaded as a CSV.");
+  // "Is it not ORI AL00118?": no antecedent and no figure: not read as an ID lookup.
+  assert.notEqual((ask2("Is it not ORI AL00118?") as { kind: string }).kind, "coverage");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
