@@ -9728,6 +9728,55 @@
    "batch": "p327-clearance-share-20261122",
    "date": "2026-11-22",
    "numbers": 153
+  },
+  "QL-ct-03f30bac71": {
+   "digest": "f2c829ae093b7923",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 20
+  },
+  "QL-ct-283f8a1a68": {
+   "digest": "33574d93d24152dc",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 5
+  },
+  "QL-ct-3ccaa44e57": {
+   "digest": "25e6709e6cdf8d81",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 3
+  },
+  "QL-ct-d32408965b": {
+   "digest": "d0c50b211664b0b1",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 20
+  },
+  "QL-ct-e703639489": {
+   "digest": "247faa3a8b91a205",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 20
+  },
+  "QL-ct-ebe98d6827": {
+   "digest": "603612b9f003b2ab",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 20
+  },
+  "QL-hist-33357a5935": {
+   "digest": "2fad1178249978ef",
+   "by": "runner-codex-blind",
+   "batch": "p323-ranking-20261122",
+   "date": "2026-11-22",
+   "numbers": 20
   }
  }
 }
