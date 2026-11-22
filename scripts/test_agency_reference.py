@@ -114,7 +114,7 @@ def main():
     assert len(merges) == 15, len(merges)
     print(f"agency_county.csv: {len(county)} rows, {len(counties)} counties, {len(many)} with more than one county agency")
     print(f"agency_succession.csv: {len(merges)} merges, {len(excl)} exclusions")
-    assert len(counties) == 3058 and len(many) == 66, (len(counties), len(many))
+    assert len(county) == 3124 and len(counties) == 3058 and len(many) == 66, (len(county), len(counties), len(many))
 
     if a.db:
         import export_agency_county_reference as ex

@@ -14,7 +14,7 @@ One row per law-enforcement agency of a county: a Historical agency of type `cou
 | first_year, last_year | first and last year with a violent-crime figure in `historical_agency_crime` |
 | source | where the crosswalk row came from |
 
-How to use it: select the rows of the county. One row: that agency answers. More than one (66 counties): drop the agencies whose `last_year` is far behind the latest data year only when exactly one remains; otherwise ask which agency is meant. Baltimore County MD has two rows, MD0030000 (last 2000) and MD0030100 (last 2025), so it resolves to MD0030100.
+How to use it: select the rows of the county. One row: that agency answers only if the period asked lies within `first_year` to `last_year`; a row whose `last_year` is far behind the latest data year is not an answer for a recent period (Clark County NV has only NV0020000, last 1973; its successor NV0020100 is not a county-type agency and is not in this file). More than one (66 counties): drop the agencies whose `last_year` is far behind the latest data year only when exactly one remains; otherwise ask which agency is meant. Baltimore County MD has two rows, MD0030000 (last 2000) and MD0030100 (last 2025), so it resolves to MD0030100.
 
 Known source defect, copied and not repaired: VA0020000 (Albemarle County, last data 1984) carries FIPS 51540 (Charlottesville) under the county name Albemarle. The test names it as the only allowed case.
 
