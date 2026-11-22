@@ -954,7 +954,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
   const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
-  const text = [x.delivered.text[0], ...say, ...x.delivered.text.slice(1)];
+  // A sentence the answer already carries is not said twice (a series built "by year" says its own "No years were given").
+  const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1)];
   void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
