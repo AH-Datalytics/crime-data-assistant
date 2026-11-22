@@ -18573,17 +18573,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which Los Angeles",
-     "period"
+     "which Los Angeles"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -19128,17 +19126,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which San Diego",
-     "period"
+     "which San Diego"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -40843,17 +40839,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which Los Angeles",
-     "period"
+     "which Los Angeles"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -41558,17 +41552,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which San Diego",
-     "period"
+     "which San Diego"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {

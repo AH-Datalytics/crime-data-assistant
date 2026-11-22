@@ -5568,7 +5568,14 @@
 },
 "QL-ct-df0e43158d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-df6a291291": {
 "status": "reviewed",
@@ -5717,7 +5724,14 @@
 },
 "QL-ct-e7610c3d67": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which San Diego"
+]
+}
 },
 "QL-ct-e763fe102b": {
 "status": "reviewed",
@@ -11681,7 +11695,14 @@
 },
 "QL-hist-df0e43158d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-df3e4191cb": {
 "status": "reviewed",
@@ -11896,7 +11917,14 @@
 },
 "QL-hist-e7610c3d67": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which San Diego"
+]
+}
 },
 "QL-hist-e7af5fa70e": {
 "status": "reviewed",
