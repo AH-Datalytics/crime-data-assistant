@@ -903,9 +903,10 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
         defaultDepth++;
         try {
-          // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
+          // Built against the heavy-statement probe; a deferred (national) series is then built for real: P170's every year is an answer, not
+          // an ask (coordinator 2026-11-22; every year nationally took 13-21 s with no cube).
           const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
-          if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
+          if (o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
       // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
@@ -921,7 +922,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       note = "No kind of crime was named, so violent crime and property crime are shown.";
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
-    if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
+    // A deferred option (a national NIBRS statement, long because every agency is listed) is built here: P170 and P180-P182 answer, never ask.
+    if (!option || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "no answer" }); return o0; }
     notes.push(note);
     buttons.push(...more);
     cur = option.continuation;
@@ -946,7 +948,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const rows = x.delivered.table?.rows ?? [];
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
-  const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
+  // A note the answer already says (an every-year answer built for the period says its own) is not said twice.
+  const say = [...new Set(notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`)))].filter((s) => !x.delivered.text.includes(s));
   const text = [x.delivered.text[0], ...say, ...x.delivered.text.slice(1)];
   void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
