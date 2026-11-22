@@ -3,10 +3,10 @@
  * worker, shutdown, the token and body limits, and the configuration read from the environment. Fake workers stand in for the engine (no data, no Python, no network but loopback).
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { crimeIndexBuilder, shrBuilder } from "../lib/engine-service/sources";
+import { crimeIndexBuilder, hateBuilder, shrBuilder } from "../lib/engine-service/sources";
 import { asSourceTab, SOURCE_TABS } from "../lib/nibrs-shadow/source-description";
 import type { AddressInfo } from "node:net";
 import type { ShadowDeps, ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -256,7 +256,18 @@ function fakes() {
   const sr = both.answer(req("q", { tab: "shr" })); assert.ok(sr.ok && sr.release === "shr-20261101-1");
   assert.ok(seen[seen.length - 1].cur, "a Homicide Reports question gets the shr source");
   assert.deepEqual(both.info().sources, { crimeIndex: "loaded", shr: "loaded" });
-  both.close();  // info() alone tries every configured source, and a broken folder is not hammered inside its pause.
+  both.close();  // piece 4: Hate crime builder reads release.json and needs the data file beside it.
+  const hd = mkdtempSync(path.join(tmpdir(), "hate-"));
+  assert.throws(() => hateBuilder(hd, { execute: exec }), /no hate crime export/);
+  mkdirSync(path.join(hd, "hate_crime_incident")); writeFileSync(path.join(hd, "hate_crime_incident", "data.parquet"), "");
+  writeFileSync(path.join(hd, "release.json"), JSON.stringify({ source_sha256: "abcdef0123", rows: 5, first_incident_date: "1991-01-01", latest_incident_date: "2024-12-31", rows_whose_stored_label_differs: 2 }));
+  assert.throws(() => hateBuilder(hd, { execute: exec }), /release\.json must hold/, "a release that fails its checks is refused with the reason");
+  writeFileSync(path.join(hd, "release.json"), JSON.stringify({ source_sha256: "abcdef0123", rows: 5, first_incident_date: "1991-01-01", latest_incident_date: "2024-12-31", rows_whose_stored_label_differs: 0 }));
+  assert.deepEqual(hateBuilder(hd, { execute: exec }).releases, { hate_crime: "hate-abcdef01-5" });
+  const hc = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_HATE_ROOT: hd }), hooks);
+  assert.deepEqual(hc.info().tabs, ["nibrs", "hate_crime"]);
+  const hr = hc.answer(req("q", { tab: "hate_crime" })); assert.ok(hr.ok && hr.release === "hate-abcdef01-5");
+  hc.close();  // info() alone tries every configured source, and a broken folder is not hammered inside its pause.
   let tries = 0, clock = 0;
   const live = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: "/nowhere" }), { base: hooks.base, now: () => clock, sources: { crimeIndex: () => { tries++; throw new Error("boom"); } } });
   assert.equal((live.info() as { base: string }).base, "loaded");

@@ -3,6 +3,7 @@
  * preview route do, and throws a plain sentence when the folder is not what the engine needs, so the core can report it and keep the other sources answering.
  */
 import { currentBuildAt } from "../nibrs-shadow/current";
+import { hateBuildAt } from "../nibrs-shadow/hate";
 import { historicalBuildAt } from "../nibrs-shadow/historical";
 import { shrBuildAt } from "../nibrs-shadow/shr";
 import type { SourceBuilder } from "./core";
@@ -24,4 +25,12 @@ export const shrBuilder: SourceBuilder = (root) => {
   try { shr = shrBuildAt(root); } catch (e) { throw new Error(e instanceof Error ? e.message : String(e)); }
   if (!shr) throw new Error(`there is no Homicide Reports manifest.json in ${root}`);
   return { deps: { shr }, releases: { shr: shr.release } };
+};
+
+/** Hate crime: the export folder holds release.json and hate_crime_incident/data.parquet. A folder missing either, or with a release.json that fails its checks, is refused with the reason. */
+export const hateBuilder: SourceBuilder = (root) => {
+  let hate;
+  try { hate = hateBuildAt(root); } catch (e) { throw new Error(e instanceof Error ? e.message : String(e)); }
+  if (!hate) throw new Error(`there is no hate crime export (release.json and hate_crime_incident/data.parquet) in ${root}`);
+  return { deps: { hate }, releases: { hate_crime: hate.release } };
 };
