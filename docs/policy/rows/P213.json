@@ -1,12 +1,12 @@
 {
   "id": "P213",
-  "topic": "Homicide Reports shares",
-  "decision needed": "Jeff to confirm the definitions (build may proceed on these defaults)",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
   "situation (example wording)": "\"share of murders that did not involve a firearm\", \"non-firearm murders nationally\"",
   "what the app does today": "Declined or asked: these shares are not built.",
   "proposed behavior": "NON-FIREARM = every recorded weapon except the five firearm codes (11 firearm type not stated, 12 handgun, 13 rifle, 14 shotgun, 15 other gun). Code 90 \"other or unknown weapon\" mixes the two and cannot be split, so it counts as non-firearm and the answer says so in a note. The denominator is all murders for the place and period (P165); the table shows firearms together and each other weapon with counts and shares, and a share asked for is one sentence (N of M).",
   "exact default or choices offered": "Firearms together, non-firearm (with the code 90 note), each weapon, counts and shares.",
   "why": "Builds on P165 (firearm share = murders by weapon).",
-  "status": "Drafted 2026-11-22 (Engine 2.0) at the coordinator's request for Capability's build; awaiting Jeff's OK",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
   "test cases": "Comes with the build."
 }

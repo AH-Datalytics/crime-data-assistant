@@ -1,12 +1,12 @@
 {
   "id": "P211",
-  "topic": "Homicide Reports shares",
-  "decision needed": "Jeff to confirm the definitions (build may proceed on these defaults)",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
   "situation (example wording)": "\"share of murders committed by strangers\", \"stranger vs acquaintance murders\", \"what percent of murder victims knew their killer\"",
   "what the app does today": "Declined or asked: these shares are not built.",
   "proposed behavior": "STRANGER = relationship ST. ACQUAINTANCE = AQ only (the FBI's own category); friend (FR), neighbor (NE), employee/employer (EE, ER) and other known (OK) are their own lines, not acquaintance. \"Knew their killer\" or \"known to the victim\" = every relationship except ST and UN (P36). The denominator is ALL murders for the place and period, relationship unknown (UN) included and shown as its own line, so the shares add to 100%; the table shows stranger, acquaintance, other known to the victim (family, partner, friend, neighbor and the rest) and unknown, with counts and shares. A share asked for is one sentence (N of M).",
   "exact default or choices offered": "Table: stranger, acquaintance, other known, unknown, with counts and shares.",
   "why": "Extends P36 (strangers; someone they knew) to murder shares; the share counts murders, and unknown stays in the denominator (show the data as published).",
-  "status": "Drafted 2026-11-22 (Engine 2.0) at the coordinator's request for Capability's build; awaiting Jeff's OK",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
   "test cases": "Comes with the build."
 }
