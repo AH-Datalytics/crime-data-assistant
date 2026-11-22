@@ -2813,6 +2813,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/per 100,000 people in 2023\.$/.test(pa.delivered.text[0]), pa.delivered.text[0]);
   }
 }
+// 284's re-gate: a follow-up's default guards read what was typed and asked before, not only the rewrite. "compare with statewide ..." rewrites to
+// the state alone, and "Durham, North Carolina and population" leans on a larceny-from-motor-vehicle question: neither is answered in part by a default.
+{
+  const gd = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  // (A pin of the outcome: with no stub data the default never lands here; the real-data check is the 1,242 follow-up labels, where only these two change.)
+  const cmp = shadowFollowUp("countywide total", "compare with statewide violent crime rate in maryland", gd);
+  assert.equal(cmp.kind, "clarify", JSON.stringify(cmp).slice(0, 300));
+  const pop = shadowFollowUp("Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size", "Durham, North Carolina and population", gd);
+  assert.ok(!["srs", "historical", "current"].includes(pop.kind), JSON.stringify(pop).slice(0, 300));
+}
 // P10 (Jeff 2026-11-16): "all homicides" as a plain count is Crime Index (murders by year, nothing else); with a breakdown of anything
 // it is Homicide Reports, and justifiable homicides are counted and said so.
 {

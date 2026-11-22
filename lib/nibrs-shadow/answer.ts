@@ -85,6 +85,9 @@ export type ShadowDeps = {
   checkingOffer?: boolean;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
   noDefaults?: boolean;
+  /** Set while a follow-up is answered from a rewrite or as its own question: the words the user typed and the previous question, which the
+   *  default guards read too (a rewrite drops "compare with"; "Durham and population" leans on a NIBRS-only question before it). */
+  guardText?: string;
   /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
   rewritten?: boolean;
   /** Set while a bare-assault question goes on as asked: the bare-assault rule steps aside. */
@@ -919,20 +922,21 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     cur = option.continuation;
   }
   if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
+  const typed = deps.guardText ? `${question}\n${deps.guardText}` : question;
   // A Crime Index (or hate crime) figure has no breakdown by a person's age, race, sex or by weapon: a default that lands there for a question that asks
   // one would answer without it, which is a wrong answer, so such a question stays an ask.
-  if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(question)) {
+  if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(typed)) {
     DEFAULT_MISSES.push({ site: "chain", why: "breakdown not in this source" });
     return o0;
   }
   // 284's final gate: a question that names NIBRS or a NIBRS-only offense ("in NIBRS", "larceny from motor vehicle") is never answered from the Crime
   // Index or Current Trends by a default (the every-year reading can route there), and a question that points back at an answer that isn't there
   // ("Compare to Tulsa murders", "Other large cities and violent crime", "compare with statewide ...") is never answered in part.
-  if (["srs", "historical", "current"].includes(cur.kind) && NIBRS_ONLY.test(question)) {
+  if (["srs", "historical", "current"].includes(cur.kind) && NIBRS_ONLY.test(typed)) {
     DEFAULT_MISSES.push({ site: "chain", why: "NIBRS named or NIBRS-only offense" });
     return o0;
   }
-  if (POINTS_BACK.test(question)) { DEFAULT_MISSES.push({ site: "chain", why: "points back" }); return o0; }
+  if (POINTS_BACK.test(question) || (deps.guardText && deps.guardText.split("\n").some((t) => POINTS_BACK.test(t)))) { DEFAULT_MISSES.push({ site: "chain", why: "points back" }); return o0; }
   const x = cur as ShadowOutcome & { delivered: { text: string[]; table: { rows: unknown[][] } }; buttons?: ShadowOption[] };
   const rows = x.delivered.table?.rows ?? [];
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
@@ -1291,6 +1295,10 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     return { ...withOffer, rewrite: followUp, rewriteKind: "new" };
   }
   const r = rewriter.rewrite(previous, followUp);
+  // 284's re-gate: a follow-up answered from a rewrite or as its own question leans on what was typed and asked before, so the default guards
+  // read both ("compare with statewide ..." rewrites to the state alone; "Durham, North Carolina and population" after a larceny-from-motor-vehicle
+  // question). Either would otherwise be answered in part by a default.
+  const guarded: ShadowDeps = { ...deps, guardText: `${followUp}\n${previous}` };
   // P157: a presentation-only edit (chart type, labels, legend, gridlines, colors, sort, "as a table", "hide the chart") used to return the previous
   // answer unchanged with nothing said; the page has no control for it, so it is declined with the one chart sentence.
   if ((r.kind as string) === "presentation") return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
@@ -1300,7 +1308,7 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // ("show me robberies and murders in the southwest" asked what it changes in the last question). Its first-turn answer or ask is given; when
   // that would be a decline (words unread, a combination not offered) the question back about the last turn stays, as before.
   if (r.kind === "ask" && !pointsBack(followUp) && followUp.trim().split(/\s+/).length >= 3) {
-    const own = shadowAnswer(followUp, deps);
+    const own = shadowAnswer(followUp, guarded);
     if (own.kind !== "decline") return { ...own, rewrite: followUp, rewriteKind: "new" };
   }
   if (r.kind === "ask") {
@@ -1313,7 +1321,7 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     const asked = withoutDeadButtons({ kind: "clarify", about: r.why, question: followUp, options });
     return { ...asked, rewrite: null, rewriteKind: "ask" };
   }
-  return { ...shadowAnswer(r.question, deps), rewrite: r.question, rewriteKind: r.kind, ...(r.kind === "presentation" ? { presentation: true as const } : {}) };
+  return { ...shadowAnswer(r.question, guarded), rewrite: r.question, rewriteKind: r.kind, ...(r.kind === "presentation" ? { presentation: true as const } : {}) };
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
