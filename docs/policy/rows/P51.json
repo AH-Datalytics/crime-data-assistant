@@ -1,0 +1,12 @@
+{
+  "id": "P51",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murders by strangers in Virginia Beach in 2024\": a month in which the agency reported crimes but none matched",
+  "what the app does today": "Blank: no number, because nothing confirmed a zero (no zero report for that crime or category).",
+  "proposed behavior": "Zero. When the agency reported crimes that month but the crime, category or filter has none, the count is 0. A month the agency reported as zero crimes is not reported when ONE agency is asked about (P121); a state or group sum keeps it (it adds nothing). A month with no reporting evidence stays unknown and blank.",
+  "exact default or choices offered": "Applies to every count: crimes, categories, arrests by arrest month, combined totals, years and totals.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: \"if the reporting shows crimes for that agency that month but a filter comes up empty then it should be 0\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-transforms.ts, scripts/nibrs-compile-gate.ts, scripts/test-nibrs-compile.ts."
+}

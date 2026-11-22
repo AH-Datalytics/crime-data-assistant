@@ -1,0 +1,12 @@
+{
+  "id": "P43",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Robberies of stores\", \"businesses robbed\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Businesses are not counted as victims of robbery: in NIBRS robbery is a property crime, counted by offense (D18, P11).",
+  "exact default or choices offered": "No business-victim counts for robbery.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 21 \"no because robberies in a nibrs sense are property crimes\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

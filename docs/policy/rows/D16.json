@@ -1,0 +1,12 @@
+{
+  "id": "D16",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How does Austin compare with similar cities?\"",
+  "what the app does today": "Peers chosen by population; the band and the cities are named.",
+  "proposed behavior": "Keep.",
+  "exact default or choices offered": "Peers: cities in a stated population band.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 16)",
+  "test cases": "GC-115, GC-116, GC-118, GC-119"
+}

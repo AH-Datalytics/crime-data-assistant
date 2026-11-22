@@ -1,0 +1,12 @@
+{
+  "id": "P07",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Burglaries in Texas last year\"",
+  "what the app does today": "Current Trends: the latest full year in its data. NIBRS and Historical: the calendar year before today, declined if not in the data yet.",
+  "proposed behavior": "Always the calendar year before today. If that year is not in the source yet, say so and offer the latest year it has as a button; never answer another year silently.",
+  "exact default or choices offered": "In October 2026: 2025. Offer: the same question for the latest year available.",
+  "why": "\"Last year\" has one everyday meaning; answering another year without saying so is a wrong answer.",
+  "status": "Decided 2026-10-28 (Jeff: always the last calendar year)",
+  "test cases": "engine check: \"burglaries in Texas last year\"; new cases to write"
+}

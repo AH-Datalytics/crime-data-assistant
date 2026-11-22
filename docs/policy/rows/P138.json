@@ -1,0 +1,12 @@
+{
+  "id": "P138",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "After a question: \"Is it getting better?\", \"Is it getting worse?\", \"Has it improved?\", \"is it getting better or worse?\"",
+  "what the app does today": "Asked back: \"I couldn't tell how this changes your last question.\"",
+  "proposed behavior": "A follow-up that asks for a verdict is declined with one sentence: \"I report figures and don't judge whether they're getting better or worse.\" The decline offers a comparison built from the previous question: its one crime and one place, the latest complete year against the year before (or the previous question's own last year when it names years and stops there): \"Ask instead: \\\"Violent crime in Detroit in 2025 compared with 2024\\\"\". With a rate in the previous question the offer says rate. With no single crime and place in the previous question, or a crime the reader changed (\"fatal shootings\"), the decline has no offer. The offer is shown only when it runs.",
+  "exact default or choices offered": "The sentence, and the comparison when one can be built.",
+  "why": "Jeff 2026-11-18 (through the coordinator): decline, do not answer with a change figure and do not ask which comparison; offer a concrete comparison built from the previous answer.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-follow-up.ts (\"A verdict is not given\")."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P71",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Make it quarterly\", \"by quarter\"",
+  "what the app does today": "Not answered: the data has months and years.",
+  "proposed behavior": "A quarter is the sum of its three months (Q1 = January + February + March, and so on). A quarter in which the agency did not report all three months is marked incomplete and never shown as a whole quarter.",
+  "exact default or choices offered": "Quarters: sums of months; an incomplete quarter is marked incomplete.",
+  "why": "A quarter with a missing month would understate the count if shown as whole.",
+  "status": "Decided 2026-10-31 (Jeff: \"Add up months\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

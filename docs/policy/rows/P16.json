@@ -1,0 +1,12 @@
+{
+  "id": "P16",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Crime in Las Vegas\", where the city is policed by a combined city-county agency or by several agencies",
+  "what the app does today": "A city name means that city's police department, without saying which agency.",
+  "proposed behavior": "See P28.",
+  "exact default or choices offered": "See P28.",
+  "why": "The reader should know whose numbers they are reading.",
+  "status": "Superseded by P28 (2026-11-16)",
+  "test cases": "GC-075, GC-080, GC-081, GC-082, GC-083, GC-084"
+}

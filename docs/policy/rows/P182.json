@@ -1,0 +1,12 @@
+{
+  "id": "P182",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"crime in Alameda County since 2018\", \"crime in Portland\", \"show crime in Pennsylvania\", \"new orleans\"",
+  "what the app does today": "A question that says \"crime\" (or names only a place) for a state, a county or a place with several agencies asks which kind of crime (P34, P118, D09); only one agency's \"crime\" by month is answered (P148).",
+  "proposed behavior": "\"Crime\", \"overall crime\" or \"all crimes\" with no kind named is violent crime and property crime with their parts, for any place: a table with violent crime (murder, rape, robbery, aggravated assault) and property crime (burglary, larceny-theft, motor vehicle theft) and the Part I total, from the Crime Index figures (Current Trends for months, the historical file for years), with a note: \"No kind of crime was named, so violent crime and property crime are shown.\" The buttons offer one specific crime. A bare place name is the same question. P148's shape for one agency by month is unchanged.",
+  "exact default or choices offered": "Note and buttons: \"Violent crime only\", \"Property crime only\", \"A specific crime\" (which then asks which one).",
+  "why": "Jeff 2026-11-21 (typed, through the coordinator): \"Crime\" with no kind named = violent crime and property crime with their parts, with a note and buttons for a specific crime. Supersedes the ask of P34, P118 and D09 (D09 stays for what the buttons offer).",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator); not built yet",
+  "test cases": "Not built: tests come with the build."
+}

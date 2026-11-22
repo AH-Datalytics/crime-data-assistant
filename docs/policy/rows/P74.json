@@ -1,0 +1,12 @@
+{
+  "id": "P74",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Every decline, question back, button and note the user reads: \"I can't apply 'victim': clearance figures count offense records, not other units.\"",
+  "what the app does today": "Engine wording reached users: \"Not in the slice yet\", policy ids, \"I can't apply\", \"I couldn't interpret\", code names.",
+  "proposed behavior": "Every user-facing string says in plain words what the data records, says why the question can't be answered as asked, and offers the nearest answerable question as a button whenever one exists (the full question is shown on the button, and it runs only when chosen). It never uses engine vocabulary: units, records as a noun, slice, shadow, policy ids, \"apply\", \"interpret\", dimension or field names, code names, \"reading\", \"plan\", \"v0\". Example: \"Clearances are recorded for each offense, not for each person, so they can't be counted by 'victim'.\" A test fails if any engine word reaches user-facing text.",
+  "exact default or choices offered": "Plain words; why it can't be answered; the nearest answerable question as a button.",
+  "why": "Jeff, on the engine's text in the preview: \"The answers need to be much, much more crystal clear for users.\"",
+  "status": "Decided 2026-11-01 (Jeff, through the coordinator)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-plain-wording.ts."
+}

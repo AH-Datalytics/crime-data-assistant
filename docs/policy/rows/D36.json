@@ -1,0 +1,12 @@
+{
+  "id": "D36",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Houston carjackings per month since 2019\" (Houston, TXHPD0000, July 2026 onward)",
+  "what the app does today": "July 2026 is a reported month (REPORTED_CRIMES) with its counts; August 2026 on are UNKNOWN and shown with no number (D04).",
+  "proposed behavior": "Keep it: Houston July 2026 is a complete, normal reported month (12,868 incidents; 33 carjackings), no partial-month flag. August 2026 on stay no data, never zero.",
+  "exact default or choices offered": "No code change: the engine has no partial-month flag for NIBRS months; it reads each month's status.",
+  "why": "Jeff 2026-11-13, typed in the NIBRS Model session and relayed by the coordinator.",
+  "status": "Decided (Jeff 2026-11-13)",
+  "test cases": "QL-nibrs-28e65b33e3"
+}

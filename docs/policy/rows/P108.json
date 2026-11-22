@@ -1,0 +1,12 @@
+{
+  "id": "P108",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"violent crimes by offender age in Texas in 2024\", \"violent crimes by victim age\" (violent crime by a person's age)",
+  "what the app does today": "Declined: violent crime is four crimes of two units with no single counted person.",
+  "proposed behavior": "Ask victim or offender when the question does not say (the existing Victims / Offenders ask). Answer from NIBRS crimes against persons (homicide, kidnapping, sex offenses, assault, intimidation and human trafficking; no robbery, no justifiable homicide) counted per victim for victim age and per offender for offender age, and say so in one line. Offender age may show Unknown. Nationally over several years: declined in words (too large to count here), as arrests are.",
+  "exact default or choices offered": "Line: \"Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.\" Offender with a firearm is not built.",
+  "why": "Jeff 2026-11-15: \"Violent crime by age should ask offender or victim and then give NIBRS violent crimes and say so, NOT the 4 SRS ones\"; \"No need to call out robbery\".",
+  "status": "Decided (Jeff 2026-11-15)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-scope-deterministic.ts, scripts/test-nibrs-shadow.ts."
+}

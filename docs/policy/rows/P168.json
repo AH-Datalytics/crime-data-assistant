@@ -1,0 +1,12 @@
+{
+  "id": "P168",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"show me violent crimes involving use of a firearm in Houston in 2025 by age of offender\", \"violent crime with a firearm in Houston in 2025 by age of arrestee\"",
+  "what the app does today": "Declined (\"v0 cannot apply an existence over offense_weapon at offender scope to offender counts\") as \"I can't answer this combination\".",
+  "proposed behavior": "For one agency, the offenders (or the arrests) of an incident that has an offense of the question's crimes with the weapon, by age. A person is not linked to one offense in the data, so the answer says: \"A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense.\" A state, the nation or several agencies with a weapon and a person's age stays declined for now.",
+  "exact default or choices offered": "The offenders or arrests by age group with the weapon, and the one sentence.",
+  "why": "Jeff 2026-11-19 (through the coordinator): weapon with a person's age for one agency and one year first.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P168\")."
+}

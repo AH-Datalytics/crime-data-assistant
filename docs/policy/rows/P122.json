@@ -1,0 +1,12 @@
+{
+  "id": "P122",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Annual counts of offenders by age from 1986 through 2025\" (no place, no crime), \"property crime offenders by age by year 2019 to 2025 for the United States\": property crime in the United States by a person's attribute (offender, victim, arrestee) over several years",
+  "what the app does today": "The national statements ran for about 5 minutes (before the ask for the place was even shown) and timed out in the scorecard.",
+  "proposed behavior": "Declined up front, before any SQL runs, also from a question with no place: \"This isn't available: property crime in the United States broken down by offender age over several years takes too long to count here. Ask for one year, for example \\\"nationwide property crime by offender age in 2025\\\", or for one state.\" One year, a state, an agency or one crime still answer. The older guards (violent crime by offender or victim age, every arrest by a person attribute, property crime by victim age) keep their wording. No pointer to another tool. Offenders are not arrestees.",
+  "exact default or choices offered": "Check: scripts/test-nibrs-shadow.ts. The decision and the logged questions it declines: docs/reports/heavy-national-backlog.md.",
+  "why": "Jeff 2026-11-16: \"We should decline and try to make it work later\"; \"Offenders does not mean arrestees\"; the target is offenders by age group from the first NIBRS year to the latest, once it is fast enough. The period clamps to the release's first year (2017) and says so.",
+  "status": "Decided (Jeff 2026-11-16)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

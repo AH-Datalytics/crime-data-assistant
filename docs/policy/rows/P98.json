@@ -1,0 +1,12 @@
+{
+  "id": "P98",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Show me nationwide police staffing data since 2015\", \"Total law enforcement officers in Texas since 1990\" (a state or national staffing total)",
+  "what the app does today": "Declined: Crime Index publishes police staffing for agencies only.",
+  "proposed behavior": "Declined in plain words: staffing is reported by individual agencies; there is no state or national staffing total. The three labels that expected an answer (QL-ct-b59cfdca3c, QL-hist-b59cfdca3c, QL-hist-1621806352) now expect this decline.",
+  "exact default or choices offered": "No state or national sum is built.",
+  "why": "Agencies that report staffing change from year to year (707 in 1930, about 15,000 in 2025), so a sum would partly measure who reported.",
+  "status": "Decided 2026-11-11 (Jeff: \"Decline national and state staffing\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

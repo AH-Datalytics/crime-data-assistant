@@ -1,0 +1,12 @@
+{
+  "id": "P96",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Robbery rate in Memphis by month in 2025\", \"murder rate in Chicago in June 2025\" (a rate for one month, or month by month)",
+  "what the app does today": "Declined: a Current Trends rate was given only for a total of two or more months (design note, decision B), and NIBRS rates only by year.",
+  "proposed behavior": "A monthly rate is that month's count per 100,000 of the population, not annualized, labeled as a rate for the month. The population is the month's own in Current Trends; before Current Trends' months begin, and in NIBRS, the agency's population for that month's year as the FBI or Crime Index publishes it. A clearance rate is still given for a whole year, not month by month.",
+  "exact default or choices offered": "Each month's count per 100,000; not annualized; labeled \"per 100,000 for the month\".",
+  "why": "Monthly rates were asked for and the data has the counts and the populations; a month's rate must never read as a yearly one.",
+  "status": "Decided 2026-11-06 (Jeff: \"Now\" on monthly or rolling rates; the single-month rule dropped)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-current.ts, scripts/test-nibrs-shadow.ts."
+}

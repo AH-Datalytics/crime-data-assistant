@@ -1,0 +1,12 @@
+{
+  "id": "P13",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What is the safest city in America?\" / \"most dangerous city\"",
+  "what the app does today": "Declines: no agreed definition; asks the user to name an offense and a count or rate.",
+  "proposed behavior": "Decline, with today's note: there is no agreed definition of safest or most dangerous, so ask about a specific offense and a count or rate. No ranking is offered in its place.",
+  "exact default or choices offered": "Not applicable: a decline with the note.",
+  "why": "\"Safe\" and \"dangerous\" are judgements the data cannot make; the app reports counts and rates without editorializing.",
+  "status": "Decided 2026-10-28 (Jeff: decline, with the note about safe and dangerous)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-plan-language.ts."
+}

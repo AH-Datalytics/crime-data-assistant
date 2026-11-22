@@ -1,0 +1,12 @@
+{
+  "id": "P181",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders in Philadelphia\", \"robbery by weapon type in Philadelphia\", \"DUI arrests nationally\", \"murder rate in Houston per 100K\"",
+  "what the app does today": "A question with no period asks which period (P05, P06, P37, R13, D31): single figures and breakdowns ask; series default only in some forms (P161 for a Homicide Reports victim or offender breakdown).",
+  "proposed behavior": "No period named is EVERY YEAR BY YEAR (the P161 rule for every question and every source): one row per year of the data for that source and place, with the note \"No years were given, so every year in the data is shown: FIRST through LAST.\" and buttons for a single year. A question that names a period is unchanged. \"Last year\" and similar words keep P07. The years are those the source has for the place and measure; NIBRS series over several years follow P158 (the question of all reporting agencies or the Consistent Reporting Agencies for a state or national figure).",
+  "exact default or choices offered": "Note and buttons for a single year (the latest complete year first).",
+  "why": "Jeff 2026-11-21 (typed, through the coordinator): no period named = every year by year, not the latest complete year; P161's rule extended to all questions. Supersedes the ask of P05, P06 (single figure) and P37 where no period is named.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator); not built yet",
+  "test cases": "Not built: tests come with the build."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "D10",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Crime in Cook County\"",
+  "what the app does today": "The sheriff's agency, named in the answer.",
+  "proposed behavior": "Keep. Two named agencies give two answers.",
+  "exact default or choices offered": "Default: the sheriff's agency, named.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 10)",
+  "test cases": "GC-075, GC-080, GC-081, GC-082, GC-083, GC-084"
+}
