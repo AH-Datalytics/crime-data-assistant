@@ -156,7 +156,17 @@ export function candidateLabel(c: Candidate, all: Candidate[], idx?: PlaceIndex)
  * question used for it. The reader fills in a state it was not given ("Columbus" -> OH), so a state counts as named
  * only when the words say more than the name.
  */
-const REQUEST_WORD = /^(?:just|only|show|me|compare|using|use|calculate|give|tell|get|find|list|display|plot|chart|graph|see|view|what|about|data|now|please|also|then|so|ok|okay)\s+\S/i;
+/**
+ * "Westlake, Florida": the agency of that name in that state in the place index (the one source of truth for the cities the build has), or null.
+ * A city named with its state is never the same name in another state (coordinator 2026-11-22: Westlake, Florida answered Westlake, Ohio).
+ * A city of the name is preferred to a county's agency of it.
+ */
+export function agencyInState(idx: PlaceIndex, name: string, stateCode: string): Agency | null {
+  const pool = (idx.byName.get(base(name)) ?? []).filter((a) => a.state === stateCode);
+  return pool.find((a) => a.kind === "city") ?? pool[0] ?? null;
+}
+export const stateCodeOf = (name: string): string | undefined => STATE_BY_NAME[name.toLowerCase()] ?? (/^district of columbia$/i.test(name) ? "DC" : undefined);
+const REQUEST_WORD =/^(?:just|only|show|me|compare|using|use|calculate|give|tell|get|find|list|display|plot|chart|graph|see|view|what|about|data|now|please|also|then|so|ok|okay)\s+\S/i;
 export function resolvePlace(idx: PlaceIndex, value: string, text: string): PlaceResolution {
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };

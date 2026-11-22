@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyInState, agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateCodeOf, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -1797,7 +1797,59 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
     delivered: { ...firstOut.delivered, table, evidence, chart, text, ...((firstOut.delivered as Partial<Delivered>).headline ? { headline: title } : {}) } } as unknown as ShadowOutcome;
 }
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
-function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
+/**
+ * "City, State" is checked against the place index (coordinator 2026-11-22: "burglaries in Westlake, Florida" answered Westlake, Ohio plus the state
+ * of Florida, and "Deltona, Florida" was not understood, because the reader's own city list lacks cities the index has). A name followed by a state
+ * is that state's agency of the name: one merged place; and if the index has none there, a decline. Never the same name in another state.
+ */
+function reconcileCityState(ledger: RequestLedger, deps: ShadowDeps): { ledger: RequestLedger; decline?: ShadowOutcome } {
+  if (!deps.places) return { ledger };
+  const parts = [...ledger.parts].sort((a, b) => a.span[0] - b.span[0]);
+  const out: Part[] = [];
+  const drop = new Set<Part>();
+  // The commas and fillers between a name and its state are parts of their own; the next part that means something is the state.
+  const meaningful = parts.filter((x) => x.state !== "context");
+  for (let i = 0; i < meaningful.length - 1; i++) {
+    const p = meaningful[i], s = meaningful[i + 1];
+    // A two-word name the reader split ("Litchfield" read as a place, "Park," not understood, then the state): the words together, kept only
+    // when the index has the whole name in that state.
+    const st3 = meaningful[i + 2];
+    if (p.clause === 0 && p.concept === "place" && /^(?:city|county|ambiguous):/.test(p.value ?? "") && s.concept === "unrecognized" && /^[A-Z][A-Za-z.'-]*,?$/.test(s.text.trim())
+      && st3 && st3.concept === "place" && /^state:/.test(st3.value ?? "") && /^\s*,?\s*$/.test(ledger.question.slice(s.span[1], st3.span[0]))) {
+      const code3 = stateCodeOf(String(st3.value).slice("state:".length));
+      const name3 = `${p.text.trim()} ${s.text.trim().replace(/,$/, "")}`;
+      const a3 = code3 ? agencyInState(deps.places, name3, code3) : null;
+      if (a3) {
+        out.push({ ...p, concept: "place", value: `${a3.kind}:${a3.name}:${a3.state}`, text: `${name3}, ${stateName(code3!)}`, span: [p.span[0], st3.span[1]], explains: [[p.span[0], st3.span[1]]],
+          rule: "shadow:city-state", state: "recognized", explanation: null } as unknown as Part);
+        drop.add(p); drop.add(s); drop.add(st3);
+        i += 2;
+        continue;
+      }
+    }
+    if (p.clause !== 0 || s.clause !== 0 || s.concept !== "place" || !/^state:/.test(s.value ?? "")) continue;
+    if (!/^[\s,]+$/.test(ledger.question.slice(p.span[1], s.span[0]).replace(/[()]/g, "")) && !/^\s*,\s*$/.test(ledger.question.slice(p.span[1], s.span[0]))) continue;
+    // A name read as a city or county, or text the reader did not understand that ends in a capitalized name ("in Deltona,").
+    let name: string | null = null;
+    if (p.concept === "place" && /^(?:city|county|ambiguous):/.test(p.value ?? "") && !/,\s*[A-Za-z .]+$/.test(p.text.trim())) name = p.text.trim();
+    else if (p.concept === "unrecognized") name = /(?:^|\s)(?:in|for|of|at|near)\s+((?:[A-Z][A-Za-z.'-]*)(?:\s+[A-Z][A-Za-z.'-]*){0,3}),?\s*$/.exec(p.text.trim())?.[1] ?? null;
+    if (!name) continue;
+    const code = stateCodeOf(String(s.value).slice("state:".length));
+    if (!code) continue;
+    const full = `${name}, ${stateName(code)}`;
+    const a = agencyInState(deps.places, name, code);
+    if (!a) return { ledger, decline: decline("unresolved_place", `I couldn't find "${full}" among the city and county police agencies, states and the nation here.`) };
+    const merged = { ...p, concept: "place", value: `${a.kind}:${a.name}:${a.state}`, text: full, span: [p.concept === "unrecognized" ? p.span[1] - name.length - (/,\s*$/.test(p.text) ? 1 : 0) : p.span[0], s.span[1]],
+      explains: [[p.span[0], s.span[1]]], rule: "shadow:city-state", state: "recognized", explanation: null } as unknown as Part;
+    drop.add(p); drop.add(s); out.push(merged);
+  }
+  if (!out.length) return { ledger };
+  return { ledger: withParts(ledger, [...parts.filter((x) => !drop.has(x)), ...out]) };
+}
+function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
+  const reconciled = reconcileCityState(ledgerIn, deps);
+  if (reconciled.decline) return reconciled.decline;
+  const ledger0 = reconciled.ledger;
   const { release } = deps;
   const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
   // The same months of each year (Q1): answered by its own function, or declined; the months are never dropped.
