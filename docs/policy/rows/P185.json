@@ -1,0 +1,12 @@
+{
+  "id": "P185",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Texas murders in 2025\" or \"nationwide carjackings in 2024\" from NIBRS (a sum over a state's or the nation's agencies)",
+  "what the app does today": "A state or national NIBRS sum ended with its note and the source line only.",
+  "proposed behavior": "Under a NIBRS sum over several agencies (a state or the nation), after the note (\"Includes all agencies.\" or the consistent reporters' note) comes one fixed sentence: \"The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.\" Never under one agency's answer, and not under Current Trends or the Crime Index figures.",
+  "exact default or choices offered": "The sentence, no button.",
+  "why": "Jeff 2026-11-21 (through the coordinator), adopting Savant's sentence for state and national NIBRS sums only.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P185\")."
+}

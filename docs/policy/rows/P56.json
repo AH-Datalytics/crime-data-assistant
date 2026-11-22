@@ -1,0 +1,12 @@
+{
+  "id": "P56",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Carjackings in Memphis over the last 12 months\"",
+  "what the app does today": "Declined: the reader does not read \"over the last 12 months\".",
+  "proposed behavior": "The 12 months ending at the latest reported month (P52: October 2025 through September 2026), as one total, with the months named. \"Recently\" and \"lately\" still ask (P37).",
+  "exact default or choices offered": "Last 12 months: the 12 months ending at the latest reported month.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: \"Agreed\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
+}

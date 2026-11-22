@@ -1,0 +1,12 @@
+{
+  "id": "D20",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Domestic violence\" and \"domestic violence murders\"",
+  "what the app does today": "Relationship lists without stepsiblings, foster relations or cohabitants.",
+  "proposed behavior": "Add stepsiblings and foster parents and children (family) and cohabitants; domestic violence murders stay defined by relationship.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "definition check: domestic violence"
+}

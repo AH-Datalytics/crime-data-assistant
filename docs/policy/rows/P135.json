@@ -1,0 +1,12 @@
+{
+  "id": "P135",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "After a question: \"Countywide total\", \"calculate for Chicago, IL\", \"show the same chart and table for Chicago\", \"now do violent crime\", \"murders per year\", \"Start rolling in 2000\", \"Can you change the start year to 1988?\", \"ok; let's do 2020 through 2024\"",
+  "what the app does today": "Asked back: \"I couldn't tell how this changes your last question.\"",
+  "proposed behavior": "These short follow-ups change the last question as they say, and the changed question is answered: \"countywide\" adds the whole county (every agency summed) when the last place is a county; \"calculate for X\", \"do it for X\" and \"show the same ... for X\" replace the place; \"now do violent crime\" replaces the crime; \"murders per year\" replaces the crime and sets the grain; \"start rolling in 2000\" and \"change the start year\" replace the first year (also for \"from 1998 to present\"); \"let's do 2020 through 2024\" replaces the period. Anything the rules cannot place fully is still asked.",
+  "exact default or choices offered": "As for the other follow-ups: the rewritten question is shown above the answer.",
+  "why": "Jeff 2026-11-18 (through the coordinator): quick reader fix for follow-up edits (\"Is it getting better?\", \"Countywide total\", \"do it for shootings\").",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-follow-up.ts (\"Group 2 follow-ups of the query log\")."
+}

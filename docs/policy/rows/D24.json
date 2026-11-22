@@ -1,0 +1,12 @@
+{
+  "id": "D24",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Hate crimes in Texas in 2023\"",
+  "what the app does today": "The Hate Crime tab uses the FBI file; the NIBRS tab uses NIBRS.",
+  "proposed behavior": "The FBI Hate Crime file answers; NIBRS only for details only NIBRS records.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "D03",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murder rate for Black victims\" or rates by age group",
+  "what the app does today": "Declined; offers counts or shares.",
+  "proposed behavior": "Rates only for places (city, state, nation); offer counts or shares by group.",
+  "exact default or choices offered": "Alternative: counts and shares by group.",
+  "why": "No population figures by group at these levels.",
+  "status": "Decided 2026-09-06 (frozen rule 3)",
+  "test cases": "GC-023, GC-024, GC-025, GC-026, GC-027, GC-028, GC-029, GC-030, GC-031, GC-032, GC-033, GC-034, GC-035, GC-036, GC-037, GC-038, GC-039, GC-109"
+}

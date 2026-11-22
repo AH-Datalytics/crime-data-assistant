@@ -1,0 +1,12 @@
+{
+  "id": "D41",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Any answer, decline or ask the app writes",
+  "what the app does today": "Some wording named the FBI's data set by its abbreviation (\"SHR\").",
+  "proposed behavior": "Never show an internal source name the user does not know. Use the tab names the site shows (Homicide Reports, Crime Index, Current Trends).",
+  "exact default or choices offered": "\"SHR\" never appears in the new engine's wording.",
+  "why": "Jeff 2026-11-14: the user-wording rule given with \"yes to all three\".",
+  "status": "Decided (Jeff 2026-11-14)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

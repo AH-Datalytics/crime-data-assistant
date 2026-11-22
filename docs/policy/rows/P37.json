@@ -1,0 +1,12 @@
+{
+  "id": "P37",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Robberies recently\", \"lately\", \"the past few years\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Ask which period is meant, with buttons (for example the last 12 months; the last 3 complete years; another range).",
+  "exact default or choices offered": "Ask for the period.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 15 \"yes, ask for definition\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

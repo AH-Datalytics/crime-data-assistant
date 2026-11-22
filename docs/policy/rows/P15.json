@@ -1,0 +1,12 @@
+{
+  "id": "P15",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Rate of robberies with a firearm in Georgia in 2024\" (a rate of a detail only NIBRS records)",
+  "what the app does today": "Divides by the population of the agencies that reported (weighted by months reported), not the whole state.",
+  "proposed behavior": "Keep today's rule, and say it in the answer's own sentence: a state or national rate ends \"..., per 100,000 in 2024, summed over the agencies that reported.\"; a Historical county sum says \"The rate is per 100,000 of the reporting agencies' summed population.\"; a Homicide Reports rate says \"Rate per 100,000 people in the agencies that reported.\" (P115).",
+  "exact default or choices offered": "Denominator: population of the agencies counted.",
+  "why": "Dividing partial counts by the whole state understates the rate.",
+  "status": "Decided 2026-10-28 (Jeff: yes)",
+  "test cases": "correctness case: Houston murder victims by race and sex; new cases to write"
+}

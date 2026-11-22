@@ -1,0 +1,12 @@
+{
+  "id": "P42",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"People robbed\", \"people assaulted\", \"attacked\", \"targeted\", \"survivors\", \"complainants\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "\"People robbed\" and \"people assaulted\" mean the victims of robbery and of assault (robbery is a property crime, so it is answered in offenses with P11's sentence). \"Attacked\", \"targeted\", \"survivors\" and \"complainants\" are declined.",
+  "exact default or choices offered": "Robbed, assaulted -> victims of those crimes; the others declined.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 20 \"people robbed and assaulted can be used to refer to victims of those two specific crimes, others should be declined\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}
