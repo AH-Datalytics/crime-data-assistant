@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"How does Austin compare with similar cities?\"",
   "what the app does today": "Peers chosen by population; the band and the cities are named.",
-  "proposed behavior": "Keep.",
+  "proposed behavior": "Superseded by P187: the app does not choose peers; a question about similar cities keeps the decline that asks for the agencies to compare.",
   "exact default or choices offered": "Peers: cities in a stated population band.",
   "why": "",
-  "status": "Decided 2026-09-06 (frozen rule 16)",
+  "status": "Decided 2026-09-06 (frozen rule 16); superseded by P187 (2026-11-21): the app does not choose peer or similar cities (cleanup 2026-11-22), audit B3, C15",
   "test cases": "GC-115, GC-116, GC-118, GC-119"
 }

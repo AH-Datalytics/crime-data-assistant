@@ -6,7 +6,7 @@
   "what the app does today": "NIBRS declines (\"falls under broader narcotic categories\") with no alternative.",
   "proposed behavior": "Decline and offer the category that contains it: synthetic narcotics (fentanyl and other synthetic opioids).",
   "exact default or choices offered": "Alternative: synthetic narcotics, same place and period.",
-  "why": "Frozen rule 14: a nearest measure exists here.",
+  "why": "A nearest measure exists here (the nearest-measure rule that was frozen rule 14, now P102).",
   "status": "Decided 2026-10-28 (Jeff: yes)",
   "test cases": "GC-092, GC-103, GC-104, GC-105, GC-106, GC-107, GC-108, GC-109, GC-110, GC-111"
 }
