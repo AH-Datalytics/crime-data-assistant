@@ -1586,6 +1586,24 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
     if (police !== civilian) sq.filters.push({ dim: "circumstance", codes: [police ? "81" : "80"] });
   }
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  // D42 (Engine 2.0 2026-11-22): the span asked runs past the last month Homicide Reports hold (a span through the most recent month, or a year still being filed):
+  // the answer shows the span it has, and says the latest month it holds, as it says where the series starts (askedFrom).
+  if (a.kind === "shr" && !everyYear) {
+    // The span asked: a year or a range runs to its December (period.to); "through the most recent month" runs to the release's latest month, which can be later than
+    // Homicide Reports' own (the period above was resolved against theirs).
+    let askedEnd = period.to;
+    try {
+      const r2 = resolvePeriod(plan.period, deps.release);
+      const e2 = r2.kind === "years" ? `${Math.max(...r2.years)}-12` : r2.kind === "absolute" ? r2.to : null;
+      if (e2 && e2 > askedEnd) askedEnd = e2;
+    } catch { /* the period as resolved above stands */ }
+    const latest = deps.shr.latestMonth;
+    if (askedEnd > latest) {
+      const after = shiftMonth(latest, 1);
+      const line = `Homicide Reports here run through ${monthName(latest)}, so ${after === askedEnd ? monthName(after) : `${monthName(after)} through ${monthName(askedEnd)}`} ${after === askedEnd ? "isn't" : "aren't"} included.`;
+      return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], line, ...a.delivered.text.slice(1)] } };
+    }
+  }
   if (a.kind === "shr" && detailEveryYear)
     return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);

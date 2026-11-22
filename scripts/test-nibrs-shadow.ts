@@ -2761,6 +2761,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.equal(shadowAnswer("Dallas vs Houston robberies per month", both).kind, "current");
     assert.notEqual(shadowAnswer("Houston murders by year since 2020", both).kind, "shr");
     assert.equal(shadowAnswer("Dallas vs Houston murders per month", cdeps).kind, "current", "no Homicide Reports build: Current Trends, as before");
+    // D42 (Engine 2.0 2026-11-22): Homicide Reports end before the question's span does: the answer shows the span it has and says the latest month it holds.
+    const early = { ...both, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-05", crosswalk: "cw" } } as unknown as ShadowDeps;
+    for (const q of ["Houston murders per month in 2026", "Dallas vs Houston murders per month in 2026"]) {
+      const e = shadowAnswer(q, early);
+      assert.equal(e.kind, "shr", q);
+      const t = (e as unknown as { delivered: { text: string[] } }).delivered.text;
+      assert.match(t[0], /Jan-May 2026/, q);
+      assert.ok(t.includes("Homicide Reports here run through May 2026, so June 2026 through December 2026 aren't included."), JSON.stringify(t));
+    }
+    // A span that ends inside what Homicide Reports hold says nothing extra.
+    assert.ok(!(shadowAnswer("Houston murders per month in 2025", early) as unknown as { delivered: { text: string[] } }).delivered.text.some((t) => /run through/.test(t)));
     // The Current Trends view asked for is not sent back to Homicide Reports.
     assert.equal(shadowAnswer("Dallas vs Houston murders per month", { ...both, ctView: true }).kind, "current");
   }
