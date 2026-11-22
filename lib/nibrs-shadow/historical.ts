@@ -24,6 +24,7 @@ import { stateName } from "./places";
 import { headerStates } from "../nibrs-plan/state-codes";
 import { answerSrsSeveral, type SrsPlace } from "./srs";
 import { titleCase } from "./titles";
+import { agencyCrimeSql } from "./ori-crosswalk";
 import { agencySubject, changeSentence, countSentence, rateChangeSentence, rateSentence, seriesTitle, titleTimeframe } from "./headline";
 
 /** Where the Crime Index build is, and the years it holds. */
@@ -225,7 +226,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   }
 
   const col = `${m.col}_${hq.statistic === "rate" ? "capita" : "total"}`;
-  const got = execute(`SELECT ori, year, ${m.col}_total, ${m.col}_capita, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
+  const got = execute(`SELECT ori, year, ${m.col}_total, ${m.col}_capita, population FROM ${agencyCrimeSql(build.root)} `
     + `WHERE ori IN (${oris}) AND year BETWEEN ${covered[0]} AND ${covered[covered.length - 1]} ORDER BY ori, year`);
   const cell = new Map(got.map((r) => [`${r[0]}|${r[1]}`, { total: num(r[2]), capita: num(r[3]), population: num(r[4]) }]));
   const value = (ori: string, y: number) => {
@@ -263,7 +264,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     if (several) return { kind: "historical-decline", explanation: "This isn't available: a change for more than one agency. Ask for one agency." };
     const [E, L] = [hq.comparison.earlier, hq.comparison.later];
     const ori = hq.agencies[0].ori;
-    const two = execute(`SELECT year, ${m.col}_total FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE ori = ${q(ori)} AND year IN (${E}, ${L})`);
+    const two = execute(`SELECT year, ${m.col}_total FROM ${agencyCrimeSql(build.root)} WHERE ori = ${q(ori)} AND year IN (${E}, ${L})`);
     const at = (y: number) => num(two.find((r) => Number(r[0]) === y)?.[1]);
     const e = at(E), l = at(L);
     if (e === null || l === null) return { kind: "historical-decline", explanation: `Crime Index has no ${m.words} for ${where} in ${e === null ? E : L}: not available in this data, so there is no change to give.` };
@@ -287,7 +288,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     if (several) return { kind: "historical-decline", explanation: "This isn't available: a change for more than one agency. Ask for one agency." };
     const [E, L] = [hq.comparison.earlier, hq.comparison.later];
     const ori = hq.agencies[0].ori;
-    const two = execute(`SELECT year, ${m.col}_total, ${m.col}_capita, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE ori = ${q(ori)} AND year IN (${E}, ${L})`);
+    const two = execute(`SELECT year, ${m.col}_total, ${m.col}_capita, population FROM ${agencyCrimeSql(build.root)} WHERE ori = ${q(ori)} AND year IN (${E}, ${L})`);
     const at = (y: number) => { const r = two.find((x) => Number(x[0]) === y); return r ? historicalRate(num(r[2]), num(r[1]), num(r[3])).rate : null; };
     const e = at(E), l = at(L);
     if (e === null || l === null) return { kind: "historical-decline", explanation: `Crime Index has no ${m.name} rate for ${where} in ${e === null ? E : L}: not available in this data, so there is no change to give.` };
@@ -471,7 +472,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const got = states
     ? execute(`SELECT state, name, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
       + `WHERE year = ${rq.year} AND state <> 'DC' ORDER BY state`)
-    : execute(`SELECT ori, ${cities ? cityNameSql() : "name"}, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
+    : execute(`SELECT ori, ${cities ? cityNameSql() : "name"}, population, ${m.col}_total, ${m.col}_capita, state FROM ${agencyCrimeSql(build.root)} `
       + `WHERE ${national ? (rq.region ? `state IN (${rq.region.states.map(q).join(", ")}) AND ` : "") : `state = ${q(rq.state)} AND `}${cities ? `${citySql()} AND ` : counties ? `type = 'county' AND ori NOT IN (${[...CITY_AS.drop, ...Object.keys(CITY_AS.asCity)].map(q).join(", ")}) AND ` : `ori NOT IN (${CITY_AS.drop.map(q).join(", ")}) AND `}year = ${rq.year}${floorSql} ORDER BY ori`);
   const entries = got.map((r) => {
     const total = num(r[3]), capita = num(r[4]), population = num(r[2]);
@@ -584,16 +585,16 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
   if (sq.from < build.firstYear || sq.to > build.lastYear)
     return { kind: "historical-decline", explanation: `Historical city figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${sq.from === sq.to ? sq.from : `${sq.from} through ${sq.to}`} is outside them.` };
   const national = sq.state === "US";
-  const file = q(`${build.root}/agency_crime.parquet`);
+  const file = agencyCrimeSql(build.root);
   const inState = national ? "" : `state = ${q(sq.state)} AND `;
   // Every city tied with the Nth by population is in the set too (P17; Codex rankings review 01.4).
-  const base = `SELECT ori, ${cityNameSql()} AS name, state, population FROM read_parquet(${file}) WHERE ${inState}${citySql()} AND year = ${sq.to} AND population IS NOT NULL`;
+  const base = `SELECT ori, ${cityNameSql()} AS name, state, population FROM ${file} WHERE ${inState}${citySql()} AND year = ${sq.to} AND population IS NOT NULL`;
   const set = execute(`WITH c AS (${base}), cut AS (SELECT population FROM c ORDER BY population DESC LIMIT 1 OFFSET ${Math.floor(sq.n) - 1}) `
     + `SELECT * FROM c WHERE population >= coalesce((SELECT population FROM cut), 0) ORDER BY population DESC, name`);
   const where = national ? "the United States" : stateName(sq.state);
   if (!set.length) return { kind: "historical-decline", explanation: `Crime Index has no city populations in ${where} for ${sq.to}.` };
   const oris = set.map((r) => String(r[0]));
-  const got = execute(`SELECT ori, year, ${m.col}_total, ${m.col}_capita, population FROM read_parquet(${file}) WHERE ori IN (${oris.map(q).join(", ")}) `
+  const got = execute(`SELECT ori, year, ${m.col}_total, ${m.col}_capita, population FROM ${file} WHERE ori IN (${oris.map(q).join(", ")}) `
     + `AND year BETWEEN ${sq.from} AND ${sq.to} ORDER BY ori, year`);
   const rate = sq.statistic === "rate";
   const byKey = new Map(got.map((r) => [`${String(r[0])}:${Number(r[1])}`, r]));
@@ -716,7 +717,7 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
     + `k AS (SELECT data_year, fips_county FROM f WHERE ori = ${q(cq.countyOri)}), `
     + `mem AS (SELECT f.data_year AS y, f.ori FROM f JOIN k USING (data_year, fips_county) JOIN s ON s.data_year = f.data_year AND s.ori = f.ori `
     + `WHERE s.state_abbr IN (${headerStates(cq.state).map(q).join(", ")}) AND f.data_year BETWEEN ${cq.from} AND ${cq.to}) `
-    + `SELECT mem.y, mem.ori, a.name, a.population, a.${m.col}_total FROM mem LEFT JOIN read_parquet(${q(`${build.root}/agency_crime.parquet`)}) a ON a.ori = mem.ori AND a.year = mem.y ORDER BY mem.y, a.name`);
+    + `SELECT mem.y, mem.ori, a.name, a.population, a.${m.col}_total FROM mem LEFT JOIN ${agencyCrimeSql(build.root)} a ON a.ori = mem.ori AND a.year = mem.y ORDER BY mem.y, a.name`);
   const years = Array.from({ length: cq.to - cq.from + 1 }, (_, i) => cq.from + i);
   const rate = cq.statistic === "rate";
   // A rate needs every reporting member's population (Codex rankings-B review 01.4): one missing, no rate that year.
@@ -788,8 +789,8 @@ export function answerHistoricalPosition(pq: PositionQuestion, build: Historical
   if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
   if (pq.year < build.firstYear || pq.year > build.lastYear)
     return { kind: "historical-decline", explanation: `Historical city figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${pq.year} is outside them.` };
-  const file = q(`${build.root}/agency_crime.parquet`);
-  const self = execute(`SELECT population FROM read_parquet(${file}) WHERE ori = ${q(pq.ori)} AND year = ${pq.year}`);
+  const file = agencyCrimeSql(build.root);
+  const self = execute(`SELECT population FROM ${file} WHERE ori = ${q(pq.ori)} AND year = ${pq.year}`);
   const pop = num(self[0]?.[0]);
   const rate = pq.statistic === "rate";
   let within: string, said: string;
@@ -802,7 +803,7 @@ export function answerHistoricalPosition(pq: PositionQuestion, build: Historical
     within = `state = ${q(pq.state)}${rate ? ` AND (population >= 100000 OR ori = ${q(pq.ori)})` : ""}`;
     said = `${stateName(pq.state)} cities${rate ? " of 100,000 or more (and the city asked about)" : ""}`;
   }
-  const got = execute(`SELECT ori, ${cityNameSql()}, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${file}) `
+  const got = execute(`SELECT ori, ${cityNameSql()}, population, ${m.col}_total, ${m.col}_capita, state FROM ${file} `
     + `WHERE ${citySql()} AND year = ${pq.year} AND ${within} ORDER BY ori`);
   const entries = got.map((r) => {
     const total = num(r[3]), capita = num(r[4]), population = num(r[2]);

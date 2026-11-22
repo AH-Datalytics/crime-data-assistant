@@ -20,6 +20,7 @@
  * room for is counted with no demographics (Unknown).
  */
 import fs from "node:fs";
+import { agencyCrimeSql } from "./ori-crosswalk";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
 import type { NibrsPlan } from "../nibrs-plan/plan";
@@ -333,7 +334,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const properZero = new Set<number>();
   if (sq.place.kind === "agency" && hist) {
     const missing = Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).filter((y) => !filed.has(y) && y <= hist.lastYear);
-    if (missing.length) for (const r of execute(`SELECT year FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE ori = ${q(sq.place.ori)} AND murder_total = 0 AND year IN (${missing.join(", ")})`))
+    if (missing.length) for (const r of execute(`SELECT year FROM ${agencyCrimeSql(hist.root)} WHERE ori = ${q(sq.place.ori)} AND murder_total = 0 AND year IN (${missing.join(", ")})`))
       properZero.add(Number(r[0]));
   }
   const counted = (y: number) => filed.has(y) || properZero.has(y);
@@ -478,7 +479,7 @@ function partialNote(sq: ShrQuestion, build: ShrBuild, execute: (sql: string) =>
   const whole = years;
   const all: ShrQuestion = { ...sq, measure: "murder", unit: "victims", filters: [], breakdown: null, share: false, grain: "year", from: `${whole[0]}-01`, to: `${whole[whole.length - 1]}-12` };
   const shr = new Map(execute(shrSql(all, build)).map((r) => [Number(r[0]), Number(r[1])]));
-  const ci = new Map(execute(`SELECT year, murder_total FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE ori = ${q(sq.place.ori)} AND year IN (${whole.join(", ")}) AND murder_total IS NOT NULL`)
+  const ci = new Map(execute(`SELECT year, murder_total FROM ${agencyCrimeSql(hist.root)} WHERE ori = ${q(sq.place.ori)} AND year IN (${whole.join(", ")}) AND murder_total IS NOT NULL`)
     .map((r) => [Number(r[0]), Number(r[1])]));
   const short = whole.flatMap((y) => { const c = ci.get(y), s = shr.get(y) ?? 0; return c && c > 0 && s < 0.9 * c ? [{ y, s, c }] : []; });
   if (!short.length) return null;
@@ -502,7 +503,7 @@ function coverageShares(sq: ShrQuestion, filed: Map<number, { keys: string[] }>,
     const oris = filed.get(y)!.keys.filter((k) => k.startsWith("ori9:")).map((k) => k.slice(5));
     const d = denom.get(y);
     if (!oris.length || !d) continue;
-    const got = execute(`SELECT sum(population) FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE year = ${y} AND ori IN (${oris.map(q).join(", ")})`);
+    const got = execute(`SELECT sum(population) FROM ${agencyCrimeSql(hist.root)} WHERE year = ${y} AND ori IN (${oris.map(q).join(", ")})`);
     const covered = num(got[0]?.[0]);
     if (covered !== null) out.set(y, Math.min(100, Math.round((covered * 1000) / d) / 10));
   }
@@ -574,7 +575,7 @@ export function shrRankingSql(rk: ShrRanking, build: ShrBuild, hist: HistoricalB
   const popYear = Math.min(toY, hist.lastYear);
   // The record's columns come through the subselect, so its conditions read them off the person row p.
   const matched = rk.filters.length ? rk.filters.map((f) => condition(f, "p").replace(/\br\./g, "p.")).join(" AND ") : "TRUE";
-  return `WITH big AS (SELECT ori, ${cityNameSql()} AS name, state, population FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) `
+  return `WITH big AS (SELECT ori, ${cityNameSql()} AS name, state, population FROM ${agencyCrimeSql(hist.root)} `
     + `WHERE year = ${popYear} AND ${citySql()}${rk.minPopulation ? ` AND population >= ${Math.floor(rk.minPopulation)}` : ""}), `
     + `filed AS (SELECT agency_key FROM ${table(build, "shr_agency_year")} WHERE records > 0 AND data_year BETWEEN ${fromY} AND ${toY} GROUP BY agency_key HAVING count(DISTINCT data_year) = ${toY - fromY + 1}) `
     + `SELECT big.ori, big.name, big.state, big.population, (('ori9:' || big.ori) IN (SELECT agency_key FROM filed)) AS filed_all, `
@@ -650,7 +651,7 @@ function answerShrRolling(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const properZero = new Set<number>();
   if (sq.place.kind === "agency" && hist) {
     const missing = Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).filter((y) => !filed.has(y) && y <= hist.lastYear);
-    if (missing.length) for (const r of execute(`SELECT year FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE ori = ${q(sq.place.ori)} AND murder_total = 0 AND year IN (${missing.join(", ")})`))
+    if (missing.length) for (const r of execute(`SELECT year FROM ${agencyCrimeSql(hist.root)} WHERE ori = ${q(sq.place.ori)} AND murder_total = 0 AND year IN (${missing.join(", ")})`))
       properZero.add(Number(r[0]));
   }
   const counted = (y: number) => filed.has(y) || properZero.has(y);
@@ -706,7 +707,7 @@ function coveredPopulation(sq: ShrQuestion, filed: Map<number, { keys: string[] 
     const oris = filed.has(y) ? filed.get(y)!.keys.filter((k) => k.startsWith("ori9:")).map((k) => k.slice(5)) : properZero.has(y) && sq.place.kind === "agency" ? [sq.place.ori] : [];
     const popYear = y <= hist.lastYear ? y : carriesTo(y, hist.lastYear) ? hist.lastYear : null;
     if (!oris.length || popYear === null) continue;
-    const got = execute(`SELECT sum(population) FROM read_parquet(${q(`${hist.root}/agency_crime.parquet`)}) WHERE year = ${popYear} AND ori IN (${oris.map(q).join(", ")})`);
+    const got = execute(`SELECT sum(population) FROM ${agencyCrimeSql(hist.root)} WHERE year = ${popYear} AND ori IN (${oris.map(q).join(", ")})`);
     const pop = num(got[0]?.[0]);
     if (pop) out.set(y, pop);
   }

@@ -10,6 +10,9 @@ import path from "node:path";
 import type { NibrsPlan } from "../lib/nibrs-plan/plan";
 import { answerShr, answerShrRanking, shrRankingSql, filterWords, shrBuildAt, shrQuestionOf, shrSql, stateOfOri, shrWhat, type ShrQuestion } from "../lib/nibrs-shadow/shr";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
+import { crosswalkOffForTests } from "../lib/nibrs-shadow/ori-crosswalk";
+// These checks read the SQL text; the agency ID crosswalk (crimeindex-ori-crosswalk.json) is checked in test-nibrs-current.ts.
+crosswalkOffForTests();
 
 // The manifest's "shr" key, checked strictly; no manifest, no build.
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "shr-"));

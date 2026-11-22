@@ -14,6 +14,9 @@ import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
 import { shadowAnswer, shadowFollowUp, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { standsAlone } from "../lib/nibrs-shadow/follow-up";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { crosswalkOffForTests } from "../lib/nibrs-shadow/ori-crosswalk";
+// The stubs below read the SQL text; the agency ID crosswalk (crimeindex-ori-crosswalk.json) is checked in test-nibrs-current.ts.
+crosswalkOffForTests();
 
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
 // Memphis 2022-2023 as published (crimeindex.org page API, 2026-11-01: 2023 violent 16,091, population 616,061, rate 2,611.9);
