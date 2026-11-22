@@ -2619,6 +2619,15 @@
       "note": "Current Trends in the new engine (P90, P91, decisions A-C): agency months, consistent group sums, cumulative totals never complete over unknown months; a stub executor stands in for DuckDB over the build, which is checked when present"
     },
     {
+      "id": "test-scorecard",
+      "tier": "F",
+      "script": "scripts/test-scorecard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The crime scorecard in the new engine (P215): agency, state and national cards from a tiny Crime Index fixture in temp parquet, blank change never 0.0, clearance never clamped, no clearance column above an agency, cards more than three years stale refused; needs the local Python with duckdb, skips without it"
+    },
+    {
       "id": "test-nibrs-shr",
       "tier": "F",
       "script": "scripts/test-nibrs-shr.ts",
