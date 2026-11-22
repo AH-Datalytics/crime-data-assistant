@@ -3255,6 +3255,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(ask("robberies in Chicago in 2024 cleared by arrest versus exceptional means").kind, ask("robberies in Chicago in 2024 by clearance type").kind);
   for (const q of ["annual murder rates for the entire US", "murder rate across the whole country by year", "show me the annual murder rate in the entire United States since 2000"])
     assert.equal(ask(q).kind, ask(q.replace(/(?:for|in|across)\s+the\s+(?:entire|whole)\s+(?:US|United States|country)/i, "nationwide")).kind, q);
+  // "What percentage ... cleared by arrest vs exceptional" asks for both shares: the clearance types side by side, like "by clearance type".
+  assert.equal(readQuestion("What percentage of murders are cleared by arrest vs exceptional nationally?", 2026, "2026-09").text, "murders nationally?");
+  assert.equal(ask("What percentage of murders in Dallas in 2024 are cleared by arrest vs exceptional?").kind, ask("murders in Dallas in 2024 by clearance type").kind);
+  assert.equal(readQuestion("what share of robberies were cleared by exception in 2024", 2026, "2026-09").text.includes("share"), true, "one share stays a share");
   // "Per year and type" beside exceptional clearances is the year and the clearance type together, answered like "by type by year".
   // (The read text is compared: a decline here would come from the test's stub rows, not the wording.)
   for (const q of ["newark exceptional murder clearances per year and type from 2022 to 2025", "Tulsa exceptional homicide clearances per year and type since 2019"])
