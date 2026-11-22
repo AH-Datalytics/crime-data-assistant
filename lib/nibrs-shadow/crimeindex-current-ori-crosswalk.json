@@ -1,0 +1,12 @@
+{
+ "about": "One agency filed under two IDs (ORIs) in the Crime Index current data: AH Datalytics' monthly working file (the Final file, current_final, January 2017 on) and crimeindex.org's current_crime download (2025 on). Each pair maps `id` to `same_as`, the ID current_crime uses, and both the engine (lib/nibrs-shadow/current.ts) and the blind checker read every Crime Index current row through it, so the agency is one agency in every month. Found by scanning both files for IDs in one file and not the other whose monthly counts are equal on every shared month (none other than these as of crimeindex-20261119). Add a pair only with that evidence.",
+ "build_checked": "crimeindex-20261119",
+ "pairs": [
+  {
+   "id": "MI631900X",
+   "same_as": "MI6367300",
+   "agency": "Pontiac, MI",
+   "evidence": "Final file: MI631900X, 2017-01 to 2026-09 (117 months). current_crime: MI6367300, 2025-01 to 2026-09 (21 months, sample true). The seven Part I counts are equal in all 21 shared months (2025-01: 49 violent crimes in both). Neither ID is in the other file. Listed as a known difference in nibrs-model docs/RUNBOOK.md (Current Trends, the Final file)."
+  }
+ ]
+}

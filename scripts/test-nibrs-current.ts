@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { canonicalOri, agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -176,5 +176,19 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   assert.equal(answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [nola, nola], from: "2025-01", to: "2025-03" }, b, rows).kind, "current-decline", "no place has a population");
   const six = answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [dallas, dallas, dallas, dallas, dallas, dallas], from: "2025-01", to: "2025-03" }, b, rows);
   assert.ok(six.kind === "current-decline" && /Name up to 5 places/.test(six.explanation), JSON.stringify(six));
+}
+// One agency under two IDs (crimeindex-current-ori-crosswalk.json, loop 2 finding 3): Pontiac, MI is MI631900X in the Final file and
+// MI6367300 in current_crime; either ID reads both files' months, and every pair carries its evidence.
+{
+  const cw = JSON.parse(fs.readFileSync("lib/nibrs-shadow/crimeindex-current-ori-crosswalk.json", "utf8")) as { pairs: { id: string; same_as: string; evidence: string }[] };
+  assert.equal(canonicalOri("MI631900X"), "MI6367300");
+  assert.equal(canonicalOri("MI6367300"), "MI6367300");
+  assert.equal(canonicalOri("TXHPD0000"), "TXHPD0000");
+  for (const p of cw.pairs) assert.ok(p.id !== p.same_as && p.evidence.length > 40 && !cw.pairs.some((o) => o.id === p.same_as), JSON.stringify(p));
+  let seen = "";
+  const stub = ((sql: string) => { seen = sql; return []; }) as (sql: string) => unknown[][];
+  agencyMonths({ root: "/b", release: "r", firstMonth: "2025-01", lastMonth: "2026-09", finalFirstMonth: "2017-01" }, "MI631900X", "violent_crime", "2024-12", "2025-01", stub);
+  assert.match(seen, /WHEN 'MI631900X' THEN 'MI6367300'/);
+  assert.match(seen, /ori = 'MI6367300'/);
 }
 console.log("nibrs current: agency months, consistent group sums, cumulative totals never complete over unknown months");

@@ -60,7 +60,7 @@ import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } fr
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
-import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { canonicalOri, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -2433,7 +2433,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // Murder and homicide are the exception: for an agency Current Trends lacks, a plain murder count by month is Homicide
       // Reports' from 1985 (D37, Jeff 2026-11-14), which the path below gives.
       const murderOnly = ["murder", "homicide", "homicide_all"].includes(sp.measures[0]);
-      const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
+      const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${canonicalOri(a.ori).replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
       if (a?.kind === "agency" && (has || !murderOnly)) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
     }
     // Availability last (design note section 4): a span that starts after Current Trends' latest month goes on to NIBRS
