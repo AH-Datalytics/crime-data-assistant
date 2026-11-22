@@ -379,9 +379,13 @@ class HeavyStatement extends Error {}
 function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
   let heavy = false;
   const limit = deps.deferChars ?? HEAVY_STATEMENT;
-  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
+  // The probe refuses a heavy statement only while it is probing. A button built inside the probed build (a deferred "which kind of crime" in the
+  // place default's answer) keeps these deps for its own lazy build later: it must run its statement then, not throw the probe's refusal (an
+  // empty "deferred answer failed:" decline, found by the Runner on the injury questions, 2026-11-22).
+  let probing = true;
+  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (probing && sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
   let first: ShadowOutcome | null = null;
-  try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
+  try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; } finally { probing = false; }
   if (!heavy) return { label, continuation: first!, ...extra };
   // Something between the executor and here swallowed the refusal and made an outcome of it: not a plan that reached its statement; built for real.
   if (first) return { label, continuation: build(deps), ...extra };
@@ -924,7 +928,13 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
-      more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+      // Injury type (element 33, Jeff 2026-11-22) is recorded for victims of crimes against persons: with no kind named and violent crime the one choice
+      // that answers, that is the answer ("firearm crimes in 2024 by injury type").
+      if (!option && /\binjur/i.test(question) && c.options.length === 1 && /^Crimes with injury recorded$/.test(c.options[0].label)) {
+        option = c.options[0];
+        note = "No kind of crime was named, so every crime that records injury is counted.";
+      }
+      more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both" && x !== option));
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     if (!byStateRows) notes.push(note);
@@ -2092,8 +2102,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (!named && !placeFirst && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
-    const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
-      { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
+    // Injury type (element 33, Jeff 2026-11-22) is recorded only for some crimes against persons and robbery: with no kind named, those are the crimes.
+    const injuryAsked = /\binjur/i.test(ledger0.question);
+    const kinds = injuryAsked ? [{ label: "Crimes with injury recorded", measures: [["injury_recorded", "crime with injury recorded"]] }]
+      : [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
+        { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
     const options = kinds.map((k) => deferHeavy(k.label, (d) => fromLedger(filledAll(ledger, "measure", k.measures), d, pins), deps));
     const runnable = options.filter(optionRuns);
     if (!runnable.length) {

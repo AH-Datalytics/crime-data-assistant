@@ -541,6 +541,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")
         // A victim with at least one of the circumstances (element 31), counted once.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_circumstance")} c2 WHERE ${sameVictim("c2", "v")} AND c2.circumstance IN (${list(values)}))`);
+      else if (on === "victim_injury victim_injury.injury victim victim")
+        // A victim with at least one of the injury types (element 33), counted once.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_injury")} i2 WHERE ${sameVictim("i2", "v")} AND i2.injury IN (${list(values)}))`);
       else return no(`v0 cannot apply an existence over ${f.entity} at ${f.scope} scope to ${entity} counts`);
       continue;
     }
@@ -573,7 +576,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const incidentFilter = (a: string) => restFilter(a) + ownFilter(a);
   const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter },
     // P120 (Jeff 2026-11-16): victims of a property crime with a victim age (juvenile robbery victims) are counted by victim.
-    plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
+    // Element 33 (Jeff 2026-11-22): a breakdown by injury type counts victims, and injury is recorded for robbery victims too ("firearm crimes by injury type").
+    plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age") || attrDims.some((g) => g.dimension === "victim_injury.injury"));
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes

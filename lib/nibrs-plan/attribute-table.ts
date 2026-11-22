@@ -41,6 +41,8 @@ export const ATTRIBUTE_TABLE: AttributeRow[] = [
   { unit: "victim", dimension: "victim_offender.relationship", kind: "linked", alias: "v", table: "victim_offender", childAlias: "r", column: "offender_relationship", keys: "victim" },
   // Element 31 (coordinator 2026-11-04): up to two per victim, each counted once under each (categories_overlap).
   { unit: "victim", dimension: "victim_circumstance.circumstance", kind: "linked", alias: "v", table: "victim_circumstance", childAlias: "vc", column: "circumstance", keys: "victim" },
+  // Element 33 (Coordinator 2026-11-22): up to five types of injury per victim, each counted once under each (categories_overlap).
+  { unit: "victim", dimension: "victim_injury.injury", kind: "linked", alias: "v", table: "victim_injury", childAlias: "vi", column: "injury", keys: "victim" },
   { unit: "victim", dimension: "incident.hour", kind: "hour", alias: "v" },
   ...offenders("victim", "v"),
   ...PERSON.map((c): AttributeRow => ({ unit: "victim", dimension: `victim_offender.offender_${c}`, kind: "paired", alias: "v", column: c })),

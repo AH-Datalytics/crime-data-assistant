@@ -4,7 +4,7 @@
  * that returns rows shaped like the compiled query's, so this checks the pipeline and the delivered answer, never the
  * numbers (scripts/nibrs-compile-gate.ts and the runner do that against a canonical build). No database, no model.
  */
-import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
+import { CIRCUMSTANCE, INJURY } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -1248,6 +1248,16 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.equal(built.kind, same.kind, "chosen, it answers as the eager one did");
   if (built.kind === "answer" && same.kind === "answer") assert.deepEqual(built.delivered.table.rows, same.delivered.table.rows);
   assert.ok(sqls.length >= mark0, "its statements run when it is chosen");
+  // A deferred choice built inside another's probed build (the national place choice whose answer asks which kind of crime, the kind choice itself heavy) runs its
+  // statement when it is chosen: it is not refused by the probe it was built under (the Runner found an empty "deferred answer failed:" on the injury questions).
+  {
+    const nested = as(shadowAnswer("Firearm crimes in 2024 by injury type", heavy), "clarify");
+    const nat = nested.options.find((o) => o.label === "The United States")!;
+    const kindAsk = as(nat.continuation!, "clarify");
+    const kindChoice = kindAsk.options[0];
+    const out = kindChoice.continuation!;
+    assert.ok(!/deferred answer failed/.test(JSON.stringify((out as { detail?: unknown }).detail ?? "")), JSON.stringify(out).slice(0, 300));
+  }
   // The preview lists it without building it.
   const again = as(shadowAnswer(q, heavy), "clarify");
   const mark = sqls.length;
@@ -2064,6 +2074,46 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
     assert.match(as(ask("Robberies during an argument in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
     assert.equal(as(ask("Murders during an argument in Tennessee in 2024"), "route").source, "shr");
+    // Element 33 (Jeff 2026-11-22, "every type, with a note"): injury type is recorded for each victim, up to five, each victim counted under
+    // every type they have, with a line saying the rows can add up to more than the victims; "injured" is any type other than none (P41).
+    {
+      const inj = as(ask("Aggravated assault victims in Memphis by injury type in 2024"), "answer");
+      assert.ok(inj.plan.groupings.some((x) => x.dimension === "victim_injury.injury" && x.multiValue === "each_value"));
+      assert.ok(inj.plan.measures.every((m) => m.unit === "victim"));
+      const stats = inj.plan.statistics.map((x) => x.as);
+      const cols = ["victim_injury.injury", ...stats.flatMap((x) => [x, `${x}_status`])];
+      const row = (c: string, n: number) => [c, ...stats.flatMap((x, i) => [i === 0 ? n : n / 251, "VALUE"])];
+      const d = deliver(inj.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("N", 120), row("M", 80), row("B", 9), row("G", 2)], [], "r", [], null);
+      assert.deepEqual(d.table.rows.map((r) => r[0]), ["None", "Apparent minor injury", "Apparent broken bones", "Gunshot wound"]);
+      assert.ok(d.text.includes("Gunshot wound is a recent injury code that few agencies reported before 2023, so its count is low and rising."), JSON.stringify(d.text));
+      assert.ok(d.text.includes("A victim can have several injury types, so the rows can add up to more than the number of victims."), JSON.stringify(d.text));
+      assert.ok(d.text.includes("Injury type is recorded only for individual victims of kidnapping, murder and manslaughter, sex offenses, robbery, assault, extortion and human trafficking."), JSON.stringify(d.text));
+      assert.ok(inj.delivered.answerStatements.includes("categories_overlap"));
+      assert.deepEqual(Object.keys(INJURY).sort(), ["B", "G", "I", "L", "M", "N", "O", "T", "U"]);
+      assert.equal(INJURY.G, "Gunshot wound");   // added by the 2025.0 technical specification; 51 victims in 2024
+      // "Firearm crimes" and "handgun victims" by injury type: the victims of violent crime with that weapon on their connected offense (injury is recorded
+      // for robbery victims too), with no kind of crime named taken as violent crime, and said so.
+      for (const q of ["Firearm crimes in Memphis in 2024 by injury type", "Handgun victims in Memphis in 2024 by injury type"]) {
+        const fa = as(shadowAnswer(q, { ...deps, noDefaults: false }), "answer");
+        assert.deepEqual(fa.plan.measures.map((m) => [m.id, m.unit]), [["victims.injury_recorded", "victim"]], q);
+        assert.ok(fa.plan.groupings.some((x) => x.dimension === "victim_injury.injury"), q);
+        assert.ok(fa.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon"), q);
+        assert.ok(fa.delivered.text.includes("No kind of crime was named, so every crime that records injury is counted."), JSON.stringify(fa.delivered.text));
+      }
+      // P31 kept (Jeff 2026-11-22): in an injury question "stabbings" (and the logged typo "stabbongs") are murder (09A) and aggravated assault (13A) victims with a
+      // knife or cutting instrument (weapon 20), counted as one measure so they can be broken down; the answer says how it was read. Plain "stabbings" is unchanged.
+      for (const q of ["Stabbings in Memphis in 2024 by injury type", "Knife stabbongs in Memphis in 2024 by injury type"]) {
+        const st = as(shadowAnswer(q, { ...deps, noDefaults: false }), "answer");
+        assert.deepEqual(st.plan.measures.map((m) => [m.id, m.unit]), [["victims.stabbing", "victim"]], q);
+        assert.ok(st.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon" && JSON.stringify(x.where).includes('"values":["20"]')), q);
+        assert.ok(st.plan.groupings.some((x) => x.dimension === "victim_injury.injury"), q);
+        assert.ok(st.delivered.text.includes("Stabbings are read as murder and aggravated assault victims with a knife or cutting instrument."), JSON.stringify(st.delivered.text));
+        assert.ok(!/stabbongs/i.test(JSON.stringify(st.delivered.text)), "the typo is not echoed");
+      }
+      assert.deepEqual(MEASURE_CODES.stabbing, ["09A", "13A"]);
+      // Asked in offenses, the unit is still the victim (injury is recorded for each victim).
+      assert.ok(as(ask("Aggravated assault offenses in Memphis by injury type in 2024"), "answer").plan.measures.every((m) => m.unit === "victim"));
+    }
     // Codex circumstance review 01.1: an offered question keeps the circumstance, or none is offered.
     const fb = ask("Aggravated assaults during an argument in Memphis by sex and race in 2024");
     if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /argument/i);

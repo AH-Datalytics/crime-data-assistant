@@ -36,6 +36,14 @@ export const CIRCUMSTANCE: Record<string, string> = {
  * (deliver.ts), until the domestic violence gap note is done.
  */
 export const CIRCUMSTANCE_HELD: ReadonlySet<string> = new Set(["06"]);
+/**
+ * NIBRS data element 33, type of injury, by the FBI's code names (2025.0 NIBRS technical specification, which added G, gunshot wound): up to five per
+ * victim, one row each in canonical/victim_injury. N (none) is a recorded value: "injured" is any injury other than N (P41).
+ */
+export const INJURY: Record<string, string> = {
+  B: "Apparent broken bones", G: "Gunshot wound", I: "Possible internal injury", L: "Severe laceration", M: "Apparent minor injury",
+  N: "None", O: "Other major injury", T: "Loss of teeth", U: "Unconsciousness",
+};
 const ENTITIES: SemanticEntity[] = [
   entity("incident", INC), entity("offense", [...INC, "offense_code"]), entity("victim", [...INC, "victim_seq"]),
   entity("offender", [...INC, "offender_seq"]), entity("arrestee", [...INC, "arrestee_seq"], { incident_date: "incident_date", arrest_date: "arrest_date" }),
@@ -45,6 +53,8 @@ const ENTITIES: SemanticEntity[] = [
   entity("offense_weapon", [...INC, "offense_code", "ordinal"]), entity("offense_bias", [...INC, "offense_code", "ordinal"]),
   // NIBRS data element 31 (coordinator 2026-11-04): a victim's aggravated assault/homicide circumstances, up to two.
   entity("victim_circumstance", [...INC, "victim_seq", "ordinal"]),
+  // NIBRS data element 33 (Coordinator 2026-11-22, Jeff "every type, with a note"): a victim's types of injury, up to five.
+  entity("victim_injury", [...INC, "victim_seq", "ordinal"]),
 ];
 
 /** Every link joins on the incident's key, plus the entity keys that make it exact. */
@@ -61,6 +71,8 @@ const LINKS: SemanticLink[] = [
   L("victim_offender_victim", "victim_offender", "victim", "one", [["victim_seq", "victim_seq"]]),
   L("victim_circumstances", "victim", "victim_circumstance", "many", [["victim_seq", "victim_seq"]]),
   L("victim_circumstance_victim", "victim_circumstance", "victim", "one", [["victim_seq", "victim_seq"]]),
+  L("victim_injuries", "victim", "victim_injury", "many", [["victim_seq", "victim_seq"]]),
+  L("victim_injury_victim", "victim_injury", "victim", "one", [["victim_seq", "victim_seq"]]),
   L("offense_weapons", "offense", "offense_weapon", "many", [["offense_code", "offense_code"]]),
   L("offense_biases", "offense", "offense_bias", "many", [["offense_code", "offense_code"]]),
   L("arrestee_arrest_offense", "arrestee", "offense", "one", [["arrest_offense", "offense_code"]]),
@@ -155,6 +167,7 @@ const DIMENSIONS: SemanticDimension[] = [
   dim("victim_offender.offender_ethnicity", "victim_offender", { values: ETHNICITY_CODES }), dim("victim_offender.offender_age", "victim_offender", { numeric: AGE }),
   dim("victim_offense.offense", "victim_offense"), dim("incident.hour", "incident", { numeric: { min: 0, max: 23, special: {} } }),
   dim("victim_circumstance.circumstance", "victim_circumstance", { values: CIRCUMSTANCE }),
+  dim("victim_injury.injury", "victim_injury", { values: INJURY }),
 ];
 
 export const DRAFT_LAYER: SemanticLayer = {

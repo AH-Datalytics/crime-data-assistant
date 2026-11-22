@@ -187,6 +187,8 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "hour", pattern: R(String.raw`\bby\s+(?:hour(?:\s+of\s+(?:the\s+)?day)?|time\s+of\s+day)\b`) },
   { concept: "breakdown", value: () => "relationship", pattern: R(String.raw`\bby\s+relationship(?:\s+to\s+(?:the\s+)?offenders?)?\b`) },
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
+  // NIBRS element 33 (Jeff 2026-11-22, "every type, with a note"): a victim's types of injury, up to five each.
+  { concept: "breakdown", value: () => "injury", pattern: R(String.raw`\bby\s+(?:the\s+)?(?:type\s+of\s+)?injur(?:y|ies)(?:\s+types?)?\b|\binjury\s+types?\s+breakdown\b|\b(?:and|with)\s+(?:the\s+)?injury\s+types?\b`) },
   { concept: "breakdown", value: () => "drug", pattern: R(String.raw`\bby\s+drug\s+(?:type|category)\b`) },
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\bby\s+bias(?:\s+motivation)?\b`) },
   // "and sex" right after another breakdown is a second breakdown (declined by the types: one breakdown only).
@@ -212,6 +214,8 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "peeping_tom", pattern: R(String.raw`\bpeeping\s+toms?\b`) },
   // Job AR6: "gun possession", "firearm possession", "weapons law violations" are weapon law violations (520), never
   // drug possession; "gun arrests" alone stays a firearm condition.
+  // P31's stabbings broken down by injury type (the reader rewrites the word in an injury question): murder and aggravated assault victims, one measure.
+  { concept: "measure", value: () => "stabbing", pattern: R(String.raw`\bstabbing\b`) },
   { concept: "measure", value: () => "weapon_law", pattern: R(String.raw`\b(?:illegal\s+|unlawful\s+)?(?:guns?|firearms?|handguns?|weapons?)\s+(?:possession|law\s+violations?|laws?\s+violations?|violations?)\b|\bweapons?\s+laws?\b|\b(?:(?:illegal|unlawful)\s+)?(?:possession|carrying)\s+of\s+(?:a\s+)?(?:guns?|firearms?|weapons?)\b|\bcarrying\s+(?:a\s+)?(?:concealed\s+)?(?:guns?|firearms?|weapons?)\b`) },
   { concept: "measure", value: () => "drug_possession", pattern: R(String.raw`\bdrug\s+possession\b|(?<!\b(?:guns?|firearms?|handguns?|weapons?)\s)\bpossession\b(?!\s+of\s+(?:a\s+)?(?:guns?|firearms?|weapons?))|\bdrug(?:\/narcotic)?\s+(?:offenses?|violations?)\b|\bdrugs?\b|\bnarcotics?\b`) },
   // P32: "sexual assaults" is asked about like "sex offenses" (which sex offenses), never read as aggravated assault.
