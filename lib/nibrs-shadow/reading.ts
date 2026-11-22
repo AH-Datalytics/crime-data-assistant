@@ -219,6 +219,10 @@ const PHRASES: [RegExp, string][] = [
   [/\bretail\s+thefts?\b/gi, "shoplifting"],
   [/\blarcen(?:y|ies)\s+(?:from|of)\s+(?:an?\s+)?(?:auto|autos|motor\s+vehicles?|vehicles?|cars?)\b/gi, "theft from motor vehicle"],
   [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
+  // P193 (census 2026-11-21, real asks): "by year and clearance type" is the clearance type by year (the shape that is built), with "per" for "by".
+  [/\b(?:per|by)\s+(year|month)\s+(?:and|&)\s+(?:by\s+)?clearance\s+type\b/gi, "by type by $1"],
+  // "Murders cleared by clearance type" is the murder clearances by type.
+  [/\bcleared\s+by\s+(?:the\s+)?(?:clearance\s+)?type\b/gi, "clearances by type"],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
@@ -555,6 +559,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
+  // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
+  // since the look-ahead would fail in PHRASES).
+  dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
