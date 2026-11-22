@@ -1,0 +1,12 @@
+{
+  "id": "P201",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What jurisdictions had the highest murder rates in 2024?\", \"What cities had the worst murder clearance rate in 2024?\", \"What five cities are currently experiencing the greatest number of homicides?\", \"the highest annual murder rate\"",
+  "what the app does today": "Said it did not understand \"jurisdictions\", \"worst\", \"the greatest number of\", \"experiencing\" or \"five cities\", or asked the place.",
+  "proposed behavior": "Ranking words are read as their plain meaning, each said in the answer's reading note: \"worst\" is the highest (the lowest when the measure is a clearance rate), \"the greatest number of\" is \"the most\", \"jurisdictions\" beside a ranking word are cities, \"cities\" misspelled \"cites\" is cities, a number word before cities, states, agencies or counties in a ranking (\"the three cities with the highest ...\") is \"top 3\", and \"annual\" beside a ranking word adds nothing. Only beside a ranking word: \"which jurisdictions are included\" is not changed.",
+  "exact default or choices offered": "The answer to the ranking as read; the reading note names each word taken.",
+  "why": "Jeff 2026-11-22 (through the coordinator): the reader-failure batch from the defaults gate (PR 284), ranking wording.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P201\")."
+}
