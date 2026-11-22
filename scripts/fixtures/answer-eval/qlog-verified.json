@@ -617,13 +617,6 @@
    "numbers": 6,
    "date": "2026-11-06"
   },
-  "QL-ct-8bfb354d8d": {
-   "digest": "701812be0c9dd810",
-   "by": "codex-blind-sql",
-   "batch": "crimeindex-2026-11-06",
-   "numbers": 66,
-   "date": "2026-11-06"
-  },
   "QL-hist-653aac28d5": {
    "digest": "0a78dce90fd90ea6",
    "by": "codex-blind-sql",
@@ -3760,13 +3753,6 @@
    "numbers": 12,
    "date": "2026-11-06"
   },
-  "QL-ct-0dddb2a05c": {
-   "digest": "bd3f143380f13b7c",
-   "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
-  },
   "QL-ct-136722a05c": {
    "digest": "bd3f143380f13b7c",
    "by": "runner-codex-blind",
@@ -3878,20 +3864,6 @@
    "batch": "crimeindex-2026-11-06",
    "numbers": 1,
    "date": "2026-11-06"
-  },
-  "QL-ct-440c1df6a2": {
-   "digest": "1583e4427a5c4579",
-   "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
-  },
-  "QL-ct-46e5213672": {
-   "digest": "bd3f143380f13b7c",
-   "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
   },
   "QL-ct-4cf47a5623": {
    "digest": "ca126bf35f81ed64",
@@ -4075,13 +4047,6 @@
    "date": "2026-11-19",
    "numbers": 1
   },
-  "QL-ct-cc32aea160": {
-   "digest": "abc4b6b742fdad0a",
-   "by": "codex-blind-sql",
-   "batch": "crimeindex-2026-11-06",
-   "numbers": 66,
-   "date": "2026-11-06"
-  },
   "QL-ct-db5dff539d": {
    "digest": "01791ada09fa367f",
    "by": "runner-codex-blind",
@@ -4126,13 +4091,6 @@
   },
   "QL-ct-f718a2a05c": {
    "digest": "bd3f143380f13b7c",
-   "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
-  },
-  "QL-ct-f960533ecf": {
-   "digest": "507b2203ecf47e57",
    "by": "runner-codex-blind",
    "batch": "crimeindex-2026-11-19",
    "date": "2026-11-19",
@@ -4411,13 +4369,6 @@
    "numbers": 6,
    "date": "2026-11-06"
   },
-  "QL-hist-adcbedb4fb": {
-   "digest": "4e20dc0c1dae8497",
-   "by": "codex-blind-sql",
-   "batch": "crimeindex-2026-11-06",
-   "numbers": 96,
-   "date": "2026-11-06"
-  },
   "QL-hist-b369c61eb6": {
    "digest": "a38643ae0ef4a2eb",
    "by": "codex-blind-sql",
@@ -4437,13 +4388,6 @@
    "by": "codex-blind-sql",
    "batch": "crimeindex-2026-11-06",
    "numbers": 16,
-   "date": "2026-11-06"
-  },
-  "QL-hist-c136595d3a": {
-   "digest": "36db96bf1a5ebbba",
-   "by": "codex-blind-sql",
-   "batch": "crimeindex-2026-11-06",
-   "numbers": 66,
    "date": "2026-11-06"
   },
   "QL-hist-c147452c40": {
@@ -6109,13 +6053,6 @@
    "date": "2026-11-13",
    "numbers": 87
   },
-  "QL-ct-b424005f06": {
-   "digest": "bd3f143380f13b7c",
-   "by": "runner-codex-blind",
-   "batch": "crimeindex-2026-11-19",
-   "date": "2026-11-19",
-   "numbers": 21
-  },
   "QL-hist-07d4308fda": {
    "digest": "07eacc9b45850b21",
    "by": "codex-blind-sql",
@@ -7363,13 +7300,6 @@
    "date": "2026-11-21",
    "numbers": 144
   },
-  "QL-nibrs-9bbed83a5e": {
-   "digest": "dc7a72a3d5c0faa8",
-   "by": "runner-codex-blind",
-   "batch": "nibrs-canon2-20261121",
-   "date": "2026-11-21",
-   "numbers": 4
-  },
   "QL-nibrs-a3cf12cbd1": {
    "digest": "42cfe086531c0499",
    "by": "runner-codex-blind",
@@ -7446,13 +7376,6 @@
    "batch": "nibrs-canon2-20261121",
    "date": "2026-11-21",
    "numbers": 16
-  },
-  "QL-nibrs-ec32dca905": {
-   "digest": "b0f3a8bd3e68e4f6",
-   "by": "runner-codex-blind",
-   "batch": "nibrs-canon2-20261121",
-   "date": "2026-11-21",
-   "numbers": 5
   },
   "QL-nibrs-fade97001c": {
    "digest": "59ea7e2331f4be7f",
@@ -7593,13 +7516,6 @@
    "batch": "loop1-20261121",
    "date": "2026-11-21",
    "numbers": 321
-  },
-  "QL-hc-3bc7bb6c1d": {
-   "digest": "e7ca74c5bbc2ad2f",
-   "by": "runner-codex-blind",
-   "batch": "loop1-20261121",
-   "date": "2026-11-21",
-   "numbers": 418
   },
   "QL-hc-8f6ef8f6ef": {
    "digest": "90a16bcd6c9a0ce7",
@@ -7902,22 +7818,8 @@
    "date": "2026-11-21",
    "numbers": 18
   },
-  "QL-shr-0b297d35d9": {
-   "digest": "0a8329a9f3bc7c2e",
-   "by": "runner-codex-blind",
-   "batch": "loop1-20261121",
-   "date": "2026-11-21",
-   "numbers": 504
-  },
   "QL-shr-26e06d35d9": {
    "digest": "0a8329a9f3bc7c2e",
-   "by": "runner-codex-blind",
-   "batch": "loop1-20261121",
-   "date": "2026-11-21",
-   "numbers": 504
-  },
-  "QL-shr-3afd6400d5": {
-   "digest": "3045675cf1d27b84",
    "by": "runner-codex-blind",
    "batch": "loop1-20261121",
    "date": "2026-11-21",

@@ -83827,8 +83827,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"San fran agg assaults since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -85624,8 +85624,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (2022) is carried from the previous question (\"Motor vehicle thefts per month in the 5 cities with the most motor vehicle thefts in 2022\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -85705,8 +85705,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2020) is carried from the previous question (\"San Francisco aggravated assaults per month since 2020\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -87816,8 +87816,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"monthly murders in Houston since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -88773,8 +88773,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2023) is carried from the previous question (\"san francisco violent crimes by type and month since 2023\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -89381,8 +89381,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (2021 to 2025) is carried from the previous question (\"10 cities with largest declines in murder from 2021 to 2025\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -90939,8 +90939,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (the past 5 years) is carried from the previous question (\"How is the Richmond, VA murder rate trending for the past 5 years?\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -91400,8 +91400,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2000) is carried from the previous question (\"Houston hate crimes rolling over 12 months since 2000\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -97221,8 +97221,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (2000-2020) is carried from the previous question (\"National murder trend, 2000–2020\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -97738,8 +97738,8 @@
     "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (the past decade) is carried from the previous question (\"homicide rates in new york city over the past decade\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -105773,8 +105773,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"Vehicle burglaries per year in Denver, Houston and Minneapolis since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -108164,8 +108164,8 @@
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2019) is carried from the previous question (\"houston vehicle burglaries rolling over 12 months since 2019\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -109250,8 +109250,8 @@
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-19",
-    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 1980) is carried from the previous question (\"domestic homicides in California since 1980\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -110433,8 +110433,8 @@
     "status": "reviewed",
     "rule": "F1+R13",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-19",
-    "notes": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2000) is carried from the previous question (\"domestic homicides in Texas since 2000\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
