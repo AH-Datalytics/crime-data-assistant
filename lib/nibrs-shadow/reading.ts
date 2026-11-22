@@ -289,7 +289,7 @@ const PHRASES: [RegExp, string][] = [
 /** P31's composites: the crimes each counts, and its weapon. */
 const COMPOSITES: [RegExp, string, Composite][] = [
   [/\bgun\s+crimes?\b/gi, "murders, robberies and aggravated assaults", "firearm"],
-  [/\bstabbings?\b/gi, "murders and aggravated assaults", "knife"],
+  [/\bstabbings?\b(?!\s+victims?\b)/gi, "murders and aggravated assaults", "knife"],
 ];
 const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const MON = `(${MONTH_NAMES.join("|")})`;
@@ -598,11 +598,11 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
       if (!TIMEFRAME.test(text)) endWith("over the past 5 years");
     }
   }
-  // Jeff 2026-11-22: in an injury question "stabbings" (and the logged typo "stabbongs") are victims of offenses with a knife or cutting instrument (weapon 20),
-  // and the answer says how it was read. Elsewhere "stabbings" keeps its meaning (P31: murder and aggravated assault victims with a knife).
+  // Jeff 2026-11-22 (P31 kept): in an injury question "stabbings" (and the logged typo "stabbongs") are murder and aggravated assault victims with a knife or
+  // cutting instrument, counted as one measure so they can be broken down by injury type; the answer says how it was read.
   if (/\binjur/i.test(text)) text = text.replace(/\b(?:knife\s+)?stabb(?:ings?|ongs?)\b/gi, (m) => {
-    readings.push({ kind: "meaning", from: m, to: "victims of offenses with a knife or cutting instrument" });
-    return "victims with a knife";
+    readings.push({ kind: "meaning", from: m, to: "murder and aggravated assault victims with a knife or cutting instrument" });
+    return "stabbing victims with a knife";
   });
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in

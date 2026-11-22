@@ -42,6 +42,8 @@ export const MEASURE_CODES: Record<string, string[]> = {
   weapon_law: ["520"],
   // NIBRS data element 33 (2025.0 User Manual, Coordinator 2026-11-22): injury is collected only for individual victims of these offenses; "firearm crimes by
   // injury type" with no kind named counts victims of any of them (no reader words: the ask for a kind of crime takes it).
+  // P31's stabbings as ONE measure for a breakdown (an injury question): murder and aggravated assault victims; the knife is the weapon filter.
+  stabbing: ["09A", "13A"],
   injury_recorded: ["100", "09A", "09B", "09C", "11A", "11B", "11C", "11D", "120", "13A", "13B", "210", "64A", "64B"],
   // NIBRS crimes against society (coordinator 2026-11-22, the crime-against family): the Group A codes whose CDE codebook crime_against
   // value is Society (scripts/fixtures/cde/NIBRS_OFFENSE_TYPE.csv), the federal-only codes included; Group B codes are arrests only.
@@ -62,7 +64,7 @@ export const MEASURE_LABEL: Record<string, string> = {
   motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", assault_offenses: "assault offense",
   disorderly_conduct: "disorderly conduct", drunkenness: "drunkenness", liquor_law: "liquor law violation", curfew_loitering: "curfew or loitering",
   trespass: "trespass of real property", family_offense_nonviolent: "nonviolent family offense", peeping_tom: "peeping tom", bad_checks: "bad checks",
-  runaway: "runaway", all_other_offenses: "all other offenses", weapon_law: "weapon law violation", injury_recorded: "crime with injury recorded",
+  runaway: "runaway", all_other_offenses: "all other offenses", weapon_law: "weapon law violation", injury_recorded: "crime with injury recorded", stabbing: "stabbing",
   against_society: "crime against society",
 };
 
