@@ -2808,6 +2808,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       assert.equal(po.delivered.text[po.delivered.text.length - 1], "Source: Crime Index.");
     }
   }
+  // Group 3 of the 11-22 scorecard (P181, P148): a place alone, or crime in it with no grain, is by year (not "which kind of crime");
+  // an overview with vague words set aside is still asked, and a comparison or people question is not taken for a bare place.
+  // (This stub holds no series, so what is checked is that the composite is tried, not the kind-of-crime ask.)
+  const gdeps = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  for (const q of ["Dallas", "Dallas scorecard", "crime in Dallas", "Dallas crime from 2023"]) {
+    const bo = shadowAnswer(q, gdeps);
+    assert.ok(!(bo.kind === "clarify" && bo.about === "which kind of crime"), `${q}: ${JSON.stringify(bo).slice(0, 200)}`);
+  }
+  for (const q of ["Tell me more about Dallas", "Dallas vs Houston", "Dallas juvenile arrests"]) {
+    const bo = shadowAnswer(q, gdeps);
+    assert.ok(bo.kind !== "historical" && bo.kind !== "srs" && bo.kind !== "current", `${q}: ${JSON.stringify(bo).slice(0, 200)}`);
+  }
   const poGap = shadowAnswer("Houston crime per month", cdeps);
   assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
     // Every column is blank that month: the line is said once, naming no column (Engine 2.0 2026-11-21).

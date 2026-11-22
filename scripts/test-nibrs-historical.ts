@@ -311,7 +311,8 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const now = withBuild("crime in Memphis in 2026");
   assert.ok(runnable(now) && !(now.kind === "clarify" && now.options.some((x) => x.continuation?.kind === "route")), JSON.stringify(now).slice(0, 300));
   const kinds = withBuild("Memphis crime in 2023");
-  assert.ok(kinds.kind === "clarify" && runnable(kinds) && kinds.options.map((x) => x.label).join() === "Violent crime,Property crime", JSON.stringify(kinds).slice(0, 300));
+  // Group 3 (11-22 scorecard, P181): crime in a place with no kind named is no longer asked "which kind"; it is the by-year composite.
+  assert.equal(kinds.kind, "historical", JSON.stringify(kinds).slice(0, 300));
   // A Part I crime by month goes to NIBRS (monthly), never Historical's whole-years decline or P01's.
   for (const q of ["Memphis robberies per month in 2023", "Memphis burglaries by quarter in 2023"]) {
     const o = withBuild(q);
