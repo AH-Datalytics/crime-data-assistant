@@ -37,11 +37,11 @@ export const CIRCUMSTANCE: Record<string, string> = {
  */
 export const CIRCUMSTANCE_HELD: ReadonlySet<string> = new Set(["06"]);
 /**
- * NIBRS data element 33, type of injury, by the FBI's code names (2025 NIBRS technical specification): up to five per victim, one row each in
- * canonical/victim_injury. N (none) is a recorded value: "injured" is any injury other than N (P41).
+ * NIBRS data element 33, type of injury, by the FBI's code names (2025.0 NIBRS technical specification, which added G, gunshot wound): up to five per
+ * victim, one row each in canonical/victim_injury. N (none) is a recorded value: "injured" is any injury other than N (P41).
  */
 export const INJURY: Record<string, string> = {
-  B: "Apparent broken bones", I: "Possible internal injury", L: "Severe laceration", M: "Apparent minor injury",
+  B: "Apparent broken bones", G: "Gunshot wound", I: "Possible internal injury", L: "Severe laceration", M: "Apparent minor injury",
   N: "None", O: "Other major injury", T: "Loss of teeth", U: "Unconsciousness",
 };
 const ENTITIES: SemanticEntity[] = [

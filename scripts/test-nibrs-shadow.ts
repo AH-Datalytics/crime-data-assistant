@@ -2077,7 +2077,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       assert.deepEqual(d.table.rows.map((r) => r[0]), ["None", "Apparent minor injury", "Apparent broken bones"]);
       assert.ok(d.text.includes("A victim can have several injury types, so the rows can add up to more than the number of victims."), JSON.stringify(d.text));
       assert.ok(inj.delivered.answerStatements.includes("categories_overlap"));
-      assert.deepEqual(Object.keys(INJURY).sort(), ["B", "I", "L", "M", "N", "O", "T", "U"]);
+      assert.deepEqual(Object.keys(INJURY).sort(), ["B", "G", "I", "L", "M", "N", "O", "T", "U"]);
+      assert.equal(INJURY.G, "Gunshot wound");   // added by the 2025.0 technical specification; 51 victims in 2024
       // "Firearm crimes" and "handgun victims" by injury type: the victims of violent crime with that weapon on their connected offense (injury is recorded
       // for robbery victims too), with no kind of crime named taken as violent crime, and said so.
       for (const q of ["Firearm crimes in Memphis in 2024 by injury type", "Handgun victims in Memphis in 2024 by injury type"]) {
