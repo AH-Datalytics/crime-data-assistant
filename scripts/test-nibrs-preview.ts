@@ -28,7 +28,7 @@ function stub(sql: string): unknown[][] {
   if (/AS period/.test(sql)) return months.map((m) => [m, 7, "VALUE"]);
   return [[7 * months.length, "VALUE"]];
 }
-const deps: ShadowDeps = { places: loadPlaceIndex(), release: { id: "test", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/build", builtYears: [2023, 2024, 2025, 2026] }, execute: stub };
+const deps: ShadowDeps = { places: loadPlaceIndex(), release: { id: "test", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/build", builtYears: [2023, 2024, 2025, 2026] }, execute: stub, noDefaults: true };
 
 // An answer by month: the table's headers are the columns, rows keyed by them, the chart binds those headers, the text
 // in order with the source last.
