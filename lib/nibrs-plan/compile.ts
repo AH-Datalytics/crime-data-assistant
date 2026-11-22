@@ -672,7 +672,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // Every category that occurs in the place and period, in every month.
     // In grid mode, a placeholder category when none occurs (Codex state-categories review 01.1): the cross join below
     // would otherwise drop every agency-month and its status; the state sum reads coverage from it and skips it in sums.
-    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${grid ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
+    // P192: a clearance-type table lists every type even when none occurred (one agency too), so its months keep their statuses.
+    const placeholder = grid || (attrDims.length === 1 && attrDims[0].dimension === "offense.clearance_type");
+    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${placeholder ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
     // In grid mode (a state's or the nation's agencies, state-sum.ts) each agency's categories are its own: the agency is
     // carried through and joined on (coordinator 2026-11-04: a state or national sum by category).
     parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped u GROUP BY ALL)`);

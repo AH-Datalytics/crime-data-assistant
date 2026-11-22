@@ -1,0 +1,12 @@
+{
+  "id": "P192",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Chicago robbery clearance by type in 2024\", \"Texas murder clearance by type in 2025\", \"murder clearance by type in the United States in 2024\"",
+  "what the app does today": "A table with only the clearance types that occurred (Chicago robbery 2024: two rows, cleared by arrest 704 and uncleared 8,170).",
+  "proposed behavior": "Clearance by type always shows all seven rows, in this order, zeros included, for one agency, a state and the nation alike: Cleared by arrest; the five exceptional types (death of the offender, prosecution declined, in custody of another jurisdiction, victim refused to cooperate, juvenile with no custody); Uncleared. A type with no cases is a row of 0 (and 0 incidents). A clearance condition in the question keeps only the types it allows (cleared by exception: the five exceptional types). A period whose figures are not known gets no invented zeros.",
+  "exact default or choices offered": "The seven-row table with the incidents beside each count.",
+  "why": "Jeff 2026-11-21 (through the coordinator): always all seven rows, zeros included, for one agency, states and the nation.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P192\")."
+}
