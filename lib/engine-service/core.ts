@@ -29,6 +29,13 @@ export type Core = { answer(req: EngineRequest): EngineResult; info(): Record<st
 /** Test seam: replaces the engine call (an outcome for the question) so the adapter can be tested without data. */
 export type CoreHooks = { answerOutcome?: (req: EngineRequest, deps: ShadowDeps) => ShadowOutcome | null };
 
+/** Follow-ups #2: the whole question a reply answered or asked about. A first question is itself; a typed follow-up is its rewritten question, or the
+ * previous question when the follow-up could not be read (so the next turn still has a whole question to change). */
+export function askedOf(req: Pick<EngineRequest, "question" | "previous">, outcome: unknown): string {
+  if (!req.previous) return req.question;
+  const rewrite = (outcome as { rewrite?: unknown } | null)?.rewrite;
+  return typeof rewrite === "string" && rewrite.trim() ? rewrite.trim() : req.previous;
+}
 export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
   const built = new Map<string, { deps: ShadowDeps; exec: DuckdbExecutor; release: string }>();
   function depsFor(tab: string): { deps: ShadowDeps; release: string } | null {
@@ -60,7 +67,9 @@ export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
           : req.previous ? (shadowFollowUp(req.previous, req.question, b.deps) as ShadowOutcome) : shadowAnswer(req.question, b.deps);
         const at = outcome && follow(outcome, req.path);
         if (!at) return { ok: false, kind: "bad_request", message: "That button is no longer offered for this question." };
-        return { ok: true, response: toPreview(at, req.path, b.deps.places, req.question), ms: 0, release: b.release, sql: at.kind === "answer" ? at.sql : null };
+        // Follow-ups #2: the whole question asked, for the page to send back as the next turn's `previous` (a decline or an ask carries it too).
+        const asked = askedOf(req, outcome);
+        return { ok: true, response: toPreview(at, req.path, b.deps.places, req.question), ms: 0, release: b.release, sql: at.kind === "answer" ? at.sql : null, asked };
       } catch (e) {
         return { ok: false, kind: "error", message: `The engine failed: ${e instanceof Error ? e.message : String(e)}` };
       }

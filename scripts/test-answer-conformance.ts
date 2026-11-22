@@ -26,6 +26,7 @@
  *  18  a decline's offered question keeps the place and crime asked, and its words name no source not loaded
  *  16  the coverage columns never change the chart: the same answer with and without them has the same chart options
  */
+import { compositeTableOnly } from "../lib/nibrs-shadow/crime-over-time";
 import assert from "node:assert/strict";
 import { latestShownMonth, chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
   type SourceId, type SourceProfile } from "../lib/answer-contract/contract";
@@ -326,7 +327,8 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     const profExclusive = catDims.length > 0 && catDims.every((dm) => prof.breakdowns.some((b) => b.dimension === dm && b.exclusive));
     check(!(c.allowed.includes("stacked_bar") || c.allowed.includes("stacked_100")) || profExclusive, `6 ${tag}: stacked though the profile doesn't mark every breakdown exclusive`);
     check(c.default === null || c.allowed.includes(c.default), `6 ${tag}: default not allowed`);
-    const tableOnly = o.kind === "answer" ? o.plan.statistics.filter((x) => ["agencies", "coverage", "population", "incidents"].includes(x.kind)).map((x) => x.as) : [];
+    // Crime in a place over time: its Part I sum and offenses (and property crime for several places) are table only.
+    const tableOnly = o.kind === "answer" ? o.plan.statistics.filter((x) => ["agencies", "coverage", "population", "incidents"].includes(x.kind)).map((x) => x.as) : compositeTableOnly(t);
     check(JSON.stringify(c) === JSON.stringify(chartOptionsOf(t, p.ordered, tableOnly)), `6 ${tag}: chart options not the shared builder's`);
     // The columns charted, named exactly (coordinator 2026-11-02): never a coverage, population or incidents column.
     check(c.columns.every((h) => t.columns.some((x) => x.header === h && x.binding.kind === "statistic" && !tableOnly.includes(x.binding.as))) && !c.columns.some((h) => ["Agencies reporting", "Consistent Reporting Agencies", "Population covered", "Population", "Incidents"].includes(h)), `6 ${tag}: charted columns ${JSON.stringify(c.columns)}`);
