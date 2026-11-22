@@ -3014,6 +3014,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P70 (Engine 2.0, QL-hist-8ae8e7b9d6): "all <County> agencies" is the county-wide request, declined with the county agency named.
+{
+  for (const q of ["murders in 2024 for all St. Louis County, MO agencies", "is there another data source that will aggregate murder data for  all St. Louis County, MO agencies"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "decline" && /^County-wide sums aren't given; the figures for St\. Louis County are those of the St\. Louis County Police Department\./.test(o.explanation ?? ""), JSON.stringify(o).slice(0, 300));
+  }
+  assert.ok(readQuestion("murders in all Texas agencies", 2026, "2026-09").text.includes("all Texas agencies"), "a state is not a county");
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
