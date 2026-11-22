@@ -3128,6 +3128,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.equal(multi.delivered.table.rows.find((r) => r[0] === String(y))![1], one.delivered.table.rows[0][0], `${y} equals the year alone`);
   }
   assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), multi.delivered.text.join(" | "));
+  // The wordings of the labels (QL-nibrs-9598316bab, cb75da0bdb): "each year from ... to ...", and "exceptional means".
+  for (const q of ["what share of murders were cleared by exceptional means in Texas each year from 2023 to 2025?", "what share of murders were cleared by exception each year from 2023 to 2025 in Texas?"]) {
+    const w = as(ask(q), "answer") as unknown as Out;
+    assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], q);
+  }
+  // "Exceptional clearance rate for murder in Texas" with no year (QL-nibrs-e04248e56d): the share cleared by exception, every year by year (P181).
+  const rate = shadowAnswer("exceptional clearance rate for murder in Texas", { ...deps, noDefaults: false }) as unknown as Out;
+  assert.equal(rate.kind, "answer", JSON.stringify(rate).slice(0, 400));
+  assert.ok(rate.delivered.table.rows.length > 1 && rate.delivered.table.rows.every((r) => /^\d{4}$/.test(String(r[0]))), JSON.stringify(rate.delivered.table.rows));
   // By state over several years stays declined (one year).
   const msb = ask("what share of all murder clearances in the United States were prosecution declined from 2023 to 2025 by state");
   assert.equal(msb.kind, "decline");
