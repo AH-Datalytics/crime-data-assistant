@@ -19390,12 +19390,15 @@
 }
 },
 "QL-nibrs-d40fc08288": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 (one year, by state: the share of rape offenses cleared by exception, from the clearance-by-type sums over the agencies that reported, P171), every state ranked by share, highest first (P173; Jeff 2026-11-22), a state with nothing to divide blank, not 0. By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-d4532e17b1": {
