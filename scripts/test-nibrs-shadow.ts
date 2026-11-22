@@ -2697,7 +2697,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     for (const q of ["felony murder vs argument murder nationally in 2024", "felony murder vs argument murder trend", "what share of murders are felony murders", "murders vs misdemeanor assaults share nationally"]) {
       const fd = go(q);
       assert.equal(fd.kind, "decline", q);
-      assert.match(fd.explanation ?? "", /how a case is charged, and the data records neither/, q);
+      assert.match(fd.explanation ?? "", /felony and misdemeanor are charging classifications, and the data doesn't record them/, q);
+    }
+    // Any question that counts, filters or compares by felony or misdemeanor (Jeff 2026-11-22, widened by the coordinator), with the question without the word offered.
+    for (const q of ["Show me the trends in misdemeanor arrests in the ten largest cities", "murders during another felony in Houston in 2024", "what are the count of felony assaults in new york city in 2025"]) {
+      const fd = shadowAnswer(q, sdeps3) as unknown as { kind: string; explanation?: string; alternative?: { label: string } | null };
+      assert.equal(fd.kind, "decline", q);
+      assert.match(fd.explanation ?? "", /charging classifications/, q);
+      assert.ok(fd.alternative && /^Ask instead: "/.test(fd.alternative.label) && !/felony|misdemeanor/i.test(fd.alternative.label), `${q}: ${fd.alternative?.label}`);
     }
     // Stranger vs acquaintance, with the relationship groups (P211).
     const sa = go("stranger murders vs acquaintance murders nationally in 2024");

@@ -26,11 +26,15 @@ type Family = { breakdown: Groups; filters: ShrFilter[]; notes: string[] } | nul
  * A felony or misdemeanor request is declined whole, with the reason (Jeff 2026-11-22: "we don't count felonies as that's a charging device"): a felony and a
  * misdemeanor are classifications a prosecutor charges, and the data does not record them. Asked as a share, a comparison or a trend of murders (no partial answer).
  */
+export const FELONY_WORDS = /\b(?:felony|felonies|felonious|misdemeanou?rs?)\b/i;
 export function shrShareDecline(question: string): string | null {
-  const q = question.replace(/\s+/g, " ");
-  if (!/\b(?:murders?|homicides?|killings?)\b/i.test(q) || !/\b(?:felony|felonies|misdemeanou?rs?)\b/i.test(q)) return null;
-  if (!/\b(?:shares?|percent(?:age)?|proportion|portion|vs\.?|versus|compared?|trend|how\s+many)\b|%/i.test(q)) return null;
-  return "A felony or a misdemeanor is how a case is charged, and the data records neither, so they can't be counted or compared. Ask about a specific offense or circumstance instead, for example murders from arguments.";
+  if (!FELONY_WORDS.test(question)) return null;
+  return "This isn't available: felony and misdemeanor are charging classifications, and the data doesn't record them.";
+}
+/** The question without the word ("felony murders" is "murders"), or null when nothing is left to ask. */
+export function withoutFelonyWords(question: string): string | null {
+  const s = question.replace(/\b(?:felony|felonies|felonious|misdemeanou?rs?)\b\s*(?:vs\.?|versus|and|or|,)?\s*/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([?.!,])/g, "$1").trim();
+  return s && s !== question && /[a-z]{3}/i.test(s) ? s : null;
 }
 
 /** The grouping a question asks for, or null when it is not one of these shares. */
