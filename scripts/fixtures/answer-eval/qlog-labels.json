@@ -846,19 +846,24 @@
    "question": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state (P28); through July is P126 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -1567,19 +1572,16 @@
    "question": "is baltimore's homicide trend meaningfully different from the national trend?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which Baltimore"
-    ],
-    "about": "which Baltimore"
+    "reason": "a judgement of whether trends differ is not given (D12, P138)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department (Baltimore beside the nation), but \"meaningfully different\" asks a judgement (D12, P138) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -4486,16 +4488,18 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Washington",
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Washington, Kansas City and Richmond"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Several unqualified place names meet P28 ambiguity rules."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 settles Baltimore and Jacksonville (city against county); Washington (DC or the state), Kansas City (MO/KS) and Richmond (VA/CA) are two places of one name of 100,000+ each (P28); Jackson TN is under 100,000 in the place index, so Jackson is Jackson, MS By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -4619,20 +4623,24 @@
    "question": "Did Los Angeles have more homicides than ny city?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a comparison of counts, every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -5025,19 +5033,24 @@
    "question": "Compare property crime in New York City and Los Angeles annually since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; by year since 2020 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -6023,20 +6036,24 @@
    "question": "Compare robbery rates in New York City, Los Angeles, and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -6896,20 +6913,24 @@
    "question": "compare new york city vs Los angeles murders",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -7760,18 +7781,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington",
-     "which Baltimore",
-     "period"
+     "which Washington"
     ],
     "about": "which Washington"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires resolving both ambiguous place names.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 settles Baltimore; \"Washington\" is DC or the state, and a name that is also a state always offers the state (P28); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -7784,22 +7803,24 @@
    "question": "Compare murders in Sacramento, El Paso, and San Diego",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Sacramento",
-    "about_any": [
-     "which Sacramento",
-     "which El Paso",
-     "which San Diego",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Sacramento city against its county; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -8323,19 +8344,24 @@
    "question": "Compare monthly murders in Baltimore and Detroit",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a monthly series is Current Trends By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -8562,19 +8588,16 @@
    "question": "Ok. Now compare the monthly murder trend in Baltimore with the trend in DC. Is DC improving more than Balto?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which Baltimore"
-    ],
-    "about": "which Baltimore"
+    "reason": "a verdict on which place is improving is not given (P138), and no partial answer (P187)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department (Baltimore beside DC), but \"Is DC improving more\" asks a verdict (P138); no partial answers (P187) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -9350,19 +9373,24 @@
    "question": "annual murder rate nationwide and in Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Baltimore city and county are ambiguous under P28.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; annual rate By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -9460,20 +9488,24 @@
    "question": "compare NYC vs Los Angeles murder",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -11371,19 +11403,24 @@
    "question": "show homicide rates for los angeles and ny city since 2017",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; rates since 2017 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -13116,21 +13153,24 @@
    "question": "Compare murders in Los Angeles and Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; both cities settled; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -13712,20 +13752,24 @@
    "question": "Compare the current homicide rates in Chicago and Baltimore.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Baltimore city and county require disambiguation.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"current\" is the latest complete year (P188) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -14326,19 +14370,24 @@
    "question": "Murders per year from 2022 to 2025 in Houston, Dallas, Plano, Atlanta, Memphis, New Orleans, Birmingham, Baton Rouge and Mobile",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Mobile",
-    "about_any": [
-     "which Mobile"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Mobile city against its county By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -15349,19 +15398,24 @@
    "question": "Compare murders in Baltimore and Detroit per year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; per year By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -16589,20 +16643,24 @@
    "question": "Compare murders in Charlotte-Mecklenburg and Jacksonville",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Jacksonville",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Jacksonville"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Jacksonville has multiple qualifying places under P28.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Jacksonville, FL is the only one of 100,000+ (P28); its sheriff's office is the city's police By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -17022,19 +17080,24 @@
    "question": "Show me a chart of the three-month moving average for murders in DC and Baltimore.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D5 permits the moving series but Baltimore remains ambiguous.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a 3-month rolling average is P94 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -17484,20 +17547,24 @@
    "question": "Murder rates in Baltimore, Washington DC, and Detroit",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; DC named as DC; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -17809,21 +17876,24 @@
    "question": "Murder rates in Washington DC, Baltimore, and St. Louis per 100K",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period",
-     "which St. Louis"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; rates per 100,000; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -18265,20 +18335,24 @@
    "question": "Compare murders in Houston, Dallas, San Antonio, Austin, Fort Worth, and El Paso",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which El Paso",
-    "about_any": [
-     "which El Paso",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; El Paso city against its county; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -18726,19 +18800,24 @@
    "question": "Compare NYC and LA murders by month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which LA"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which LA"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-15-which-la",
-    "reviewed_by": "jeff-2026-11-15-which-la",
-    "notes": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"LA\" in a list of cities is Los Angeles (P141); monthly is Current Trends By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -18780,17 +18859,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Fayetteville",
-     "period"
+     "which Fayetteville"
     ],
     "about": "which Fayetteville"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Fayetteville has multiple qualifying cities under P28.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "Fayetteville NC and AR are both 100,000+ in the place index (P28); Albany GA is under 100,000, so Albany is Albany, NY; P196 does not choose between states By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -19099,19 +19177,24 @@
    "question": "Compare NYC and LA murders per month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which LA"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which LA"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-15-which-la",
-    "reviewed_by": "jeff-2026-11-15-which-la",
-    "notes": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; P141; monthly is Current Trends By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -19951,20 +20034,24 @@
    "question": "Does Los Angeles usually have more homicides than NY city?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a comparison of counts, every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -20170,20 +20257,24 @@
    "question": "los angeles vs new york city murder rates",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -20274,20 +20365,24 @@
    "question": "compare DC, Seattle, Pittsburgh, LA, NYC, Baltimore, San Diego, PG County homicides over the last 10 years",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "which San Diego"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; LA in a city list (P141); PG County is the county named; the last 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -20815,19 +20910,24 @@
    "question": "Your chart shows like no murders in Baltimore and way more in DC. Show me a chart that compares the monthly murder rate in Baltimore and DC",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; the first sentence is a comment; the request is the monthly rate (P144) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -23996,21 +24096,24 @@
    "question": "Compare officers per capita in New York and Los Angeles",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "New York does not explicitly specify the city.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside a city is New York City; a staffing rate By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -24918,21 +25021,24 @@
    "question": "compare murder clearance rates in Los Angeles versus New York",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "New York requires city versus state clarification.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates (P57); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -25923,19 +26029,24 @@
    "question": "Show me the number of officers per capita in New York City, Los Angeles, and Chicago over time",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; officers per capita over time By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -26537,20 +26648,24 @@
    "question": "how do robbery clearance rates compare between Los Angeles and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates (P57); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -29127,19 +29242,24 @@
    "question": "Compare murder trends in Los Angeles and New York City since 1985",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; since 1985 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -29869,19 +29989,24 @@
    "question": "Compare murder rates in 1935 between New York and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "New York does not explicitly specify city versus state."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside Chicago is the city; 1935 agency years (P76) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -31839,19 +31964,23 @@
    "question": "Compare robbery in Florida, Texas, and New York since 1990",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "New York is not explicitly specified as state."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "\"New York\" beside two states is the state (not a city), from Crime Index's state figures (P53) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -32369,19 +32498,24 @@
    "question": "Can you give me the population per year of New Orleans, New York City, Baltimore, Detroit, DC and Philadelphia from 1960 to 2024?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Population is available in Historical but Baltimore is ambiguous.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; population by year By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -34035,20 +34169,24 @@
    "question": "compare los angeles and new york's homicide rate since 1930",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; since 1930 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -37909,19 +38047,24 @@
    "question": "Compare the total annual number of homicides in Baltimore and Chicago over the past 10 years.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; the past 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -38944,19 +39087,24 @@
    "question": "Compare murder trends in New York City and Los Angeles since 1985",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; since 1985 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -38969,20 +39117,24 @@
    "question": "can you overlay murder in new york city, los angeles, chicago and philadelphia",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"overlay\" is several places by year; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -39120,20 +39272,24 @@
    "question": "compare los angeles vs nyc murders",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -40219,19 +40375,24 @@
    "question": "Can I see the violent crime rate in New York City vs. Los Angeles, California since 1930?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state; since 1930 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -42010,20 +42171,24 @@
    "question": "Can I see the violent crime rate in New York vs. Los Angeles since 1930?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside Los Angeles is the city; since 1930 By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -42063,20 +42228,24 @@
    "question": "Compare murders in New York and Los Angeles historically",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside Los Angeles is the city; historically = every year By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -47776,19 +47945,23 @@
    "question": "Compare anti-Asian hate crimes in California and New York by year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York"
+    "outcome": "answer",
+    "source": "hate_crime",
+    "source_any": [
+     "hate_crime"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P26 requires city versus state."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "\"New York\" beside a state is the state; a state's hate crimes by year (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -49789,20 +49962,24 @@
    "question": "How do robbery clearance rates compare between Chicago and Los Angeles?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates (P57); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -52309,19 +52486,24 @@
    "question": "Let's try something else. Make me a chart of the 3-month rolling average murder rate for Detroit, Baltimore, Washington DC, Birmingham Ala, Memphis, Baton Rouge, New Orleans, Cleveland and Kansas City MO.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D5 permits the rolling series but Baltimore remains ambiguous."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a 3-month rolling average rate (P94); Kansas City MO named with its state By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -53003,20 +53185,23 @@
    "question": "Compare carjackings in New York City and Los Angeles",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; carjacking is NIBRS-only; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -63201,20 +63386,23 @@
    "question": "How many homicides and carjackings in Boston and New York?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "period"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P26 requires city versus state."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department (\"New York\" beside Boston is the city); homicides and carjackings, carjacking NIBRS-only By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -66474,19 +66662,23 @@
    "question": "How many anti-Black hate crimes occurred in New York versus Texas in 2024?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York"
+    "outcome": "answer",
+    "source": "hate_crime",
+    "source_any": [
+     "hate_crime"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P26 requires city versus state."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "\"New York\" beside a state is the state; a state's hate crimes in 2024 (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -68594,19 +68786,24 @@
    "question": "Compare robbery clearance rates between Chicago and Los Angeles by year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates by year (P57) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -71454,19 +71651,24 @@
    "question": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-0c9baffc48 (a plain murder count is Crime Index's, D3) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -78488,20 +78690,24 @@
    "question": "Compare homicides in New York City, Los Angeles and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; homicide on Crime Index is the murder count (P10); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -83841,20 +84047,24 @@
    "question": "compare DC, Seattle, Pittsburgh, LA, NYC, Baltimore, San Diego, PG County homicides over the last 10 years",
    "previous": "edmond oklahoma murders",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "which San Diego"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230 (the follow-up stands alone, F1) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -85393,16 +85603,18 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Washington",
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Washington, Kansas City and Richmond"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Several unqualified place names remain ambiguous."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "as QL-ct-33fb87de8b (the follow-up repeats the question) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -88380,20 +88592,24 @@
    "question": "Compare DC, Seattle, Pittsburgh, LA, NYC, Baltimore, San Diego, and Prince George County homicides going back at least 15 years and excluding 2026",
    "previous": "how about the last 20 years",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "which San Diego"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Baltimore city versus county remains unresolved.; with the 2026-11-07 rules' parts"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230, at least 15 years, 2026 left out By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -98652,19 +98868,24 @@
    "question": "Can I see the violent crime rate in New York City vs. Los Angeles, California since 1930?",
    "previous": "recidivism",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-hist-d54e893dbf (the follow-up stands alone, F1) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
