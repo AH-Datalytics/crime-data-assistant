@@ -110,8 +110,8 @@ export function groupMonths(b: CurrentBuild, states: string[] | null, measure: s
 
 /**
  * A group's months over a span, from the agencies that have a figure in EVERY month of it (Jeff 2026-11-19: "the national sample is the
- * collection of all consistent agencies that reported"): an agency-month's figure is current_final's, else current_crime's (they agree
- * where both hold it); an agency with a month missing drops out of the span's sample. `states` null for the nation. The
+ * collection of all consistent agencies that reported"): an agency-month's figure is current_final's before 2025 and current_crime's from
+ * 2025-01 (decision A, as agencyMonths); an agency with a month missing drops out of the span's sample. `states` null for the nation. The
  * `sample` flag is not used. Returns each month's total, the agencies counted and the people they cover (current_crime's latest population).
  */
 export function groupSpanMonths(b: CurrentBuild, states: string[] | null, measure: string, from: Month, to: Month, execute: (sql: string) => unknown[][]):
@@ -121,10 +121,10 @@ export function groupSpanMonths(b: CurrentBuild, states: string[] | null, measur
   const finalExpr = PARTS[col] ? `CASE WHEN ${PARTS[col].map((p) => `${p}_total IS NULL`).join(" OR ")} THEN NULL ELSE ${PARTS[col].map((p) => `${p}_total`).join(" + ")} END` : `${col}_total`;
   const where = `${states ? `state IN (${states.map(q).join(", ")}) AND ` : ""}${key} BETWEEN ${q(from)} AND ${q(to)}`;
   const n = months(from, to).length;
-  const cte = `WITH u AS (SELECT ori, ${key} AS ym, ${finalExpr} AS v FROM read_parquet('${b.root}/current_final.parquet') WHERE ${where}
-      UNION ALL SELECT c.ori, ${key.replace(/year/g, "c.year").replace(/month/g, "c.month")} AS ym, c.${col}_total AS v FROM read_parquet('${b.root}/current_crime.parquet') c
-        WHERE ${where.replace(/\byear\b/g, "c.year").replace(/\bmonth\b/g, "c.month").replace(/\bstate\b/g, "c.state")}
-        AND NOT EXISTS (SELECT 1 FROM read_parquet('${b.root}/current_final.parquet') f WHERE f.ori = c.ori AND f.year = c.year AND f.month = c.month)),
+  // Decision A, as agencyMonths: the Final panel gives an agency's months before 2025 only; from 2025-01 the months are current_crime's (loop 2
+  // finding 3: the Final panel's 2025-26 rows kept an agency current_crime lacks a month for, 575 agencies where the rule gives 574).
+  const cte = `WITH u AS (SELECT ori, ${key} AS ym, ${finalExpr} AS v FROM read_parquet('${b.root}/current_final.parquet') WHERE ${where} AND ${key} < ${q(b.firstMonth)}
+      UNION ALL SELECT ori, ${key} AS ym, ${col}_total AS v FROM read_parquet('${b.root}/current_crime.parquet') WHERE ${where} AND ${key} >= ${q(b.firstMonth)}),
     full_span AS (SELECT ori FROM u WHERE v IS NOT NULL GROUP BY ori HAVING count(*) = ${n})`;
   const out = new Map<Month, number | null>(months(from, to).map((m) => [m, null]));
   for (const [ym, v] of execute(`${cte} SELECT ym, sum(v) FROM u WHERE ori IN (SELECT ori FROM full_span) GROUP BY ym`)) out.set(String(ym), num(v));
