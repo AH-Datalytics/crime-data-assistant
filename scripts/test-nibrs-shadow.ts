@@ -2913,6 +2913,21 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // COMPARED TO THE (REST OF THE) NATION is the nation's rates beside the place's.
   assert.equal(rd("How does Houston compare to the rest of the nation in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
 }
+// P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
+// not cleared), never summed.
+{
+  const mc = as(ask("murder clearance by type in 2025 in Houston and Dallas"), "answer") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } };
+  assert.deepEqual(mc.delivered.table.columns.map((c) => c.header), ["Agency", "Murder offenses", "Cleared by arrest", "Cleared by exceptional means", "Not cleared"], JSON.stringify(mc.delivered.table.columns));
+  // Houston 9 a month = 108 units: half by arrest (54), one in twelve under each of the five exceptional types (9 each: 45), the rest 9; Dallas 7 a month = 84: 42, 35, 7.
+  assert.deepEqual(mc.delivered.table.rows, [["Houston, Texas", 108, 54, 45, 9], ["Dallas, Texas", 84, 42, 35, 7]], JSON.stringify(mc.delivered.table.rows));
+  assert.ok(mc.delivered.text[0].startsWith("Murder Offenses by Agency and Clearance Type, 2025"), mc.delivered.text[0]);
+  assert.ok(mc.delivered.text.some((t) => /agencies are not added together/.test(t)));
+  // The order the question names them.
+  const dh = as(ask("murder clearance by type in 2025 in Dallas and Houston"), "answer") as unknown as { delivered: { table: { rows: unknown[][] } } };
+  assert.deepEqual(dh.delivered.table.rows.map((r) => r[0]), ["Dallas, Texas", "Houston, Texas"]);
+  // One agency named alone keeps its own answer (the clearance types as rows).
+  assert.equal(as(ask("murder clearance by type in 2025 in Houston"), "answer").delivered.table.columns[0].header, "Clearance type");
+}
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
   const tx = as(ask("Texas murder clearance by type in 2025"), "answer");
