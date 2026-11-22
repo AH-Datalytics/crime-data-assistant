@@ -2733,6 +2733,37 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     return stub(sql);
   };
   const cdeps = { ...deps, execute: ctStub, current: { root: "/ct", release: "ct-test", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" } } as unknown as ShadowDeps;
+  // B15 (Jeff 2026-11-22, "SHR regardless of the timeframe"; D37, D42, P113): a plain murder or homicide count by month, one agency or several, whatever the span,
+  // is Homicide Reports' answer, with the Current Trends view of the same question as a button; every other question keeps its path.
+  {
+    const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+    const shrStub = (sql: string): unknown[][] => {
+      if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+      if (/AS k1/.test(sql)) { const [, a, b] = /BETWEEN (\d{6}) AND (\d{6})/.exec(sql)!; const out: unknown[][] = []; for (let v = Number(a); v <= Number(b); v = v % 100 === 12 ? v + 89 : v + 1) out.push([Math.floor(v / 100), v % 100, 3]); return out; }
+      return /current_crime|WHERE sample|full_span/.test(sql) ? ctStub(sql) : [];
+    };
+    const both = { ...cdeps, execute: shrStub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+      historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
+    const buttonLabels = (o: unknown) => ((o as { buttons?: { label: string }[] }).buttons ?? []).map((b) => b.label);
+    // One agency, a span inside Current Trends' months: Homicide Reports, with the Current Trends view.
+    const one = shadowAnswer("Houston murders per month in 2026", both);
+    assert.equal(one.kind, "shr", JSON.stringify(one).slice(0, 240));
+    assert.ok(buttonLabels(one).includes("Crime Index (Current Trends) view of the same question"), JSON.stringify(buttonLabels(one)));
+    const ctButton = (one as unknown as { buttons: { label: string; continuation: { kind: string } }[] }).buttons.find((b) => /Current Trends/.test(b.label))!;
+    assert.equal(ctButton.continuation.kind, "current", "the button is the Current Trends answer the question had before");
+    // Several agencies: one table from Homicide Reports, the same button.
+    const several = shadowAnswer("Dallas vs Houston murders per month in 2026", both);
+    assert.equal(several.kind, "shr", JSON.stringify(several).slice(0, 240));
+    assert.ok(buttonLabels(several).some((l) => /Current Trends/.test(l)));
+    // A span that reaches before Current Trends (the old rule): still Homicide Reports.
+    assert.equal(shadowAnswer("Houston murders per month from 2015 to 2020", both).kind, "shr");
+    // Not this rule: another crime by month, a yearly murder count, a rate, murders with Homicide Reports not built.
+    assert.equal(shadowAnswer("Dallas vs Houston robberies per month", both).kind, "current");
+    assert.notEqual(shadowAnswer("Houston murders by year since 2020", both).kind, "shr");
+    assert.equal(shadowAnswer("Dallas vs Houston murders per month", cdeps).kind, "current", "no Homicide Reports build: Current Trends, as before");
+    // The Current Trends view asked for is not sent back to Homicide Reports.
+    assert.equal(shadowAnswer("Dallas vs Houston murders per month", { ...both, ctView: true }).kind, "current");
+  }
   const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
   assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
   if (sev.kind === "current") {

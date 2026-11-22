@@ -88,6 +88,8 @@ export type ShadowDeps = {
   checkingOffer?: boolean;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
   noDefaults?: boolean;
+  /** Set while the Current Trends view of a monthly murder count is built (the button beside Homicide Reports' answer, B15): not sent to Homicide Reports again. */
+  ctView?: boolean;
   /** Set while a follow-up is answered from a rewrite or as its own question: the words the user typed and the previous question, which the
    *  default guards read too (a rewrite drops "compare with"; "Durham and population" leans on a NIBRS-only question before it). */
   guardText?: string;
@@ -2436,6 +2438,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length >= 1
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec, cur = deps.current, pl = sp.places[0];
+    // B15 (Jeff 2026-11-22, "SHR regardless of the timeframe"; D37, D42, P113): a plain murder or homicide count by month, for one agency or several, whatever
+    // the span, is Homicide Reports' answer (from 1985), with the Current Trends view of the same question offered beside it as a button. The question is
+    // asked of Homicide Reports as the user would ask it by name; an answer it cannot give (no match, a decline) leaves the question on the path it had.
+    if (deps.shr && !deps.ctView && sp.grain === "month" && sp.statistic === "count" && ["murder", "homicide", "homicide_all"].includes(sp.measures[0])
+      && sp.places.every((p) => p.kind === "agency") && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).region && !flags(ledger0).column && !clause0("combine").length) {
+      const hr = shadowAnswer(`${ledger0.question.replace(/[?.!\s]+$/, "")} according to Homicide Reports`, deps);
+      if (hr.kind === "shr") {
+        const ct = shadowAnswer(ledger0.question, { ...deps, ctView: true });
+        const button: ShadowOption = { label: "Crime Index (Current Trends) view of the same question", continuation: ct, role: "other_source", targetSource: "rtci" };
+        return ct.kind === "current" ? { ...hr, buttons: [...((hr as unknown as { buttons?: ShadowOption[] }).buttons ?? []), button] } as unknown as ShadowOutcome : hr;
+      }
+    }
     // The form asked: the rolling 12 months through the latest month; this year as one total is its year to date; a
     // range of months is each month when asked by month, otherwise one total (design note, section 3).
     const ctYear = Number(cur.lastMonth.slice(0, 4));
