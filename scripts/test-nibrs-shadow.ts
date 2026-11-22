@@ -286,6 +286,12 @@ assert.equal(ori(at("ambiguous:St. Louis", "City of St. Louis")), "MOSPD0000");
 assert.equal(ori(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", true)), "CA0194200");
 assert.equal(ori(resolvePlace(places, "city:Los Angeles:", "Los Angeles", true)), "CA0194200");
 assert.equal(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", false).kind, "ask", "one place alone still asks");
+// Beside other places "New York" is the city (the state is not a same-name city, P28); alone it still asks; Washington keeps its ask (several agencies of the name).
+assert.equal(resolvePlace(places, "ambiguous:New York", "New York", true).kind, "agency");
+assert.equal(resolvePlace(places, "ambiguous:New York", "New York", false).kind, "ask");
+assert.equal(resolvePlace(places, "ambiguous:Washington", "Washington", true).kind, "ask", "Washington: DC, the state or a county");
+assert.equal(resolvePlace(places, "ambiguous:Kansas City", "Kansas City", true).kind, "ask", "two cities of the name keep P28's ask");
+assert.equal(resolvePlace(places, "city:Columbus:OH", "Columbus", true).kind, "ask", "two cities of the name keep P28's ask");
 assert.equal(ori(resolvePlace(places, "county:Los Angeles County:CA", "Los Angeles County", true)), "CA0190000", "a county named stays the county");
 assert.deepEqual(named(at("ambiguous:San Diego", "San Diego, California")), ["San Diego Police Department", "San Diego County Sheriff's Office"]);
 assert.equal(at("ambiguous:Kansas City", "city of Kansas City").kind, "ask", "two states have a Kansas City");

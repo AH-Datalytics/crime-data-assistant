@@ -204,6 +204,9 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, liste
   const large: Candidate[] = firsts.filter((a) => a.population >= ASK_POPULATION)
     .sort((x, y) => (x.kind === y.kind ? y.population - x.population : x.kind === "city" ? -1 : 1)).map((a) => ({ kind: "agency", agency: a }));
   const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
+  // A state is not a same-name city (P28): beside other places, a name with one large agency (New York: the city) is that agency, not asked about the state.
+  // (Washington keeps its ask, as labeled by rule: D.C. and the state of Washington are both places people mean, Engine 2.0 2026-11-22.)
+  if (listed && asState && asState !== "WA" && large.length === 1 && large[0].kind === "agency") return asPlace(large[0].agency);
   if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
   if (large.length >= 2) return { kind: "ask", name, candidates: large };
   // A small place one or two letters from a large one ("Pittsburg", "Berkley", "prince George county"): which, the large
