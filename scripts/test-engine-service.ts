@@ -3,7 +3,10 @@
  * worker, shutdown, the token and body limits, and the configuration read from the environment. Fake workers stand in for the engine (no data, no Python, no network but loopback).
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { crimeIndexBuilder } from "../lib/engine-service/sources";
 import { asSourceTab, SOURCE_TABS } from "../lib/nibrs-shadow/source-description";
 import type { AddressInfo } from "node:net";
 import type { ShadowDeps, ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -208,6 +211,38 @@ function fakes() {
   assert.ok(again.ok && again.release === "s-1" && Number(tries.shr) === 1, "after the pause it is tried again and, once fixed, answers");
   assert.deepEqual((core.info().sources as Record<string, string>), { shr: "loaded", hate: "loaded" });
   core.close();
+}
+// --- piece 2: Crime Index builder serves Historical and Current from one folder; a bad folder is a reason, not a crash
+{
+  const dir = mkdtempSync(path.join(tmpdir(), "ci-"));
+  const exec = ((sql: string) => (/current_final/.test(sql) ? [[201901]] : [[201701, 202609]])) as unknown as ShadowDeps["execute"];
+  assert.throws(() => crimeIndexBuilder(dir, { execute: exec }), /no Crime Index manifest\.json/, "no manifest: said plainly");
+  writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ release: "ci-1", inputs: { historical_crime: { years: [1930, 2024] }, historical_clearances: { years: [1960, 2024] } } }));
+  assert.throws(() => crimeIndexBuilder(dir, { execute: exec }), /lists no current_crime table/, "a manifest without the current table is refused, not half served");
+  writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ release: "ci-1", inputs: { historical_crime: { years: [1930, 2024] }, historical_clearances: { years: [1960, 2024] }, current_crime: {} } }));
+  const built = crimeIndexBuilder(dir, { execute: exec });
+  assert.deepEqual(built.releases, { historical: "ci-1", current: "ci-1" });
+  assert.equal((built.deps.historical as { lastYear: number }).lastYear, 2024);
+  assert.equal((built.deps.current as { lastMonth: string }).lastMonth, "2026-09");
+  assert.throws(() => crimeIndexBuilder(dir, { execute: (() => { throw new Error("no such file"); }) as unknown as ShadowDeps["execute"] }), /current tables .* could not be read: no such file/, "an unreadable current table is a reason");
+
+  // Through the core, with the registered builder: both tabs answer on the folder's release; a bad folder leaves nibrs answering.
+  const baseDeps = { places: {} as ShadowDeps["places"], release: { id: "n-1", firstMonth: "1991-01", lastMonth: "2025-12", asOf: "2026-11-22" }, target: { root: "/n", builtYears: [2025] }, execute: exec };
+  const seen: { tab?: string; hist: boolean; cur: boolean }[] = [];
+  const hooks: CoreHooks = { base: () => ({ deps: baseDeps, release: "n-1" }),
+    answerOutcome: (_r, d) => { seen.push({ tab: d.tab, hist: !!d.historical, cur: !!d.current }); return { kind: "decline", reason: "x", about: "x" } as unknown as ShadowOutcome; } };
+  const core = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: dir }), hooks);
+  assert.deepEqual(core.info().tabs, ["nibrs", "historical", "current"]);
+  for (const tab of ["historical", "current", "nibrs"]) { const r = core.answer(req("q", { tab })); assert.ok(r.ok, `${tab} answers`); assert.equal((r as { release: string }).release, tab === "nibrs" ? "n-1" : "ci-1"); }
+  assert.ok(seen.every((x) => x.hist && x.cur), "every tab's question can read both Crime Index sources");
+  assert.deepEqual(core.info().sources, { crimeIndex: "loaded" });
+  core.close();
+  const bad = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: path.join(dir, "missing") }), hooks);
+  const h = bad.answer(req("q", { tab: "historical" }));
+  assert.ok(!h.ok && h.kind === "unavailable" && /no Crime Index manifest\.json/.test(h.message));
+  assert.ok(bad.answer(req("q", { tab: "nibrs" })).ok, "nibrs keeps answering when the Crime Index folder is bad");
+  assert.match(String((bad.info().sources as Record<string, string>).crimeIndex), /^failed: there is no Crime Index manifest/);
+  bad.close();
 }
   console.log("engine service: pool, protocol and HTTP face: ok");
 }
