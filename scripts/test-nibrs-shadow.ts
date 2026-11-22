@@ -2090,12 +2090,16 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
         assert.ok(fa.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon"), q);
         assert.ok(fa.delivered.text.includes("No kind of crime was named, so every crime that records injury is counted."), JSON.stringify(fa.delivered.text));
       }
-      // Jeff 2026-11-22: "stabbings" (and the logged typo "stabbongs") are victims of offenses with a knife or cutting instrument (weapon 20), said.
-      for (const q of ["Knife stabbings in Memphis in 2024 by injury type", "Knife stabbongs in Memphis in 2024 by injury type"]) {
+      // P31 kept (Jeff 2026-11-22): in an injury question "stabbings" (and the logged typo "stabbongs") are murder (09A) and aggravated assault (13A) victims with a
+      // knife or cutting instrument (weapon 20), counted as one measure so they can be broken down; the answer says how it was read. Plain "stabbings" is unchanged.
+      for (const q of ["Stabbings in Memphis in 2024 by injury type", "Knife stabbongs in Memphis in 2024 by injury type"]) {
         const st = as(shadowAnswer(q, { ...deps, noDefaults: false }), "answer");
+        assert.deepEqual(st.plan.measures.map((m) => [m.id, m.unit]), [["victims.stabbing", "victim"]], q);
         assert.ok(st.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon" && JSON.stringify(x.where).includes('"values":["20"]')), q);
-        assert.ok(st.delivered.text.some((t) => /is read as victims of offenses with a knife or cutting instrument\./.test(t)), JSON.stringify(st.delivered.text));
+        assert.ok(st.plan.groupings.some((x) => x.dimension === "victim_injury.injury"), q);
+        assert.ok(st.delivered.text.some((t) => /is read as murder and aggravated assault victims with a knife or cutting instrument\./.test(t)), JSON.stringify(st.delivered.text));
       }
+      assert.deepEqual(MEASURE_CODES.stabbing, ["09A", "13A"]);
       // Asked in offenses, the unit is still the victim (injury is recorded for each victim).
       assert.ok(as(ask("Aggravated assault offenses in Memphis by injury type in 2024"), "answer").plan.measures.every((m) => m.unit === "victim"));
     }
