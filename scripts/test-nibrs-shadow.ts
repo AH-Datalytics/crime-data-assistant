@@ -1896,6 +1896,16 @@ assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_r
     const texas = rk.delivered.table.rows.find((r) => r[0] === "Texas")!;
     assert.deepEqual([texas[1], texas[2], texas[3]], [34.6, 312, 4], "Texas: the same figures as its own rate answer (stub data)");
   }
+  // Several years (Jeff 2026-11-22): State | Year | rate, a block for each year, each ranked highest first on its own; each year's rows are that year's own figures.
+  const rk3 = as(ask("Which states have the highest murder clearance rate from 2023 to 2025?"), "answer");
+  assert.deepEqual(rk3.delivered.table.columns.slice(0, 3).map((c) => c.header), ["State", "Year", "Murders cleared (%)"]);
+  assert.deepEqual([...new Set(rk3.delivered.table.rows.map((r) => r[1]))], ["2023", "2024", "2025"]);
+  for (const y of ["2023", "2024", "2025"]) {
+    const block = rk3.delivered.table.rows.filter((r) => r[1] === y).map((r) => r[2] as number | null);
+    assert.ok(block.length >= 50 && block.every((v, i) => i === 0 || v === null || block[i - 1] === null || (block[i - 1] as number) >= v), `${y}: every state, highest first`);
+    const one = as(ask(`Which states have the highest murder clearance rate in ${y}?`), "answer");
+    assert.deepEqual(rk3.delivered.table.rows.find((r) => r[1] === y && r[0] === "Texas")!.slice(2), one.delivered.table.rows.find((r) => r[0] === "Texas")!.slice(1), `${y} Texas equals the year alone`);
+  }
   const early = as(ask("Show the burglary clearance rate in Texas since 2000"), "answer");
   assert.ok(early.delivered.text.includes("NIBRS state figures start in 2017; 2000 through 2016 are outside them."), JSON.stringify(early.delivered.text));
 }
@@ -3086,8 +3096,46 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(/^In the United States in 2025, [\d.]+% of the murder clearances were prosecution declined/.test(nation.delivered.text[0]), nation.delivered.text[0]);
   const byState = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025 by state"), "answer") as unknown as Out;
   assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
-  const names = byState.delivered.table.rows.map((r) => String(r[0]));
-  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+  // Ranked by the share, highest first (Jeff 2026-11-22); equal shares by the state's name.
+  const shares = byState.delivered.table.rows.map((r) => Number(r[1]));
+  assert.deepEqual(shares, [...shares].sort((a, b) => b - a), JSON.stringify(byState.delivered.table.rows));
+  // Several years are a row for each year, never pooled (Jeff 2026-11-22): the same share for each year as for that year alone.
+  const multi = as(ask("what share of murders in Texas were cleared by exception from 2023 to 2025"), "answer") as unknown as Out;
+  assert.deepEqual(multi.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], JSON.stringify(multi.delivered.table.rows));
+  for (const y of [2023, 2024, 2025]) {
+    const one = as(ask(`what share of murders in Texas were cleared by exception in ${y}`), "answer") as unknown as Out;
+    assert.equal(multi.delivered.table.rows.find((r) => r[0] === String(y))![1], one.delivered.table.rows[0][0], `${y} equals the year alone`);
+  }
+  assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), multi.delivered.text.join(" | "));
+  // One year asked with "exceptional means" is that year alone (the runner saw nine years for 'in Virginia in 2022').
+  for (const q of ["what share of murders were cleared by exceptional means in Texas in 2024?", "what share of murders in Texas were cleared by exceptional means in 2024", "what share of murders were cleared by exception in Texas in 2024"]) {
+    const one = shadowAnswer(q, { ...deps, noDefaults: false }) as unknown as Out;
+    assert.equal(one.kind, "answer", q);
+    assert.deepEqual(one.delivered.table.rows.map((r) => r.length), [1], `${q}: ${JSON.stringify(one.delivered.table.rows)}`);
+  }
+  { const v = shadowAnswer("what share of rapes were cleared by exceptional means in Virginia in 2022?", { ...deps, noDefaults: false }) as unknown as { period?: { from: string; to: string }; delivered?: { text: string[] } };
+    assert.deepEqual(v.period, { from: "2022-01", to: "2022-12" }, "one year is that year alone"); assert.ok(!v.delivered!.text.some((t) => /No years were given/.test(t))); }
+  // The wordings of the labels (QL-nibrs-9598316bab, cb75da0bdb): "each year from ... to ...", and "exceptional means".
+  for (const q of ["what share of murders were cleared by exceptional means in Texas each year from 2023 to 2025?", "what share of murders were cleared by exception each year from 2023 to 2025 in Texas?"]) {
+    const w = as(ask(q), "answer") as unknown as Out;
+    assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], q);
+  }
+  // "Exceptional clearance rate for murder in Texas" with no year (QL-nibrs-e04248e56d): the share cleared by exception, every year by year (P181).
+  const rate = shadowAnswer("exceptional clearance rate for murder in Texas", { ...deps, noDefaults: false }) as unknown as Out;
+  assert.equal(rate.kind, "answer", JSON.stringify(rate).slice(0, 400));
+  assert.ok(rate.delivered.table.rows.length > 1 && rate.delivered.table.rows.every((r) => /^\d{4}$/.test(String(r[0]))), JSON.stringify(rate.delivered.table.rows));
+  // By state over several years: State | Year | Share, a block for each year, each ranked highest first on its own (Jeff 2026-11-22).
+  const msb = as(ask("what share of all murder clearances in the United States were prosecution declined from 2023 to 2025 by state"), "answer") as unknown as Out & { delivered: { table: { columns: { header: string }[] } } };
+  assert.deepEqual(msb.delivered.table.columns.slice(0, 3).map((c) => c.header), ["State", "Year", "Share (%)"]);
+  for (const y of ["2023", "2024", "2025"]) {
+    const block = msb.delivered.table.rows.filter((r) => r[1] === y);
+    assert.ok(block.length >= 1, y);
+    const v = block.map((r) => Number(r[2]));
+    assert.deepEqual(v, [...v].sort((a, b) => b - a), `${y} ranked`);
+  }
+  assert.deepEqual(msb.delivered.table.rows.map((r) => r[1]), [...msb.delivered.table.rows.map((r) => r[1])].sort(), "the years in order, a block each");
+  // Part of a year by state is still declined.
+  assert.equal(ask("what share of all murder clearances in the United States were prosecution declined from March 2023 to 2025 by state").kind === "answer", false);
 }
 // P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
 // not cleared), never summed.
