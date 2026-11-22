@@ -1,0 +1,12 @@
+{
+  "id": "P210",
+  "topic": "Homicide Reports shares",
+  "decision needed": "Jeff to confirm the definitions (build may proceed on these defaults)",
+  "situation (example wording)": "\"what share of murders are felony murders\", \"share of murders from arguments\", \"felony vs argument murders nationally\"",
+  "what the app does today": "Declined or asked: these shares are not built.",
+  "proposed behavior": "Circumstance shares come from Homicide Reports (SHR) murders, by the circumstance code. FELONY murder = the FBI's felony-type circumstances: 02 rape, 03 robbery, 05 burglary, 06 larceny, 07 motor vehicle theft, 09 arson, 10 prostitution and commercialized vice, 17 other sex offense, 18 drug law violation, 19 gambling, 26 other felony. 70 \"suspected felony\" is its own line and is NOT counted as felony (the FBI tables keep it apart), unless the question says suspected. ARGUMENT = 44 argument over money or property plus 45 other argument; brawls (42, 43) and lover's triangle (40) are not arguments. The denominator is ALL murders for the place and period, undetermined (99) and the codes outside both groups included; the table shows felony, argument, suspected felony, other circumstances and undetermined with counts and shares, and a share asked for is one sentence (N of M) under the title. A nation or state is the agencies that filed (coverage lines as today).",
+  "exact default or choices offered": "The table by circumstance group with counts and shares; a single share as a sentence with N of M.",
+  "why": "Applies P165's rule (a share of a detail is the table with the shares shown) to circumstances; the codes are the SHR circumstance codes in lib/nibrs-shadow/shr.ts.",
+  "status": "Drafted 2026-11-22 (Engine 2.0) at the coordinator's request for Capability's build; awaiting Jeff's OK",
+  "test cases": "Comes with the build."
+}

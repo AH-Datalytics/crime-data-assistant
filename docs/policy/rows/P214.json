@@ -1,0 +1,12 @@
+{
+  "id": "P214",
+  "topic": "Homicide Reports shares",
+  "decision needed": "Jeff to confirm the definitions (build may proceed on these defaults)",
+  "situation (example wording)": "\"share of murders committed with a firearm per year since 2000\", \"percent of murders by strangers each year\"",
+  "what the app does today": "Declined or asked: these shares are not built.",
+  "proposed behavior": "A share asked for over several years (\"per year\", \"each year\", \"since <year>\" or a span) is one row per year, each year its own share over the agencies that filed that year, never pooled into one share (the rule of P203); no period named is every year the source has (P181). Each row gives the year, the count of the thing, the murders it divides and the share; the coverage lines are as today. Applies to P210 to P213 and to P165.",
+  "exact default or choices offered": "A table Year | count | murders | share, one row per year.",
+  "why": "Same rule Jeff gave for the clearance share (several years, a row per year).",
+  "status": "Drafted 2026-11-22 (Engine 2.0) at the coordinator's request for Capability's build; awaiting Jeff's OK",
+  "test cases": "Comes with the build."
+}
