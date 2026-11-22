@@ -67,7 +67,7 @@ import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
-import { shrShareDecline, shrShareQuestion, withoutFelonyWords } from "./shr-shares";
+import { answerShrShare, shrCityShareQuestion, shrShareDecline, shrShareQuestion, withoutFelonyWords } from "./shr-shares";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -1065,9 +1065,14 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const plain = withoutFelonyWords(question);
     return decline("unsupported_capability", felonySaid, plain ? { alternative: deferHeavy(`Ask instead: "${plain}"`, (d) => shadowAnswer(plain, d), deps) } : {});
   }
+  const shrCity = deps.shr && deps.historical ? shrCityShareQuestion(question, deps.shr) : null;
+  if (shrCity && deps.shr && deps.historical) {
+    const a = answerShrRanking(shrCity, deps.shr, deps.historical, deps.execute);
+    return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
+  }
   const shrShare = deps.shr ? shrShareQuestion(question, deps.shr) : null;
   if (shrShare && deps.shr) {
-    const a = answerShr(shrShare, deps.shr, deps.execute, deps.historical);
+    const a = answerShrShare(shrShare, deps.shr, deps.execute, deps.historical);
     return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
   }
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
