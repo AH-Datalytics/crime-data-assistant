@@ -2873,7 +2873,16 @@
 },
 "QL-ct-9c9f209702": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-9cb30b663a": {
 "status": "reviewed",
@@ -3617,7 +3626,16 @@
 },
 "QL-ct-cd9a53a332": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-cdad65033c": {
 "status": "draft",
@@ -4139,7 +4157,16 @@
 },
 "QL-ct-e763fe102b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-e79bbb0d4f": {
 "status": "draft",
@@ -15614,7 +15641,16 @@
 },
 "QL-shr-59ebe7a861": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-shr-5a4820135e": {
 "status": "reviewed",

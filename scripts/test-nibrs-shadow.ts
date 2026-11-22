@@ -885,7 +885,8 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     const { fillerRewrite, covers } = askInsteadChecks;
     assert.deepEqual(fillerRewrite("Minneapolis scorecard"), { rest: "Minneapolis", left: [] });
     assert.deepEqual(fillerRewrite("Toledo crime scorecard"), { rest: "Toledo crime", left: [] });
-    assert.deepEqual(fillerRewrite("is crime up in milwaukee"), { rest: "is crime milwaukee", left: ["up in"] });
+    // "up" is read now (P188, the trend by year over the past five years), so no filler is left to drop.
+    assert.equal(fillerRewrite("is crime up in milwaukee"), null);
     // Comparison wording (Jeff 2026-11-11): "vs national average" is now read in full, the city beside the United States.
     assert.equal(fillerRewrite("Murder rate in New York City vs national average"), null);
     assert.equal(readQuestion("Murder rate in New York City vs national average", 2026, "2026-09").text, "Murder rate in New York City and the United States");
@@ -2902,6 +2903,41 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A sentence that merely holds a similar word keeps its own handling: "occurred in" still reads as "in" and nothing else.
   assert.deepEqual(ask("how many murders occurred in Memphis in 2024").kind, ask("how many murders in Memphis in 2024").kind);
   assert.deepEqual(ask("Houston retail theft in 2024").kind, ask("Houston shoplifting in 2024").kind);
+}
+// P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09");
+  const note = (q: string) => (rd(q).ledger as unknown as { readings?: { from: string; to: string }[] }).readings ?? [];
+  // CURRENT is the latest complete year (2025 in 2026), only when no period is named.
+  assert.equal(rd("What is Chicago's current homicide rate").text, "What is Chicago's homicide rate in 2025");
+  assert.equal(rd("Compare the current homicide rates in Chicago and Houston.").text, "Compare homicide rates in Chicago and Houston in 2025.");
+  assert.equal(rd("What is Chicago's current homicide rate in 2022").text, "What is Chicago's current homicide rate in 2022");
+  assert.ok(note("What is Chicago's current homicide rate").some((r) => /latest complete year, 2025/.test(r.to)));
+  assert.ok(!/in 2025/.test(rd("Chicago current year to date murders").text));
+  // UP / DOWN / GOING UP OR DOWN / DROPPING with no timeframe is the trend by year over the past five years; with a timeframe, that one.
+  assert.equal(rd("is crime up in milwaukee").text, "crime in milwaukee by year over the past 5 years");
+  assert.equal(rd("are robberies going up or down in Miami?").text, "robberies in Miami by year over the past 5 years?");
+  assert.equal(rd("Has crime gone up in Asheville, NC since 2022").text, "crime in Asheville, NC since 2022 by year");
+  assert.equal(rd("Crime and homicide rates are down").text, "Crime and homicide rates by year over the past 5 years");
+  assert.ok(note("is crime up in milwaukee").some((r) => r.from === "up" && /past five years/.test(r.to)));
+  // Approved synonyms: "right now" and "these days" are current; "rising", "falling", "increasing", "getting worse/better" are up/down;
+  // "the national average" is the nation.
+  assert.equal(rd("What is the murder rate in Chicago right now?").text, "What is the murder rate in Chicago in 2025?");
+  assert.equal(rd("How is crime in Houston these days").text, "How is crime in Houston in 2025");
+  assert.equal(rd("is crime rising in Houston").text, "crime in Houston by year over the past 5 years");
+  assert.equal(rd("are murders falling in Houston?").text, "murders in Houston by year over the past 5 years?");
+  assert.equal(rd("is crime in Houston getting worse").text, "crime in Houston by year over the past 5 years");
+  assert.equal(rd("Murders in Houston are increasing since 2020").text, "Murders in Houston since 2020 by year");
+  assert.equal(rd("How does Houston compare to the national average in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
+  // Not other uses of the words.
+  assert.equal(rd("murders in Houston broken down by year").text, "murders in Houston broken down by year");
+  assert.equal(rd("is the murder rate in Houston down 10% from 2020").text, "is the murder rate in Houston down 10% from 2020");
+  // OVERALL is violent plus property crime; the crime named beside it keeps its own meaning.
+  // ("overall crime" beside a place was already violent plus property: the all-seven measure of P148.)
+  assert.equal(rd("Houston overall violent crime in 2024").text, "Houston violent crime in 2024");
+  assert.equal(rd("national overall and violent crime rates monthly in 2024").text, "national violent crime and property crime and violent crime rates monthly in 2024");
+  // COMPARED TO THE (REST OF THE) NATION is the nation's rates beside the place's.
+  assert.equal(rd("How does Houston compare to the rest of the nation in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
 }
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
