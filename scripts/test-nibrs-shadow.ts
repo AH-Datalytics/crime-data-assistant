@@ -2359,6 +2359,19 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(!/Memphis/.test(String(nation.rewrite ?? "")), String(nation.rewrite));
   // A turn that points back stays a follow-up.
   assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
+  // Follow-up #4 (P197): a short reply to the app's own ask is the button pressed, or the asked-for part filled in.
+  {
+    const asked = ask("What's the assault trend in New York over the past 5 years?") as { about?: string; options?: { label: string }[] };
+    assert.equal(asked.about, "which New York");
+    const pick = asked.options![0];
+    assert.ok(pick, JSON.stringify(asked).slice(0, 300));
+    const named = shadowFollowUp("What's the assault trend in New York over the past 5 years?", pick.label, deps);
+    assert.equal(named.rewrite, `What's the assault trend in ${pick.label} over the past 5 years`, String(named.rewrite));
+    const n = asked.options!.indexOf(pick) + 1;
+    assert.equal(shadowFollowUp("What's the assault trend in New York over the past 5 years?", `${n} please`, deps).rewrite, named.rewrite);
+    // Not a reply: a comparison, or a question of its own.
+    assert.notEqual(shadowFollowUp("What's the assault trend in New York over the past 5 years?", "compare this to Raleigh", deps).rewrite, "What's the assault trend in New York over the past 5 years in Raleigh");
+  }
   // Codex review 1: a comparison is never answered as a single place; it stays on the follow-up path (asked or proposed).
   for (const f of ["How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?"]) {
     const cmp = shadowFollowUp("Shoplifting in Memphis in 2024", f, deps);

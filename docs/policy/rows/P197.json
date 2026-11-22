@@ -1,0 +1,12 @@
+{
+  "id": "P197",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"mass\" or \"the third one\" after \"murders in springfield\" asked which Springfield; \"2\" or \"violent please\" after \"Tacoma\" asked which kind of crime; \"murder trends\" after \"tacoma pd\"; \"for the us\" or \"In Tucson Arizona\" after an ask for the place",
+  "what the app does today": "A typed reply to the app's own question was read as a change to the last question and usually got \"I couldn't tell how this changes your last question\".",
+  "proposed behavior": "When the previous turn was the app's ask, a short reply (six words or fewer, not a question that stands on its own) answers it. A choice named or numbered (every word typed starts a word of exactly one button's label; \"2\", \"the first one\") is that button pressed: the question is rebuilt with the choice (the place chosen where the name was typed) and answered as a first question, with the defaults (P180-P182). Otherwise the part that was asked for is filled in from the reply: a place for \"which place\" (the nation for \"nationwide\", \"for the us\"), a period for \"which period\", a crime for \"which kind of crime\" (the asked question's place kept). A reply that names a choice more than one button fits, adds other words, or leads to the same ask again goes on as before.",
+  "exact default or choices offered": "The button's answer, or the asked question with the reply's part.",
+  "why": "Coordinator 2026-11-22 (follow-up plan item 4, approved order): a typed reply to the app's ask is the button press.",
+  "status": "Decided 2026-11-22 (through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"Follow-up #4\")."
+}
