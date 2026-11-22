@@ -54366,23 +54366,16 @@
    "question": "show me crimes against persons in maricopa county, arizona 2020 - 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every year is blank for this agency in NIBRS (the Maricopa County Sheriff's Office reports no NIBRS data), so the series is declined in one sentence (P147)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P70/P25 (frozen rule 10, P28): a plain county name is the county's own agency, here the Maricopa County Sheriff's Office (no county police department), with P70's note that the cities in the county aren't included; Jeff 2026-11-22 \"Maricopa County means the sheriff office\"; crimes against persons counted by victim (09A, 09B, 11A-D, 13A-C, 36A, 36B, 100, 64A, 64B; 09C left out), one row per year 2020-2025. By rule from the question text; second labeler NIBRS Model"
+    "notes": "P25/P70: the place is the Maricopa County Sheriff's Office (AZ0070000); crimes against persons is NIBRS-only and that agency has no NIBRS figure in any month 2017-2026 (NIBRSAI Engine, canon2), so P147's one-sentence decline, no other agency. By rule; second labeler NIBRS Model changed to decline 2026-11-22"
    }
   },
   {
