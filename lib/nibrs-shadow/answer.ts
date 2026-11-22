@@ -429,7 +429,7 @@ function withDefault(o: ShadowOption, note: string, buttons: ShadowOption[], sit
     return null;
   }
   const x = r as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
-  const text = [x.delivered.text[0], note, ...x.delivered.text.slice(1)];
+  const text = [x.delivered.text[0], ...(note ? [note] : []), ...x.delivered.text.slice(1)];
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
@@ -894,11 +894,14 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
     let option: ShadowOption | undefined;
     let note = "";
+    let byStateRows = false;
     const more: ShadowOption[] = [];
     if (c.about === "which place") {
       option = find(/^The United States$/);
-      note = "No place was named, so the United States is shown.";
-      more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
+      // "By state" names the nation's states as the rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
+      byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(question);
+      note = byStateRows ? "" : "No place was named, so the United States is shown.";
+      if (!byStateRows) more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
       option = find(/^Every year available$/);
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
@@ -924,7 +927,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
-    notes.push(note);
+    if (!byStateRows) notes.push(note);
     buttons.push(...more);
     cur = option.continuation;
   }
@@ -2140,9 +2143,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
-    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps);
+    // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
+    // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
+    const nationalClearanceShare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "share") && CLEARANCE_WORDS.test(ledger0.question);
+    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins),
+      nationalClearanceShare ? { ...deps, deferChars: Number.MAX_SAFE_INTEGER } : deps);
     const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
-    const nationDefault = deps.noDefaults ? null : withDefault(nationOption, "No place was named, so the United States is shown.", placeButtons, "place");
+    // "By state" has the nation's states as its rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
+    const byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(ledger0.question);
+    const nationDefault = deps.noDefaults ? null : withDefault(nationOption, byStateRows ? "" : "No place was named, so the United States is shown.", byStateRows ? [] : placeButtons, "place");
     if (nationDefault) return nationDefault;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.
