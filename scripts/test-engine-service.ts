@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
-import { configFromEnv, createCore } from "../lib/engine-service/core";
+import { askedOf, configFromEnv, createCore } from "../lib/engine-service/core";
 import { createEngineServer } from "../lib/engine-service/http";
 import { EnginePool, type PoolWorker } from "../lib/engine-service/pool";
 import { parseEngineRequest, statusOf, type EngineRequest, type EngineResult } from "../lib/engine-service/protocol";
@@ -144,6 +144,12 @@ function fakes() {
   assert.deepEqual(c, { tabs: { nibrs: { root: "/r/canonical", python: "/p/python" } }, memoryLimit: "3GB", threads: 2, timeoutMs: 90000 });
   assert.deepEqual(configFromEnv({}), { tabs: {}, memoryLimit: "2GB", threads: 1, timeoutMs: 120000 }, "defaults: no tab, 2 GB, one thread");
   assert.equal(configFromEnv({ ENGINE_DUCKDB_THREADS: "0" }).threads, 1, "a bad thread count falls back to one");
+  // Follow-ups #2: the whole question a reply answered or asked about, which the page sends back as the next follow-up's `previous`.
+  assert.equal(askedOf({ question: "violent crime in Houston by year" }, { kind: "answer" }), "violent crime in Houston by year", "a first question is itself");
+  assert.equal(askedOf({ question: "show rates instead", previous: "violent crime in Houston by year" }, { kind: "answer", rewrite: "violent crime rate in Houston by year" }),
+    "violent crime rate in Houston by year", "a follow-up is its rewritten question");
+  assert.equal(askedOf({ question: "hmm", previous: "violent crime in Houston by year" }, { kind: "clarify", rewrite: null }), "violent crime in Houston by year",
+    "a follow-up that could not be read keeps the previous question");
   const core = createCore(configFromEnv({}));
   const r = core.answer(req("q", { tab: "historical" }));
   assert.ok(!r.ok && r.kind === "unavailable", "a source with no root is not available (no engine is built for it)");

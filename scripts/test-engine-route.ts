@@ -98,6 +98,10 @@ async function main(): Promise<void> {
     const u = adaptEngineResponse({ tab: "nibrs", question: "q", path: [] }, { kind: "something-new" }, "rel-1", 1);
     assert.deepEqual([u.engine.kind, typeof u.explanation], ["decline", "string"], "an unknown kind is shown as a decline, never a crash");
     assert.equal(adaptEngineResponse({ tab: "nibrs", question: "q", path: [] }, null, "r", 1).rowCount, 0);
+    // Follow-ups #2: the whole question asked rides on the engine meta (a decline too), for the page to send back as `previous`.
+    const k = adaptEngineResponse({ tab: "nibrs", question: "now murders", path: [], previous: "violent crime in Houston" }, { kind: "decline", text: "x" }, "r", 1, "murders in Houston");
+    assert.equal(k.engine.asked, "murders in Houston");
+    assert.ok(!("asked" in adaptEngineResponse({ tab: "nibrs", question: "q", path: [] }, null, "r", 1).engine), "no asked, no key");
   }
 
   // --- the route logic, with fakes
