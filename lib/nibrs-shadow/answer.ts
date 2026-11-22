@@ -67,7 +67,7 @@ import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
-import { shrShareQuestion } from "./shr-shares";
+import { shrShareDecline, shrShareQuestion } from "./shr-shares";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -1056,6 +1056,8 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
   // P210 to P214: the shares of felony and argument murders, strangers and acquaintances, the same race, firearms (Homicide Reports, the nation or a state).
+  const felonySaid = shrShareDecline(question);
+  if (felonySaid) return decline("unsupported_capability", felonySaid);
   const shrShare = deps.shr ? shrShareQuestion(question, deps.shr) : null;
   if (shrShare && deps.shr) {
     const a = answerShr(shrShare, deps.shr, deps.execute, deps.historical);

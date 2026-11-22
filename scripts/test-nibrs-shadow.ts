@@ -2688,12 +2688,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       return /shr_victim/.test(sql) && /GROUP BY/.test(sql) ? (/AS k1/.test(sql) ? [[2024, "0", 30], [2024, "1", 10], [2024, "2", 40], [2025, "0", 33], [2025, "1", 12], [2025, "2", 35]] : [["0", 60], ["1", 20], ["2", 80]]) : cstub(sql); } } as unknown as ShadowDeps;
     type Sh = { kind: string; delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] }; explanation?: string };
     const go = (q: string) => shadowAnswer(q, sdeps3) as unknown as Sh;
-    // Felony vs argument, one year: groups with counts and shares, the rest last (P210).
-    const fa = go("felony murder vs argument murder nationally in 2024");
+    // Arguments, one year: the argument group, undetermined and the rest, with counts and shares (P210; Jeff 2026-11-22: felonies are not counted).
+    const fa = go("What share of murders nationally are from arguments in 2024?");
     assert.equal(fa.kind, "shr", JSON.stringify(fa).slice(0, 300));
-    assert.deepEqual(fa.delivered.table.rows.slice(0, 3).map((r) => [r[0], r[1], r[2]]), [["Felony murders", 60, 37.5], ["Arguments", 20, 12.5], ["Suspected felony", 80, 50]]);
-    assert.ok(fa.delivered.text.some((t) => /^Felony murders are the felony-type circumstances/.test(t)));
-    assert.ok(sqls3.some((s) => /CASE WHEN r\.circumstance IN \('02', '03'/.test(s) && /ELSE '4'/.test(s)), "circumstance groups with the rest");
+    assert.deepEqual(fa.delivered.table.rows.map((r) => [r[0], r[1], r[2]]), [["Arguments", 60, 37.5], ["Undetermined", 20, 12.5], ["Other circumstances", 80, 50]]);
+    assert.ok(sqls3.some((s) => /CASE WHEN r\.circumstance IN \('44', '45'\)/.test(s) && /ELSE '2'/.test(s)), "circumstance groups with the rest");
+    // Felony and misdemeanor requests are declined whole, with the reason (a charging classification the data does not record).
+    for (const q of ["felony murder vs argument murder nationally in 2024", "felony murder vs argument murder trend", "what share of murders are felony murders", "murders vs misdemeanor assaults share nationally"]) {
+      const fd = go(q);
+      assert.equal(fd.kind, "decline", q);
+      assert.match(fd.explanation ?? "", /how a case is charged, and the data records neither/, q);
+    }
     // Stranger vs acquaintance, with the relationship groups (P211).
     const sa = go("stranger murders vs acquaintance murders nationally in 2024");
     assert.equal(sa.kind, "shr", JSON.stringify(sa).slice(0, 300));
@@ -2723,8 +2728,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(ey.delivered.table.rows.every((r) => /^\d{4}$/.test(String(r[0]))), JSON.stringify(ey.delivered.table.rows));
     assert.deepEqual(ey.delivered.table.columns.map((c) => c.header).slice(0, 3), ["Year", "Weapon", "Murder victims"]);
     // The logged wordings (the 284 gate's reader failures) are these shares.
-    const logged: [string, string][] = [["stranger homicides vs acquaintance homicides", "Stranger"], ["felony murder vs argument murder trend", "Felony murders"],
-      ["How many murders stem from arguments versus other circumstances?", "Felony murders"], ["non-firearm murders per year since 1976", "Firearm"],
+    const logged: [string, string][] = [["stranger homicides vs acquaintance homicides", "Stranger"], ["How many murders stem from arguments versus other circumstances?", "Arguments"], ["non-firearm murders per year since 1976", "Firearm"],
       ["what is the non-firearm homicide total by year", "Firearm"], ["Share of murders committed via firearm per year since 2000", "Firearm"],
       ["csv of share of murders committed with a firearm and the total number of murders", "Firearm"], ["Share of murders committed with a firearm, 2020 - 2026", "Firearm"],
       ["What share of homicides are intraracial since 2000?", "Same race (intraracial)"], ["Percentage of inter racial homicide 1975-2023", "Same race (intraracial)"],

@@ -15,13 +15,23 @@ import { SHR_FIRST_YEAR, SHR_RELATIONSHIP, type ShrBuild, type ShrFilter, type S
 import { STATE_NAMES } from "./places";
 
 type Groups = NonNullable<ShrQuestion["breakdown"]>;
-const FELONY = ["02", "03", "05", "06", "07", "09", "10", "17", "18", "19", "26"];
 const KNOWN_RACE = "('W', 'B', 'I', 'A', 'P')";
 const KEYS = "o.data_year = r.data_year AND o.source_line_no = r.source_line_no AND o.in_record";
 const OFFENDER_RACE: Record<string, string> = { black: "B", white: "W", asian: "A", indian: "I", native: "I" };
 const OFFENDER_SEX: Record<string, string> = { male: "M", males: "M", men: "M", man: "M", female: "F", females: "F", women: "F", woman: "F" };
 
 type Family = { breakdown: Groups; filters: ShrFilter[]; notes: string[] } | null;
+
+/**
+ * A felony or misdemeanor request is declined whole, with the reason (Jeff 2026-11-22: "we don't count felonies as that's a charging device"): a felony and a
+ * misdemeanor are classifications a prosecutor charges, and the data does not record them. Asked as a share, a comparison or a trend of murders (no partial answer).
+ */
+export function shrShareDecline(question: string): string | null {
+  const q = question.replace(/\s+/g, " ");
+  if (!/\b(?:murders?|homicides?|killings?)\b/i.test(q) || !/\b(?:felony|felonies|misdemeanou?rs?)\b/i.test(q)) return null;
+  if (!/\b(?:shares?|percent(?:age)?|proportion|portion|vs\.?|versus|compared?|trend|how\s+many)\b|%/i.test(q)) return null;
+  return "A felony or a misdemeanor is how a case is charged, and the data records neither, so they can't be counted or compared. Ask about a specific offense or circumstance instead, for example murders from arguments.";
+}
 
 /** The grouping a question asks for, or null when it is not one of these shares. */
 export function shrShareFamily(question: string): Family {
@@ -31,11 +41,11 @@ export function shrShareFamily(question: string): Family {
   // A share, a proportion or a comparison; a plain count ("murders from arguments in Houston") keeps its own path.
   const shareWord = /\b(?:shares?|percent(?:age)?|proportion|portion|vs\.?|versus)\b|%/i.test(q);
   const both = (a: RegExp, b: RegExp) => a.test(q) && b.test(q);
-  // P210: felony and argument.
-  if (/\b(?:felony|felonies|arguments?)\b/i.test(q) && (shareWord || both(/\b(?:felony|felonies)\b/i, /\barguments?\b/i)) && /\b(?:felony|felonies)\b|\barguments?\b.*\b(?:vs\.?|versus|other|share|percent)/i.test(q))
+  // P210 (Jeff 2026-11-22: felonies are a charging device and are not counted): arguments only; "felony" and "misdemeanor" are declined by shrShareDecline.
+  if (/\barguments?\b/i.test(q) && (shareWord || /\b(?:other\s+circumstances?|circumstances?)\b/i.test(q)) && !/\b(?:felony|felonies|misdemeanou?rs?)\b/i.test(q))
     return { breakdown: { dim: "circumstance", header: "Circumstance", words: "circumstance", groups: [
-      { label: "Felony murders", codes: FELONY }, { label: "Arguments", codes: ["44", "45"] }, { label: "Suspected felony", codes: ["70"] }, { label: "Undetermined", codes: ["99"] }], rest: "Other circumstances" },
-      filters: [], notes: ["Felony murders are the felony-type circumstances (rape, robbery, burglary, larceny, motor vehicle theft, arson, prostitution, other sex offense, drug law violation, gambling, other felony); a suspected felony is its own line. Arguments are arguments over money or property and other arguments."] };
+      { label: "Arguments", codes: ["44", "45"] }, { label: "Undetermined", codes: ["99"] }], rest: "Other circumstances" },
+      filters: [], notes: ["Arguments are arguments over money or property and other arguments; every other circumstance the agencies recorded is in \"Other circumstances\"."] };
   // P211: stranger and acquaintance.
   if (/\b(?:strangers?|acquaintances?|knew\s+(?:their|the)\s+(?:killer|murderer|offender)|known\s+to\s+the\s+victim)\b/i.test(q) && (shareWord || both(/\bstrangers?\b/i, /\bacquaintances?\b/i) || /\bknew\b/i.test(q)))
     return { breakdown: { dim: "relationship", header: "Relationship to the offender", words: "the victim's relationship to the offender", groups: [
