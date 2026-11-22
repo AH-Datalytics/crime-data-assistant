@@ -231,9 +231,11 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
     if (pid === 0) throw new Error("duckdb executor: the process never started and can't be closed");
     if (pid > 0) {
       if (process.platform === "win32") {
-        // 128: no such process (it has exited already).
+        // 128: no such process (it has exited already). 255 is what Windows also returns for a process or tree that is already gone (the Runner's runs ended with this
+        // throw after their output was written): accepted only when the process is really not there, which tasklist says.
         const r = spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
-        if (r.status !== 0 && r.status !== 128) throw new Error(`duckdb executor: taskkill failed (${r.error ?? r.status})`);
+        const gone = () => { const t = spawnSync("tasklist", ["/FI", `PID eq ${pid}`, "/NH"], { encoding: "utf8" }); return t.status === 0 && !new RegExp(`\\b${pid}\\b`).test(t.stdout ?? ""); };
+        if (r.status !== 0 && r.status !== 128 && !(r.status === 255 && gone())) throw new Error(`duckdb executor: taskkill failed (${r.error ?? r.status})`);
       } else try { process.kill(pid, "SIGKILL"); } catch { /* already gone */ }
     }
     void worker.terminate();
