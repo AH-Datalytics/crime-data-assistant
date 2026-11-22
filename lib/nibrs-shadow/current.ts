@@ -15,6 +15,7 @@
  *               never with a missing or zero population
  */
 import { carriesTo } from "./population-carry";
+import CROSSWALK from "./crimeindex-current-ori-crosswalk.json";
 import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
@@ -70,6 +71,16 @@ export const REGIONS: Record<string, { name: string; states: string[] }> = {
 
 export type Month = string; // "2026-08"
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
+/**
+ * One agency under two IDs in the Crime Index current files (crimeindex-current-ori-crosswalk.json: Pontiac, MI is MI631900X in the Final
+ * file and MI6367300 in current_crime). Every row of both files is read with the ID current_crime uses, and an ID asked for is mapped the
+ * same way, so the agency is one agency in every month (loop 2 finding 3; the blind checker reads the same table).
+ */
+const SAME_AS = new Map<string, string>(CROSSWALK.pairs.map((p) => [p.id, p.same_as]));
+export const canonicalOri = (ori: string): string => SAME_AS.get(ori) ?? ori;
+const ciTable = (b: { root: string }, table: "current_final" | "current_crime"): string => SAME_AS.size
+  ? `(SELECT * REPLACE (CASE ori ${[...SAME_AS].map(([id, as]) => `WHEN ${q(id)} THEN ${q(as)}`).join(" ")} ELSE ori END AS ori) FROM read_parquet('${b.root}/${table}.parquet'))`
+  : `read_parquet('${b.root}/${table}.parquet')`;
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 export function months(from: Month, to: Month): Month[] {
   const out: Month[] = [];
@@ -86,8 +97,8 @@ export function agencyMonths(b: CurrentBuild, ori: string, measure: string, from
   const out = new Map<Month, number | null>(months(from, to).map((m) => [m, null]));
   const key = "printf('%04d-%02d', year, month)";
   const finalExpr = PARTS[col] ? `CASE WHEN ${PARTS[col].map((p) => `${p}_total IS NULL`).join(" OR ")} THEN NULL ELSE ${PARTS[col].map((p) => `${p}_total`).join(" + ")} END` : `${col}_total`;
-  const sql = `SELECT ${key} AS ym, ${col}_total FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND ${key} BETWEEN ${q(from)} AND ${q(to)}
-    UNION ALL SELECT ${key} AS ym, ${finalExpr} FROM read_parquet('${b.root}/current_final.parquet') WHERE ori = ${q(ori)} AND ${key} BETWEEN ${q(from)} AND ${q(to)} AND ${key} < ${q(b.firstMonth)}`;
+  const sql = `SELECT ${key} AS ym, ${col}_total FROM ${ciTable(b, "current_crime")} WHERE ori = ${q(canonicalOri(ori))} AND ${key} BETWEEN ${q(from)} AND ${q(to)}
+    UNION ALL SELECT ${key} AS ym, ${finalExpr} FROM ${ciTable(b, "current_final")} WHERE ori = ${q(canonicalOri(ori))} AND ${key} BETWEEN ${q(from)} AND ${q(to)} AND ${key} < ${q(b.firstMonth)}`;
   for (const [ym, v] of execute(sql)) if (out.has(String(ym))) out.set(String(ym), num(v));
   return out;
 }
@@ -101,7 +112,7 @@ export function groupMonths(b: CurrentBuild, states: string[] | null, measure: s
   const col = CURRENT_MEASURE[measure];
   const key = "printf('%04d-%02d', year, month)";
   const sql = `SELECT ${key} AS ym, sum(${col}_total), count(*), sum(population), count(*) FILTER (WHERE ${col}_total IS NULL)
-    FROM read_parquet('${b.root}/current_crime.parquet') WHERE sample${states ? ` AND state IN (${states.map(q).join(", ")})` : ""}
+    FROM ${ciTable(b, "current_crime")} WHERE sample${states ? ` AND state IN (${states.map(q).join(", ")})` : ""}
     AND ${key} BETWEEN ${q(from)} AND ${q(to)} GROUP BY 1`;
   const out = new Map<Month, GroupMonth>();
   for (const [ym, v, n, pop, blank] of execute(sql)) out.set(String(ym), { value: num(v), agencies: Number(n), population: Number(pop ?? 0), blank: Number(blank) });
@@ -121,20 +132,20 @@ export function groupSpanMonths(b: CurrentBuild, states: string[] | null, measur
   const finalExpr = PARTS[col] ? `CASE WHEN ${PARTS[col].map((p) => `${p}_total IS NULL`).join(" OR ")} THEN NULL ELSE ${PARTS[col].map((p) => `${p}_total`).join(" + ")} END` : `${col}_total`;
   const where = `${states ? `state IN (${states.map(q).join(", ")}) AND ` : ""}${key} BETWEEN ${q(from)} AND ${q(to)}`;
   const n = months(from, to).length;
-  const cte = `WITH u AS (SELECT ori, ${key} AS ym, ${finalExpr} AS v FROM read_parquet('${b.root}/current_final.parquet') WHERE ${where}
-      UNION ALL SELECT c.ori, ${key.replace(/year/g, "c.year").replace(/month/g, "c.month")} AS ym, c.${col}_total AS v FROM read_parquet('${b.root}/current_crime.parquet') c
+  const cte = `WITH u AS (SELECT ori, ${key} AS ym, ${finalExpr} AS v FROM ${ciTable(b, "current_final")} WHERE ${where}
+      UNION ALL SELECT c.ori, ${key.replace(/year/g, "c.year").replace(/month/g, "c.month")} AS ym, c.${col}_total AS v FROM ${ciTable(b, "current_crime")} c
         WHERE ${where.replace(/\byear\b/g, "c.year").replace(/\bmonth\b/g, "c.month").replace(/\bstate\b/g, "c.state")}
-        AND NOT EXISTS (SELECT 1 FROM read_parquet('${b.root}/current_final.parquet') f WHERE f.ori = c.ori AND f.year = c.year AND f.month = c.month)),
+        AND NOT EXISTS (SELECT 1 FROM ${ciTable(b, "current_final")} f WHERE f.ori = c.ori AND f.year = c.year AND f.month = c.month)),
     full_span AS (SELECT ori FROM u WHERE v IS NOT NULL GROUP BY ori HAVING count(*) = ${n})`;
   const out = new Map<Month, number | null>(months(from, to).map((m) => [m, null]));
   for (const [ym, v] of execute(`${cte} SELECT ym, sum(v) FROM u WHERE ori IN (SELECT ori FROM full_span) GROUP BY ym`)) out.set(String(ym), num(v));
-  const head = execute(`${cte} SELECT count(*), coalesce(sum(p.population), 0) FROM full_span s LEFT JOIN (SELECT ori, population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ${key} = ${q(to)}) p USING (ori)`)[0] ?? [0, 0];
+  const head = execute(`${cte} SELECT count(*), coalesce(sum(p.population), 0) FROM full_span s LEFT JOIN (SELECT ori, population FROM ${ciTable(b, "current_crime")} WHERE ${key} = ${q(to)}) p USING (ori)`)[0] ?? [0, 0];
   return { values: out, agencies: Number(head[0]), population: Number(head[1] ?? 0) };
 }
 
 /** An agency's current population: its row's in `month`, else its latest earlier row's; null when none is above zero. */
 export function agencyPopulation(b: CurrentBuild, ori: string, month: Month, execute: (sql: string) => unknown[][]): number | null {
-  const r = execute(`SELECT population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0 AND printf('%04d-%02d', year, month) <= ${q(month)} ORDER BY year DESC, month DESC LIMIT 1`)[0];
+  const r = execute(`SELECT population FROM ${ciTable(b, "current_crime")} WHERE ori = ${q(canonicalOri(ori))} AND population > 0 AND printf('%04d-%02d', year, month) <= ${q(month)} ORDER BY year DESC, month DESC LIMIT 1`)[0];
   if (r) return Number(r[0]);
   // None yet in Current Trends: the current year takes the latest completed year's population (population-carry.ts).
   const last = completedYear(b, execute);
@@ -156,7 +167,7 @@ function completedYearPopulation(b: CurrentBuild, ori: string, last: number, exe
  * monthly-rates review 01.1).
  */
 export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWanted: Month[], execute: (sql: string) => unknown[][]): Map<Month, number | null> {
-  const cur = new Map(execute(`SELECT printf('%04d-%02d', year, month), population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
+  const cur = new Map(execute(`SELECT printf('%04d-%02d', year, month), population FROM ${ciTable(b, "current_crime")} WHERE ori = ${q(canonicalOri(ori))} AND population > 0`)
     .map((r) => [String(r[0]), Number(r[1])] as [string, number]));
   const yearly = new Map(execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
     .map((r) => [Number(r[0]), Number(r[1])] as [number, number]));
@@ -176,7 +187,7 @@ export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWante
 export function groupRateBase(b: CurrentBuild, states: string[] | null, measure: string, from: Month, to: Month, execute: (sql: string) => unknown[][]): { count: number; population: number; agencies: number } | null {
   const col = CURRENT_MEASURE[measure], key = "printf('%04d-%02d', year, month)", n = months(from, to).length;
   const r = execute(`WITH a AS (SELECT ori, count(*) AS rows, count(${col}_total) AS known, sum(${col}_total) AS total, arg_max(population, year * 100 + month) AS pop
-      FROM read_parquet('${b.root}/current_crime.parquet') WHERE sample${states ? ` AND state IN (${states.map(q).join(", ")})` : ""} AND ${key} BETWEEN ${q(from)} AND ${q(to)} GROUP BY ori)
+      FROM ${ciTable(b, "current_crime")} WHERE sample${states ? ` AND state IN (${states.map(q).join(", ")})` : ""} AND ${key} BETWEEN ${q(from)} AND ${q(to)} GROUP BY ori)
     SELECT sum(total), sum(pop), count(*) FROM a WHERE rows = ${n} AND known = ${n} AND pop > 0`)[0];
   return r && Number(r[2]) > 0 ? { count: Number(r[0]), population: Number(r[1]), agencies: Number(r[2]) } : null;
 }
