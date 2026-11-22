@@ -1416,7 +1416,10 @@ const ORDINALS = ["first", "second", "third", "fourth", "fifth"];
  */
 function replyToAsk(previous: string, followUp: string, deps: ShadowDeps): FollowUpOutcome | null {
   if (deps.checkingOffer || followUp.trim().split(/\s+/).length > 6) return null;
-  const asked = shadowAnswer(previous, deps);
+  // Whether the previous turn was an ask needs no data: read it with an executor that returns nothing, so an answered previous
+  // question is not run again just to find that out.
+  let asked: ReturnType<typeof shadowAnswer>;
+  try { asked = shadowAnswer(previous, { ...deps, execute: () => [] }); } catch { return null; }
   if (asked.kind !== "clarify" || !asked.question.trim()) return null;
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(REPLY_FILLER, " ").replace(/\s+/g, " ").trim();
   const t = norm(followUp);
