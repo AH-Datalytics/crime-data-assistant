@@ -1057,6 +1057,10 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   if (cov) return cov;
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
+  // Stabbings are the offenses with a knife (Jeff 2026-11-22); a crime named beside them would take the knife as its own weapon, which is not what was asked.
+  if (/\bstab+[a-z]{0,2}ngs?\b/i.test(question)
+    && readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger.parts.some((p) => p.clause === 0 && p.concept === "measure" && p.value !== "unspecified"))
+    return decline("unsupported_capability", "This isn't available: stabbings beside other crimes, or in this form.");
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
