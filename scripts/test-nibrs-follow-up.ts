@@ -34,6 +34,9 @@ assert.equal(q(rw("how many murders in baltimore county this year", "countywide"
 assert.match(q(rw("compare murders between the City of St. Louis, and St. Louis County, MO from 1990 to the most recent data", "countywide total")), /, countywide$/);
 assert.match(q(rw("what is the trend of aggravated assaults with a firearm in DC and Prince George's County over the past 10 years", "countywide")), /, countywide$/);
 asked(rw("violent crime in Memphis in 2024", "countywide"));
+// P70 over P135 (Jeff 2026-11-22): "<county> as a whole" and a change to a county-wide question stay county-wide, so P70 declines them.
+assert.equal(q(rw("calculate percent change in violent crimes rates from 2024-2025 for Fort Worth, TX", "for tarrant county, tx as a whole")), "calculate percent change in violent crimes rates from 2024-2025 for tarrant county, tx, countywide");
+assert.equal(q(rw("calculate the countywide percent change in violent crimes in Cook County, IL from 2024-2025", "use rates")), "calculate the countywide percent change in violent crimes in Cook County, IL from 2024-2025");
 // After an answer about the data itself (definitions, sources, agencies reporting, states with no data) there is no figure to change: the follow-up is a
 // question of its own, never rebuilt into another question about the data (QL-nibrs-534978cb8e: "Carjackings per year" after "how is domestic violence defined?").
 for (const prevQ of ["how is domestic violence defined?", "where is this data taken from", "How many agencies reported NIBRS data in 2023?", "what states are not represented?"]) {

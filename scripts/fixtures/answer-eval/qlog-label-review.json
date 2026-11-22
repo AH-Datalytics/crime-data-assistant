@@ -15652,12 +15652,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-5e21cfbc08": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Crimes against persons is a defined NIBRS offense category.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70/P25 (frozen rule 10, P28): a plain county name is the county's own agency, here the Maricopa County Sheriff's Office (no county police department), with P70's note that the cities in the county aren't included; Jeff 2026-11-22 \"Maricopa County means the sheriff office\"; crimes against persons counted by victim (09A, 09B, 11A-D, 13A-C, 36A, 36B, 100, 64A, 64B; 09C left out), one row per year 2020-2025. By rule from the question text; second labeler NIBRS Model",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-5e57d301ac": {
@@ -16250,14 +16253,11 @@
 },
 "QL-nibrs-727aa15401": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): countywide juvenile arrests for Wayne County and Cuyahoga County, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-nibrs-72d1e3dfee": {
@@ -17710,12 +17710,15 @@
 }
 },
 "QL-nibrs-9e3fd1095c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Crimes against persons is a defined NIBRS category.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70/P25 (frozen rule 10, P28): a plain county name is the county's own agency, here the Tarrant County Sheriff's Office (no county police department), with P70's note that the cities in the county aren't included; Jeff 2026-11-22 \"Maricopa County means the sheriff office\"; crimes against persons counted by victim (09A, 09B, 11A-D, 13A-C, 36A, 36B, 100, 64A, 64B; 09C left out), one row per year 2020-2025. By rule from the question text; second labeler NIBRS Model",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-9e8f0157d0": {
@@ -18045,14 +18048,11 @@
 },
 "QL-nibrs-aa40789134": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): countywide violent crimes by offender age in Bernalillo County, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-nibrs-aa4461ea77": {
@@ -25027,12 +25027,12 @@
 }
 },
 "QL-ct-4a3b18fe08": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Inherited countywide incident totals require NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"the same\" carries the previous question's \"countywide\" to Dallas County, a county-wide request (as its previous question, QL-ct-4a3b1f38eb), declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-4a77c4a77c": {
@@ -25151,12 +25151,12 @@
 }
 },
 "QL-ct-556bb5e68c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 reporting-agency aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"for tarrant county, tx as a whole\" asks the whole county, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-56ce52a05c": {
@@ -25298,12 +25298,12 @@
 }
 },
 "QL-ct-6e331ab5fa": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Inherited countywide rates require reporting-agency aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"use rates\" keeps the previous question's countywide Cook County change, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-6eed23fc44": {
@@ -27142,12 +27142,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-8ae8e7b9d6": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P70 countywide aggregation uses reporting agencies.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): murder data aggregated for all St. Louis County agencies is a county-wide sum, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-8e159c9ad6": {
