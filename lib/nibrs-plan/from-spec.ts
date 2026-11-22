@@ -38,6 +38,9 @@ const DV: Record<string, string[]> = {
 /** Today's age groups (scripts/nibrs-auto-update.py age_group_expr), as bins; special codes stay their own categories. */
 /** Today's age groups (P30). */
 /** Time of day (Jeff 2026-11-15): morning 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight, night midnight to 6 AM. */
+/** A plan default's reason when "violent crime" / "property crime" was answered with the NIBRS category (Jeff 2026-11-15): the answer keeps the words asked. */
+export const ASKED_AS_VIOLENT = "violent crime by a person's age counts NIBRS crimes against persons (Jeff 2026-11-15)";
+export const ASKED_AS_PROPERTY = "property crime by a victim's age counts NIBRS crimes against property (Jeff 2026-11-15)";
 export const HOUR_BINS = [
   { label: "Morning", from: 6, to: 11 }, { label: "Afternoon", from: 12, to: 17 }, { label: "Evening", from: 18, to: 23 }, { label: "Night", from: 0, to: 5 },
 ];
@@ -242,6 +245,9 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       addMeasure(spec.measure, unit, spec.measure);
       if (whose) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       if (propertyAge) measurePath.set("property_crime", measurePath.get("against_property")!);
+      // The crime asked was violent / property crime: the answer keeps those words (a question naming the NIBRS category itself is called by it).
+      if (whose || propertyAge) defaults.push({ path: measurePath.get(whose ? "person_crimes" : "against_property")!, value: measureId(spec.measure, unit),
+        reason: whose ? ASKED_AS_VIOLENT : ASKED_AS_PROPERTY });
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
       const p = resolve(spec.place);

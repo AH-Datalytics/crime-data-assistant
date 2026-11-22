@@ -15,6 +15,7 @@ type Measure = NibrsPlan["measures"][number];
 import type { Comparison } from "../nibrs-plan/transforms";
 import { ANSWER_STATEMENTS, checkEnvelope, shownStatements, finalStatistics, peopleFacts, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
 import { MEASURE_CODES, MEASURE_LABEL } from "../nibrs-question-types";
+import { ASKED_AS_PROPERTY, ASKED_AS_VIOLENT } from "../nibrs-plan/from-spec";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
 import { agencySubject, changeSentence, nationSubject, seriesTitle, type Subject } from "./headline";
@@ -49,6 +50,13 @@ export function periodWords(from: string, to: string): string {
 
 const UNIT_PLURAL: Record<string, string> = { offense: "offenses", incident: "incidents", victim: "victims", offender: "offenders", arrest: "arrests", arrestee: "arrests", group_b_arrest: "arrests" };
 const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic violation", drug_equipment: "drug equipment violation" };
+/** The NIBRS crime-against categories by their own name, and how each counted unit is said around it. */
+const CRIME_AGAINST_WORDS: Record<string, string> = { person_crimes: "crimes against persons", against_property: "crimes against property", against_society: "crimes against society" };
+const AGAINST_UNIT: Record<string, string> = { victim: "victims of {}", offense: "{}", incident: "incidents of {}", offender: "offenders in {}", arrest: "arrests for {}", arrestee: "arrests for {}" };
+/** True when the plan says this measure answers "violent crime" / "property crime" (the defaults of Jeff's 2026-11-15 rule and of P167). */
+export function askedAsPartOne(plan: NibrsPlan, m: Measure): boolean {
+  return plan.defaults.some((d) => d.value === m.id && (d.reason === ASKED_AS_VIOLENT || d.reason === ASKED_AS_PROPERTY || d.reason.startsWith("P167")));
+}
 /**
  * A filter on weapons or relationships, in words ("with a firearm", "by a stranger", "with a weapon recorded as
  * Handgun"); null for any other, or for a code with no name. The shadow declines a weapon or relationship filter this
@@ -141,6 +149,9 @@ export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent man
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
 /** A victim's age for the NIBRS crimes against property (Jeff 2026-11-15, the short line). */
 export const PROPERTY_AGE_LINE = "Counts victims of NIBRS crimes against property, such as robbery, burglary, theft, fraud and vandalism. Businesses and other victims that are not people have no age and show as Unknown.";
+/** The crime-against categories asked by name (coordinator 2026-11-22): what each counts, one line. */
+export const PROPERTY_CRIMES_LINE = "Counts NIBRS crimes against property, such as robbery, burglary, theft, motor vehicle theft, arson, fraud and vandalism.";
+export const SOCIETY_CRIMES_LINE = "Counts NIBRS crimes against society, such as drug offenses, weapon law violations, gambling, prostitution, pornography and animal cruelty.";
 export const NIGHT_LINE = "Many agencies record midnight when the time is not known, so night may be overstated.";
 export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
 export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
@@ -160,6 +171,10 @@ export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): st
   // Increment 7: with no condition on the incident, every arrest (standalone Group B arrests included).
   if (m.id === "arrests.all_crime") return [peopleFacts(plan).throughIncident ? "arrests on incidents" : "arrests", ...filters].join(" ");
   if (name === "drug_possession" && m.unit === "arrest" && filters.includes(MARIJUANA_WORDS)) return ["marijuana possession arrests", ...filters.filter((x) => x !== MARIJUANA_WORDS)].join(" ");
+  // The NIBRS crime-against categories asked by their own name (coordinator 2026-11-22) are called by it; reached from "violent crime" /
+  // "property crime" (Jeff 2026-11-15, a plan default says so) they keep the words asked.
+  const against = CRIME_AGAINST_WORDS[name];
+  if (against && !askedAsPartOne(plan, m)) return [`${(AGAINST_UNIT[m.unit] ?? "{} " + (UNIT_PLURAL[m.unit] ?? m.unit)).replace("{}", against)}`, ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
