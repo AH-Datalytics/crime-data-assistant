@@ -2,11 +2,11 @@
   "id": "P199",
   "topic": "Already decided",
   "decision needed": "None: already decided",
-  "situation (example wording)": "\"female vs male murder victims per year\", \"Male vs female firearm murder victims per month since 2018\"",
-  "what the app does today": "Showed 0 in every year or month: the two sexes were counted as one record with both, and months after the last filed month showed 0.",
-  "proposed behavior": "Two values of one person detail (female and male victims, two races) are two categories of one breakdown, never both on one person, so no \"versus\" is needed. For a state or the nation by month, months after the last month with any Homicide Report in the final year are blank, never 0, and the answer says so (\"A blank month is one after the last month in which any agency filed Homicide Reports.\"): a 0 would claim no murders (S3).",
-  "exact default or choices offered": "The breakdown table; blank months with the gap note.",
-  "why": "Coordinator 2026-11-22, blind check of QL-shr-b31e79fb3a, QL-shr-c5a7750e9c, QL-shr-c674f79a08: a 0 claims no murders.",
-  "status": "Decided 2026-11-22 (S3, through the coordinator)",
-  "test cases": "scripts/test-nibrs-shadow.ts (\"female vs male murder victims\", \"female murder victims nationally per month in 2026\")."
+  "situation (example wording)": "\"Hillsboro, Oregon sworn officers per 1,000 by year\": a year whose published officers-per-100,000 is blank in the Crime Index build while the officer count and the population are there (Hillsboro 1995: 48 officers, 45,262 people)",
+  "what the app does today": "The engine computes the rate from the counts (48 / 45,262 x 1,000 = 1.06); the blind checker scaled the published rate, which is blank, and had nothing (loop 2 finding 4).",
+  "proposed behavior": "A staffing rate (officers, civilians or all employees per 1,000, per 100,000 or another base) is the count over the population, scaled to the base asked for, computed from the counts whenever both are there, including a year whose published rate is blank. It is blank only when the count or the population is missing. The same rule as a crime rate. Checkers compute it from the counts too.",
+  "exact default or choices offered": "Count / population x base; blank only when either is missing.",
+  "why": "Jeff 2026-11-22 (through the coordinator), loop 2 finding 4: compute officers per 1,000 from the counts when the published rate is blank.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "Blind-check scripts (staffing rates); scripts/test-nibrs-shadow.ts staffing tests."
 }
