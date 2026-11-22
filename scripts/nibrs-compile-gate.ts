@@ -144,11 +144,15 @@ write("offense", 2025, O, [
     ("XX0000000", "MAR-1", "20250305", "240", 2, "20"),
 ])
 write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1, "20")])  # a January 2025 incident in the 2026 file
-S = ["ori", "month", "status"]
-write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)] + [("ZZ0000000", 1, "REPORTED_CRIMES")])
-write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
-    + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
-write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
+# agency_month_status carries the evidence columns the compiler reads (Model's build): a REPORTED_CRIMES month has Group A rows, a REPORTED_ZERO month
+# the zero report, an UNKNOWN month neither (a release without them fails in the compiler's SQL with a Binder Error naming the column).
+S = ["ori", "month", "status", "group_a_rows", "group_b_rows", "zero_flag", "ab_flag"]
+def st(rows):
+    return [(o, m, s_, 1 if s_ == "REPORTED_CRIMES" else 0, 0, "Y" if s_ == "REPORTED_ZERO" else "N", "Y" if s_ == "REPORTED_CRIMES" else "N") for (o, m, s_) in rows]
+write("agency_month_status", 2024, S, st([("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)] + [("ZZ0000000", 1, "REPORTED_CRIMES")]))
+write("agency_month_status", 2025, S, st([("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
+    + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)]))  # YY: all of 2025 reported zero
+write("agency_month_status", 2026, S, st([("XX0000000", 1, "REPORTED_CRIMES")]))
 # Arrests (Jeff 2026-11-12, "Yes, count them"): an arrest in a month reported as zero crimes (January) or not reported
 # (April, an arrest in the 2026 file) is counted, not a conflict; an M segment is left out (P68).
 A = ["ori", "incident_num", "arrestee_seq", "key_occurrence", "arrest_date", "arrest_offense", "multiple_arrestee_indicator", "age"]
@@ -169,9 +173,9 @@ write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occur
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
-// February: crimes reported, none of this kind: a known 0 (P51).
+// January: a zero report with an offense row in it counts the row (P183, Jeff 2026-11-21: rows win over the flag for crimes). February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
+  ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
@@ -179,10 +183,11 @@ const by = (dimension: string) => ({ dimension, unknown: "visible" as const, abs
 check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offense"), geography: { places: [{ kind: "agency", ori: "YY0000000", label: "Synthetic, YY" }], combine: "separate" },
   groupings: [by("time.year"), by("offense.location_type")], statistics: [{ kind: "count", as: "count", measure: "n" }, { kind: "share", as: "share", measure: "n", within: ["time.year"] }] },
   { kind: "absolute", from: "2024-01", to: "2025-12" }, SYN, [2024, 2025, 2026], new Map<string, Cell[]>([
-    ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(null, "NOT_REPORTED"), C(null, "NOT_REPORTED")]]]));
+    ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(0, "REPORTED_ZERO"), C(null, "UNAVAILABLE", true)]]]));
 
-// One agency, zero-report months (Jeff 2026-11-16): YY has a theft in January 2024 and a zero report for February to December. Those months
-// are left out: the year and the total are the January count, naming the months left out; a year with no month with crimes is blank (NOT_REPORTED).
+// One agency, zero-report months (Jeff 2026-11-22, audit batch 2, replacing 2026-11-16): YY has a theft in January 2024 and a zero report for February to
+// December. A formal zero report is a reported 0 and counts in the total: the year and the total are the January count (the zero months add 0 and nothing is
+// left out); a year of nothing but zero reports is a reported zero (REPORTED_ZERO).
 {
   const yy = { ...syn("offenses.motor_vehicle_theft", "offense"), geography: { places: [{ kind: "agency" as const, ori: "YY0000000", label: "Synthetic, YY" }], combine: "separate" as const } };
   const run = (plan: NibrsPlan, from: string, to: string) => {
@@ -196,11 +201,11 @@ check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offen
   const y24 = year.rows.find((r) => String(r[0]) === "2024")!, y25 = year.rows.find((r) => String(r[0]) === "2025")!;
   const bad: string[] = [];
   if (y24[idx(year, "count")] !== 1 || y24[idx(year, "count_status")] !== "VALUE") bad.push(`2024 year ${JSON.stringify(y24)}`);
-  if (String(y24[idx(year, "left_out")]) !== "202402,202403,202404,202405,202406,202407,202408,202409,202410,202411,202412") bad.push(`2024 left_out ${y24[idx(year, "left_out")]}`);
-  if (y25[idx(year, "count")] !== null || y25[idx(year, "count_status")] !== "NOT_REPORTED") bad.push(`2025 year ${JSON.stringify(y25)}`);
+  if (String(y24[idx(year, "left_out")]) !== "") bad.push(`2024 left_out ${y24[idx(year, "left_out")]}`);
+  if (y25[idx(year, "count")] !== 0 || y25[idx(year, "count_status")] !== "REPORTED_ZERO") bad.push(`2025 year ${JSON.stringify(y25)}`);
   const t = total.rows[0];
-  if (t[idx(total, "count")] !== 1 || t[idx(total, "count_status")] !== "VALUE" || !String(t[idx(total, "left_out")]).startsWith("202402,")) bad.push(`total ${JSON.stringify(t)}`);
-  console.log(`synthetic one agency, zero-report months left out: ${bad.length ? `${bad.length} PROBLEM(S)` : "all equal"}`);
+  if (t[idx(total, "count")] !== 1 || t[idx(total, "count_status")] !== "VALUE" || String(t[idx(total, "left_out")]) !== "") bad.push(`total ${JSON.stringify(t)}`);
+  console.log(`synthetic one agency, zero-report months count as 0: ${bad.length ? `${bad.length} PROBLEM(S)` : "all equal"}`);
   for (const b of bad) console.log(`  ${b}`);
   if (bad.length) failed++;
 }
@@ -216,13 +221,13 @@ check("synthetic victim with a handgun on its connecting offense", zz([{ id: "vi
 
 check("synthetic arrests in zero and unreported months", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
   measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
-    ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(null, "NOT_REPORTED")]]]),
+    ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(1, "VALUE")]], ["2025-04", [C(1, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
   ["arrests_counted_once"]);
 // Job AR3: robbery arrests at XX: none anywhere, but January (REPORTED_ZERO) and April (UNKNOWN) have a theft arrest, so
 // both are a known 0 (VALUE, Codex 04.1), not a reported zero or a blank; May (REPORTED_ZERO, no arrest) stays a reported zero.
 check("synthetic arrests of another kind in an unreported month", { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date",
   measures: [{ id: "arrests.robbery", unit: "arrest", as: "n" }] }, SYN_PERIOD, SYN, [2025, 2026], new Map<string, Cell[]>([
-    ["2025-01", [C(0, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(null, "NOT_REPORTED")]]]),
+    ["2025-01", [C(0, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(0, "VALUE")]], ["2025-04", [C(0, "VALUE")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]),
   ["arrests_counted_once"]);
 // Job AR6: DUI arrests (a Group B offense) at WW, from the standalone Group B arrests: January has one (a month with an
 // arrest is reported for arrests whatever its status), February-May have neither an arrest nor a status (blank).

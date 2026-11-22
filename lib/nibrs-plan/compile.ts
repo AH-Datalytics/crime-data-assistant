@@ -48,6 +48,7 @@
 import { cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
 import { FAMILIES, GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import { CRIME_MONTH_STATUS } from "./month-status";
 import cubeMeasures from "./cube-measures.json";
 import type { NibrsPlan } from "./plan";
 import { ATTRIBUTE_TABLE, type AttributeRow } from "./attribute-table";
@@ -640,7 +641,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     ...(cube?.totalSql ? [`totals AS (${cube.totalSql})`, `scoped_t AS (SELECT * FROM totals u WHERE ${inScope})`] : []),
     // Every month of the period, so a month with no rows still gets a status.
     `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? (bigGrid ? ` CROSS JOIN ${GRID} a` : ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a`) : ""} WHERE TRUE${inYears("ym")})`,
-    `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
+    // P51/P121 (coordinator 2026-11-22, QL-ct-f960533ecf): a month "reported" only through Group B arrest rows (no Group A row and no zero
+    // report: Miami FL0130600 in 2021) did not report its crimes, so for a crime counted from Group A segments it is unknown (blank, with the
+    // gap sentence), never a 0. A month with the agency's zero report (zero_flag Y, about 767 such months with Group B rows) did report a zero:
+    // REPORTED_ZERO, blank like any zero report (the independent review of PR 347; month-status.ts). Arrests keep the flag: a Group B arrest is
+    // that month's arrest report.
+    `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, ${isArrest ? "status" : `${CRIME_MONTH_STATUS} AS status`}
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
     `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, ${nUnits} AS n, ${nIncidents} AS ni FROM ${cube?.totalSql ? "scoped_t" : "scoped"} u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
@@ -654,9 +660,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         "'VALUE'"}${anyArrest ? `
            WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN ${
-        // One agency (Jeff 2026-11-16): a month reported as zero crimes is NOT reported: left out, blank, never 0. A state or
-        // group sum (grid) keeps the zero report: it adds nothing, and the month is present when any agency has rows.
-        grid ? "'REPORTED_ZERO'" : "'NOT_REPORTED'"}
+        // A formal zero report (the zero flag set, no rows at all) is a reported 0 (Jeff 2026-11-22, audit batch 2, replacing 2026-11-16): it counts
+        // as 0 in one agency's total, and in a state or group sum (grid) it adds nothing; the month is present when any agency has rows.
+        "'REPORTED_ZERO'"}
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
       FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${anyArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,

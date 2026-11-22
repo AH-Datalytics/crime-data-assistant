@@ -61,6 +61,7 @@ import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearan
 import { answerClearanceShare } from "./clearance-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { ARREST_MONTH_REPORTED, CRIME_MONTH_REPORTED } from "../nibrs-plan/month-status";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -472,7 +473,7 @@ function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number
  * One choice left answers with it and says why. Null when none runs (the plain decline stands).
  */
 let inSpanChoices = false;
-function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; startMonth: string; endMonth: string; ct?: { first: string; last: string } }): ShadowOutcome | null {
+function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<number, Candidate>; agency: string; ori: string; startYear: number; startMonth: string; endMonth: string; ct?: { first: string; last: string }; arrests?: boolean }): ShadowOutcome | null {
   if (inSpanChoices) return null;
   inSpanChoices = true;
   try {
@@ -498,7 +499,7 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
     // The agency's first reported NIBRS month, never before the release's first.
     let nFirst: string | null = rel.firstMonth;
     try {
-      const r = deps.execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND status IN ('REPORTED_CRIMES', 'REPORTED_ZERO')`)[0]?.[0];
+      const r = deps.execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND ${a.arrests ? ARREST_MONTH_REPORTED : CRIME_MONTH_REPORTED}`)[0]?.[0];
       const n = Number(r);
       // No reported month at all: the agency has no monthly NIBRS figures to offer (Codex span review 06.4).
       if (r === null || r === undefined) nFirst = null;
@@ -1237,9 +1238,26 @@ function nibrsHasNoReports(o: ShadowOutcome, ledger0: RequestLedger, deps: Shado
     });
   }
   if (!bad.length) return o;
-  const named = places.length === 1 ? `the ${agencyName(deps.places, bad[0].ori)}` : (() => { const n = bad.map((p) => p.label.split(",")[0]); return n.length > 2 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n.join(" and "); })();
   const question = ledger0.question.replace(/[?.!\s]+$/, "");
-  return decline("not_recorded_in_nibrs", `NIBRS has no data from ${named} in this period.`,
+  // Jeff 2026-11-22 (audit batch 2, B18): "<Agency>'s NIBRS data isn't complete for <period> (N of M months reported)." when some months of the period were
+  // reported, so the blank is the missing months and not an agency with nothing; "NIBRS has no data from <agency> in <period>." only when none were.
+  const [from, to] = [(o as { period: { from: string; to: string } }).period.from, (o as { period: { from: string; to: string } }).period.to];
+  const total = (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(to.slice(5)) - Number(from.slice(5)) + 1;
+  const arrests = o.plan.measures.length > 0 && o.plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
+  const reportedMonths = (ori: string): number => {
+    try {
+      const r = deps.execute(`SELECT count(*) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND data_year * 100 + month BETWEEN ${Number(from.replace("-", ""))} AND ${Number(to.replace("-", ""))} AND ${arrests ? ARREST_MONTH_REPORTED : CRIME_MONTH_REPORTED}`)[0]?.[0];
+      return Number(r) || 0;
+    } catch { return 0; }
+  };
+  const counted = bad.map((p) => ({ p, n: reportedMonths(p.ori) }));
+  const when = periodWords(from, to);
+  const shortName = (p: { label: string }) => p.label.split(",")[0];
+  const partial = counted.filter((c) => c.n > 0).map((c) => `${shortName(c.p)}'s NIBRS data isn't complete for ${when} (${c.n} of ${total} months reported).`);
+  const none = counted.filter((c) => c.n === 0).map((c) => c.p);
+  const named = places.length === 1 ? `the ${agencyName(deps.places, bad[0].ori)}` : (() => { const n = none.map(shortName); return n.length > 2 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n.join(" and "); })();
+  const explanation = [...partial, ...(none.length ? [`NIBRS has no data from ${named} in ${when}.`] : [])].join(" ");
+  return decline("not_recorded_in_nibrs", explanation,
     { alternative: { label: `Ask instead: "${question}"`, question, role: "other_source", targetSource: "historical" } });
 }
 
@@ -3432,7 +3450,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const onePlace = plan.geography.places.length === 1 ? plan.geography.places[0] : null;
     if (onePlace && onePlace.kind === "agency" && !yearSet && !flags(ledger0).nibrsAsked && plan.groupings.some((g) => g.dimension === "time.month") && plan.statistics.every((st) => st.kind === "count")
       && !plan.measures.some((m) => /^(?:victims|offenses|incidents)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))) {
-      const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), startMonth: period.from, endMonth: period.to });
+      const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, arrests: plan.measures.length > 0 && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id)), startYear: Number(period.from.slice(0, 4)), startMonth: period.from, endMonth: period.to });
       if (ch) return ch;
     }
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);
