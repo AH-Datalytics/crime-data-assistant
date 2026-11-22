@@ -175,12 +175,14 @@ const FIXTURES: Record<string, string[]> = {
     "violent crime per capita in Tennessee over time and how it compares to other states"],
   // Current Trends (design note 2026-11-03): an agency by month (a blank month), the nation by month, a state's month.
   // P148: crime by month for one agency is violent and property beside their sum (the Part I total), not a choice.
-  rtci: ["Memphis murders by month in 2025", "Memphis crime per month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
+  rtci: ["Memphis crime per month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026"],
   // Homicide Reports (Jeff S1, S2, 2026-11-11): a state's murder victims by weapon; a city's firearm murders reaching
   // back before NIBRS's years.
   shr: ["Murder victims in Texas by weapon in 2024", "Firearm murders in Memphis by year since 2010", "Memphis murders by weapon in 2024",
     // Codex SHR-A confirmation 01.7: the relationship breakdown, asked as "victim-offender relationship".
-    "Murders in Virginia in 2024 by victim-offender relationship"],
+    "Murders in Virginia in 2024 by victim-offender relationship",
+    // B15: murders per month are Homicide Reports' answer whatever the span (Current Trends is the button).
+    "Memphis murders by month in 2025", "Memphis murders by month in 2018"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
 const CHOICES = ["Memphis crime in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",
