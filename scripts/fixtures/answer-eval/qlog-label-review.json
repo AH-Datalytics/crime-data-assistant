@@ -6698,7 +6698,15 @@
 },
 "QL-hist-6ebd4f2228": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-hist-6f624e6886": {
 "status": "draft",
@@ -7125,7 +7133,15 @@
 },
 "QL-hist-8a21c198a8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-hist-8b55b24a6f": {
 "status": "reviewed",
@@ -8740,7 +8756,15 @@
 },
 "QL-hist-f18108068c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-hist-f1a5516075": {
 "status": "reviewed",
@@ -8945,7 +8969,15 @@
 },
 "QL-hist-fffdd52afc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-nibrs-00b7c6b3c9": {
 "status": "reviewed",
@@ -14667,7 +14699,15 @@
 },
 "QL-shr-0b47c2ecf0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-shr-0c808347cd": {
 "status": "reviewed",
@@ -16913,7 +16953,12 @@
 },
 "QL-shr-c6b8a6f2a1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "clarify",
+"about": "period"
+}
 },
 "QL-shr-c6d44e39ca": {
 "status": "reviewed",

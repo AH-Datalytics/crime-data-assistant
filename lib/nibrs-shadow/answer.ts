@@ -57,7 +57,7 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrentClearance } from "./clearance-current";
+import { answerCurrentClearance, answerStateClearanceSeries } from "./clearance-current";
 import { partOneMonthly, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -1437,6 +1437,21 @@ const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") &&
 const currentClearance = (sp: { statistic: string; measures: string[]; filters: unknown[]; grain: string; period: NPeriod; unit: string | null }, thisYear: number) =>
   sp.statistic === "clearance_rate" && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && sp.grain === "total"
   && sp.period.form === "year" && sp.period.year === thisYear && (sp.unit === null || sp.unit === "offenses");
+/**
+ * A completed year's clearance rate for one state (P172, Jeff 2026-11-21, reversing P18): the cleared offenses over the offenses of every agency that
+ * reported, from NIBRS. The nation's completed years stay Crime Index's.
+ */
+const completedStateClearance = (sp: { statistic: string; measures: string[]; filters: unknown[]; grain: string; period: NPeriod; unit: string | null; places: { kind: string }[] },
+  thisYear: number, firstYear: number): { years: number[]; note: string | null } | null => {
+  if (!(sp.statistic === "clearance_rate" && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && (sp.grain === "total" || sp.grain === "year")
+    && (sp.unit === null || sp.unit === "offenses") && sp.places.length === 1 && sp.places[0].kind === "state")) return null;
+  const span = yearSpan(sp, thisYear, firstYear);
+  // The current year is the Consistent Reporting Agencies' rate (P57), and a span reaching it is not decided here.
+  if (!span || span[1] >= thisYear || span[1] < firstYear || span[0] > span[1]) return null;
+  const from = Math.max(span[0], firstYear);
+  const years = Array.from({ length: span[1] - from + 1 }, (_, i) => from + i);
+  return { years, note: from > span[0] ? `NIBRS state figures start in ${firstYear}; ${span[0]}${from - 1 > span[0] ? ` through ${from - 1}` : ""} ${from - 1 > span[0] ? "are" : "is"} outside them.` : null };
+};
 /** A question finer than whole years: a month or quarter grain, or a comparison of part years. */
 const partYear = (sp: { grain: string }, cmp: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null | undefined) =>
   (sp.grain !== "total" && sp.grain !== "year") || (!!cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later)));
@@ -1495,7 +1510,7 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
 /** P13's sentence, as Current Trends and Historical say it. */
 const SAFEST_SENTENCE = "There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.";
 /** P18's sentence, as the clearance answer says it for a state. */
-const STATE_CLEARANCE_SENTENCE = "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate.";
+const STATE_CLEARANCE_SENTENCE = "A clearance rate for every state at once isn't available. Ask for one state and one year, for example \"Texas murder clearance rate in 2024\".";
 const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 /**
  * The same months of each year (Jeff 2026-11-16, Q1): "Murders through April from 2017 to 2025", "homicides in the first 6 months of each
@@ -1657,8 +1672,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (clause0("clearance").some((p) => p.value === "rate") && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "entity" && p.state !== "context")
     // Only where the existing path would ask first: "by state" (no place), or a state with no period, for a Part I crime (a crime NIBRS alone
     // records has its own, longer sentence, said once a period is given).
-    && (clause0("list").some((p) => p.value === "list:state")
-      || (clause0("place").some((p) => /^state:/.test(p.value ?? "")) && !clause0("period").length && clause0("measure").length > 0 && clause0("measure").every((p) => PART_ONE.has(p.value ?? "")))))
+    && clause0("list").some((p) => p.value === "list:state"))
     return decline("not_recorded_in_nibrs", STATE_CLEARANCE_SENTENCE);
   const term = flags(ledger0).undefinedTerm;
   if (term) {
@@ -2332,6 +2346,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // increment-5 review 2.3) and stay with P01's decline.
     if ((geo || geos) && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
       && !currentClearance(sp, Number(release.lastMonth.slice(0, 4)))
+      && !completedStateClearance(sp, Number(release.lastMonth.slice(0, 4)), Number(release.firstMonth.slice(0, 4)))
       && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate") && !flags(ledger0).composite
       && !(partYear(sp, flags(ledger0).comparison) && !ANNUAL_ONLY.has(sp.measures[0]))) {
       // The file has whole years only: a month, part of a year or a part-year comparison is declined, never answered
@@ -2355,7 +2370,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [] };
       const r = geos ? answerSrsSeveral(srsQ, geos.map(srsPlace)) : answerSrs({ ...srsQ, place: srsPlace(geo!) });
       if (r.kind === "srs") return r;
-      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /state clearance rate for several years/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }
   }
   // Item 3 (coordinator 2026-11-07): an agency beside its state or the nation ("Memphis and Tennessee murder rate in
@@ -2585,9 +2600,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A clearance rate for a state or the nation that is not a Part I offense's (P57): a state has none (P18); the method
   // for a NIBRS-only offense is not decided (P57).
   if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && d.spec.places.length === 1 && (d.spec.places[0].kind === "state" || d.spec.places[0].kind === "national")
-    && !(plainRate && currentClearance(d.spec, Number(release.lastMonth.slice(0, 4)))))
+    && !(plainRate && (currentClearance(d.spec, Number(release.lastMonth.slice(0, 4)))
+      || completedStateClearance(d.spec, Number(release.lastMonth.slice(0, 4)), Number(release.firstMonth.slice(0, 4))))))
     return decline("not_recorded_in_nibrs", d.spec.places[0].kind === "state"
-      ? "There is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and how to compute a clearance rate for a NIBRS-only offense is not decided."
+      ? "How to compute a state clearance rate for a NIBRS-only offense, or for several years at once, is not decided."
       : "How to compute a national clearance rate for a NIBRS-only offense is not decided.");
   // P01: a standard (Part I) crime's count is Historical's (completed years) or Current Trends' (this year), not this
   // NIBRS shadow's; it is declined rather than answered from the wrong source.
@@ -2917,6 +2933,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (d.spec.type === "series" && plainRateNow && currentClearance(d.spec, Number(release.lastMonth.slice(0, 4))) && d.spec.places.length === 1)
     return answerCurrentClearance(plan, { from: `${release.lastMonth.slice(0, 4)}-01`, to: release.lastMonth }, d.spec.measures[0], deps, statements, [],
       (why, detail) => decline("unsupported_capability", why, detail ? { detail } : undefined));
+  // A completed year's clearance rate for one state (P172): every agency that reported, said so.
+  const seriesSpec = d.spec.type === "series" ? d.spec : null;
+  const stateRate = seriesSpec && plainRateNow ? completedStateClearance(seriesSpec, Number(release.lastMonth.slice(0, 4)), Number(release.firstMonth.slice(0, 4))) : null;
+  if (seriesSpec && stateRate) {
+    const fail = (why: string, detail?: string) => decline("unsupported_capability", why, detail ? { detail } : undefined);
+    return stateRate.years.length === 1
+      ? answerCurrentClearance(plan, { from: `${stateRate.years[0]}-01`, to: `${stateRate.years[0]}-12` }, seriesSpec.measures[0], deps, statements, [], fail, true)
+      : answerStateClearanceSeries(plan, stateRate.years, seriesSpec.measures[0], deps, statements, [], fail, stateRate.note);
+  }
   // Offender and arrestee breakdowns for a state or the nation are summed like victims' (coordinator 2026-11-04; P29's
   // words, by/against, still decide whose attribute is grouped).
   // A state or national sum by one category (coordinator 2026-11-04): its count and each category's share, never a rate
