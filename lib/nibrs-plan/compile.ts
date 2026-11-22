@@ -326,9 +326,11 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   }
   if (kind === "offenders" && unit === "offender") {
     // P44: the offender segments of incidents with the codes, one per segment (segment 00, no offender known, as recorded).
+    // The incidents with the codes as a semi join on their key, not a correlated EXISTS: the same rows, but the nation's homicide
+    // offenders by age group for five years took 21 s on that step with EXISTS and 3.6 s this way (Runner: 191 s against a 300 s cap).
     return { entity: "offender", sql: `SELECT DISTINCT f.data_year, f.ori, f.incident_num, f.offender_seq || ':' || f.key_occurrence AS sub, substr(f.incident_date, 1, 6) AS ym${extra}
       FROM ${read("offender")} f ${joins}
-      WHERE EXISTS (SELECT 1 FROM ${read("offense")} o WHERE ${sameIncident("o", "f")} AND o.offense_code IN (${list(codes)}))${incidentFilter("f")}` };
+      WHERE (f.data_year, f.ori, f.incident_num) IN (SELECT o.data_year, o.ori, o.incident_num FROM ${read("offense")} o WHERE o.offense_code IN (${list(codes)}))${incidentFilter("f")}` };
   }
   if (kind === "arrests" && (unit === "arrest" || unit === "arrestee")) {
     // P46, P50: Group A arrestee segments by arrest offense, each once, placed by arrest date. P68 (DE44): a segment the
