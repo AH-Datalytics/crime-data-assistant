@@ -23,6 +23,8 @@ import { agencyHeaderSql, universeStates } from "./state-sum";
 import { postalState } from "../nibrs-plan/state-codes";
 import { NOT_YET } from "./wording";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
+/** P172/P173 (Jeff 2026-11-22, audit A15): said once in every statewide clearance-rate answer. */
+export const STATEWIDE_CLEARANCE_SENTENCE = "The FBI does not compute statewide clearance rates. This is computed from NIBRS reports instead.";
 
 type Decline = (explanation: string, detail?: string) => ShadowOutcome;
 type Measure = NibrsPlan["measures"][number];
@@ -86,7 +88,7 @@ export function answerStateClearanceRanking(plan: NibrsPlan, crime: string, deps
     .sort((a, b) => (a.v === null ? 1 : b.v === null ? -1 : b.v - a.v) || b.t.offenses - a.t.offenses || stateName(a.s).localeCompare(stateName(b.s)));
   if (!ranked.length) return decline(`No agency reported ${words} in ${year}.`);
   const rows = ranked.map((r) => ({ key: stateName(r.s), value: r.v, status: r.v === null ? "UNAVAILABLE" : "VALUE" }));
-  const lines = [`${year} ${words[0].toUpperCase()}${words.slice(1)} Cleared (%) by State`,
+  const lines = [`${year} ${words[0].toUpperCase()}${words.slice(1)} Cleared (%) by State`, STATEWIDE_CLEARANCE_SENTENCE,
     `Every state, from the highest clearance rate to the lowest. Each rate is the offenses cleared over the offenses reported, summed over the agencies that reported in ${year}.`, "Includes all agencies."];
   const plan2: NibrsPlan = { ...plan, statistics: [stat, { kind: "count", as: "offenses", measure: all.as }, { kind: "agencies", as: "agencies", measure: all.as }], transforms: [] };
   const delivered = deliverTable(plan2, { dimension: "geo.state", header: "State" }, { as: stat.as, header: `${words[0].toUpperCase()}${words.slice(1)} cleared (%)` }, rows, lines, statements, deps.release.id, readings,
@@ -120,7 +122,7 @@ export function answerStateClearanceSeries(plan: NibrsPlan, years: number[], cri
   // P159: place, what is counted, the series, then the timeframe ("Florida Rapes Cleared (%) Per Year, 2017-2025").
   const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : String(years[0]);
   const title = seriesTitle(span, `${words} Cleared (%)`, "year", Where);
-  const lines = [title, "Each year's rate is the offenses cleared over the offenses reported, summed over the agencies that reported that year.", "Includes all agencies.", ...(note ? [note] : [])];
+  const lines = [title, ...(place.kind === "state" ? [STATEWIDE_CLEARANCE_SENTENCE] : []), "Each year's rate is the offenses cleared over the offenses reported, summed over the agencies that reported that year.", "Includes all agencies.", ...(note ? [note] : [])];
   const plan2: NibrsPlan = { ...plan, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] };
   const delivered = deliverTable(plan2, { dimension: "time.year", header: "Year" }, { as: stat.as, header: `${words[0].toUpperCase()}${words.slice(1)} cleared (%)` }, rows, lines, statements, deps.release.id, readings);
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
@@ -198,7 +200,7 @@ export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; 
     if (!every.length) return decline(`No agency in ${where} reported crimes in ${when}.`);
     const d = every.reduce((n, o) => n + gAll.get(o)!.sum, 0), c = every.reduce((n, o) => n + gCleared.get(o)!.sum, 0);
     if (!d) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
-    return deliver(c, d, [`${place.kind === "national" ? "The United States" : Where} cleared ${rateOf(c, d)}% of the ${words} reported in ${when}, summed over the ${fmt(every.length)} agencies that reported.`, "Includes all agencies."]);
+    return deliver(c, d, [`${place.kind === "national" ? "The United States" : Where} cleared ${rateOf(c, d)}% of the ${words} reported in ${when}, summed over the ${fmt(every.length)} agencies that reported.`, ...(place.kind === "state" ? [STATEWIDE_CLEARANCE_SENTENCE] : []), "Includes all agencies."]);
   }
   // A state or the nation: the Consistent Reporting Agencies, one set for both figures.
   const set =oris.filter((o) => withHeader.has(o) && gAll.get(o)?.val === gAll.get(o)?.months && gAll.get(o)!.months === span0 && gCleared.get(o)?.rep === span0);

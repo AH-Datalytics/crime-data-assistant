@@ -793,8 +793,8 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     ex((s2) => (/^SELECT population/.test(s2) ? [[290_000]] : field)));
   assert.ok(pos.kind === "historical", JSON.stringify(pos));
   if (pos.kind === "historical") {
-    assert.equal(pos.delivered.text[0], "Where Durham Ranks on 2024 Murder Rate Among U.S. Cities");
-    assert.equal(pos.delivered.text[1], "Durham, North Carolina ranks 3rd of 6 U.S. cities of 250,000 or more (the FBI's population group Durham, North Carolina is in) by murder rate in 2024; 1st is the highest.");
+    assert.equal(pos.delivered.text[0], "Where Durham Ranks on 2024 Murder Rate Among U.S. Cities of 250,000+");
+    assert.equal(pos.delivered.text[1], "Durham, North Carolina ranks 3rd of 6 U.S. cities of 250,000 or more by murder rate in 2024; 1st is the highest.");
     assert.equal(pos.delivered.text[2], "It is shown with the two cities above and the two below; ties share a place and are ordered by name.");
     assert.deepEqual(pos.delivered.table.rows.map((r) => r[1]), ["Alpha, NC", "Beta, NC", "Durham, NC", "Epsilon, NC", "Phi, NC"]);
     assert.ok(sql.some((x) => /population >= 250000 ORDER BY ori/.test(x)));
@@ -844,6 +844,14 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const noScope = shadowAnswer("where does houston stand on murder rate 2024", standBase as never) as { kind: string };
   const noScopeRank = shadowAnswer("where does houston rank on murder rate 2024", standBase as never) as { kind: string };
   assert.equal(noScope.kind, noScopeRank.kind);
+  // The size button is a fixed band by the city's own population (P132, Jeff 2026-11-22): 250,000+ for a large city, else 100,000+.
+  const buttons = (pop: number, q: string) => {
+    const o = shadowAnswer(q, { ...base, execute: (s2: string) => (/^SELECT population/.test(s2) ? [[pop]] : field2) } as never) as { kind: string; options?: { label: string }[] };
+    assert.equal(o.kind, "clarify", JSON.stringify(o).slice(0, 200));
+    return o.options!.map((x) => x.label);
+  };
+  assert.deepEqual(buttons(2_300_000, "Where does Houston stand on murder rate in 2024?"), ["Among Texas cities", "Among U.S. cities of 250,000+"]);
+  assert.deepEqual(buttons(110_000, "Where does Houston stand on murder rate in 2024?"), ["Among Texas cities", "Among U.S. cities of 100,000+"]);
 }
 // Engine 2, rules 1 and 3 (Jeff 2026-11-12): a rate for a group of people (D03) and what the data doesn't record are declined
 // in plain words before any place, period or crime is asked; counts and shares by group, and place names, still answer.
