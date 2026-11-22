@@ -1,0 +1,12 @@
+{
+  "id": "P38",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Gang-related shootings in Chicago\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "\"Gang-related\" murder and aggravated assault victims are answered from the FBI's recorded circumstance codes 04 (gangland) and 05 (juvenile gang), with the note that many agencies record the circumstance as unknown. A gang question those codes can't answer (gang shootings as such, gang membership, other crimes) is declined, saying that gang-related crime is often poorly reported to the FBI.",
+  "exact default or choices offered": "Answer from circumstance codes 04 and 05 with the unknown-circumstance note; otherwise decline with that note.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 16 \"decline with note that gang-related crime counts can be poorly reported to the FBI unless the precise definitions recorded by the FBI in NIBRS & SHR are used\"); amended 2026-11-04 (Jeff: \"Merge; keep gang codes\")",
+  "test cases": "Tests that cite this row: scripts/test-gemini-reader.ts, scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
+}

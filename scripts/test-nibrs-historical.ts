@@ -210,7 +210,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
 // Through the shadow (Codex review 01): routed only with the build, restrictions kept, combined declined.
 {
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub };
   const withBuild = (q: string) => shadowAnswer(q, { ...base, historical: build });
   assert.equal(withBuild("Murders in Memphis in 2023").kind, "historical");
   assert.notEqual(shadowAnswer("Murders in Memphis in 2023", base).kind, "historical", "no build: not Historical's answer");
@@ -322,7 +322,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
 // nation's from the historical file); the period asked when none; a crime or a column beside it goes on as before.
 {
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
   const pop = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`); return o as Extract<ShadowOutcome, { kind: "historical" }>; };
   const one = pop("Population of Memphis in 2023");
   assert.deepEqual(one.delivered.table.rows, [[616061]]);
@@ -385,7 +385,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
 // P70 (Jeff 2026-11-18, overriding 2026-10-30): a county-wide sum is declined, naming the county's own agency; nothing is summed.
 {
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
   const dec = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "decline", `${q}: ${JSON.stringify(o).slice(0, 240)}`); return o as Extract<ShadowOutcome, { kind: "decline" }>; };
   for (const q of ["countywide murders in Cook County Illinois by year", "Murders across all agencies in Kern County, California in 2025", "calculate the countywide percent change in violent crime rates in Cook County, IL from 2024-2025"])
     assert.match(dec(q).explanation, /^County-wide sums aren't given; the figures for (?:Cook|Kern) County are those of the (?:Cook|Kern) County Sheriff's Office\.$/, q);
@@ -397,7 +397,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
 // have none; officers and civilians together are asked which.
 {
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
   const hist = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`); return o as Extract<ShadowOutcome, { kind: "historical" }>; };
   const officers = hist("Show me the number of police officers in Memphis in 2023");
   assert.deepEqual(officers.delivered.table.rows, [[1900]]);
@@ -535,7 +535,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(later.kind === "historical");
   // The shadow: a ranking of a state's cities in a year before NIBRS's is Crime Index's; a NIBRS year never is.
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
   const viaShadow = shadowAnswer("Which Texas cities had the most murders in 1950?", base as never) as ShadowOutcome & { question?: { ranking?: unknown } };
   assert.ok(viaShadow.kind === "historical" && !!viaShadow.question?.ranking, JSON.stringify(viaShadow).slice(0, 300));
   // One city asked for, however the state is said (Codex ranking review 1): one row.
@@ -578,7 +578,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(early.kind === "historical-decline" && /cover 1960 through/.test(early.explanation));
   // Through the shadow: states ranked need no place; "big cities" with none are the nation's of 250,000 or more.
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
   const s1 = shadowAnswer("Which state had the highest murder rate in 2022", base as never);
   assert.ok(s1.kind === "historical" && s1.delivered.table.rows[0][0] === "Louisiana", JSON.stringify(s1).slice(0, 300));
   rsql.length = 0;
@@ -617,7 +617,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(answerHistoricalSet({ measure: "murder", state: "US", from: 2026, to: 2026, statistic: "count", n: 5 }, build, sexec).kind === "historical-decline");
   // Through the shadow: the set is read, the place is the nation or the state named, and nothing else answers in its place.
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: sexec, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: sexec, historical: build };
   for (const [q, n] of [["murder rate for the 10 largest cities in 2024", 10], ["Murder counts for the four largest U.S. cities, 2010-2024", 4], ["the 20 most populous cities ranked by their 2024 murder rate", 20]] as const) {
     assert.equal(readQuestion(q, 2026, "2026-09").largestSet, n, q);
   }
@@ -685,7 +685,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const tied = answerHistoricalSet({ measure: "murder", state: "TX", from: 2024, to: 2024, statistic: "count", n: 2 }, build, xexec);
   assert.ok(tied.kind === "historical" && tied.delivered.table.rows.length === 3 && tied.delivered.text.some((t) => /2 cities tie at the 2nd largest population, so 3 are shown/.test(t)), JSON.stringify(tied));
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: xexec, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: xexec, historical: build };
   // 01.1: a unit Crime Index doesn't count, and 01.2: a region or "combined", keep their own paths (never a set answer).
   for (const q of ["robbery victims in the 5 largest Texas cities in 2024", "murders for the 5 largest Texas cities in 2024 combined", "murders for the 5 largest cities in the Northeast in 2024"]) {
     const o = shadowAnswer(q, base as never);
@@ -710,7 +710,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const fsql: string[] = [];
   const fexec = (sql: string) => { fsql.push(sql); return [["X1", "Alpha", 200_000, 10, 5, "TX"]]; };
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: fexec, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: fexec, historical: build };
   const rate = shadowAnswer("Which Texas cities had the highest murder rate in 2024?", base as never);
   assert.ok(fsql.some((x) => /population >= 100000/.test(x)) && rate.kind === "historical" && rate.delivered.text.includes("No population was given, so rates are ranked among agencies of 100,000 or more."), JSON.stringify(rate).slice(0, 300));
   fsql.length = 0;
@@ -753,7 +753,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(south.kind === "historical" && JSON.stringify(south.delivered.table.rows) === "[[10]]" && south.delivered.text.some((t) => /District of Columbia isn't in the state totals/.test(t)), JSON.stringify(south));
   // Through the shadow: a region's city ranking and total, never the nation's.
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: gexec, historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: gexec, historical: build };
   gsql.length = 0;
   shadowAnswer("Which Midwest cities had the highest murder rate in 2024?", base as never);
   assert.ok(gsql.some((x) => /state IN \('IL'.*population >= 100000/.test(x)), gsql.join("\n"));
@@ -823,7 +823,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(r3.kind === "historical" && JSON.stringify(r3.delivered.table.rows) === "[[null]]", JSON.stringify(r3));
   // Through the shadow: county-wide population and the position's year to date or another scale are never answered.
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: () => [[500_000]], historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: () => [[500_000]], historical: build };
   assert.notEqual(shadowAnswer("Countywide population in Kern County, California in 2024", base as never).kind, "historical");
   for (const q of ["Where does Durham rank in murder rate so far in 2025 nationally?", "Where does Durham rank in murder rate per 1,000 in 2024 nationally?"]) {
     const o = shadowAnswer(q, base as never) as { kind: string; delivered?: { text: string[] } };
@@ -848,7 +848,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
 // in plain words before any place, period or crime is asked; counts and shares by group, and place names, still answer.
 {
   const places = loadPlaceIndex();
-  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: () => [], historical: build };
+  const base = { noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: () => [], historical: build };
   const GROUP = /^A rate for a group of people needs population figures by race, sex or age, which the FBI data doesn't include\./;
   for (const q of ["show me the crime rate for 18 to 25 year olds", "How do juvenile crime rates compare to criminal rates", "homicide rates for gender and race", "violent crime rates by race 2006 to 2026",
     "How do juvenile arrest rates compare to adult rates", "compare the rate of violent victimization for males and females from 1995 to 2013", "Can you show me the national female arrest rate for simple assault over time please",

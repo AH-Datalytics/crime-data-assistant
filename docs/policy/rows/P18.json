@@ -1,0 +1,12 @@
+{
+  "id": "P18",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Burglary clearance rate in Ohio in 2023\" (Historical has agency and national clearance, not state)",
+  "what the app does today": "Declined when the request is clearly a state.",
+  "proposed behavior": "Decline: there is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and a figure from reporting agencies is not a state rate.",
+  "exact default or choices offered": "Not applicable: a decline.",
+  "why": "A state clearance rate built from the agencies that report would be read as the state's rate.",
+  "status": "Decided 2026-10-28 (Jeff, on reflection: decline)",
+  "test cases": "GC-092, GC-103, GC-104, GC-105, GC-106, GC-107, GC-108, GC-109, GC-110, GC-111"
+}

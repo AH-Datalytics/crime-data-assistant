@@ -1,0 +1,12 @@
+{
+  "id": "P106",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Compare gun murders vs knife murders nationally by year\", \"How have intimate partner homicides trended nationwide?\"",
+  "what the app does today": "Both asked \"which range of years\" and offered a choice of years, because the engine could not answer the form (two weapons compared; the ex-boyfriend and ex-girlfriend code has no Homicide Reports equal).",
+  "proposed behavior": "Two weapons compared (the question says compare, versus or vs) are two categories of one breakdown by weapon: a gun (all firearm codes together) and a knife, each its own row, by year or total, from Homicide Reports. Intimate partner in Homicide Reports is husband, wife, common-law husband or wife, boyfriend, girlfriend, same-sex partner, ex-husband or ex-wife; the answer says: \"This data source does not record ex-boyfriend and ex-girlfriend relationships.\" and nothing else about it. A weapon named alone (a handgun without its automatic code) still stays with its own path.",
+  "exact default or choices offered": "\"Compare gun murders vs knife murders nationally by year\" shows Firearm and Knife or cutting instrument per year.",
+  "why": "Jeff 2026-11-15 via coordinator: the intimate partner set and the sentence, in his words; the two-weapon comparison as a breakdown over the chosen codes.",
+  "status": "Decided 2026-11-15 (Jeff)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

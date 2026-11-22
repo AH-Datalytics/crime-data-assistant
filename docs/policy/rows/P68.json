@@ -1,0 +1,12 @@
+{
+  "id": "P68",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "One arrest reported against several incidents (the FBI's Multiple Arrestee Segments Indicator, DE44)",
+  "what the app does today": "Each arrestee segment counts as an arrest.",
+  "proposed behavior": "The arrest counts once (P46, P50: the segment the FBI marks as counted); every incident it is attached to is still cleared by arrest (P64). Depends on the canonical arrestee table carrying the indicator (open with nibrs-model).",
+  "exact default or choices offered": "Arrest counted once; every attached incident cleared.",
+  "why": "One apprehension is one arrest, whatever the number of incidents it clears.",
+  "status": "Decided 2026-10-30 (Jeff: \"agree\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts, scripts/nibrs-compile-gate.ts."
+}

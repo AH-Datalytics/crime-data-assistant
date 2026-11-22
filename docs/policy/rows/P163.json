@@ -1,0 +1,12 @@
+{
+  "id": "P163",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"justifiable homicides in Houston in 2023\", \"justifiable homicides by police in Houston since 2015\", \"Compare justifiable homicides by police vs civilians nationally since 2015\"",
+  "what the app does today": "Declined: the reader did not know the word \"justifiable\" or \"by police\" (the question was not answered).",
+  "proposed behavior": "Justifiable homicide (a felon killed by a private citizen or by police) is its own measure from Homicide Reports, never counted in murders. With \"police\" in the question alone it is the felons killed by police; with \"civilians\" or \"private citizens\" alone, the felons killed by a private citizen; with neither, both together; with both words (\"by police vs civilians\"), the two side by side as a breakdown by circumstance.",
+  "exact default or choices offered": "Both together unless the question names one.",
+  "why": "Jeff 2026-11-19 (through the coordinator): police only when asked; otherwise civilian and police together; both stay out of murder counts.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P163\")."
+}

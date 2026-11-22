@@ -1,0 +1,12 @@
+{
+  "id": "P115",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What is the firearm murder rate in Pennsylvania in 2023?\", \"what is the homicide rate by firearm in Pennsylvania from 2015-2024\"",
+  "what the app does today": "Routed to the Homicide Reports tab: \"this form of the question isn't available here yet\".",
+  "proposed behavior": "A Homicide Reports rate is victims for the word asked (murder or homicide, as P10 says, with the detail asked) counted for the agencies that filed Homicide Reports that year, per 100,000 of the Crime Index population of those same agencies that year, one decimal. One year, or by year (each year over its own agencies); a rate over several years without \"by year\", by month or with a breakdown is not built. Two lines: \"<Place>: murder victims with a firearm per 100,000 people, 2023.\" and \"Rate per 100,000 people in the agencies that reported.\"",
+  "exact default or choices offered": "\"What is the firearm murder rate in Pennsylvania in 2023?\" shows one rate for 2023.",
+  "why": "Jeff 2026-11-15 via coordinator: rate per 100,000 people of the reporting agencies' population; both lines approved as written.",
+  "status": "Decided 2026-11-15 (Jeff)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

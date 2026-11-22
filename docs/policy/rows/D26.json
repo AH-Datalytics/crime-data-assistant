@@ -1,0 +1,12 @@
+{
+  "id": "D26",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many officers does Baltimore have?\"",
+  "what the app does today": "Officers, or total employees when no officer count exists, marked \"Officers\" or \"Employees\".",
+  "proposed behavior": "Keep. This marker is the only text column allowed in an answer.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

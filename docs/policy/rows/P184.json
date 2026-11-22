@@ -1,0 +1,12 @@
+{
+  "id": "P184",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Vermont murders per 100,000 in 2024 (NIBRS)\", \"Pennsylvania violent crime rate from NIBRS\", a NIBRS state or national rate",
+  "what the app does today": "A NIBRS state or national rate divides by the sum of the agencies' own NIBRS populations, a zero included (P62): 150 agencies hold a zero in 2024 where the Crime Index has a population (6.4 million people), so Vermont's and Pennsylvania's rates came out about 30% too high.",
+  "proposed behavior": "A NIBRS state or national rate divides by the sum, over the agencies counted, of each agency's own NIBRS population only. An agency whose NIBRS population is zero adds 0 people and its crimes stay in the count, as the FBI does: the FBI gives zero to agencies (county sheriffs, state police, campus police) whose people another agency already counts. An agency with no population value at all (null) means the rate is withheld. No Crime Index population is filled in. Nothing changes for Current Trends or Historical, which use the Crime Index populations.",
+  "exact default or choices offered": "No question; the rate's note names the combined population as before.",
+  "why": "Jeff 2026-11-21 (through the coordinator): first decided to fill a NIBRS zero with the Crime Index population of the same agency; the same day, after a check showed the fill counted people twice (Pennsylvania's 2024 agency sum 127% of the state's population, Vermont 126%, New Hampshire 112%; e.g. Lancaster County sheriff 188,474 people already held by city police and the state police), decided to remove the fill: own NIBRS population only (the behavior before PR 286). Amends P62 and P90.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/check-nibrs-state-population.py fails when a population rule pushes a state's summed agency populations more than 1% over the Crime Index state population; the runner gate lists every NIBRS state or national rate that changes."
+}

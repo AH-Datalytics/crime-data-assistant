@@ -454,8 +454,11 @@ function main(argv) {
     });
     if (state === FAILED) recordFailure(entry, command);
 
+    // "exit null" alone hid that test-court-refusal-regression was killed at the time limit after passing every check (CI,
+    // 2026-11-21): a failure says whether it timed out, or which signal ended it.
+    const why = run.timedOut ? `, timed out after ${Math.round(options.timeout / 1000)} s` : run.signal ? `, signal ${run.signal}` : "";
     process.stdout.write(`${state === PASSED ? "  ok  " : "  FAIL"} ${id}` +
-      `${state === PASSED ? "" : ` (exit ${run.code})`}\n`);
+      `${state === PASSED ? "" : ` (exit ${run.code}${why})`}\n`);
   }
 
   fs.rmSync(workDir, { recursive: true, force: true });

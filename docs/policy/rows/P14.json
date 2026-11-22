@@ -1,0 +1,12 @@
+{
+  "id": "P14",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murders in Chicago from 1990 to 2024\" (a span one source covers and another covers only in part)",
+  "what the app does today": "Each tab reads only its own data; no rule for a span only another source covers.",
+  "proposed behavior": "Never join two sources in one series. Answer from the one source that covers the whole span with the same measure and filters (here Historical, for murders) and name it; if none does, answer the covered part and name the missing years (frozen rule 4).",
+  "exact default or choices offered": "Source: the one covering the whole span; otherwise the covered years, with the gap named.",
+  "why": "Sources count differently; a joined series shows jumps that are not real.",
+  "status": "Decided 2026-10-28 (Jeff: never splice sources)",
+  "test cases": "GC-010, GC-040, GC-041, GC-042, GC-043, GC-044, GC-046, GC-047, GC-048, GC-088"
+}

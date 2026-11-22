@@ -1,0 +1,12 @@
+{
+  "id": "P20",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Will crime go up next year?\" or any forecast",
+  "what the app does today": "No rule found.",
+  "proposed behavior": "Decline: the data records past crime and cannot predict. Offer the recent trend for the same place and measure.",
+  "exact default or choices offered": "Alternative: last 10 complete years for the place and measure.",
+  "why": "A forecast is not in the data; a plain statement beats an improvised answer.",
+  "status": "Decided 2026-10-28 (Jeff: yes, decline)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
+}

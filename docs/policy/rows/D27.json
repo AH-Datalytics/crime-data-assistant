@@ -1,0 +1,12 @@
+{
+  "id": "D27",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Robberies in Ohio this year\" on Current Trends",
+  "what the app does today": "The active answer path already uses the state's sample agencies; the stored state table sums all agencies.",
+  "proposed behavior": "State totals use the state's agencies from the national sample, built the same way; in the rebuild only.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28 (rebuild only)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

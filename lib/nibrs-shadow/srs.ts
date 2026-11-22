@@ -88,7 +88,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
 
   // P57: the national clearance rate, from the historical clearances (the file states it as a percent).
   if (q.statistic === "clearance_rate") {
-    if (q.place.kind !== "national") return { kind: "srs-decline", explanation: "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate." };
+    if (q.place.kind !== "national") return { kind: "srs-decline", explanation: "A state clearance rate for several years at once isn't available. Ask for one year, for example \"Texas murder clearance rate in 2024\"." };
     // A change in a clearance rate is not computed here (Codex clearance review 01.1).
     if (q.comparison) return { kind: "srs-decline", explanation: "This isn't available: a change in a clearance rate. Ask for the clearance rate by year." };
     // By year (item 7: "National murder clearance rate since 1960"): the file's published percentage for each year; a

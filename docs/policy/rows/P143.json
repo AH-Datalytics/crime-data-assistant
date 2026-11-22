@@ -1,0 +1,12 @@
+{
+  "id": "P143",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Baltimore carjackings per month until January 2026\", \"Can I get the raw numbers, not rates, for New Orleans homicides, monthly\", \"denver coloradocrime data for the last three years by month\"",
+  "what the app does today": "Declined (\"I didn't understand \\\"until\\\"\", \"... \\\"raw\\\" or \\\"not\\\"\", \"... \\\"coloradocrime\\\"\").",
+  "proposed behavior": "\"Until January 2026\" in a month series with no start means from the first month of the data through January 2026, inclusive. \"Raw numbers, not rates\" (and \"counts, not rates\") asks for counts. A state name run into \"crime\" (\"coloradocrime\") is read as two words. A question that names its own start, or is not a month series, is left as it is.",
+  "exact default or choices offered": "As for the question in the words the reader knows.",
+  "why": "Jeff 2026-11-18 (through the coordinator): option A, months group; \"until X\" is through X, inclusive; \"raw numbers, not rates\" is counts.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P143\")."
+}

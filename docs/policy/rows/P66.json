@@ -1,0 +1,12 @@
+{
+  "id": "P66",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Vehicle burglaries by clearance status\" and \"how were they cleared\" (the unit and levels of a clearance answer; refines P64)",
+  "what the app does today": "P64 counts incidents.",
+  "proposed behavior": "The answer counts the question's D18 unit (offenses; victims for crimes against persons), each taking its incident's P64 status, with the incident count beside it. Two levels: STATUS is cleared or uncleared; TYPE is cleared by arrest, each exceptional-clearance type (A-E, labelled), or uncleared. \"By clearance status\" gives the status; \"by clearance type\" (or \"how were they cleared\") gives the type.",
+  "exact default or choices offered": "Status: cleared / uncleared. Type: by arrest / exceptional A-E (labelled) / uncleared. Unit: D18, with the incident count.",
+  "why": "The question asks about crimes; the incident count shows what P64 counts.",
+  "status": "Decided 2026-10-30 (Jeff: \"agree (cleared or uncleared is status, type is by arrest, exception types, uncleared)\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-compile.ts, scripts/test-nibrs-plan-language.ts."
+}
