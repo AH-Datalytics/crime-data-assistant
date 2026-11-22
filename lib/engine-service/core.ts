@@ -159,10 +159,20 @@ export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
     info() {
       const cube = cubeFromEnv(process.env, cfg.roots.nibrs);
       const releases: Record<string, string> = {};
+      // A live check tries every configured source (root set and builder registered) so it shows loaded or failed without a question first.
+      // A failed source is not tried again inside its pause, so repeated checks cannot hammer a broken folder.
+      let baseState: string | undefined;
+      if (cfg.roots.nibrs) {
+        try {
+          const b = loadBase();
+          baseState = "loaded";
+          for (const id of ["crimeIndex", "shr", "hate"] as const) sourceFor(id, b);
+        } catch (e) { baseState = `failed: ${e instanceof Error ? e.message : String(e)}`; }
+      }
       if (base) releases.nibrs = base.release;
       const state: Record<string, string> = {};
       for (const [id, s] of sources) { state[id] = "build" in s ? "loaded" : `failed: ${s.error}`; if ("build" in s) Object.assign(releases, s.build.releases); }
-      return { tabs: (["nibrs", "historical", "current", "shr", "hate_crime"] as const).filter(served), releases, sources: state,
+      return { tabs: (["nibrs", "historical", "current", "shr", "hate_crime"] as const).filter(served), releases, ...(baseState ? { base: baseState } : {}), sources: state,
         cubes: { group: !!cube?.years.length, groupV4: !!cube?.groupV4, code: !!cube?.code, offense: !!cube?.offense, weapon: !!cube?.weapon }, memoryLimit: cfg.memoryLimit, threads: cfg.threads };
     },
     close() { try { exec?.close(); } catch { /* ending */ } exec = null; base = null; sources.clear(); },

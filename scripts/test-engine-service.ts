@@ -243,6 +243,18 @@ function fakes() {
   assert.ok(bad.answer(req("q", { tab: "nibrs" })).ok, "nibrs keeps answering when the Crime Index folder is bad");
   assert.match(String((bad.info().sources as Record<string, string>).crimeIndex), /^failed: there is no Crime Index manifest/);
   bad.close();
+  // info() alone tries every configured source, and a broken folder is not hammered inside its pause.
+  let tries = 0, clock = 0;
+  const live = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: "/nowhere" }), { base: hooks.base, now: () => clock, sources: { crimeIndex: () => { tries++; throw new Error("boom"); } } });
+  assert.equal((live.info() as { base: string }).base, "loaded");
+  assert.deepEqual(live.info().sources, { crimeIndex: "failed: boom" });
+  assert.equal(tries, 1, "a second check inside the pause does not try again");
+  clock = 31_000; live.info();
+  assert.equal(tries, 2, "after the pause it tries again");
+  live.close();
+  const ok = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_CRIME_INDEX_ROOT: dir }), hooks);
+  assert.deepEqual(ok.info().sources, { crimeIndex: "loaded" }, "loaded shows without a question first");
+  ok.close();
 }
   console.log("engine service: pool, protocol and HTTP face: ok");
 }
