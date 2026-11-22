@@ -2675,6 +2675,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const gk = shadowAnswer("Compare gun murders vs knife murders nationally in 2024", cdeps);
   assert.equal(gk.kind, "shr", JSON.stringify(gk).slice(0, 300));
   if (gk.kind === "shr") assert.deepEqual(gk.delivered.table.rows.map((r) => r[0]), ["Knife or cutting instrument", "Firearm"]);
+  // "Female vs male murder victims per year": the two sexes are two categories of one breakdown, never two filters ANDed (every year was 0).
+  const sqls: string[] = [];
+  const sdeps = { ...cdeps, execute: (sql: string) => { sqls.push(sql); return cstub(sql); } } as unknown as ShadowDeps;
+  const fm = shadowAnswer("female vs male murder victims nationally per year from 2020 to 2024", sdeps);
+  assert.equal(fm.kind, "shr", JSON.stringify(fm).slice(0, 300));
+  const body = sqls.find((s) => /shr_victim/.test(s)) ?? "";
+  assert.ok(/IN \('F'\) THEN '0' WHEN .* IN \('M'\) THEN '1'/.test(body) && /p\.sex IN \('F', 'M'\)/.test(body) && !/p\.sex IN \('F'\) AND/.test(body), body);
+  // Months after the last one with any report are blank, never 0 (the final year is still being filed).
+  const mstub = (sql: string): unknown[][] => (/max\(r\.offense_month\)/.test(sql) ? [[2]] : /GROUP BY/.test(sql) ? [[2026, 1, 5], [2026, 2, 6]] : cstub(sql));
+  const mon = shadowAnswer("female murder victims nationally per month in 2026", { ...cdeps, execute: mstub } as unknown as ShadowDeps);
+  if (mon.kind === "shr") {
+    assert.deepEqual(mon.delivered.table.rows.map((r) => r[1]), [5, 6, null, null, null, null, null, null, null], JSON.stringify(mon.delivered.table.rows));
+    assert.ok(mon.delivered.text.some((t) => /^A blank month is one after the last month in which any agency filed/.test(t)), mon.delivered.text.join(" | "));
+  } else assert.fail(JSON.stringify(mon).slice(0, 300));
   const ip = shadowAnswer("How have intimate partner homicides trended nationwide?", cdeps);
   assert.equal(ip.kind, "shr", JSON.stringify(ip).slice(0, 300));
   if (ip.kind === "shr") assert.ok(ip.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."));
