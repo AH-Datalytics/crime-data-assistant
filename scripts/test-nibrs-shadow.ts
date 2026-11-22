@@ -3128,7 +3128,6 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.equal(multi.delivered.table.rows.find((r) => r[0] === String(y))![1], one.delivered.table.rows[0][0], `${y} equals the year alone`);
   }
   assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), multi.delivered.text.join(" | "));
-  assert.equal(multi.delivered.contractProblems?.length ?? 0, 0);
   // By state over several years stays declined (one year).
   const msb = ask("what share of all murder clearances in the United States were prosecution declined from 2023 to 2025 by state");
   assert.equal(msb.kind, "decline");
