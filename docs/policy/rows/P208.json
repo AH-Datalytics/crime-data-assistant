@@ -1,0 +1,12 @@
+{
+  "id": "P208",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"el paso, texas thefts compared to other texas large cities\", \"how does Memphis compare to other large cities in Tennessee\"",
+  "what the app does today": "P128 kept a comparison with other large cities on \"its old reading\", which no row describes.",
+  "proposed behavior": "\"<City> compared to other large cities in <state>\" (or \"other <state> large cities\") is every city agency in that state with 100,000 or more people (P28's floor), the named city included, ranked by the figure asked for, highest first, with the named city highlighted. One year, the latest complete year when none is named (P181's ranking default); a rate per 100,000 when asked. The title and notes follow P131 and P159; the named city's place in the ranking is said in one line. Without a state named, P128 and P132 apply as they stand.",
+  "exact default or choices offered": "The state's cities of 100,000+, ranked, the named city highlighted.",
+  "why": "Jeff 2026-11-22 (card through the coordinator): \"Compute it\". Replaces P128's unwritten old reading for this form.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Capability (ranking, after PR 340)",
+  "test cases": "Comes with the build."
+}

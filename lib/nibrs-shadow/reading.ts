@@ -219,6 +219,10 @@ const PHRASES: [RegExp, string][] = [
   [/\bretail\s+thefts?\b/gi, "shoplifting"],
   [/\blarcen(?:y|ies)\s+(?:from|of)\s+(?:an?\s+)?(?:auto|autos|motor\s+vehicles?|vehicles?|cars?)\b/gi, "theft from motor vehicle"],
   [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
+  // P193 (census 2026-11-21, real asks): "by year and clearance type" is the clearance type by year (the shape that is built), with "per" for "by".
+  [/\b(?:per|by)\s+(year|month)\s+(?:and|&)\s+(?:by\s+)?clearance\s+type\b/gi, "by type by $1"],
+  // "Murders cleared by clearance type" is the murder clearances by type.
+  [/\bcleared\s+by\s+(?:the\s+)?(?:clearance\s+)?type\b/gi, "clearances by type"],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
@@ -241,6 +245,8 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P173 (Jeff 2026-11-21): "murder clearance rates by state" is every state ranked by its clearance rate.
+  [/\b((?:[a-z]+\s+){0,2}?)clearance\s+rates?\s+(?:by|per|for\s+(?:each|every)|in\s+each)\s+state\b/gi, "rank states by $1clearance rate"],
   // P163 (Jeff 2026-11-19): justifiable homicides "by police vs civilians" are the two kinds of justifiable homicide side by side (the
   // circumstance breakdown); "by police" alone (or "by civilians" alone) is read from the question text where the answer is made.
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
@@ -539,6 +545,13 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
   text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // Filler (Jeff 2026-11-22): "highlight" opening a question and "major" before a crime word add nothing ("show me" and "give me" are
+  // already request words elsewhere, and the age rule reads "show me" itself)
+  // ("Highlight major crime trends in the city of Philadelphia since 2022"). Not "major cities" (the large-city rule above).
+  text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?highlight\s+(?:the\s+)?(?=[a-z])/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
   // here, not in PHRASES, whose replacement re-reads only the matched words (its look-ahead would fail).
   text = text.replace(/^\s*us\s+(?=(?:murder|homicide|crime|violent|property|robber|burglar|theft|assault|rape|arson|clearance)\w*)/i,
@@ -553,6 +566,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
+  // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
+  // since the look-ahead would fail in PHRASES).
+  dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
@@ -731,7 +747,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/\bby\s+clearance(\s+(?:status|type))?\s+and\s+(?:by\s+)?(year|month)\b/i, (_m, w = "", t: string) => (set({ by: kind(w) }), `by ${t}`));
   text = text.replace(/,?\s*\bby\s+(?:clearance\s+type|type\s+of\s+clearance|how\s+(?:they\s+were|it\s+was)\s+cleared)\b/i, () => (set({ by: "type" }), ""));
   text = text.replace(/,?\s*\bby\s+clearance(?:\s+status)?\b(?!\s+rate)/i, () => (set({ by: "status" }), ""));
-  text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b/i, () => (set({ only: "cleared" }), ""));
+  // (Not "that were cleared by exception" / "because ...": a clearance type named is the share's own part, read by the question types.)
+  text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b(?!\s+(?:by\s+(?:exception|an\s+exception)|because|due\s+to))/i, () => (set({ only: "cleared" }), ""));
   // Increment 7: people wording (P29, P30, P44, P49, P65). Read here, built by the shadow; the reader reads the rest.
   const pr = readPeople(text);
   // Any rewrite here ("by victim race" -> "by race") is read again by the accounting, flag or not (Codex 05).
