@@ -1,4 +1,4 @@
-﻿/**
+/**
  * What one engine worker does: answer one request from a named source. Built the way the private preview route builds its dependencies (lib/nibrs-shadow/preview.ts is the shared
  * adapter), but with the executor capped (DuckDB memory limit and threads) and no clock-dependent "as of" beyond the date. A source (tab) that is not configured answers
  * "unavailable": stage 1 configures `nibrs` only; Current Trends, Historical, Homicide Reports and Hate Crime are added by giving them a root in the config.

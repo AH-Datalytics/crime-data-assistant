@@ -1,4 +1,4 @@
-﻿# Engine service runbook (stage 1: the NIBRS tab, private flag)
+# Engine service runbook (stage 1: the NIBRS tab, private flag)
 
 The engine service answers questions from the canonical NIBRS release, in its own capped processes, so a slow question can never freeze the website. Nothing in this file has been installed anywhere yet. Every server step below needs the owner's typed OK first, one step at a time.
 

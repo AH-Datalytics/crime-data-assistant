@@ -1,4 +1,4 @@
-﻿/**
+/**
  * The engine service's pool, protocol and HTTP face (lib/engine-service): worker count and queue bound, the busy answer, the timeout that kills and replaces a worker, a crashed
  * worker, shutdown, the token and body limits, and the configuration read from the environment. Fake workers stand in for the engine (no data, no Python, no network but loopback).
  */
