@@ -99,6 +99,8 @@ export type ShadowDeps = {
   rebuilt?: number;
   /** A statement longer than this many characters is a heavy national statement (default 100,000: an inline list of ~20,000 agencies); see deferHeavy. */
   deferChars?: number;
+  /** The population floor of "all the cities" (default 250,000); 100,000 for "other large cities in <state>" (P208). */
+  cityFloor?: number;
 };
 
 export type ShadowOption = {
@@ -1049,11 +1051,56 @@ export const CHART_EDIT = new RegExp([
 /** A request to change a chart (a date marker or any other change the page cannot make). */
 export const isChartEdit = (turn: string) => CHART_MARKER.test(turn) || CHART_EDIT.test(turn);
 
+/**
+ * P208 (Jeff 2026-11-22, "Compute it"): "<City> compared to other large cities in <state>" ("El Paso, Texas thefts compared to other Texas large cities") is
+ * every city agency in that state with 100,000 or more people (P28's floor), the named city included, ranked by the figure asked for, highest first, with the
+ * named city highlighted and its place in the ranking said in one line. Built on "all the cities in <state>" (P128) with the lower floor.
+ */
+const VS_LARGE = /\s*,?\s*\b(?:compared?\s+(?:to|with|against)|versus|vs\.?)\s+(?:the\s+)?(?:other|rest\s+of\s+(?:the\s+)?)\s*(?:([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+)?(?:large|major|big|largest)\s+cities(?:\s+(?:in|of)\s+([A-Za-z]+(?:\s+(?!in\b|for\b|during\b|since\b|from\b)[A-Za-z]+)?))?/i;
+function largeCitiesInState(question: string, deps: ShadowDeps): ShadowOutcome | null {
+  const m = VS_LARGE.exec(question);
+  if (!m || !deps.places) return null;
+  const rest = (question.slice(0, m.index) + question.slice(m.index + m[0].length)).replace(/\s{2,}/g, " ").trim();
+  const read = readQuestion(rest, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth);
+  const placeParts = read.ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
+  const city = placeParts.find((p) => /^(?:city|ambiguous):/.test(p.value ?? ""));
+  if (!city || placeParts.length > 2) return null;
+  // The state: the one the city names ("El Paso, Texas"), else the state the question names beside the words, else the city's own when it is unambiguous.
+  const codeOf = (name: string | undefined) => (name ? Object.entries(STATE_NAMES).find(([, n]) => n.toLowerCase() === name.trim().toLowerCase())?.[0] : undefined);
+  const named = [m[1], m[2], ...placeParts.filter((p) => /^state:/.test(p.value ?? "")).map((p) => String(p.value).slice(6))].map(codeOf).find(Boolean);
+  // A state must be named (P208): without one, P128 and P132 apply as they stand.
+  const stateCode = named;
+  if (!stateCode) return null;
+  const cityName = city.text.replace(/,.*$/, "").trim();
+  // What is asked of the cities: the measure and period words of the question without the named city and its state.
+  const what = read.ledger.parts.filter((p) => p.clause === 0 && (p.concept === "measure" || p.concept === "statistic" || p.concept === "unit")).sort((a, b) => a.span[0] - b.span[0]);
+  if (!what.some((p) => p.concept === "measure")) return null;
+  const when = read.ledger.parts.filter((p) => p.clause === 0 && p.concept === "period").map((p) => p.text.trim()).join(" ");
+  const floor = 100000;
+  // No year named: the latest complete year (P181's ranking default), said.
+  const lastYear = deps.historical?.lastYear ?? Number(deps.release.lastMonth.slice(0, 4)) - 1;
+  const setQuestion = `${what.map((p) => p.text.trim()).join(" ")} in all ${stateName(stateCode)} cities ${when || `in ${lastYear}`}`.replace(/\s+/g, " ").trim();
+  const o = shadowAnswer(setQuestion, { ...deps, cityFloor: floor });
+  if (!["historical", "current"].includes(o.kind)) return o;
+  const x = o as unknown as { delivered: { table: { rows: unknown[][] }; text: string[]; highlight?: number } };
+  if (!when) x.delivered.text.splice(1, 0, `No year was given, so the latest complete year, ${lastYear}, is shown.`);
+  const rows = x.delivered.table.rows;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
+  const at = rows.findIndex((row) => norm(String(row[0])).startsWith(norm(cityName)));
+  if (at < 0) return decline("unsupported_capability", `${cityName} is not among the ${stateName(stateCode)} cities of ${floor.toLocaleString("en-US")} or more people in this data.`);
+  const nth = (n: number) => `${n}${[11, 12, 13].includes(n % 100) ? "th" : ["th", "st", "nd", "rd"][n % 10 > 3 ? 0 : n % 10]}`;
+  x.delivered.highlight = at;
+  // The city as the table names it ("El Paso"), not as the question typed it.
+  x.delivered.text.splice(1, 0, `${String(rows[at][0]).replace(/,\s*[A-Z]{2}$/, "")} is highlighted: it is ${nth(at + 1)} of the ${rows.length} ${stateName(stateCode)} cities of ${floor.toLocaleString("en-US")} or more people, ranked from the highest figure to the lowest.`);
+  return o;
+}
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
+  const vsLarge = largeCitiesInState(question, deps);
+  if (vsLarge) return vsLarge;
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
@@ -2226,7 +2273,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       if (one.ordered && yrs && yrs[0] !== yrs[1]) return decline("unsupported_capability", allCities ? "This isn't available: the cities of 250,000 or more over several years. Ask for one year." : "This isn't available: the largest cities ranked over several years. Ask for one year.");
       if (yrs && yrs[1] <= hb.lastYear && !toDate) {
         const r = allCities
-          ? answerHistoricalRanking({ measure: one.measure, state, year: yrs[0], statistic, direction: "top", limit: ALL_CITIES_N, minPopulation: 250000, floorAsked: true, entity: "city" }, hb, deps.execute)
+          ? answerHistoricalRanking({ measure: one.measure, state, year: yrs[0], statistic, direction: "top", limit: ALL_CITIES_N, minPopulation: deps.cityFloor ?? 250000, floorAsked: true, entity: "city" }, hb, deps.execute)
           : answerHistoricalSet({ measure: one.measure, state, from: yrs[0], to: yrs[1], statistic, n: setN }, hb, deps.execute);
         if (r.kind === "historical") return allCities ? r : order(r);
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -2237,7 +2284,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       if (ctSpan && cur) {
         const r = answerCurrentRanking({ measure: one.measure, state, from: ctSpan[0], to: ctSpan[1], statistic,
           pick: allCities ? { kind: "rank", direction: "top", limit: ALL_CITIES_N } : { kind: "largest", n: setN },
-          minPopulation: allCities ? 250000 : null, floorAsked: allCities, entity: "city" }, cur, hb.root, deps.execute, rankAgencies);
+          minPopulation: allCities ? deps.cityFloor ?? 250000 : null, floorAsked: allCities, entity: "city" }, cur, hb.root, deps.execute, rankAgencies);
         if (r.kind === "current") return allCities ? r : order(r);
         return decline("unsupported_capability", r.explanation);
       }
