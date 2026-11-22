@@ -290,7 +290,7 @@ const PHRASES: [RegExp, string][] = [
 const COMPOSITES: [RegExp, string, Composite][] = [
   [/\bgun\s+crimes?\b/gi, "murders, robberies and aggravated assaults", "firearm"],
   // (Typos too: "stabbongs", "stabings"; the coordinator 2026-11-22, QL-nibrs-12ac4f9472 "knife stabbongs in 2024 by injury type".)
-  [/\bstab+[a-z]{0,2}ngs?\b/gi, "murders and aggravated assaults", "knife"],
+  [/(?:\b(?:knife|knives)\s+)?\bstab+[a-z]{0,2}ngs?\b/gi, "murders and aggravated assaults", "knife"],
 ];
 const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const MON = `(${MONTH_NAMES.join("|")})`;

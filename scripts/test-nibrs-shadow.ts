@@ -3040,8 +3040,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
   for (const q of ["stabbings in Houston in 2024", "stabbongs in Houston in 2024", "stabings in Houston in 2024", "Stabbing in Houston 2024"]) assert.equal(rd(q).replace(/\s*(?:in )?2024$/, ""), "murders and aggravated assaults in Houston", q);
   const k = readQuestion("knife stabbongs in 2024 by injury type", 2026, "2026-09");
-  assert.equal(k.text, "knife murders and aggravated assaults in 2024 by injury type");
-  assert.ok(k.ledger.parts.some((p) => p.concept === "filter" && p.value === "weapon:20"));
+  // "Knife" before it is the same knife (P31 stays: the composite, with the weapon, once).
+  assert.equal(k.text, "murders and aggravated assaults in 2024 by injury type");
+  assert.equal((k.ledger as unknown as { composite?: string }).composite, "knife");
+  assert.equal(rd("knife stabbings in Houston in 2024"), "murders and aggravated assaults in Houston in 2024");
   assert.equal(rd("he stabs a lot"), "he stabs a lot", "not a stabbing count");
 }
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
