@@ -811,11 +811,9 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   }
   for (const q of ["safest city in the us", "safest city in 2023", "most dangerous city in 2024"])
     assert.ok(declined(q).explanation.startsWith("There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate."), q);
-  // P172 (Jeff 2026-11-21, reversing P18): one state's clearance rate is answered; every state at once is not, and says what to ask.
+  // P172 (Jeff 2026-11-21, reversing P18): one state's clearance rate is answered, and every state ranked (P173) once a crime is named.
   {
-    const d = declined("clearance rates by state");
-    assert.equal(d.reason, "not_recorded_in_nibrs");
-    assert.match(d.explanation, /^A clearance rate for every state at once isn't available\./);
+    assert.notEqual(declined("clearance rates by state").reason, "not_recorded_in_nibrs", "no state-has-no-rate sentence any more");
     assert.equal((ask("What is the homicide clearance rate in Kansas?") as { about?: string }).about, "which period", "a state's clearance rate with no year asks the year");
   }
   // Not changed: a number asked with a trailing "why" is answered and the why declined; a state's NIBRS-only clearance rate keeps its own sentence.
@@ -1888,6 +1886,16 @@ assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_r
     // P159's title shape: place, what is counted, the series, the timeframe.
     assert.equal(by.delivered.text[0], "Texas Murders Cleared (%) Per Year, 2023-2025");
   }
+  // P173 (Jeff 2026-11-21): every state ranked, the offenses and agencies reporting beside each rate, no minimum.
+  for (const q of ["Which states have the highest murder clearance rate in 2025?", "murder clearance rate by state in 2025", "rank states by murder clearance rate in 2025"]) {
+    const rk = as(ask(q), "answer");
+    assert.deepEqual(rk.delivered.table.columns.map((c) => c.header), ["State", "Murders cleared (%)", "Offenses", "Agencies reporting"], q);
+    assert.equal(rk.delivered.text[0], "2025 Murders Cleared (%) by State", q);
+    const rates = rk.delivered.table.rows.map((r) => r[1] as number | null);
+    assert.ok(rates.length >= 50 && rates.every((v, i) => i === 0 || v === null || rates[i - 1] === null || (rates[i - 1] as number) >= v), "every state, highest first");
+    const texas = rk.delivered.table.rows.find((r) => r[0] === "Texas")!;
+    assert.deepEqual([texas[1], texas[2], texas[3]], [34.6, 312, 4], "Texas: the same figures as its own rate answer (stub data)");
+  }
   const early = as(ask("Show the burglary clearance rate in Texas since 2000"), "answer");
   assert.ok(early.delivered.text.includes("NIBRS state figures start in 2017; 2000 through 2016 are outside them."), JSON.stringify(early.delivered.text));
 }
@@ -2360,6 +2368,19 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(!/Memphis/.test(String(nation.rewrite ?? "")), String(nation.rewrite));
   // A turn that points back stays a follow-up.
   assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
+  // Follow-up #4 (P197): a short reply to the app's own ask is the button pressed, or the asked-for part filled in.
+  {
+    const asked = ask("What's the assault trend in New York over the past 5 years?") as { about?: string; options?: { label: string }[] };
+    assert.equal(asked.about, "which New York");
+    const pick = asked.options![0];
+    assert.ok(pick, JSON.stringify(asked).slice(0, 300));
+    const named = shadowFollowUp("What's the assault trend in New York over the past 5 years?", pick.label, deps);
+    assert.equal(named.rewrite, `What's the assault trend in ${pick.label} over the past 5 years`, String(named.rewrite));
+    const n = asked.options!.indexOf(pick) + 1;
+    assert.equal(shadowFollowUp("What's the assault trend in New York over the past 5 years?", `${n} please`, deps).rewrite, named.rewrite);
+    // Not a reply: a comparison, or a question of its own.
+    assert.notEqual(shadowFollowUp("What's the assault trend in New York over the past 5 years?", "compare this to Raleigh", deps).rewrite, "What's the assault trend in New York over the past 5 years in Raleigh");
+  }
   // Codex review 1: a comparison is never answered as a single place; it stays on the follow-up path (asked or proposed).
   for (const f of ["How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?"]) {
     const cmp = shadowFollowUp("Shoplifting in Memphis in 2024", f, deps);
@@ -3019,6 +3040,26 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(parts("Chicago murders against Houston").includes("versus:versus"));
   assert.equal(ask("Maricopa County crimes against persons 2020-2025").kind === "decline" && (ask("Maricopa County crimes against persons 2020-2025") as { reason?: string }).reason === "reader", false);
 }
+// P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("What jurisdictions had the highest murder rates in 2024?"), "What cities had the highest murder rates in 2024?");
+  assert.ok(/jurisdictions/.test(rd("which jurisdictions are included in homicide reports")), "not a ranking");
+  assert.equal(rd("What cities (250k+) had the worst murder clearance rate in 2024?"), "What cities (250k+) had the lowest murder clearance rate in 2024?");
+  assert.equal(rd("worst murder rate for cities 250k+"), "highest murder rate for cities 250k+");
+  assert.equal(rd("What are the three cities with the highest murder rate?"), "What are top 3 cities with the highest murder rate?");
+  assert.equal(rd("What five cities are currently experiencing the greatest number of homicides?"), "What top 5 cities with the most homicides?");
+  assert.equal(rd("Give me a list of the 10 cities with the highest annual murder rate in 2024"), "Give me a list of the 10 cities with the highest murder rate in 2024");
+  assert.equal(rd("the five boroughs of New York"), "the five boroughs of New York", "not a ranking");
+}
+// P204 (Jeff 2026-11-22): "highlight", "show me", "give me" opening a question and "major" before a crime word are filler.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("Highlight major crime trends in the city of Dallas since 2022"), "crime trends in the city of Dallas since 2022");
+  assert.equal(rd("Give me major violent crime in Houston in 2024"), "Give me violent crime in Houston in 2024");
+  assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
+  assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
@@ -3061,6 +3102,52 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("national overall and violent crime rates monthly in 2024").text, "national violent crime and property crime and violent crime rates monthly in 2024");
   // COMPARED TO THE (REST OF THE) NATION is the nation's rates beside the place's.
   assert.equal(rd("How does Houston compare to the rest of the nation in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
+}
+// P203 (Jeff 2026-11-21): the share of a crime's clearances (or offenses) of one clearance type, for a state or the nation, from the by-type sums.
+{
+  type Out = { kind: string; delivered: { table: { rows: unknown[][] }; text: string[] } };
+  // Texas murders in the stub: 312 units, 156 by arrest, 26 under each of the five exceptional types (130), 26 not cleared.
+  const ofOffenses = as(ask("what share of murders in Texas were cleared by exception in 2025"), "answer") as unknown as Out;
+  assert.deepEqual(ofOffenses.delivered.table.rows, [[41.7]], JSON.stringify(ofOffenses.delivered.table.rows));
+  assert.ok(ofOffenses.delivered.text[0].startsWith("In Texas in 2025, 41.7% of the murders reported were cleared by exceptional means, summed over the 4 agencies that reported."), ofOffenses.delivered.text[0]);
+  // "that were cleared by exception" is the same question (the reader left it unread before).
+  assert.deepEqual((as(ask("what was the share of all murders that were cleared by exception in Texas in 2025?"), "answer") as unknown as Out).delivered.table.rows, [[41.7]]);
+  const ofClearances = as(ask("what share of all murder clearances in Texas were prosecution declined in 2025"), "answer") as unknown as Out;
+  assert.deepEqual(ofClearances.delivered.table.rows, [[9.1]], JSON.stringify(ofClearances.delivered.table.rows));
+  assert.ok(/9\.1% of the murder clearances were prosecution declined/.test(ofClearances.delivered.text[0]), ofClearances.delivered.text[0]);
+  // The nation, and by state (a row for each state, in alphabetical order).
+  const nation = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025"), "answer") as unknown as Out;
+  assert.ok(/^In the United States in 2025, [\d.]+% of the murder clearances were prosecution declined/.test(nation.delivered.text[0]), nation.delivered.text[0]);
+  const byState = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025 by state"), "answer") as unknown as Out;
+  assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
+  const names = byState.delivered.table.rows.map((r) => String(r[0]));
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+  // P180: no place named is the United States, with the note and the place buttons; "by state" needs neither.
+  const liveAsk = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  const noPlace = as(liveAsk("what share of murders were cleared by exception in 2025?"), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(/^In the United States in 2025, [\d.]+% of the murders reported were cleared by exceptional means/.test(noPlace.delivered.text[0]), noPlace.delivered.text[0]);
+  assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
+  assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
+  // The national clearance share is exempt from the heavy-statement deferral (coordinator 2026-11-22), so a tiny limit still answers it.
+  assert.equal(shadowAnswer("what share of murders were cleared by exception in 2025?", { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
+  const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
+  assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));
+}
+// P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
+// not cleared), never summed.
+{
+  const mc = as(ask("murder clearance by type in 2025 in Houston and Dallas"), "answer") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } };
+  assert.deepEqual(mc.delivered.table.columns.map((c) => c.header), ["Agency", "Murder offenses", "Cleared by arrest", "Cleared by exceptional means", "Not cleared"], JSON.stringify(mc.delivered.table.columns));
+  // Houston 9 a month = 108 units: half by arrest (54), one in twelve under each of the five exceptional types (9 each: 45), the rest 9; Dallas 7 a month = 84: 42, 35, 7.
+  assert.deepEqual(mc.delivered.table.rows, [["Houston, Texas", 108, 54, 45, 9], ["Dallas, Texas", 84, 42, 35, 7]], JSON.stringify(mc.delivered.table.rows));
+  assert.ok(mc.delivered.text[0].startsWith("Murder Offenses by Agency and Clearance Type, 2025"), mc.delivered.text[0]);
+  assert.ok(mc.delivered.text.some((t) => /agencies are not added together/.test(t)));
+  // The order the question names them.
+  const dh = as(ask("murder clearance by type in 2025 in Dallas and Houston"), "answer") as unknown as { delivered: { table: { rows: unknown[][] } } };
+  assert.deepEqual(dh.delivered.table.rows.map((r) => r[0]), ["Dallas, Texas", "Houston, Texas"]);
+  // One agency named alone keeps its own answer (the clearance types as rows).
+  assert.equal(as(ask("murder clearance by type in 2025 in Houston"), "answer").delivered.table.columns[0].header, "Clearance type");
 }
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
@@ -3109,6 +3196,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(gunViolent.delivered.text.some((t) => /^Counts NIBRS crimes against persons: /.test(t)), JSON.stringify(gunViolent.delivered.text));
   // A crime already counted by offense, and the murder path, are left as they were.
   assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
+}
+// P193 (census 2026-11-21): "in these cities: A, B, C" names the places in the list; "per year and clearance type" is the clearance type by year.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("murders in 2025 in these cities: Chicago, IL, Houston, TX, Dallas, TX"), "murders in 2025 in Chicago, IL, Houston, TX, Dallas, TX");
+  assert.equal(rd("murder rate in 2024 for the following cities: Chicago, Houston"), "murder rate in 2024 in Chicago, Houston");
+  // The words alone, with no list after them, are left as written.
+  assert.equal(rd("murders in 2025 in these cities"), "murders in 2025 in these cities");
+  assert.equal(rd("Chicago murder clearances per year and clearance type since 2022"), "Chicago murder clearances by type by year since 2022");
+  assert.equal(rd("Murder clearances by year and clearance type in Detroit from 2022 to 2025"), "Murder clearances by type by year in Detroit from 2022 to 2025");
+  assert.equal(rd("murders cleared by clearance type in 2025 in Chicago"), "murders clearances by type in 2025 in Chicago");
+  assert.equal(ask("murders cleared by clearance type in 2025 in Detroit").kind, ask("murder clearances by type in 2025 in Detroit").kind);
+  // The same wording as "by type by year", which answers.
+  assert.equal(ask("Detroit murder clearances by year and clearance type in 2023 and 2024").kind, ask("Detroit murder clearances by type by year in 2023 and 2024").kind);
 }
 // P191 (Jeff 2026-11-21, reader class): clearance wording and "the entire US" are read, never "I didn't understand".
 {

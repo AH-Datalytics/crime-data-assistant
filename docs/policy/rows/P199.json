@@ -4,8 +4,8 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Hillsboro, Oregon sworn officers per 1,000 by year\": a year whose published officers-per-100,000 is blank in the Crime Index build while the officer count and the population are there (Hillsboro 1995: 48 officers, 45,262 people)",
   "what the app does today": "The engine computes the rate from the counts (48 / 45,262 x 1,000 = 1.06); the blind checker scaled the published rate, which is blank, and had nothing (loop 2 finding 4).",
-  "proposed behavior": "A staffing rate (officers, civilians or all employees per 1,000, per 100,000 or another base) is the count over the population, scaled to the base asked for, computed from the counts whenever both are there, including a year whose published rate is blank. It is blank only when the count or the population is missing. The same rule as a crime rate. Checkers compute it from the counts too.",
-  "exact default or choices offered": "Count / population x base; blank only when either is missing.",
+  "proposed behavior": "A staffing rate (officers, civilians or all employees per 1,000, per 100,000 or another base) is Crime Index's published rate converted to the base asked for when one is published (P97). For a year whose published rate is blank, it is the count over the population, scaled to the base asked for (D33). It is blank only when the count or the population is missing. The same rule as a crime rate (P75). Checkers do the same: the published rate converted, else the counts.",
+  "exact default or choices offered": "The published rate converted (P97); count / population x base when the published rate is blank; blank only when either count is missing.",
   "why": "Jeff 2026-11-22 (through the coordinator), loop 2 finding 4: compute officers per 1,000 from the counts when the published rate is blank.",
   "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
   "test cases": "Blind-check scripts (staffing rates); scripts/test-nibrs-shadow.ts staffing tests."

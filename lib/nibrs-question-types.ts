@@ -107,11 +107,15 @@ export type Statistic = "count" | "rate" | "clearance_rate" | "total_value" | "a
 export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null; statistic: Statistic; filters: string[]; places: NPlace[]; period: NPeriod; grain: Grain;
   /** A rolling series' window (Jeff 2026-11-05: any length named; an average when asked): months null when none is named. */
   window?: { months: number | null; average: boolean } };
-export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true };
+export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true;
+  /** P194 (Jeff 2026-11-21): clearance by type for several named agencies, one row each, never summed (place is the first of them). */
+  places?: NPlace[] };
 export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true };
 export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency" | "county"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
 export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; statistic: "count" | "rate"; place: NPlace; earlier: number; later: number };
 export type NibrsSpec = SeriesSpec | BreakdownSpec | ShareSpec | RankSpec | ChangeSpec;
+/** The most named agencies one clearance-by-type table covers (P194). */
+export const MAX_CLEARANCE_PLACES = 50;
 
 export type NibrsTypeDecision =
   | { kind: "spec"; spec: NibrsSpec; explainLimitation: string | null }
@@ -374,7 +378,10 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (monthPeriodParts.length && !opts.monthlyBreakdowns) return declineParts(monthPeriodParts, (p) => cannot(p, "breakdowns come from yearly tables; a breakdown for part of a year isn't available."));
     const separateYears = periodParts.filter((p) => /^years:/.test(p.value ?? ""));
     if (separateYears.length) return declineParts(separateYears, (p) => cannot(p, "a breakdown covers one year or one range of years; ask for each year on its own."));
-    if (measures.length !== 1 || one("one place")) return { kind: "none" };
+    // P194: the clearance type for several named agencies: a row for each (one year or one range; every place an agency).
+    const severalAgencies = places.length > 1 && places.length <= MAX_CLEARANCE_PLACES && places.every((p) => p!.kind === "agency")
+      && breakdowns[0]?.value === "clearance-type" && !grains.length;
+    if (measures.length !== 1 || (one("one place") && !severalAgencies)) return { kind: "none" };
     let dim = breakdowns[0].value!;
     let bUnit = unit;
     // r2: "by offender age" / "by victim age" fixes whose age (Codex review-13).
@@ -397,6 +404,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     const byYear = grains.includes("year"), byMonth = grains.includes("month");
     if (byYear && byMonth) return declineParts(grainParts, (p) => cannot(p, "a breakdown is by year or by month, not both."));
     return finish({ type: "breakdown", measure: measures[0], unit: bUnit, filters, dim, place: places[0]!, period: periods[0] ?? { form: "none" },
+      ...(severalAgencies ? { places: places as NPlace[] } : {}),
       ...(byYear ? { byYear: true as const } : {}), ...(byMonth ? { byMonth: true as const } : {}) });
   }
 
