@@ -2583,6 +2583,15 @@
       "note": "The executor's temp directory: removed when the executor closes, is killed at its time limit or the program ends (a killed national query left 8-12 GB behind); the sweep removes only old folders no live process owns, never anything but this code's own files. Uses the harness Python's duckdb; the executor part is skipped with none."
     },
     {
+      "id": "test-victim-injury",
+      "tier": "F",
+      "script": "scripts/test-victim-injury.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Victim injury type (NIBRS element 33) end to end on a tiny canonical folder: aggravated assault victims by injury type count each victim once under every type they have (distinct victims, never rows), so one victim with two types is in two rows and the rows add up to more than the victims; the FBI's code names; the line saying a victim can have several. Uses the harness Python's duckdb and is skipped without it."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",
