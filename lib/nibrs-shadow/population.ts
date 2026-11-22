@@ -11,6 +11,7 @@ import type { HistoricalAgency, HistoricalAnswer, HistoricalBuild, HistoricalDec
 import { stateName } from "./places";
 import { agencySubject, seriesTitle } from "./headline";
 import { carriedPopulation } from "./population-carry";
+import { agencyCrimeSql } from "./ori-crosswalk";
 import { srsPopulation, SRS_YEARS, type SrsPlace } from "./srs";
 
 /** One place, in the order asked: an agency (the Crime Index build) or a state or the nation (the historical file). */
@@ -38,7 +39,7 @@ export function answerPopulation(places: PopulationPlace[], from: number, to: nu
   // A carried year in the table is covered too: the text never says "through 2025" beside a 2026 row.
   const span = `Population figures in the data cover ${first} through ${covered.some((y) => y > last) ? reach : last}`;
   if (!covered.length) return { kind: "historical-decline", explanation: `${span}, so ${yearsWords(from, to)} ${from === to ? "is" : "are"} outside them.` };
-  const got = agencies.length ? execute(`SELECT ori, year, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
+  const got = agencies.length ? execute(`SELECT ori, year, population FROM ${agencyCrimeSql(build.root)} `
     + `WHERE ori IN (${agencies.map((a) => q(a.ori)).join(", ")}) AND year BETWEEN ${Math.min(covered[0], build.lastYear)} AND ${covered[covered.length - 1]} ORDER BY ori, year`) : [];
   const pop = new Map(got.map((r) => [`${r[0]}|${r[1]}`, r[2] === null || r[2] === undefined ? null : Number(r[2])]));
   const value = (p: PopulationPlace, y: number): number | null => ("agency" in p
@@ -114,7 +115,7 @@ export function answerAgencyList(state: string, year: number, build: HistoricalB
   // The build's state is the ORI's first two letters, which are the postal code except Nebraska's "NB" (Codex
   // population review 02.1: Nebraska's list was empty).
   const code = state === "NE" ? "NB" : state;
-  const got = execute(`SELECT ori, name, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE state = ${q(code)} AND year = ${readYear}`);
+  const got = execute(`SELECT ori, name, population FROM ${agencyCrimeSql(build.root)} WHERE state = ${q(code)} AND year = ${readYear}`);
   if (!got.length) return { kind: "historical-decline", explanation: `Crime Index publishes no agencies for ${where} in ${year}.` };
   const rows = got.map((r) => ({ ori: String(r[0]), label: label(String(r[0])) ?? `${String(r[1])}, ${where}`, population: r[2] === null || r[2] === undefined ? null : Number(r[2]) }))
     .sort((a, b) => (a.population === null ? 1 : 0) - (b.population === null ? 1 : 0) || (b.population ?? 0) - (a.population ?? 0) || a.label.localeCompare(b.label));

@@ -15,7 +15,7 @@
  *               never with a missing or zero population
  */
 import { carriesTo } from "./population-carry";
-import CROSSWALK from "./crimeindex-current-ori-crosswalk.json";
+import { agencyCrimeSql, canonicalOri, currentTableSql } from "./ori-crosswalk";
 import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
@@ -71,16 +71,9 @@ export const REGIONS: Record<string, { name: string; states: string[] }> = {
 
 export type Month = string; // "2026-08"
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
-/**
- * One agency under two IDs in the Crime Index current files (crimeindex-current-ori-crosswalk.json: Pontiac, MI is MI631900X in the Final
- * file and MI6367300 in current_crime). Every row of both files is read with the ID current_crime uses, and an ID asked for is mapped the
- * same way, so the agency is one agency in every month (loop 2 finding 3; the blind checker reads the same table).
- */
-const SAME_AS = new Map<string, string>(CROSSWALK.pairs.map((p) => [p.id, p.same_as]));
-export const canonicalOri = (ori: string): string => SAME_AS.get(ori) ?? ori;
-const ciTable = (b: { root: string }, table: "current_final" | "current_crime"): string => SAME_AS.size
-  ? `(SELECT * REPLACE (CASE ori ${[...SAME_AS].map(([id, as]) => `WHEN ${q(id)} THEN ${q(as)}`).join(" ")} ELSE ori END AS ori) FROM read_parquet('${b.root}/${table}.parquet'))`
-  : `read_parquet('${b.root}/${table}.parquet')`;
+// One agency under two IDs (crimeindex-ori-crosswalk.json, read through ori-crosswalk.ts; the blind checker reads the same table).
+export { canonicalOri };
+const ciTable = (b: { root: string }, table: "current_final" | "current_crime"): string => currentTableSql(b.root, table);
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 export function months(from: Month, to: Month): Month[] {
   const out: Month[] = [];
@@ -157,7 +150,7 @@ function completedYear(b: CurrentBuild, execute: (sql: string) => unknown[][]): 
   return r && r[0] !== null && r[0] !== undefined ? Number(r[0]) : null;
 }
 function completedYearPopulation(b: CurrentBuild, ori: string, last: number, execute: (sql: string) => unknown[][]): number | null {
-  const r = execute(`SELECT population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND year = ${last} AND population > 0`)[0];
+  const r = execute(`SELECT population FROM ${agencyCrimeSql(b.root)} WHERE ori = ${q(canonicalOri(ori, "historical_crime"))} AND year = ${last} AND population > 0`)[0];
   return r ? Number(r[0]) : null;
 }
 /**
@@ -169,7 +162,7 @@ function completedYearPopulation(b: CurrentBuild, ori: string, last: number, exe
 export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWanted: Month[], execute: (sql: string) => unknown[][]): Map<Month, number | null> {
   const cur = new Map(execute(`SELECT printf('%04d-%02d', year, month), population FROM ${ciTable(b, "current_crime")} WHERE ori = ${q(canonicalOri(ori))} AND population > 0`)
     .map((r) => [String(r[0]), Number(r[1])] as [string, number]));
-  const yearly = new Map(execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
+  const yearly = new Map(execute(`SELECT year, population FROM ${agencyCrimeSql(b.root)} WHERE ori = ${q(canonicalOri(ori, "historical_crime"))} AND population > 0`)
     .map((r) => [Number(r[0]), Number(r[1])] as [number, number]));
   // The current year's months (the year after the latest completed one) with no population of their own take that
   // completed year's (Jeff 2026-11-14, population-carry.ts); a past month without one keeps no rate (P96).
@@ -425,7 +418,7 @@ export function currentEntries(b: CurrentBuild, historicalRoot: string, rq: Curr
   const rows = execute(`WITH a AS (SELECT ori, any_value(state) AS state, sum(${col}_total) AS v, count(${col}_total) AS known, `
     + `max(CASE WHEN year * 100 + month = ${t} THEN population END) AS pop FROM read_parquet(${q(`${b.root}/current_crime.parquet`)}) `
     + `WHERE sample AND year * 100 + month BETWEEN ${f} AND ${t}${national ? (rq.region ? ` AND state IN (${rq.region.states.map(q).join(", ")})` : "") : ` AND state = ${q(rq.state)}`} GROUP BY ori), `
-    + `n AS (SELECT ori, ${rq.entity === "city" ? cityNameSql() : "name"} AS name, type, row_number() OVER (PARTITION BY ori ORDER BY year DESC) AS k FROM read_parquet(${q(`${historicalRoot}/agency_crime.parquet`)})) `
+    + `n AS (SELECT ori, ${rq.entity === "city" ? cityNameSql() : "name"} AS name, type, row_number() OVER (PARTITION BY ori ORDER BY year DESC) AS k FROM ${agencyCrimeSql(historicalRoot)}) `
     + `SELECT a.ori, n.name, a.state, a.pop, a.v, a.known FROM a JOIN n ON n.ori = a.ori AND n.k = 1 WHERE ${rq.entity === "city" ? citySql("n") : rq.entity === "county" ? `n.type = 'county' AND n.ori NOT IN (${[...CITY_AS.drop, ...Object.keys(CITY_AS.asCity)].map(q).join(", ")})` : `n.ori NOT IN (${CITY_AS.drop.map(q).join(", ")})`} ORDER BY a.ori`);
   const entries = rows.map((r) => {
     const pop = num(r[3]), total = num(r[4]), known = Number(r[5]) === ms.length;

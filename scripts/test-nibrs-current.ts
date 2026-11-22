@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { canonicalOri, agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
+import { agencyCrimeSql } from "../lib/nibrs-shadow/ori-crosswalk";
 
 // Months and periods.
 assert.deepEqual(months("2025-11", "2026-02"), ["2025-11", "2025-12", "2026-01", "2026-02"]);
@@ -177,18 +178,34 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   const six = answerCurrentSeveral({ measure: "murder", statistic: "rate", places: [dallas, dallas, dallas, dallas, dallas, dallas], from: "2025-01", to: "2025-03" }, b, rows);
   assert.ok(six.kind === "current-decline" && /Name up to 5 places/.test(six.explanation), JSON.stringify(six));
 }
-// One agency under two IDs (crimeindex-current-ori-crosswalk.json, loop 2 finding 3): Pontiac, MI is MI631900X in the Final file and
-// MI6367300 in current_crime; either ID reads both files' months, and every pair carries its evidence.
+// Agencies under two IDs (crimeindex-ori-crosswalk.json): Pontiac, MI is MI631900X in the Final file and MI6367300 in current_crime;
+// either ID reads both files' months under the place index's ID. In agency_crime each ID owns its years, so one row a year.
 {
-  const cw = JSON.parse(fs.readFileSync("lib/nibrs-shadow/crimeindex-current-ori-crosswalk.json", "utf8")) as { pairs: { id: string; same_as: string; evidence: string }[] };
-  assert.equal(canonicalOri("MI631900X"), "MI6367300");
-  assert.equal(canonicalOri("MI6367300"), "MI6367300");
+  type Pair = { files: string; same_as: string; id?: string; owns?: { id: string; from: number; to: number }[]; evidence: string };
+  const cw = JSON.parse(fs.readFileSync("lib/nibrs-shadow/crimeindex-ori-crosswalk.json", "utf8")) as { pairs: Pair[] };
+  assert.equal(canonicalOri("MI6367300"), "MI631900X");
+  assert.equal(canonicalOri("MI631900X"), "MI631900X");
   assert.equal(canonicalOri("TXHPD0000"), "TXHPD0000");
-  for (const p of cw.pairs) assert.ok(p.id !== p.same_as && p.evidence.length > 40 && !cw.pairs.some((o) => o.id === p.same_as), JSON.stringify(p));
+  for (const p of cw.pairs) {
+    assert.ok(p.evidence.length > 40 && ["current", "historical_crime"].includes(p.files), JSON.stringify(p));
+    if (p.files === "current") assert.ok(p.id && p.id !== p.same_as, JSON.stringify(p));
+    else {
+      // Each year 1930-2025 is owned by exactly one of the pair's IDs, and same_as is one of them.
+      const owns = p.owns!;
+      assert.ok(owns.some((o) => o.id === p.same_as), JSON.stringify(p));
+      for (let y = 1930; y <= 2025; y++) assert.equal(owns.filter((o) => y >= o.from && y <= o.to).length, 1, `${p.same_as} ${y}`);
+    }
+  }
   let seen = "";
   const stub = ((sql: string) => { seen = sql; return []; }) as (sql: string) => unknown[][];
-  agencyMonths({ root: "/b", release: "r", firstMonth: "2025-01", lastMonth: "2026-09", finalFirstMonth: "2017-01" }, "MI631900X", "violent_crime", "2024-12", "2025-01", stub);
-  assert.match(seen, /WHEN 'MI631900X' THEN 'MI6367300'/);
-  assert.match(seen, /ori = 'MI6367300'/);
+  agencyMonths({ root: "/b", release: "r", firstMonth: "2025-01", lastMonth: "2026-09", finalFirstMonth: "2017-01" }, "MI6367300", "violent_crime", "2024-12", "2025-01", stub);
+  assert.match(seen, /WHEN 'MI6367300' THEN 'MI631900X'/);
+  assert.match(seen, /ori = 'MI631900X'/);
+  // agency_crime: each ID's rows kept only in the years it owns, then read as one ID.
+  const hist = agencyCrimeSql("/b");
+  assert.match(hist, /\(ori = 'MI6367300' AND year BETWEEN 1960 AND 2010\)/);
+  assert.match(hist, /\(ori = 'MI631900X' AND year BETWEEN 2011 AND 2025\)/);
+  assert.match(hist, /WHEN 'NM0320200' THEN 'NM0330100'/);
+  assert.equal(canonicalOri("WI0480100", "historical_crime"), "WI0561100");
 }
 console.log("nibrs current: agency months, consistent group sums, cumulative totals never complete over unknown months");
