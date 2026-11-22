@@ -3022,6 +3022,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
   assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
 }
+// Stabbings, and their common typos, are the murders and aggravated assaults with a knife (coordinator 2026-11-22, QL-nibrs-12ac4f9472).
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  for (const q of ["stabbings in Houston in 2024", "stabbongs in Houston in 2024", "stabings in Houston in 2024", "Stabbing in Houston 2024"]) assert.equal(rd(q).replace(/\s*(?:in )?2024$/, ""), "murders and aggravated assaults in Houston", q);
+  const k = readQuestion("knife stabbongs in 2024 by injury type", 2026, "2026-09");
+  assert.equal(k.text, "knife murders and aggravated assaults in 2024 by injury type");
+  assert.ok(k.ledger.parts.some((p) => p.concept === "filter" && p.value === "weapon:20"));
+  assert.equal(rd("he stabs a lot"), "he stabs a lot", "not a stabbing count");
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
