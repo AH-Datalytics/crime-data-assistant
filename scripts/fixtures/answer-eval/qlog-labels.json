@@ -38680,19 +38680,23 @@
    "question": "score card",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (Jeff 2026-11-22: the live scorecard) national form and P180 (no place named is the United States, with the note): the nine rows Violent Crime, Murder, Rape, Robbery, Aggravated Assault, Property Crime, Burglary, Theft, Motor Vehicle Theft, no clearance column, the change column comparing the latest FBI year with the year before, both named; the note says the year (P181). By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
