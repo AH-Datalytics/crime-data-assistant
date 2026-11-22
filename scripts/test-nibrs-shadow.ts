@@ -3014,7 +3014,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
-// P197 (Jeff 2026-11-22): "highlight", "show me", "give me" opening a question and "major" before a crime word are filler.
+// P204 (Jeff 2026-11-22): "highlight", "show me", "give me" opening a question and "major" before a crime word are filler.
 {
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
   assert.equal(rd("Highlight major crime trends in the city of Dallas since 2022"), "crime trends in the city of Dallas since 2022");
