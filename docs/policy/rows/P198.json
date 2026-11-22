@@ -2,11 +2,11 @@
   "id": "P198",
   "topic": "Already decided",
   "decision needed": "None: already decided",
-  "situation (example wording)": "\"What jurisdictions had the highest murder rates in 2024?\", \"What cities had the worst murder clearance rate in 2024?\", \"What five cities are currently experiencing the greatest number of homicides?\", \"the highest annual murder rate\"",
-  "what the app does today": "Said it did not understand \"jurisdictions\", \"worst\", \"the greatest number of\", \"experiencing\" or \"five cities\", or asked the place.",
-  "proposed behavior": "Ranking words are read as their plain meaning, each said in the answer's reading note: \"worst\" is the highest (the lowest when the measure is a clearance rate), \"the greatest number of\" is \"the most\", \"jurisdictions\" beside a ranking word are cities, \"cities\" misspelled \"cites\" is cities, a number word before cities, states, agencies or counties in a ranking (\"the three cities with the highest ...\") is \"top 3\", and \"annual\" beside a ranking word adds nothing. Only beside a ranking word: \"which jurisdictions are included\" is not changed.",
-  "exact default or choices offered": "The answer to the ranking as read; the reading note names each word taken.",
-  "why": "Jeff 2026-11-22 (through the coordinator): the reader-failure batch from the defaults gate (PR 284), ranking wording.",
+  "situation (example wording)": "\"US murder rate since 1950\", \"Texas violent crime since 1955\": a state's or the nation's Crime Index figures for 1958 and 1959",
+  "what the app does today": "States and the nation start in 1960: the archive's 1958-59 state and national rows are partial, so those years are blank (lib/nibrs-shadow/historical.ts). The blind checker read the 1958-59 rows as figures (loop 2: 9 answers).",
+  "proposed behavior": "A state's or the nation's Crime Index series starts in 1960. 1958 and 1959 are blank for a state or the nation, never the archive's partial rows. An agency's own years before 1960 are unchanged (with the note that fewer agencies reported then). Checkers compute a state's or the nation's years from 1960 the same way.",
+  "exact default or choices offered": "States and the nation from 1960.",
+  "why": "Jeff 2026-11-22 (through the coordinator), loop 2 finding 2: states and the nation start in 1960; the checker was wrong.",
   "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
-  "test cases": "scripts/test-nibrs-shadow.ts (\"P198\")."
+  "test cases": "lib/nibrs-shadow/historical.ts (states and the nation from 1960); blind-check scripts."
 }

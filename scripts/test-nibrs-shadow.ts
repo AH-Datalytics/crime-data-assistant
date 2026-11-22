@@ -3006,7 +3006,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
-// P198 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
+// P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
 {
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
   assert.equal(rd("What jurisdictions had the highest murder rates in 2024?"), "What cities had the highest murder rates in 2024?");
@@ -3020,6 +3020,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 }
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
+  // The note reaches the answer, just before the source line.
+  const up = ask("is shoplifting going up or down in Detroit?") as unknown as { kind: string; delivered?: { text: string[] } };
+  assert.ok(up.delivered, JSON.stringify(up).slice(0, 200));
+  const sayings = up.delivered!.text.filter((t) => / is read as /.test(t));
+  assert.deepEqual(sayings, ["Going up or down is read as its trend by year over the past five years."], up.delivered!.text.join(" | "));
+  assert.ok(/^Source/.test(up.delivered!.text[up.delivered!.text.length - 1]), "the source line stays last");
+  const cur = ask("shoplifting in Detroit right now") as unknown as { delivered?: { text: string[] } };
+  assert.ok(cur.delivered?.text.includes("Right now is read as the latest complete year, 2025."), JSON.stringify(cur.delivered?.text));
   const rd = (q: string) => readQuestion(q, 2026, "2026-09");
   const note = (q: string) => (rd(q).ledger as unknown as { readings?: { from: string; to: string }[] }).readings ?? [];
   // CURRENT is the latest complete year (2025 in 2026), only when no period is named.
