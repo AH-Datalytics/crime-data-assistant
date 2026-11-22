@@ -6,7 +6,7 @@
     "evidence": "Final file: MI631900X, 2017-01 to 2026-09 (117 months). current_crime: MI6367300, 2025-01 to 2026-09 (21 months, sample true). The seven Part I counts are equal in all 21 shared months (2025-01: 49 violent crimes in both). Neither ID is in the other file. Listed as a known difference in nibrs-model docs/RUNBOOK.md." },
   { "files": "historical_crime", "agency": "Pontiac, MI", "same_as": "MI631900X",
     "owns": [ { "id": "MI631900X", "from": 1930, "to": 1959 }, { "id": "MI6367300", "from": 1960, "to": 2010 }, { "id": "MI631900X", "from": 2011, "to": 2025 } ],
-    "evidence": "Counts under MI631900X 1930-1959 and 2011-2025, under MI6367300 1960-2010; no year has counts under both (the other ID's rows those years are empty). Population 1959 81,378 (MI631900X), 1960 82,233 (MI6367300)." },
+    "evidence": "Counts under MI631900X 1930-1959 and 2025, under MI6367300 1960-2010; 2011-2024 have no counts under either ID (rows with a population only), so they stay blank. No year has counts under both. Population 1959 81,378 (MI631900X), 1960 82,233 (MI6367300)." },
   { "files": "historical_crime", "agency": "Sullivan, MO", "same_as": "MO0281000",
     "owns": [ { "id": "MO0360600", "from": 1930, "to": 2001 }, { "id": "MO0281000", "from": 2002, "to": 2025 } ],
     "evidence": "Counts under MO0360600 1961-2001, MO0281000 2002-2025; no shared year. Population 2001 6,390, 2002 6,439." },
