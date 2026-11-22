@@ -325,7 +325,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (!structural) return { kind: "clarify", explanation: "Do you mean the share of all clearances, or the share of all offenses? Ask, for example, \"what share of rape clearances were prosecution declined\" or \"what share of rapes were cleared because prosecution was declined\"." };
     // The subset begins at the first linking word after the population ("were", "was", "that", "who", "involved").
     const tail = ledger.question.slice(shareStart);
-    const link = /\b(?:were|was|that|who|which|involved|involving|had)\b/i.exec(tail.slice(share[0].text.length));
+    const link = /\b(?:were|was|that|who|which|involved|involving|had|committed|come|came)\b/i.exec(tail.slice(share[0].text.length));
     const subsetStart = link ? shareStart + share[0].text.length + link.index : Number.POSITIVE_INFINITY;
     const fparts = of("filter").concat(of("clearance-reason"));
     const subset = fparts.filter((p) => p.span[0] >= subsetStart).map((p) => p.value!);
