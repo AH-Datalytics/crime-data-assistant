@@ -11,7 +11,7 @@ import { monthName } from "./deliver";
 
 export type SourceTab = "historical" | "current" | "nibrs" | "shr" | "hate_crime";
 /** The latest data of each source the texts mention; a source without a release here has no text to give. */
-export type SourceLatest = { historicalYear?: number | null; nibrsMonth?: string | null; shrMonth?: string | null; hateYear?: number | null };
+export type SourceLatest = { historicalYear?: number | null; nibrsMonth?: string | null; shrMonth?: string | null; currentMonth?: string | null; hateYear?: number | null };
 export type SourceDescriptionQuestion = { source: SourceTab | null; other: string | null };
 
 export const SOURCE_LIST = "Crime Index - Historical, Crime Index - Current, NIBRS, Homicide Reports and Hate crimes";
@@ -31,7 +31,7 @@ const ASK = String.raw`(?:what(?:'s|\s+is)\s+the\s+(?:scope|coverage)\s+of|what(
 /** "what is X", "tell me about X", "describe X", "what is the scope of the X data (you have)": one short question about the source alone. */
 const ABOUT = new RegExp(String.raw`^\s*(?:(?:please|hi|hello|hey)[,\s]+)?(?:can\s+you\s+|could\s+you\s+)?${ASK}\b`, "i");
 /** No source named: "what data do you have", "what does this tab cover", "what is this data". */
-const UNNAMED = /^\s*(?:(?:please|hi|hello|hey)[,\s]+)?(?:what\s+(?:data|information|stats|statistics|numbers)\s+(?:do|does|can)\s+(?:you|this|the\s+(?:tab|site|tool|app))\s+(?:have|hold|contain|cover|include|show|offer)|what\s+(?:is|are|does)\s+(?:this|the)\s+(?:data(?:set)?|tab|source|data\s+source)(?:\s+(?:cover|include|contain|hold|have))?|what\s+does\s+(?:this|the)\s+(?:tab|data(?:set)?)\s+(?:cover|include|contain|hold|have)|what(?:'s|\s+is)\s+in\s+(?:this|the)\s+(?:data(?:set)?|tab)|describe\s+(?:this|the)\s+(?:data(?:set)?|tab|source))\s*[?.!]*\s*$/i;
+const UNNAMED = /^\s*(?:(?:please|hi|hello|hey)[,\s]+)?(?:what\s+(?:data|information|stats|statistics|numbers)\s+(?:do|does|can)\s+(?:you|this|the\s+(?:tab|site|tool|app))\s+(?:have|hold|contain|cover|include|show|offer)|what\s+(?:is|are|does)\s+(?:this|the)\s+(?:data(?:set)?|tab|source|data\s+source)(?:\s+(?:cover|include|contain|hold|have))?|what\s+does\s+(?:this|the)\s+(?:tab|data(?:set)?)\s+(?:cover|include|contain|hold|have)|what(?:'s|\s+is)\s+in\s+(?:this|the)\s+(?:data(?:set)?|tab)|describe\s+(?:this|the)\s+(?:data(?:set)?|tab|source)|what(?:'s|\s+is)\s+the\s+(?:source|origin)\s+of\s+(?:this|the)\s+(?:data(?:set)?|tab)|where\s+does\s+(?:this|the)\s+data\s+come\s+from)\s*[?.!]*\s*$/i;
 /** A figure, a place or a period asked with it is that figure's question, not this one. */
 const FIGURE = /\b(?:19|20)\d{2}\b|\b(?:how\s+many|rate|trend|count|number\s+of|total|compare|clearance|top\s+\d+|highest|lowest|rank)\b/i;
 
@@ -65,8 +65,8 @@ export function sourceText(tab: SourceTab, latest: SourceLatest): string | null 
       return latest.historicalYear == null ? null
         : `Crime Index - Historical holds yearly counts of crimes, law enforcement staffing, and clearances. Police agencies report the figures to the FBI. It has no detail on victims, offenders or weapons, and it has no monthly counts. Crime and staffing data for many agencies is available from 1930 to ${latest.historicalYear} while state and national estimates are available from 1960 on.`;
     case "current":
-      // Jeff has not given the Crime Index - Current text yet (P234: withheld); until it is added, it gets the no-description sentence.
-      return null;
+      return !latest.currentMonth ? null
+        : `Crime Index - Current holds monthly counts of crime and clearances from 2017 to ${monthName(latest.currentMonth)} for city agencies of 50,000 or more and county agencies of 100,000 or more. Police agencies report these preliminary figures which give an approximate of national crime trends. It has no detail on victims, offenders or weapons.`;
     case "nibrs":
       return !latest.nibrsMonth ? null
         : `NIBRS is the FBI's National Incident-Based Reporting System. Police agencies report each crime incident to the FBI: the offenses, victims, offenders, weapons, arrests and clearances. The data here run by month from 1991 for some agencies through ${monthName(latest.nibrsMonth)}. It covers only agencies that report through NIBRS, so a state or year can have few agencies or none. It leaves out crimes not reported to police.`;

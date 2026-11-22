@@ -1092,7 +1092,7 @@ function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
   // P234: what a source is, one fixed text for it.
   const sd = readSourceDescription(question, hasMeasure, hasPlace);
   if (sd && (sd.source || sd.other || deps.tab)) {
-    const line = describeSource(sd, deps.tab, { historicalYear: deps.historical?.lastYear, nibrsMonth: deps.release.lastMonth, shrMonth: deps.shr?.latestMonth, hateYear: deps.hate ? Number(deps.hate.latestDate.slice(0, 4)) : null });
+    const line = describeSource(sd, deps.tab, { historicalYear: deps.historical?.lastYear, nibrsMonth: deps.release.lastMonth, shrMonth: deps.shr?.latestMonth, currentMonth: deps.current?.lastMonth,hateYear: deps.hate ? Number(deps.hate.latestDate.slice(0, 4)) : null });
     const span = { from: deps.release.firstMonth, to: deps.release.lastMonth };
     return { kind: "coverage", shape: "description", period: span,
       meaning: { source: "nibrs", places: [], filters: [], measures: [{ name: "source description", unit: "text" }], period: span, groupings: [], statistic: "count" },

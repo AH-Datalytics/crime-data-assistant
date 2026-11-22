@@ -117,7 +117,8 @@ assert.notEqual(shadowAnswer("how many agencies reported murders in Texas in 202
 // P234 (Jeff 2026-11-22): what a source is gets that source's one fixed text, the latest year or month filled from the release, nothing else added.
 {
   const sdeps: ShadowDeps = { ...deps, shr: { root: "/shr", release: "shr-20261101-1", latestMonth: "2025-12", crosswalk: "x" },
-    hate: { root: "/hc", release: "hate-abcd1234-9", firstDate: "1991-01-01", latestDate: "2024-12-31", latestMonth: "2024-12" } };
+    hate: { root: "/hc", release: "hate-abcd1234-9", firstDate: "1991-01-01", latestDate: "2024-12-31", latestMonth: "2024-12" },
+    current: { root: "/cur", release: "cur-1", firstMonth: "2017-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" } };
   const say = (q: string, d: ShadowDeps = sdeps): string => { const o = shadowAnswer(q, d); assert.equal(o.kind, "coverage", `${q}: ${JSON.stringify(o).slice(0, 160)}`); const c = o as Cov; assert.equal(c.shape, "description", q); assert.equal(c.delivered.text.length, 1, q); return c.delivered.text[0]; };
   const NIBRS = "NIBRS is the FBI's National Incident-Based Reporting System. Police agencies report each crime incident to the FBI: the offenses, victims, offenders, weapons, arrests and clearances. The data here run by month from 1991 for some agencies through September 2026. It covers only agencies that report through NIBRS, so a state or year can have few agencies or none. It leaves out crimes not reported to police.";
   for (const q of ["what is NIBRS", "What is NIBRS?", "tell me about NIBRS", "describe nibrs", "what's the NIBRS data", "Can you tell me about NIBRS?"]) assert.equal(say(q), NIBRS, q);
@@ -132,9 +133,11 @@ assert.notEqual(shadowAnswer("how many agencies reported murders in Texas in 202
   assert.equal(say("what data do you have", { ...sdeps, tab: "nibrs" }), NIBRS);
   assert.match(say("What does this tab cover?", { ...sdeps, tab: "shr" }), /^Homicide Reports comes from/);
   assert.notEqual(shadowAnswer("what data do you have", sdeps).kind, "coverage");
-  // Crime Index - Current: Jeff's text is withheld, so it is not described yet; any other source is not held.
+  assert.equal(say("what is Crime Index - Current"), "Crime Index - Current holds monthly counts of crime and clearances from 2017 to August 2026 for city agencies of 50,000 or more and county agencies of 100,000 or more. Police agencies report these preliminary figures which give an approximate of national crime trends. It has no detail on victims, offenders or weapons.");
+  assert.match(say("What is the source of this data?", { ...sdeps, tab: "nibrs" }), /^NIBRS is the FBI/);
+  assert.match(say("Where does this data come from?", { ...sdeps, tab: "historical" }), /^Crime Index - Historical holds/);
+  // A source not held gets the no-description sentence.
   const none = "I don't have a description of that. The sources here are Crime Index - Historical, Crime Index - Current, NIBRS, Homicide Reports and Hate crimes.";
-  assert.equal(say("what is Crime Index - Current"), none);
   assert.equal(say("what is LEOKA?"), none);
   assert.equal(say("what is the Police Employee data"), none);
   // Not this: a figure, a definition or a difference between two sources.
