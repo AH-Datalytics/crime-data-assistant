@@ -2428,9 +2428,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
 // The nearest question that works, the breakdown kept (coordinator, 2026-11-01): victims by weapon as offenses by
 // weapon; "cleared" read into the crime's name asked as "that were cleared".
 {
-  const weapon = as(ask("Murder victims in Memphis in 2024 by weapon"), "decline");
-  assert.match(weapon.explanation, /^Weapons are recorded for each offense, not for each victim/);
-  assert.equal(weapon.alternative?.question, "Murder offenses in Memphis in 2024 by weapon");
+  // B10 (Jeff 2026-11-22): victims by weapon are answered by victim (no longer declined to offenses).
+  assert.equal((as(ask("Murder victims in Memphis in 2024 by weapon"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "victims.murder");
   const cleared = as(ask("Homicide victims cleared in Memphis 2024"), "decline");
   assert.equal(cleared.alternative?.question, "Homicide victims in Memphis 2024 that were cleared");
   assert.equal(as(ask("Aggravated assaults cleared in Memphis in 2024"), "decline").alternative?.question, "Aggravated assaults in Memphis in 2024 that were cleared");
@@ -3178,8 +3177,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
 {
   const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
-  assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
-  assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
+  // B10 (Jeff 2026-11-22): P166 retired; a weapon question is counted by victim.
+  assert.equal(byWeapon.plan.measures[0].id, "victims.aggravated_assault");
+  assert.ok(!byWeapon.delivered.text.some((t) => /not victims/.test(t)), JSON.stringify(byWeapon.delivered.text));
+  assert.equal((as(ask("robbery victims by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "victims.robbery");
   const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
   assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
   assert.ok(gunViolent.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "victim"));

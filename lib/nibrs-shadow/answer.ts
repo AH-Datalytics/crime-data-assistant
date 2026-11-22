@@ -259,10 +259,6 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     && !/\bwere cleared\b/i.test(said)
     ? nearest(tidy(`${said.replace(/\s+cleared\b/i, "").replace(/[?.!]+$/, "")} that were cleared`), "I couldn't read \"cleared\" there. Put \"that were cleared\" at the end instead.", ["clearance"]) : null;
   if (cleared) return cleared;
-  const byWeapon = /group victim by offense_weapon/.test(o.detail ?? "") && /\bvictims?\b/i.test(said)
-    ? nearest(tidy(said.replace(/\bvictim(s?)\b/i, (_m, s: string) => `offense${s}`)), "Weapons are recorded for each offense, not for each victim, so victims can't be counted by weapon. Offenses can be.")
-    : null;
-  if (byWeapon) return byWeapon;
   // The two specific steps above come first; a button the decline already has (the question without the words the
   // reader couldn't use) is kept over the generic ones below.
   if (o.alternative && offerable(o.alternative.question)) return o;
@@ -3167,22 +3163,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const property = name !== "against_property" && (name === "carjacking" || (!!codes && codes.every((c) => CRIMES_AGAINST_PROPERTY.has(c))));
     // P120 (Jeff 2026-11-16): victims of a property crime with an age ("juvenile robbery victims") are counted by victim.
     const victimAge = plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age");
-    if (m.id.startsWith("victims.") && property && !victimAge) {
+    // B10 (Jeff 2026-11-22): a weapon question is always counted by victim, even for one property crime; the title names victims.
+    const weaponAsked = plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon") || plan.groupings.some((g) => g.dimension === "offense_weapon.weapon");
+    if (m.id.startsWith("victims.") && property && !victimAge && !weaponAsked) {
       plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense" };
       plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
       unbind((p) => p.concept === "unit");
       if (!statements.includes("property_counted_by_offense")) statements.push("property_counted_by_offense");
     }
-    // P166 (Jeff 2026-11-19): a crime counted by victim, broken down by weapon, is counted by offense (the weapon belongs to the offense), and
-    // the answer says so: "Counts are aggravated assault offenses by weapon, not victims."
-    if (m.id.startsWith("victims.") && plan.measures[i].id === m.id && plan.groupings.some((g) => g.dimension === "offense_weapon.weapon")
-      && !!MEASURE_CODES[name] && !["violent_crime", "property_crime", "person_crimes", "against_property", "homicide", "homicide_all", "murder"].includes(name)) {
-      const toOffense = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" ? { ...f, scope: "offense" } : f);
-      plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense", ...(m.filters ? { filters: m.filters.map(toOffense) } : {}) };
-      plan.filters = plan.filters.map(toOffense);
-      plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P166: a breakdown by weapon counts the offenses, not the victims" });
-      unbind((p) => p.concept === "unit");
-    }
+    // P166 is retired (B10, Jeff 2026-11-22): a victim crime by weapon stays counted by victim.
   });
   // P31: a composite's crimes, each in its own unit (FBI standard), with the composite's weapon on the offense that
   // connects a victim, or on the robbery offense itself.
@@ -3572,8 +3561,6 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
     // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
     ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
-    // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
-    ...(plan.defaults.some((d) => d.reason.startsWith("P166")) ? [`Counts are ${MEASURE_LABEL[plan.measures[0].id.split(".")[1]] ?? "crime"} offenses by weapon, not victims.`] : []),
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),

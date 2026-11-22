@@ -172,7 +172,7 @@ function groupableOf(r: AttributeRow): Groupable {
     case "paired": return pairAttr(c as (typeof OFFENDER_ATTRS)[number]);
     case "linked": {
       const ca = r.childAlias ?? "", table = r.table ?? "";
-      return { col: `${ca}.${c}`, multi: true, join: (read) => `LEFT JOIN ${read(table)} ${ca} ON ${r.keys === "victim" ? sameVictim(ca, r.alias) : sameOffense(ca, r.alias)}` };
+      return { col: `${ca}.${c}`, multi: true, join: (read) => `LEFT JOIN ${read(table)} ${ca} ON ${r.keys === "victim" ? sameVictim(ca, r.alias) : r.keys === "victim_offense" ? `${sameIncident(ca, r.alias)} AND ${ca}.offense_code = vo.connected_offense` : sameOffense(ca, r.alias)}` };
     }
     case "clearance": return { col: CLEARANCE_COL[r.dimension], join: clearanceJoin(r.alias) };
     case "self": {
@@ -314,6 +314,7 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   }
   if (kind === "victims" && unit === "victim") {
     // Victims of crimes against property are counted only as the property crime by a victim's age (Jeff 2026-11-15; P120 for a named crime with a victim age); every other property victim count stays by offense (P11).
+    // B10 (Jeff 2026-11-22): a weapon question counts victims too, property victims included.
     if (!codes.every((c) => PERSON_CODES.has(c)) && m[2] !== "against_property" && !propertyVictimsByAge) return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
     return { entity: "victim", sql: `SELECT DISTINCT v.data_year, v.ori, v.incident_num, v.victim_seq || ':' || v.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym${extra}
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
@@ -573,7 +574,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const incidentFilter = (a: string) => restFilter(a) + ownFilter(a);
   const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter },
     // P120 (Jeff 2026-11-16): victims of a property crime with a victim age (juvenile robbery victims) are counted by victim.
-    plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
+    plan.filters.some((f) => (f.kind === "attribute" && f.dimension === "victim.age") || (f.kind === "exists" && f.entity === "offense_weapon"))
+      || plan.groupings.some((g) => g.dimension === "offense_weapon.weapon"));
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
