@@ -968,8 +968,11 @@ function listedAgencyNotes(ledger: RequestLedger, deps: ShadowDeps): string[] {
   const places = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
   if (places.length < 2 || !deps.places) return [];
   const out: string[] = [];
+  const stateWords = new Set(Object.values(STATE_NAMES).map((n) => n.toLowerCase()));
   for (const p of places) {
     if (!/^(?:city|ambiguous):/.test(p.value ?? "")) continue;
+    // A name beside states only is the state (Florida, Texas and New York), not a police department.
+    if (stateWords.has(p.text.trim().toLowerCase().replace(/[,\s]+$/, "")) && places.every((o) => o === p || /^state:/.test(o.value ?? ""))) continue;
     const r = resolvePlace(deps.places, p.value!, p.text, true);
     if (r.kind !== "agency" || r.agency.kind !== "city") continue;
     const sameName = (deps.places.byName.get(r.agency.name.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()) ?? []).some((a) => a.kind === "county" && a.state === r.agency.state);
@@ -2024,9 +2027,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   let ask: { part: Part; name: string; candidates: Candidate[]; more?: boolean } | null = null;
   let unfound: Part | null = null;
   const isListedPlace = (p: Part) => p.clause === 0 && p.concept === "place" && !!p.value && /^(city|county|ambiguous):/.test(p.value);
-  const listedPlaces = ledger0.parts.filter(isListedPlace).length > 1;
+  // Any 2+ places (P196): the nation or a state beside a city name counts as a place too ("annual murder rate nationwide and in Baltimore").
+  const placeParts = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "place" && !!p.value);
+  const listedPlaces = placeParts.length > 1;
+  // A name beside states only is the state ("Florida, Texas, and New York": New York the state, not the city).
+  const stateNames = new Set(Object.values(STATE_NAMES).map((n) => n.toLowerCase()));
   const parts = ledger0.parts.map((p) => {
     if (!isListedPlace(p)) return p;
+    const named = /^(?:city|county|ambiguous):(.+?)(?::[A-Z]{2})?$/.exec(p.value!)?.[1]?.trim().toLowerCase();
+    if (listedPlaces && named && stateNames.has(named) && /^(?:ambiguous|city):/.test(p.value!))
+      if (placeParts.every((o) => o === p || /^state:/.test(o.value!))) return { ...p, value: `state:${Object.values(STATE_NAMES).find((n) => n.toLowerCase() === named)}` };
     const pin = pins.get(p.span[0]);
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value!, p.text, listedPlaces);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };

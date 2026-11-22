@@ -3045,6 +3045,12 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Each city with a county agency of the name (Houston County, Dallas County) names the police department it used.
   const dh = (ask("murder clearance by type in 2025 in Houston and Dallas") as { delivered?: { text: string[] } }).delivered?.text ?? [];
   assert.ok(dh.includes("Dallas is read as the Dallas Police Department.") && dh.includes("Houston is read as the Houston Police Department."), dh.join(" | "));
+  // The nation or a state beside a city name is a place too (QL-ct-6cd2364e08): Baltimore is the city's police, not asked about the county.
+  assert.notEqual((ask("carjackings nationwide and in Baltimore in 2024") as { kind: string }).kind, "clarify");
+  // A name beside states only is the state (QL-hist-6f624e6886): New York in "Florida, Texas, and New York" is not the New York City Police Department.
+  const fl = ask("Compare robbery in Florida, Texas, and New York since 1990") as { kind: string; delivered?: { text: string[] } };
+  assert.notEqual(fl.kind, "clarify");
+  assert.ok(!(fl.delivered?.text ?? []).some((t) => /New York City Police Department/.test(t)), JSON.stringify(fl.delivered?.text));
 }
 // P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
 {
