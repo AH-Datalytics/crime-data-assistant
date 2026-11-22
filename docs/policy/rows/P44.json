@@ -1,0 +1,12 @@
+{
+  "id": "P44",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Offenders\", \"perpetrators\", \"suspects\", \"attackers\", \"criminals\", \"assailants\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Offenders, perpetrators and suspects mean NIBRS offenders. Attackers, criminals and assailants: ask what is meant.",
+  "exact default or choices offered": "Offenders = perpetrators = suspects; the others asked about.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 22 \"yes to offender and perpetrator, the other 3 should seek clarification\", 23 yes)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-compile.ts."
+}

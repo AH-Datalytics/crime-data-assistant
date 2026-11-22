@@ -1,0 +1,12 @@
+{
+  "id": "P152",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Homicide Reports murders per month in Oakland 2021\", \"Houston murders per month in 2024 according to Homicide Reports\", \"Houston robberies per month in 2024 according to Homicide Reports\"",
+  "what the app does today": "\"Homicide Reports\" was ignored and the NIBRS table came back.",
+  "proposed behavior": "\"Homicide Reports\" (or \"from\", \"in\", \"according to\", \"using Homicide Reports\") in a question is a source word, like \"according to NIBRS\": murders and homicides are answered from the Homicide Reports series, with \"Source: FBI Supplementary Homicide Reports.\" Another crime is declined plainly (\"Homicide Reports hold murders and homicides only.\"). When the series has nothing for the place, one sentence says so (\"No data is available for murder victims in Oakland, California from Homicide Reports.\"). The abbreviation never appears in an answer.",
+  "exact default or choices offered": "As for a Homicide Reports answer.",
+  "why": "Jeff 2026-11-19 (through the coordinator): yes, \"Homicide Reports\" is a source word; one-sentence decline if no series for that place; never the abbreviation.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P152\")."
+}

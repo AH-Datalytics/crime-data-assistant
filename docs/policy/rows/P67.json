@@ -1,0 +1,12 @@
+{
+  "id": "P67",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "An incident with both an arrest and an exceptional clearance",
+  "what the app does today": "No rule.",
+  "proposed behavior": "Cleared by arrest wins: the incident has one status, cleared by arrest, and the answer says so.",
+  "exact default or choices offered": "One status per incident: arrest over exceptional.",
+  "why": "An arrest clears an incident; exceptional clearance applies when an arrest could not be made.",
+  "status": "Decided 2026-10-30 (Jeff: \"agreed\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts."
+}

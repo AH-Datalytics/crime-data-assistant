@@ -1,0 +1,12 @@
+{
+  "id": "D35",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Victims by age group\" when some ages are recorded as under 1 (NN, NB, BB) or 99 and older",
+  "what the app does today": "Under 1 is counted in Under 18; 99 and older in 65 and older.",
+  "proposed behavior": "Keep it: no rows of their own.",
+  "exact default or choices offered": "Under 1 inside Under 18; 99 and older inside 65 and older.",
+  "why": "Jeff 2026-11-13.",
+  "status": "Decided (Jeff 2026-11-13)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

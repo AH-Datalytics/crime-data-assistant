@@ -1,0 +1,12 @@
+{
+  "id": "D06",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murders this year\" or any partial year",
+  "what the app does today": "Year to date through the latest month, months named.",
+  "proposed behavior": "Keep.",
+  "exact default or choices offered": "The months covered are named.",
+  "why": "A partial year must not read as a full one.",
+  "status": "Decided 2026-09-06 (frozen rule 6)",
+  "test cases": "GC-040, GC-041, GC-042, GC-043, GC-044, GC-049, GC-050, GC-051, GC-052, GC-053, GC-054, GC-055, GC-060, GC-108"
+}

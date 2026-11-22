@@ -1,0 +1,12 @@
+{
+  "id": "P33",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Thefts in Denver\", \"stealing\", \"car break-ins\"",
+  "what the app does today": "NIBRS reads theft as larceny-theft; car break-ins read as theft from a motor vehicle.",
+  "proposed behavior": "Theft and stealing mean all larceny-theft: NIBRS offenses 23A-23H, or Part I larceny-theft where Historical answers. Not motor vehicle theft or burglary. Car break-ins mean theft from a motor vehicle (23F).",
+  "exact default or choices offered": "Theft = 23A-23H / Part I larceny-theft; car break-ins = 23F.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 9 \"Yes, all 23A-H nibrs codes or Part I Theft\", 10 yes)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

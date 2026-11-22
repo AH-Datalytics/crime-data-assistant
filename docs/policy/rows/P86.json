@@ -1,0 +1,12 @@
+{
+  "id": "P86",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "The notes under every NIBRS and Historical answer (\"Each share is...\", \"Each month's figure is...\", \"Age groups: ...\", \"Large means...\", the counting notes)",
+  "what the app does today": "Every statement the plan calls for is a sentence in the answer, plus definition sentences for shares, rolling months, quarters, age groups and \"large\", and Historical's availability and page-rate lines.",
+  "proposed behavior": "A note is shown only where a reader would be misled without it and the title, headers and rows don't already say it. Shown: property listed for the whole incident; property counted by offense (victims asked for); categories that overlap; clearance as of the data file. Not shown (still carried with the answer, checked by the contract and the scorer): counts reported to NIBRS; each arrest once; arrests through an incident; Group B arrests included; cleared by arrest first; victims under linked offenders; the offender condition on linked offenders; offender records; unknown details not counted. The definition sentences are removed: the column header, title or rows say it. Age groups are shown in age order, with no age recorded and an age recorded as unknown as one \"Unknown\" row, last.",
+  "exact default or choices offered": "Four notes kept; the rest carried, not shown.",
+  "why": "\"Like this entire disclaimer is unneeded\": the notes repeated what the table already shows.",
+  "status": "Decided 2026-11-01 (Jeff, through the coordinator: notes audit, Unknown and Not recorded merged, age order with Unknown last, offender-age notes removed); the keep list proposed in the notes-audit PR",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-historical.ts, scripts/test-nibrs-compile.ts."
+}

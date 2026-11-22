@@ -1,0 +1,12 @@
+{
+  "id": "P58",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Shoplifting rate in Greensboro in 2025\" when the agency has months with no data (or several agencies, one with gaps)",
+  "what the app does today": "No rule for missing months in rates.",
+  "proposed behavior": "A rate is given only when every month of the period is known for every agency counted. Otherwise no rate is given, and the missing months are named. Populations are never weighted by the months reported.",
+  "exact default or choices offered": "Rate: every month known, else no rate (months named).",
+  "why": "",
+  "status": "Decided 2026-10-30 (Jeff: \"Agreed on both\", on: a rate only when every month is known for every agency counted, otherwise no rate and the missing months named; no months-weighted populations)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-current.ts, scripts/test-nibrs-shadow.ts, scripts/test-nibrs-transforms.ts."
+}

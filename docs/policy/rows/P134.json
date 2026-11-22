@@ -1,0 +1,12 @@
+{
+  "id": "P134",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"what was the statewide violent crime rate in Colorado in 2025?\", \"Show me the homicide levels for Dallas, Texas in 2024\", \"Louisville metro murders per year\"",
+  "what the app does today": "Declined: \"I didn't understand \\\"statewide\\\"\", \"... \\\"levels in\\\"\", \"... \\\"metro\\\"\".",
+  "proposed behavior": "\"Statewide\" beside a named state adds nothing and is dropped (with no state named, the place is asked). \"Levels\" after a crime, before \"in\", \"for\", \"since\", \"from\", \"by\", \"per\" or the end, is the figure itself: a count, as \"homicides in Dallas in 2024\". \"State level\", \"city level\" and \"the level of\" keep their meaning. \"Louisville metro\" and \"Nashville metro\" are read as the city, whose own police department is the Metro department; \"metro area\" is left alone.",
+  "exact default or choices offered": "As for the plain question.",
+  "why": "Jeff 2026-11-18 (through the coordinator): quick reader fix for vocabulary (\"homicide levels\", \"statewide violent crime rate\").",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow-reading.ts (\"Vocabulary that adds nothing\")."
+}

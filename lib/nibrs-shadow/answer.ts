@@ -654,24 +654,6 @@ const cut = (text: string, parts: Part[]) => {
   return t.replace(/\s+/g, " ").trim();
 };
 /**
- * Peers and similar places with no crime named ("how crime in Nashville compares to peer cities"): Jeff 2026-11-10,
- * "Should ask for crime type", and "A is fine": the question for the place named alone, the peer words, any filler the
- * reader left unread and a comparison left with nothing to compare to taken out. Null when anything else is unread.
- */
-function peerRewrite(question: string, ledger: RequestLedger): { rest: string; peer: string } | null {
-  const c0 = ledger.parts.filter((p) => p.clause === 0);
-  const peer = c0.find((p) => p.concept === "peer");
-  if (!peer || !sameText(question, ledger.question, ledger) || !c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) return null;
-  const lq = ledger.question;
-  const drop = c0.filter((p) => p === peer || (p.concept === "entity" && p.span[0] >= peer.span[1] && /^\s*$/.test(lq.slice(peer.span[1], p.span[0])))
-    // Filler with a meaning of its own ("is crime up ... compared to similar cities") keeps the decline (Codex 02.1).
-    || (p.state === "not-interpreted" && fillerOnly(p.text) && !meaningful(p.text)));
-  if (!c0.every((p) => p.state !== "not-interpreted" || drop.includes(p))) return null;
-  // A comparison left with nothing to compare to ("compared to", "compares to", the reader's "and") goes too.
-  const rest = cut(lq, drop).replace(/\s*\b(?:compar(?:e|es|ed|ing)|vs\.?|versus|and)(?:\s+(?:with|to))?(?:\s+other)?\s*([?.!]?)\s*$/i, "$1").trim();
-  return { rest, peer: peer.text.trim() };
-}
-/**
  * A reader's decline whose unread words are all filler: the question without them, and the ones left out that mean
  * something of their own ("up in", "average"), to be said with the ask. Null when a word isn't filler or the reader
  * rewrote the question's text.
@@ -700,24 +682,20 @@ function currentYearSpan(year: number, cur: CurrentBuild, toDate: boolean): [str
 /** For tests: the ask-instead rule's checks and rewrites, which read no data. */
 export const askInsteadChecks = {
   fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
-  peerRewrite: (q: string) => peerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
   fillerRewrite: (q: string) => fillerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
   /** The P74 question without the unread words, or null when it isn't offered. */
   stripped: (q: string) => { const l = readQuestion(q, 2026, "2026-09").ledger; return askInstead(l.question, l.parts.filter((p) => p.state === "not-interpreted"), 2026)?.question ?? null; },
 };
-// Jeff 2026-11-21 (through the Coordinator): a question asking for something the engine cannot do and something it can is never
-// answered in part, with or without a line saying what was dropped: it is asked or declined. So an answer of the re-asked
-// question (crime in a place over time answers what used to ask the kind) is not taken here.
-const aboutCrime = (about: string) => /^which kind of crime\b|^which sex offenses\b/i.test(about);
+/**
+ * A reader's decline turned into an ask only when the ask covers the WHOLE question (Jeff 2026-11-21, through the Coordinator: a
+ * question asking for something the engine cannot do and something it can is declined, or asked what makes all of it
+ * answerable; never answered in part, with or without a line saying what was dropped). So peers ("compared to similar
+ * cities") keep the reader's decline, which asks for the agencies to compare.
+ */
 function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome | null {
   if (o.kind !== "decline" || COVERAGE_QUESTION.test(question)) return null;
   const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
-  if (ledger.parts.some((p) => p.clause === 0 && p.concept === "peer")) {
-    const pr = peerRewrite(question, ledger);
-    const again = pr ? answerAsked(pr.rest, { ...deps, rewritten: true }) : null;
-    return again?.kind === "clarify" && aboutCrime(again.about)
-      ? { ...again, question, note: `Comparing with ${pr!.peer} isn't available, so these choices answer for the place named alone.` } : null;
-  }
+  if (ledger.parts.some((p) => p.clause === 0 && p.concept === "peer")) return null;
   if (o.reason !== "reader") return null;
   const unread = ledger.parts.filter((p) => p.state === "not-interpreted");
   if (unread.some((p) => garbledYear(p.text)) && unread.every((p) => garbledYear(p.text) || fillerOnly(p.text))
@@ -729,7 +707,8 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
   if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(again.kind)) return again;
   if (!fr || again?.kind !== "clarify") return null;
   // Words with a meaning of their own left out ("up in", "average"): said, so a button's answer is never taken for
-  // the change or the average asked (Codex review 01.2).
+  // the change or the average asked (Codex review 01.2). Whether this ask is itself a partial answer under the rule above is
+  // an open question for the owner (2026-11-21); it is unchanged here.
   return { ...again, question, ...(fr.left.length ? { note: `The choices below answer without ${fr.left.map((t) => `"${t}"`).join(" and ")}.` } : {}) };
 }
 
@@ -1563,6 +1542,12 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   };
   const first = results.find((r) => value(r.o) !== undefined);
   if (!first) return results[0].o.kind === "decline" ? results[0].o : NO();
+  // One source for the whole table (P53, no splicing; found by the blind check of QL-shr-035f230d4f, NYPD murders through April 2000 to
+  // 2022): when the first year with a figure is Homicide Reports', every year is Homicide Reports' (a later year that would otherwise come
+  // from Current Trends is asked of Homicide Reports, and is blank where no report was filed), never one source for some years and another
+  // for the rest.
+  if (first.o.kind === "shr" && !SHR_WORDS.test(base))
+    for (const r of results) if (r.o.kind !== "shr" && r.o.kind !== "decline") r.o = shadowAnswer(`${sub(r.y)} in Homicide Reports`, deps);
   const firstOut = first.o as Delivering;
   // Homicide Reports (Jeff 2026-11-17: "Start the table in 1985"): the years before the source starts are not shown as blanks; the table
   // starts in the first year the source has, and the source's own sentence says where it starts.

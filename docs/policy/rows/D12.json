@@ -1,0 +1,12 @@
+{
+  "id": "D12",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Why did murders rise in 2020?\"",
+  "what the app does today": "Declines causes.",
+  "proposed behavior": "Answer \"why\" about the data itself; decline \"why\" about real-world causes, and offer the trend.",
+  "exact default or choices offered": "Alternative: the trend for the place and measure.",
+  "why": "The data cannot show causes, and the app does not editorialize.",
+  "status": "Decided 2026-09-06 (frozen rule 12)",
+  "test cases": "GC-022, GC-051, GC-069, GC-089, GC-090, GC-091, GC-092, GC-093, GC-094, GC-095, GC-096"
+}

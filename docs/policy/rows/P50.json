@@ -1,0 +1,12 @@
+{
+  "id": "P50",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Shoplifting arrests in Memphis in 2024\"",
+  "what the app does today": "Arrests placed by the date of the incident.",
+  "proposed behavior": "Arrests are counted by the date of the arrest: arrests made in 2024, whenever the crime happened.",
+  "exact default or choices offered": "Arrest date.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: B \"by arrest date\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts, scripts/test-nibrs-shadow.ts."
+}

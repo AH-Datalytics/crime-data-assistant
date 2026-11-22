@@ -1,0 +1,12 @@
+{
+  "id": "D14",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Shootings in Chicago\"",
+  "what the app does today": "Asks fatal or non-fatal before answering.",
+  "proposed behavior": "See P102.",
+  "exact default or choices offered": "See P102.",
+  "why": "",
+  "status": "Superseded by P102 (2026-11-16); Decided 2026-09-06 (frozen rule 14)",
+  "test cases": "GC-092, GC-103, GC-104, GC-105, GC-106, GC-107, GC-108, GC-109, GC-110, GC-111"
+}

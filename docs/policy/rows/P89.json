@@ -1,0 +1,12 @@
+{
+  "id": "P89",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Aggravated assault victims in Nashville by sex and month in 2023\" (a breakdown by month or by quarter)",
+  "what the app does today": "Declined: \"Breakdowns are available by year, not by month or as rolling totals.\" (the live tab's yearly summary tables).",
+  "proposed behavior": "The new engine answers it from the monthly build: each month's (or quarter's) categories with each category's share of that period, the months in order, Unknown last. A quarter is the sum of its three months, known only when all three are. An agency's breakdown first; a state's or the nation's next. Rolling breakdowns, and by year and by month at once, stay declined.",
+  "exact default or choices offered": "Breakdowns by month and by quarter for one agency.",
+  "why": "Jeff asked for it directly; the limit was the old yearly tables, not the data.",
+  "status": "Decided 2026-11-02 (Jeff: \"we can't breakdown by month?\"; plan approved by the coordinator)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

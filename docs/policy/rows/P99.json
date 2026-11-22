@@ -1,0 +1,12 @@
+{
+  "id": "P99",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Compare violent crime to number of police officers in Kansas City in 2022 vs 2025\" (staffing and a crime in one question)",
+  "what the app does today": "Declined: a staffing question with a crime is not read as staffing.",
+  "proposed behavior": "Declined in plain words: the app answers one dataset at a time, so staffing and a crime can't be in the same question. It says to ask for the staffing on its own and the crime on its own as separate questions. Not declined when the officers are the crime's victims or the question is a ratio (\"officers killed\", \"assaults on officers\", \"murders per officer\"): those behave as before.",
+  "exact default or choices offered": "None: staffing and crime are asked separately.",
+  "why": "Jeff: the app should do one dataset at a time, not mix them.",
+  "status": "Decided 2026-11-11 (Jeff: \"I agree with declining, it should do one dataset at a time, not mix\"; replaces the answer engine 2 proposed)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

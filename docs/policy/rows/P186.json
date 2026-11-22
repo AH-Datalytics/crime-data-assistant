@@ -1,0 +1,12 @@
+{
+  "id": "P186",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Robberies by weapon in Texas in 2024\" (no chart), \"the 10 cities with the most murders in 2024\", \"murders in Dallas and Houston by month\"",
+  "what the app does today": "Only a time series of one count got a chart; a breakdown by a category, a ranking and several places over time showed a table alone.",
+  "proposed behavior": "A chart follows the shape of the answer: a series over months a line, over years bars; a one-period breakdown by one category a bar chart of the count, the categories in the table's order (largest first, the natural order for ages and hours, Unknown last); a ranking or a table of places a bar chart of the figure in rank order; several places over months one line per place. A single figure and a one-row table have no chart. The panel turns a bar chart sideways when the labels crowd. A count by two fields (stacked bars) and clearance by type (100% stacked) come when the two-breakdown shape is built (Jeff 2026-11-21). A request to change a chart by typing stays declined (P157); the change is made by the page's own controls once the redesign has them.",
+  "exact default or choices offered": "No question, no button.",
+  "why": "Jeff 2026-11-21 (through the coordinator): bars for one-period breakdowns and rankings, several lines for several places, stacked for two fields; users change the chart type through the redesign's buttons, not by typing.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts, scripts/test-nibrs-preview.ts."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P40",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many people were killed in Memphis in 2024?\", \"deaths\", \"fatalities\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Not answered as written: ask whether murder is meant (murder as P10 defines it), with a button.",
+  "exact default or choices offered": "Ask: murder?",
+  "why": "Deaths include accidents, suicides and other causes the data does not cover.",
+  "status": "Decided 2026-10-29 (Jeff: 18 \"No, decline and ask if they mean murder\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}
