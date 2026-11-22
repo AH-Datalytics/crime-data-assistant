@@ -7,6 +7,6 @@
   "proposed behavior": "No place named is the United States, answered as the nation, with the note \"No place was named, so the United States is shown.\" and buttons to pick a state or an agency. A ranking question with no place ranks across the nation (P128, P105 as they stand). A place the reader could not resolve (a name that is not found) still asks or declines as today (P28 for several places of one name stays; an unresolved place is not the nation). A follow-up with no place keeps the previous question's place (P69, P123 unchanged).",
   "exact default or choices offered": "Note and buttons: pick a state or an agency.",
   "why": "Jeff 2026-11-21 (typed, through the coordinator): no place named = the United States, with a note saying so and buttons to pick a place, instead of \"which place?\". Supersedes P12 for a question with no place at all; P28 and the unresolved-place decline are unchanged.",
-  "status": "Decided 2026-11-21 (Jeff, through the coordinator); not built yet",
-  "test cases": "Not built: tests come with the build."
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator); built in the defaults PR",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P180 to P182\")."
 }

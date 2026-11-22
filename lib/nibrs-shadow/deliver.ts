@@ -8,6 +8,7 @@
  */
 import { CIRCUMSTANCE, CIRCUMSTANCE_HELD } from "../nibrs-plan/draft-layer";
 import { stateName } from "./places";
+import { NO_CATEGORY } from "../nibrs-plan/compile";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
@@ -293,6 +294,22 @@ const placeLabel = (p: NibrsPlan["geography"]["places"][number]) =>
 /** The place as the subject of a sentence ("Detroit", "Texas", "The United States"): an agency short, with its state only when another city of the name is as large. */
 const placeSubject = (p: NibrsPlan["geography"]["places"][number]): Subject =>
   p.kind === "agency" ? agencySubject(p.label, p.ori) : p.kind === "national" ? nationSubject : { text: placeLabel(p) };
+/** The clearance types in the order every by-type answer lists them (P192): arrest, the exceptional types A to E, not cleared. */
+const CLEARANCE_TYPE_ORDER = ["arrest", "A", "B", "C", "D", "E", "none"];
+/** The clearance types a plan's own clearance conditions leave in play (all seven with none). */
+function clearanceTypesAllowed(plan: NibrsPlan): Set<string> {
+  let allowed = new Set(CLEARANCE_TYPE_ORDER);
+  const conds = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])];
+  for (const f of conds) {
+    if (f.kind !== "attribute" || f.op !== "in" || !f.values?.length) continue;
+    const v = f.values.map(String);
+    const keep = f.dimension === "offense.clearance_type" ? v
+      : f.dimension === "offense.clearance_method" ? v.flatMap((x) => (x === "arrest" ? ["arrest"] : x === "none" ? ["none"] : ["A", "B", "C", "D", "E"]))
+      : f.dimension === "offense.clearance_status" ? v.flatMap((x) => (x === "none" ? ["none"] : ["arrest", "A", "B", "C", "D", "E"])) : null;
+    if (keep) allowed = new Set([...allowed].filter((c) => keep.includes(c)));
+  }
+  return allowed;
+}
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null, opts: TimeOptions = {}): Delivered {
   const place = plan.geography.places[0];
@@ -360,6 +377,36 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const order = binned.bins!.map((b) => b.label);
     const rank = (r: unknown[]) => { const name = categoryName(cats[0], r[ic]); const i = order.indexOf(name); return i >= 0 ? i : name === "Unknown" ? order.length + 1 : order.length; };
     rows = out.sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || rank(x) - rank(y));
+  } else if (cats.length === 1 && cats[0] === "offense.clearance_type") {
+    // P192 (Jeff 2026-11-21): clearance by type always shows all seven rows, zeros included, in one fixed order (cleared by arrest, the five
+    // exceptional types, uncleared), for one agency, a state and the nation alike; a clearance condition keeps only the types it allows.
+    const allowed = clearanceTypesAllowed(plan);
+    const ic = at(cats[0]), sc = at(`${count}_status`);
+    const periods = ip >= 0 ? [...new Set(rows.map((r) => String(r[ip])))] : [""];
+    const filled: unknown[][] = [];
+    for (const p of periods) {
+      const all = rows.filter((r) => ip < 0 || String(r[ip]) === p);
+      // The placeholder row the statement keeps when no type occurred carries the period's status; it is not a row of the table.
+      const inP = all.filter((r) => String(r[ic] ?? "") !== NO_CATEGORY);
+      // A period whose figures are not known (a blank month, a conflict) gets no invented zeros.
+      const known = all.length > 0 && all.every((r) => r[sc] === "VALUE" || r[sc] === "REPORTED_ZERO");
+      const total = inP.reduce((s, r) => s + Number(r[at(count)] ?? 0), 0);
+      for (const code of CLEARANCE_TYPE_ORDER) {
+        if (!allowed.has(code)) continue;
+        const have = inP.find((r) => String(r[ic] ?? "").trim() === code);
+        if (have) { filled.push(have); continue; }
+        if (!known) continue;
+        const z: unknown[] = columns.map(() => null);
+        if (ip >= 0) z[ip] = p;
+        z[ic] = code; z[at(count)] = 0; z[sc] = "VALUE";
+        if (beside) { z[at(beside)] = 0; z[at(`${beside}_status`)] = "VALUE"; }
+        // A share of nothing is not a number: with no offense at all in the period, the share is blank.
+        if (share) { z[at(share)] = total > 0 ? 0 : null; z[at(`${share}_status`)] = total > 0 ? "VALUE" : "UNAVAILABLE"; }
+        filled.push(z);
+      }
+      for (const r of inP) if (!CLEARANCE_TYPE_ORDER.includes(String(r[ic] ?? "").trim()) || !allowed.has(String(r[ic] ?? "").trim())) filled.push(r);
+    }
+    rows = filled;
   } else if (cats.length) {
     // Within each period, categories by count, largest first; blanks last; then by name. A category that says the detail
     // is not known (Unknown, Not recorded, No relationship reported) is always after the known ones, whatever its count
