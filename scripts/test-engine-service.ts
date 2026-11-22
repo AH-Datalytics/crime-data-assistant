@@ -45,6 +45,43 @@ function fakes() {
   return { spawned, spawn };
 }
 
+// --- piece 6: one tab's slow questions cannot hold every worker
+{
+  const f = fakes();
+  const pool = new EnginePool({ size: 2, tabCap: 1, queueMax: 3, timeoutMs: 5000, spawn: f.spawn });
+  const h1 = pool.submit(req("h1", { tab: "historical" })), h2 = pool.submit(req("h2", { tab: "historical" })), n1 = pool.submit(req("n1", { tab: "nibrs" }));
+  await new Promise((r) => setImmediate(r));
+  const running = () => f.spawned.flatMap((s) => s.held.map((h) => h.req.question));
+  assert.deepEqual(running().sort(), ["h1", "n1"], "the second historical question waits; the nibrs question takes the free worker");
+  assert.equal(pool.stats().busy, 2); assert.equal(pool.stats().queued, 1);
+  // h1 finishes: h2 (waiting behind its tab's cap) now runs on the freed worker.
+  f.spawned.flatMap((s) => s.held).find((h) => h.req.question === "h1")!.resolve(ok("h1"));
+  assert.ok((await h1).ok);
+  await new Promise((r) => setImmediate(r));
+  assert.ok(running().includes("h2")); assert.equal(pool.stats().queued, 0);
+  for (const h of f.spawned.flatMap((s) => s.held)) if (h.req.question !== "h1") h.resolve(ok(h.req.question));
+  assert.ok((await h2).ok && (await n1).ok);
+  // A request held back by its cap does not block a later one from another tab.
+  const g = fakes();
+  const p2 = new EnginePool({ size: 3, tabCap: 1, queueMax: 5, timeoutMs: 5000, spawn: g.spawn });
+  const a = p2.submit(req("a1", { tab: "shr" })), b = p2.submit(req("a2", { tab: "shr" })), c = p2.submit(req("c1", { tab: "current" })), d = p2.submit(req("d1", { tab: "nibrs" }));
+  await new Promise((r) => setImmediate(r));
+  const run2 = g.spawned.flatMap((s) => s.held.map((h) => h.req.question)).sort();
+  assert.deepEqual(run2, ["a1", "c1", "d1"], "three tabs run at once on three workers while the second shr question waits");
+  for (const h of g.spawned.flatMap((s) => s.held)) h.resolve(ok(h.req.question));
+  await a; await new Promise((r) => setImmediate(r));
+  for (const h of g.spawned.flatMap((s) => s.held)) if (h.req.question === "a2") h.resolve(ok("a2"));
+  assert.ok((await b).ok && (await c).ok && (await d).ok);
+  // A full queue still refuses, and the cap is validated.
+  const f3 = fakes(); const p3 = new EnginePool({ size: 2, tabCap: 1, queueMax: 0, timeoutMs: 5000, spawn: f3.spawn });
+  p3.submit(req("x1", { tab: "shr" }));
+  const refused = await p3.submit(req("x2", { tab: "shr" }));
+  assert.ok(!refused.ok && refused.kind === "busy", "over its tab's cap with no queue room is busy even though a worker is free");
+  void p3.submit(req("y1", { tab: "nibrs" }));
+  assert.equal(p3.stats().busy, 2, "another tab still takes the free worker");
+  assert.throws(() => new EnginePool({ size: 2, tabCap: 0, queueMax: 0, timeoutMs: 10, spawn: f3.spawn }));
+  p3.close(); p2.close(); pool.close();
+}
 // --- two workers, a bounded queue, and the busy answer
 {
   const f = fakes();
