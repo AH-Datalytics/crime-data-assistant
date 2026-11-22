@@ -481,6 +481,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // "All agencies" only before a county ("all agencies in Kern County"), never a state (Codex rankings-B review 01.1).
   text = text.replace(COUNTYWIDE_RE,
     (m) => { countywide = true; readings.push({ kind: "phrase", from: m.trim(), to: "(every agency in the county, summed)" }); return " "; });
+  // "all St. Louis County, MO agencies" is the same request (Engine 2.0, QL-hist-8ae8e7b9d6): the county kept, the agencies words taken out.
+  text = text.replace(/\b(?:(?:for|of|across|from|in)\s+)?all\s+((?:[A-Za-z.'-]+\s+){1,3}county(?:,\s*[A-Z]{2})?)\s+(?:law\s+enforcement\s+)?(?:agencies|departments)\b/i,
+    (m, county: string) => { countywide = true; readings.push({ kind: "phrase", from: m.trim(), to: "(every agency in the county, summed)" }); return ` ${county} `; });
   // All the cities (Jeff 2026-11-16): "all American cities", "every city in Texas", "all cities in the US", and "major/large/big cities" with no
   // rank word are the cities of 250,000 or more, said. Read as a set of ALL_CITIES_N, so the set's own rules (one crime, a count or a rate, one
   // year, Crime Index) apply; the place is the state named, else the nation.
