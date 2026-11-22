@@ -92,7 +92,8 @@ const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : ["(any)"])
 const cases: Case[] = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/answer-eval/cases.json"), "utf8")).cases.map((c: unknown) => Case.parse(c));
 // Value files that don't list their cases (Current Trends') are bound by the cell each case names.
 if (expectedValues) bindValueSources(expectedValues, cases);
-const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-policy.csv"), "utf8");
+// The policy rows (docs/policy/rows/<id>.json), as the generated CSV's text.
+const policyCsv = (require("./lib/policy-rows.cjs") as { policyCsv: () => string }).policyCsv();
 const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2}),.*Needs Jeff/gm)].map((m) => m[1]));
 
 type Run = { actual: ActualAction; diffs: Diff[]; notes: string[] };

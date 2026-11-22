@@ -1,0 +1,12 @@
+{
+  "id": "P02",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "The source tabs (Current Trends, Historical, NIBRS, Homicide Reports, Hate Crime)",
+  "what the app does today": "Users choose a tab, or Auto mode.",
+  "proposed behavior": "One question box by default: the app picks the source (P01) and names it at the end of the answer. The source tabs stay as an advanced option, off by default; a user who opens it and picks a source gets that source, labelled. A user can also ask for a source in words.",
+  "exact default or choices offered": "Default: one box, no tab chosen. Advanced option: the five source tabs.",
+  "why": "Most users cannot know which source answers best; advanced users keep direct control.",
+  "status": "Decided 2026-10-28 (Jeff: keep the tabs as an advanced option)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

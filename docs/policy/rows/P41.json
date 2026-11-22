@@ -1,0 +1,12 @@
+{
+  "id": "P41",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many people were injured in assaults in Memphis?\", \"hurt\", \"wounded\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Declined, unless the question is a NIBRS-type question about injuries recorded for a crime (\"assaults with an injured victim\"), which counts victims with an injury recorded.",
+  "exact default or choices offered": "Decline; NIBRS injury questions only.",
+  "why": "Injury is recorded only for some crimes, and only as the agency reported it.",
+  "status": "Decided 2026-10-29 (Jeff: 19 \"decline unless asked specifically in the context of a nibrs-type query (assaults with an injured victim)\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

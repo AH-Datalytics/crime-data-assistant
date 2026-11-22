@@ -1,0 +1,12 @@
+{
+  "id": "P146",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Any answer with a month, a year or a figure that is not there: \"No data is available for March 2024: shown blank, not zero.\", \"No figure is available for March 2020 for Dallas, Texas: shown blank, not zero.\", \"Not every month of 2025 is available: shown blank, not zero.\", \"No clearance rate is given: no data is available for March 2026.\"",
+  "what the app does today": "The same sentences said \"is known\" (\"No data is known for ...\", \"No figure is known for ...\", \"... not every month is known\").",
+  "proposed behavior": "A month or figure that is missing is said to be not available, never not known: \"No data is available for ...\", \"No figure is available for ...\", \"Not every month of ... is available\", \"because not every month is available\". Pure wording; the figures and the rest of each sentence are unchanged. \"Unknown\" stays a category label.",
+  "exact default or choices offered": "The same sentences with \"available\".",
+  "why": "Jeff 2026-11-18 (through the coordinator): \"Known should be available.\"",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts, scripts/test-nibrs-current.ts, scripts/test-answer-conformance.ts."
+}

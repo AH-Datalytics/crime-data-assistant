@@ -1,0 +1,12 @@
+{
+  "id": "P77",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "The source line of a Historical answer, including state and national Part I figures (P53)",
+  "what the app does today": "P63: \"FBI SRS\" for historical answers.",
+  "proposed behavior": "Historical answers end \"Source: Crime Index.\", as Current Trends answers do, including the state and national Part I answers of P53. This amends P63 for Historical.",
+  "exact default or choices offered": "\"Source: Crime Index.\"",
+  "why": "Historical data comes strictly from the Crime Index (Jeff).",
+  "status": "Decided 2026-11-01 (Jeff: \"3 is fine\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts."
+}

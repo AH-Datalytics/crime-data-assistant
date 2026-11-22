@@ -1,0 +1,12 @@
+{
+  "id": "P65",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murder victims by offender race in Memphis in 2024\" (crimes by the offenders' demographics)",
+  "what the app does today": "P49: each crime counts once per category of the incident's offenders.",
+  "proposed behavior": "The default stays P49 (the incident's offenders). The pair-linked reading (only the offenders the victim-offender relationship segment links to that victim, with a \"no relationship reported\" category) is used only when the question names the pairing (\"killed by\", \"victims of offenders who were ...\"), and the answer labels it as such.",
+  "exact default or choices offered": "Default: P49. Pair-linked only when the question names the pairing, labelled.",
+  "why": "The two readings give different numbers; the decided one is the default, and the other is never chosen silently.",
+  "status": "Decided 2026-10-30 (Jeff: \"Agree\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts, scripts/test-nibrs-shadow.ts."
+}

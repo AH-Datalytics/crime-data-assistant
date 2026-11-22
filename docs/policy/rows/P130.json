@@ -1,0 +1,12 @@
+{
+  "id": "P130",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"NYPD murders through April from 2000 to 2022\", \"murders through May in Nashville going back to 1935\" (the same months of each year, an agency answered from Homicide Reports, a span that starts before 1985)",
+  "what the app does today": "The table ran from the first year asked, the years before 1985 shown as blank rows, with one line naming them (\"No figure is available for 1935 to 1984: shown blank, not zero.\").",
+  "proposed behavior": "The table starts in the first year Homicide Reports has (1985), and one line says so in the source's own sentence: \"Homicide Reports here start in 1985, so 1935 through 1984 aren't included.\" The title and the period say the years shown. A span that starts inside the source has no such line. Other sources keep a blank for a year they cannot answer (P126).",
+  "exact default or choices offered": "A shorter table (1985 on) with one line for the years left out.",
+  "why": "Jeff 2026-11-17 (through the coordinator): \"Start the table in 1985.\"",
+  "status": "Decided 2026-11-17 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (the block \"The same months of each year\", Homicide Reports)."
+}

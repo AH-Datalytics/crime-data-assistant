@@ -1,0 +1,12 @@
+{
+  "id": "P84",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Car break-ins in Memphis in 2024\"",
+  "what the app does today": "Answered as theft from motor vehicle, with no line saying so.",
+  "proposed behavior": "The answer adds \"Car break-ins are counted as theft from motor vehicles.\"",
+  "exact default or choices offered": "One plain line.",
+  "why": "Says how the phrase was read.",
+  "status": "Decided 2026-11-01 (Jeff: \"yes\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

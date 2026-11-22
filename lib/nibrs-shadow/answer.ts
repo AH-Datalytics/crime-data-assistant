@@ -1630,6 +1630,12 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   };
   const first = results.find((r) => value(r.o) !== undefined);
   if (!first) return results[0].o.kind === "decline" ? results[0].o : NO();
+  // One source for the whole table (P53, no splicing; found by the blind check of QL-shr-035f230d4f, NYPD murders through April 2000 to
+  // 2022): when the first year with a figure is Homicide Reports', every year is Homicide Reports' (a later year that would otherwise come
+  // from Current Trends is asked of Homicide Reports, and is blank where no report was filed), never one source for some years and another
+  // for the rest.
+  if (first.o.kind === "shr" && !SHR_WORDS.test(base))
+    for (const r of results) if (r.o.kind !== "shr" && r.o.kind !== "decline") r.o = shadowAnswer(`${sub(r.y)} in Homicide Reports`, deps);
   const firstOut = first.o as Delivering;
   // Homicide Reports (Jeff 2026-11-17: "Start the table in 1985"): the years before the source starts are not shown as blanks; the table
   // starts in the first year the source has, and the source's own sentence says where it starts.
