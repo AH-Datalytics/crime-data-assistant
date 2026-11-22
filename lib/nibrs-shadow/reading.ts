@@ -262,7 +262,7 @@ const PHRASES: [RegExp, string][] = [
   [/\b(?:for|in|across|throughout|of)\s+(?:the\s+)?(?:entire|whole|full)\s+(?:u\.?s\.?a?\.?|united\s+states(?:\s+of\s+america)?|country|nation)(?=[\s,.?!]|$)/gi, "nationwide"],
   // P191 (Jeff 2026-11-21, reader class): "cleared by arrest versus exceptional means" is the clearance types (arrest, each exceptional type,
   // uncleared); "exceptional clearances by type" is the exceptional types; "exceptional means" alone is the exception.
-  [/,?\s*\b(?:were\s+|was\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional\s+means|exception|exceptional\s+clearance)\b/gi, " by clearance type"],
+  [/,?\s*\b(?:were\s+|was\s+|are\s+|is\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional(?:\s+means|\s+clearances?)?|exception)\b/gi, " by clearance type"],
   [/\bexceptional\s+((?:[a-z]+\s+){0,1}?)clearances?\b/gi, "$1cleared by exception"],
   [/(\bcleared\s+by\s+exception\b[^?.]*?)\b(?:per|by)\s+year\s+and\s+type\b/gi, "$1by type by year"],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
@@ -562,6 +562,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
   // since the look-ahead would fail in PHRASES).
   dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
+  // The share of both ("what percentage of murders are cleared by arrest vs exceptional nationally") is the clearance types side by side
+  // (P191's table), not one share: the share words are dropped here (look-ahead, so not in PHRASES).
+  dropWord(/\b(?:what|which)\s+(?:percent(?:age)?|share|proportion|fraction)\s+of\s+(?=[^?]*\bcleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?exception)/gi, "");
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
