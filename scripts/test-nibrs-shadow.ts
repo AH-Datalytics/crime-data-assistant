@@ -3077,6 +3077,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P204 (Jeff 2026-11-22): "highlight", "show me", "give me" opening a question and "major" before a crime word are filler.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("Highlight major crime trends in the city of Dallas since 2022"), "crime trends in the city of Dallas since 2022");
+  assert.equal(rd("Give me major violent crime in Houston in 2024"), "Give me violent crime in Houston in 2024");
+  assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
+  assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
