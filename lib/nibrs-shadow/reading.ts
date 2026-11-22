@@ -726,6 +726,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   if ((cm = /^\s*how\s+many\s+(.+?)\s+(?:were|was)\s+cleared(?:\s+by\s+(arrest|exceptional\s+means))?\s*\??\s*$/i.exec(text))) {
     text = `how many ${cm[1]}`; set({ only: !cm[2] ? "cleared" : /arrest/i.test(cm[2]) ? "arrest" : "exceptional" });
   }
+  // "Exceptional clearance rate for robbery in Texas" (QL-nibrs-e04248e56d): the share of the robberies cleared by exception (P203), said in a note.
+  text = text.replace(/\b(?:exceptional\s+clearance|cleared\s+by\s+exception)\s+rates?\s+(?:for|of)\s+((?:[a-z]+\s+){0,2}?[a-z]+?)(?=\s+(?:in|across|nationwide|nationally|statewide)\b|\s*[?.]?\s*$)/i,
+    (m, crime: string) => { readings.push({ kind: "meaning", from: m.trim(), to: `the share of ${crime} cleared by exceptional means` }); return `what share of ${crime} were cleared by exception`; });
+  // "What share of rapes were cleared by exceptional means" is the share of one clearance type (P203), which the ledger's own "by exception" filter reads.
+  if (/\b(?:share|percent(?:age)?|proportion|fraction)\s+of\b/i.test(text))
+    text = text.replace(/\bcleared\s+by\s+exceptional\s+means\b/gi, (m) => { readings.push({ kind: "phrase", from: m, to: "cleared by exception" }); return "cleared by exception"; });
   text = text.replace(/,?\s*\b(?:that\s+were\s+|which\s+were\s+)?cleared\s+by\s+(arrest|exceptional\s+means)\b/i, (_m, how: string) => (set({ only: /arrest/i.test(how) ? "arrest" : "exceptional" }), ""));
   text = text.replace(/\b(?:uncleared|unsolved|not\s+cleared)\s+/i, () => (set({ only: "uncleared" }), ""));
   text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+not\s+cleared\b/i, () => (set({ only: "uncleared" }), ""));
