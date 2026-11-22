@@ -64,7 +64,7 @@ export async function handleEngineQuery(body: unknown, d: RouteDeps): Promise<Ro
   const ms = d.clock() - t0;
   try { d.log(engineLogRow(parsed, result, ms, sessionId)); } catch { /* a log failure never changes what the visitor sees */ }
   // The answer in the shape the page already renders (title, explanation, columns, rows, chart), plus `engine`: its kind, release and buttons.
-  if (result.ok) return { status: 200, json: { ...adaptEngineResponse(parsed, result.response, result.release, ms) } };
+  if (result.ok) return { status: 200, json: { ...adaptEngineResponse(parsed, result.response, result.release, ms, typeof result.asked === "string" && result.asked.trim() ? result.asked.slice(0, 500) : undefined) } };
   const status = result.kind === "busy" ? 503 : result.kind === "timeout" ? 504 : result.kind === "unavailable" ? 503 : result.kind === "bad_request" ? 409 : 500;
   return fail(status, result.message, { engineFailure: true, kind: result.kind });
 }

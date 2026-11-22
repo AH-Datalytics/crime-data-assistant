@@ -1,0 +1,12 @@
+{
+  "id": "P193",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders in 2025 in these cities: Chicago, IL, Houston, TX, Dallas, TX\", \"murder rate in 2024 for the following cities: Chicago, Houston\", \"Chicago murder clearances per year and clearance type since 2022\"",
+  "what the app does today": "Declined (\"I couldn't use \\\"cities\\\" in this question\"; \"I didn't understand \\\"for the following\\\"\"); \"per year and clearance type\" was declined as a combination.",
+  "proposed behavior": "\"In these cities:\" and \"for the following cities:\" before a list of named places say nothing more than the list: the places named are the places asked (a list is read as the places side by side, as with \"and\"). \"By year and clearance type\" (also \"per\", and by month) is the clearance type by year, the shape already built for \"by type by year\". \"Murders cleared by clearance type\" (or \"cleared by type\") is the murder clearances by type.",
+  "exact default or choices offered": "The answer the plain wording gets.",
+  "why": "Jeff 2026-11-21 (through the coordinator): the reader owns question recognition; real asks the reader did not understand.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P193\")."
+}

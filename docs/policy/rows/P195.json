@@ -1,0 +1,12 @@
+{
+  "id": "P195",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Chicago murders per year\" after \"National murder trend, 2000-2020\"; \"clearance rate for murder since 1960\" after \"murders in Houston since 2010\"",
+  "what the app does today": "The follow-up was answered as a first question: its missing period or place took the defaults (every year; the United States), and the previous question's period was only offered as a button.",
+  "proposed behavior": "A follow-up read as its own question, with its own crime, that leaves out the place or the period takes them from the previous question when that one named them, before any default (P180, P181). The answer says so after its title (\"The period is from your last question.\", \"The place is from your last question.\", \"The place and period are from your last question.\"), and a button runs the question as typed. A follow-up across places (a ranking, \"cities\", \"agencies\") keeps its own place reading. When the carried question would not be answered, the follow-up goes on as before.",
+  "exact default or choices offered": "Carried from the last question; button: the question as typed.",
+  "why": "Jeff 2026-11-21 (through the coordinator), follow-up plan item 1: carry over the previous place and period when the previous question named them, else the defaults, and say what was carried.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"Follow-up #1\")."
+}
