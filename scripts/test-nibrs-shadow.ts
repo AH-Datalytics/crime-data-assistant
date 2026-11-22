@@ -3250,4 +3250,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // "Is it not ORI AL00118?": no antecedent and no figure: not read as an ID lookup.
   assert.notEqual((ask2("Is it not ORI AL00118?") as { kind: string }).kind, "coverage");
 }
+// P226 (Jeff 2026-11-22): a correlation is one decline sentence with the two series offered; several sources in one table is declined; "what factors correlate" is not this rule.
+{
+  const d = ask("What is the correlation between murder and robbery in Houston?") as unknown as { kind: string; explanation?: string; alternative?: { question: string }; more?: { question: string }[] };
+  assert.equal(d.kind, "decline");
+  assert.equal(d.explanation, "This isn't available: a correlation. The two series can be shown separately.");
+  assert.deepEqual([d.alternative?.question, ...(d.more ?? []).map((o) => o.question)], ["murder", "robbery in Houston"]);
+  const e = ask("compare the murder rate using all three datasets") as unknown as { kind: string; explanation?: string };
+  assert.ok(e.kind === "decline" && /several data sources/.test(e.explanation ?? ""), JSON.stringify(e).slice(0, 200));
+  const f = ask("What factors correlate with murder rates in Houston?") as unknown as { explanation?: string };
+  assert.ok(!/a correlation\. The two series/.test(f.explanation ?? ""), "the explanation decline stays");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

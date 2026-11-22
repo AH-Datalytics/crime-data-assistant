@@ -59,7 +59,7 @@ import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, a
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
-import { DOWNLOAD_ASK, DOWNLOAD_SENTENCE, downloadAnswer, readOri, SCATTER, SCATTER_SENTENCE, scatterQuestions, withoutCsvWords } from "./ori";
+import { CORRELATION, CORRELATION_EXPLAIN, CORRELATION_SENTENCE, SEVERAL_SOURCES, SEVERAL_SOURCES_SENTENCE, correlationQuestions, DOWNLOAD_ASK, DOWNLOAD_SENTENCE, downloadAnswer, readOri, SCATTER, SCATTER_SENTENCE, scatterQuestions, withoutCsvWords } from "./ori";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
@@ -1062,6 +1062,12 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const opts = two.map((t): ShadowOption => ({ label: `Ask instead: "${t}"`, question: t }));
     return { ...(decline("unsupported_capability", SCATTER_SENTENCE, opts.length ? { alternative: opts[0] } : {}) as Extract<ShadowOutcome, { kind: "decline" }>), ...(opts.length > 1 ? { more: opts.slice(1) } : {}) };
   }
+  // A correlation, or one figure from several data sources (P226): one sentence, the series offered separately.
+  if (CORRELATION.test(question) && !CORRELATION_EXPLAIN.test(question)) {
+    const opts = correlationQuestions(question).map((t): ShadowOption => ({ label: `Ask instead: "${t}"`, question: t }));
+    return { ...(decline("unsupported_capability", CORRELATION_SENTENCE, opts.length ? { alternative: opts[0] } : {}) as Extract<ShadowOutcome, { kind: "decline" }>), ...(opts.length > 1 ? { more: opts.slice(1) } : {}) };
+  }
+  if (SEVERAL_SOURCES.test(question) && /\b(?:compare|comparison|versus|vs\.?)\b/i.test(question)) return decline("unsupported_capability", SEVERAL_SOURCES_SENTENCE);
   // An agency ID (P218): looked up both ways, or the place of the question with a note, or declined naming it.
   if (!deps.checkingOffer) {
     const ori = readOri(question, deps);

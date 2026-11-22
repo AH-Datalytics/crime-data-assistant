@@ -123,6 +123,20 @@ export function scatterQuestions(question: string): string[] {
   return [withScope(withYear(a0)), withScope(withYear(b0))].map((s) => s.replace(/\s+/g, " ").trim());
 }
 
+/** A correlation (P226): declined in one sentence, the two series offered as two questions. "What factors correlate with ..." stays the explanation decline (P13). */
+export const CORRELATION = /\bcorrelat(?:ion|ions|e|es|ed|ing)\b/i;
+export const CORRELATION_EXPLAIN = /\b(?:what|which)\s+(?:\w+\s+){0,3}(?:factors?|things|variables)\b[^?]*\bcorrelat/i;
+export const CORRELATION_SENTENCE = "This isn't available: a correlation. The two series can be shown separately.";
+/** "Compare the murder rate using all three datasets": one table never mixes sources (P14). */
+export const SEVERAL_SOURCES = /\b(?:using|across|from|in|with)\s+(?:all\s+)?(?:the\s+)?(?:two|three|both|all)\s+(?:of\s+the\s+)?(?:data\s*-?\s*sets?|data\s+sources?|sources?|databases?)\b/i;
+export const SEVERAL_SOURCES_SENTENCE = "This isn't available: one figure from several data sources in one table. Each source's own series can be shown separately.";
+export function correlationQuestions(question: string): string[] {
+  const m = /\bcorrelation\s+(?:between|of)\s+(.+?)\s+(?:and|vs\.?|versus|with)\s+(.+?)[?.!]*$/i.exec(question.replace(/\s+/g, " "));
+  if (!m) return [];
+  const clean = (s: string) => s.replace(/^(?:the\s+)?(?:amount|number)\s+of\s+/i, "").replace(/^the\s+/i, "").trim();
+  return [clean(m[1]), clean(m[2])].filter((s) => /[a-z]{3}/i.test(s));
+}
+
 /** "Can I download this?" with no figure named: one sentence (P217). */
 export const DOWNLOAD_ASK = /^\W*(?:(?:hi|hey|ok|okay|and|so|please)\W+)*(?:can|could|may|is\s+it\s+possible\s+to|how\s+(?:can|do)\s+i)\s+(?:i|we|you)?\s*(?:please\s+)?(?:download|export|save|get)\s+(?:this|that|it|the\s+(?:table|data|results?|numbers))(?:\s+(?:as\s+(?:an?\s+)?(?:csv|excel|spreadsheet)(?:\s+file)?|to\s+(?:csv|excel)|by\s+state))?\s*\??\W*$/i;
 export const DOWNLOAD_SENTENCE = "This table can be downloaded as a CSV.";
