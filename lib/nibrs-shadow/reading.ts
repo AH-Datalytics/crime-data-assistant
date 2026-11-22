@@ -545,6 +545,13 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
   text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // Filler (Jeff 2026-11-22): "highlight" opening a question and "major" before a crime word add nothing ("show me" and "give me" are
+  // already request words elsewhere, and the age rule reads "show me" itself)
+  // ("Highlight major crime trends in the city of Philadelphia since 2022"). Not "major cities" (the large-city rule above).
+  text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?highlight\s+(?:the\s+)?(?=[a-z])/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
   // here, not in PHRASES, whose replacement re-reads only the matched words (its look-ahead would fail).
   text = text.replace(/^\s*us\s+(?=(?:murder|homicide|crime|violent|property|robber|burglar|theft|assault|rape|arson|clearance)\w*)/i,
@@ -728,7 +735,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/\bby\s+clearance(\s+(?:status|type))?\s+and\s+(?:by\s+)?(year|month)\b/i, (_m, w = "", t: string) => (set({ by: kind(w) }), `by ${t}`));
   text = text.replace(/,?\s*\bby\s+(?:clearance\s+type|type\s+of\s+clearance|how\s+(?:they\s+were|it\s+was)\s+cleared)\b/i, () => (set({ by: "type" }), ""));
   text = text.replace(/,?\s*\bby\s+clearance(?:\s+status)?\b(?!\s+rate)/i, () => (set({ by: "status" }), ""));
-  text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b/i, () => (set({ only: "cleared" }), ""));
+  // (Not "that were cleared by exception" / "because ...": a clearance type named is the share's own part, read by the question types.)
+  text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b(?!\s+(?:by\s+(?:exception|an\s+exception)|because|due\s+to))/i, () => (set({ only: "cleared" }), ""));
   // Increment 7: people wording (P29, P30, P44, P49, P65). Read here, built by the shadow; the reader reads the rest.
   const pr = readPeople(text);
   // Any rewrite here ("by victim race" -> "by race") is read again by the accounting, flag or not (Codex 05).
