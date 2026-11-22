@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Cases\", \"incidents\", \"reports\", \"calls for service\"",
   "what the app does today": "Not defined.",
-  "proposed behavior": "\"Cases\" is declined (not a NIBRS term). \"Incidents\" means incidents, one per event. \"Reports\" and \"calls\" are declined (no calls-for-service data).",
+  "proposed behavior": "A bare \"cases\" is declined (not a NIBRS term); \"cases closed\" and \"cases solved\" are clearances (P35, Jeff 2026-11-22). \"Incidents\" means incidents, one per event. \"Reports\" and \"calls\" are declined (no calls-for-service data).",
   "exact default or choices offered": "",
   "why": "",
-  "status": "Decided 2026-10-29 (Jeff: 26 \"decline cases since it's not a NIBRS term\", 27 yes, 28 decline)",
+  "status": "Decided 2026-10-29 (Jeff: 26 \"decline cases since it's not a NIBRS term\", 27 yes, 28 decline); Jeff 2026-11-22 (audit B22): \"cases closed/solved\" answers as clearances",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

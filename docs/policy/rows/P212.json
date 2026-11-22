@@ -1,0 +1,12 @@
+{
+  "id": "P212",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"share of murders that are intraracial\", \"what percent of murders are interracial\", \"share of murders committed by black males\"",
+  "what the app does today": "Declined or asked: these shares are not built.",
+  "proposed behavior": "SAME RACE (intraracial) = the victim's race equals offender 1's race; INTERRACIAL = they differ. Only murders where BOTH races are known (not U) can be classed: the denominator is those murders, and a note gives how many murders were left out because a race is unknown. \"Murders committed by black males\" = offender 1 race B and sex M, as a share of ALL murders for the place and period, with the murders whose offender is unknown shown as their own line. Counts and shares are shown, and a share asked for is one sentence (N of M).",
+  "exact default or choices offered": "Same-race and different-race counts and shares among murders with both races known, plus the left-out count; offender race-and-sex as a share of all murders with an unknown line.",
+  "why": "Race follows the Homicide Reports categories as published; no race grouping is invented.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "Comes with the build."
+}

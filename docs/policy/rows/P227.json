@@ -1,0 +1,12 @@
+{
+  "id": "P227",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"show rolling 12-month totals by age group by month from December 2022 to December 2025\"",
+  "what the app does today": "Declined: \"Rolling demographic breakdowns are not supported.\"",
+  "proposed behavior": "A rolling total broken down by a person attribute (age group, sex, race) is declined: \"This isn't available: rolling totals by age group, sex or race.\" It stays declined while it would be the heavy class of P122 (no place named is the nation; a person attribute over several years); Jeff decides whether it is built once its size is known.",
+  "exact default or choices offered": "The decline sentence.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator: keep the decline for now); build: none",
+  "test cases": "Label QL-nibrs-2986fe5cc2 (a decline, unchanged)."
+}

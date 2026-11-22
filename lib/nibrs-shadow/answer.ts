@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -61,6 +61,8 @@ import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearan
 import { answerClearanceShare } from "./clearance-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { buildScorecard, type ScorecardPlace } from "./scorecard";
+import { detectAgencyScorecardQuestion } from "../scorecard-format";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -429,7 +431,7 @@ function withDefault(o: ShadowOption, note: string, buttons: ShadowOption[], sit
     return null;
   }
   const x = r as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
-  const text = [x.delivered.text[0], note, ...x.delivered.text.slice(1)];
+  const text = [x.delivered.text[0], ...(note ? [note] : []), ...x.delivered.text.slice(1)];
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
@@ -894,11 +896,14 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
     let option: ShadowOption | undefined;
     let note = "";
+    let byStateRows = false;
     const more: ShadowOption[] = [];
     if (c.about === "which place") {
       option = find(/^The United States$/);
-      note = "No place was named, so the United States is shown.";
-      more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
+      // "By state" names the nation's states as the rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
+      byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(question);
+      note = byStateRows ? "" : "No place was named, so the United States is shown.";
+      if (!byStateRows) more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
       option = find(/^Every year available$/);
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
@@ -924,7 +929,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
-    notes.push(note);
+    if (!byStateRows) notes.push(note);
     buttons.push(...more);
     cur = option.continuation;
   }
@@ -1009,9 +1014,64 @@ function shrTwoWay(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const r = answerShr(sq, deps.shr, deps.execute, deps.historical);
   return r.kind === "shr" ? r : null;
 }
+/**
+ * P215 (Jeff 2026-11-22): "Tulsa scorecard", "Ohio crime scorecard", "national crime scorecard" is the crime scorecard of lib/nibrs-shadow/scorecard.ts: nine rows,
+ * Type | Offenses | Change from <prior year> | Rate per 100k | Clearance Rate (an agency only), from the Crime Index build. Only the place, "crime" and the word
+ * itself: anything else keeps its path. A county scorecard is declined in one sentence until the county crosswalk lands; a city name that names several agencies
+ * asks which, each choice the card of that agency.
+ */
+function scorecardOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
+  if (!deps.historical || !detectAgencyScorecardQuestion(question)) return null;
+  const read = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth);
+  const own = read.ledger.parts.filter((p) => p.clause === 0);
+  const places = own.filter((p) => p.concept === "place");
+  const word = (p: Part) => /^score[ \t-]*cards?$/i.test(p.text.trim());
+  const other = own.filter((p) => p.concept !== "place" && p.state !== "context" && !(p.concept === "measure" && p.value === "unspecified") && !(p.state === "not-interpreted" && word(p)));
+  if (places.length > 1 || other.length || flags(read.ledger).comparison) return null;
+  const hb = deps.historical;
+  const value = places.length ? String(places[0].value ?? "") : "national";
+  const noPlace = !places.length;
+  if (noPlace && deps.noDefaults) return null;   // P180: with the defaults off the ask stays an ask
+  const run = (place: ScorecardPlace, label: string, scope: "agency" | "state" | "national", agency?: Agency): ShadowOutcome => {
+    const r = buildScorecard(hb, deps.execute, place);
+    if (r.kind === "none") return decline("outside_release_coverage", r.explanation);
+    const periodYear = { from: `${r.year}-01`, to: `${r.year}-12` };
+    const who = agency ? { ori: agency.ori, label, name: agency.name, state: agency.state } : null;
+    return { kind: "historical", period: periodYear,
+      question: { measure: "violent_crime", agencies: who ? [who] : [], from: r.year, to: r.year, byYear: false, statistic: "count", comparison: null, notes: r.text.slice(1) },
+      meaning: { source: "historical", places: who ? [{ kind: "agency", ori: who.ori }] : [{ kind: scope }], filters: [], period: periodYear, measures: [{ name: "crime scorecard", unit: "offense" }], groupings: ["offense"], statistic: "count" },
+      delivered: { table: r.table, text: [r.text[0], ...(noPlace ? ["No place was named, so the United States is shown."] : []), ...r.text.slice(1), "Source: Crime Index."] },
+      read: { table: scope === "agency" ? "agency_crime" : scope === "state" ? "state_crime" : "nation_crime", column: "scorecard", release: hb.release } } as unknown as ShadowOutcome;
+  };
+  const cardLabel = (a: Agency) => `${a.name}, ${a.state}`;
+  if (value === "national") return run({ kind: "national" }, "United States", "national");
+  const st = /^state:(.+)$/.exec(value);
+  if (st) {
+    const code = Object.entries(STATE_NAMES).find(([, n]) => n.toLowerCase() === st[1].toLowerCase())?.[0];
+    return code ? run({ kind: "state", code, name: stateName(code) }, stateName(code), "state") : null;
+  }
+  if (/^county:/.test(value)) return decline("unsupported_capability", "This isn't available: a county scorecard. Ask for the county's sheriff or police department.");
+  if (!/^(?:city|ambiguous):/.test(value)) return null;
+  const r = resolvePlace(deps.places, value, places[0].text);
+  if (r.kind === "agency") return r.agency.kind === "county" && /\bcounty\b/i.test(places[0].text) && !/\b(?:sheriff|police)\b/i.test(places[0].text)
+    ? decline("unsupported_capability", "This isn't available: a county scorecard. Ask for the county's sheriff or police department.")
+    : run({ kind: "agency", ori: r.agency.ori, label: cardLabel(r.agency) }, cardLabel(r.agency), "agency", r.agency);
+  if (r.kind === "ask") {
+    const agencies = r.candidates.flatMap((c) => (c.kind === "agency" ? [c.agency] : []));
+    if (!agencies.length) return null;
+    const options: ShadowOption[] = r.candidates.map((c): ShadowOption => c.kind === "agency"
+      ? { label: candidateLabel(c, r.candidates, deps.places), continuation: run({ kind: "agency", ori: c.agency.ori, label: cardLabel(c.agency) }, cardLabel(c.agency), "agency", c.agency) }
+      : { label: candidateLabel(c, r.candidates, deps.places), continuation: run({ kind: "state", code: c.code, name: c.name }, c.name, "state") });
+    return { kind: "clarify", about: `which ${r.name}`, question, options };
+  }
+  return null;
+}
 function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): ShadowOutcome {
   const two = deps.rewritten ? null : shrTwoWay(question, deps);
   if (two) return two;
+  // P215: the crime scorecard.
+  const card = deps.rewritten ? null : scorecardOf(question, deps);
+  if (card) return card;
   const os = deps.rewritten ? null : otherStates(question, deps);
   if (os) return os;
   const o = answerAsked(question, deps);
@@ -1299,6 +1359,12 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // A question about the data itself ("Sources?", "what states are not represented?") is answered on its own, whatever came before.
   const about = coverageOf(followUp, deps);
   if (about) return { ...about, rewrite: followUp, rewriteKind: "new" };
+  // Follow-up #4 (coordinator 2026-11-22): a short reply to the app's own ask ("mass" after "which Springfield", "2", "for the us", "murder
+  // trends" after "which kind of crime") is that button pressed, or the asked-for part filled in.
+  if (!standsAlone(followUp)) {
+    const replied = replyToAsk(previous, followUp, deps);
+    if (replied) return replied;
+  }
   // A turn that stands on its own (its own crime and place, nothing pointing back) is a new question: answered as a
   // first question would be, the previous turn ignored (Jeff 2026-11-01). When the rules would have read it as a
   // follow-up meaning something else, that reading is offered as a button, run only when chosen.
@@ -1400,6 +1466,73 @@ function carryOver(previous: string, followUp: string, deps: ShadowDeps): Follow
   if (!ANSWER_KINDS.includes(o.kind)) return null;
   return { ...carriedOver(o, what, followUp), rewrite: q, rewriteKind: "new" };
 }
+const REPLY_FILLER = /\b(?:please|pls|thanks?|thank you|great|ok(?:ay)?|yes|yeah|sure|is good|is fine|works|the|one|option|number|choice|i want|i meant?|just|go with|lets do|let's do)\b/g;
+const ORDINALS = ["first", "second", "third", "fourth", "fifth"];
+/**
+ * Follow-up #4 (coordinator 2026-11-22, 153 real turns typed after an ask): when the previous turn was the app's ask, a short reply is read
+ * as the answer to it. A choice named or numbered ("Massachusetts", "violent", "2", "the first one") is that button pressed. Otherwise the
+ * part that was asked for is filled in from the reply: a place ("In Tucson Arizona", "for the us"), a period ("2024 is good"), or a crime
+ * ("murder trends" after "Tacoma"). A reply that adds anything else, or leads nowhere new, goes on as before.
+ */
+function replyToAsk(previous: string, followUp: string, deps: ShadowDeps): FollowUpOutcome | null {
+  if (deps.checkingOffer || followUp.trim().split(/\s+/).length > 6) return null;
+  // Whether the previous turn was an ask needs no data: read it with an executor that returns nothing, so an answered previous
+  // question is not run again just to find that out.
+  let asked: ReturnType<typeof shadowAnswer>;
+  try { asked = shadowAnswer(previous, { ...deps, execute: () => [] }); } catch { return null; }
+  if (asked.kind !== "clarify" || !asked.question.trim()) return null;
+  // It was an ask: read it again with the real executor, since its buttons carry the continuations that the data builds.
+  asked = shadowAnswer(previous, deps);
+  if (asked.kind !== "clarify" || !asked.question.trim()) return null;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(REPLY_FILLER, " ").replace(/\s+/g, " ").trim();
+  const t = norm(followUp);
+  const pressable = asked.options.filter((o) => !o.entry && !o.otherSource && (o.question || "continuation" in o));
+  const press = (o: ShadowOption): FollowUpOutcome => {
+    // Which of two places of one name ("which Springfield"): the place chosen stands where the name was typed.
+    const base = asked.question.trim().replace(/[?.!]+$/, "");
+    const name = /^which /.test(asked.about) ? asked.about.slice(6) : "";
+    const at = name && o.label.toLowerCase().startsWith(name.toLowerCase()) ? new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i") : null;
+    const q = o.question ?? (at && at.test(base) ? base.replace(at, o.label) : `${base}, ${o.label}`);
+    // Typed as a question, the choice gets the defaults a first question gets (P180-P182); a button built inside the ask doesn't, so it is
+    // the fallback.
+    const typed = shadowAnswer(q, deps);
+    const out = o.question || ANSWER_KINDS.includes(typed.kind) ? typed : o.continuation!;
+    return { ...out, rewrite: q, rewriteKind: "new" } as FollowUpOutcome;
+  };
+  // A choice by number or order.
+  const n = /^#?(\d)$/.test(t) ? Number(t.replace("#", "")) : ORDINALS.indexOf(t.replace(/^(\d)(?:st|nd|rd|th)$/, (_, d) => ORDINALS[Number(d) - 1] ?? "")) + 1;
+  if (n >= 1 && n <= asked.options.length) { const o = asked.options[n - 1]; return pressable.includes(o) ? press(o) : null; }
+  // A choice by name: every word typed starts a word of exactly one button's label.
+  const words = t.split(" ").filter((w) => w.length >= 2);
+  if (words.length) {
+    const hits = pressable.filter((o) => { const lw = norm(o.label).split(" "); return words.every((w) => lw.some((l) => l === w || (w.length >= 3 && l.startsWith(w)))); });
+    if (hits.length === 1) return press(hits[0]);
+    if (hits.length > 1) return null;
+  }
+  // The part asked for, filled in from the reply; never a reply that points back or compares ("Compare this to Raleigh", "Now give me Dallas").
+  const reply = followUp.replace(/^\s*(?:what|how)\s+about\s+/i, "");
+  if (pointsBack(reply) || /\b(?:compar\w*|vs\.?|versus|against|now|instead)\b/i.test(reply)) return null;
+  const year = Number(deps.release.lastMonth.slice(0, 4));
+  const read = (q: string) => readQuestion(q, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  const mine = read(followUp), has = (c: string) => mine.some((p) => p.concept === c);
+  const base = asked.question.trim().replace(/[?.!]+$/, "");
+  const bare = (s: string) => s.trim().replace(/^(?:in|for|across|from|during)\s+/i, "");
+  let q: string | null = null;
+  if (asked.about === "which place" && !has("measure")) {
+    const place = mine.find((p) => p.concept === "place");
+    q = NATIONAL_WORDS.test(followUp) || /\b(?:the (?:us|whole country|country)|america)\b/i.test(followUp) ? `${base} nationally` : place ? `${base} in ${bare(place.text)}` : null;
+  } else if (asked.about === "which period" && !has("measure")) {
+    const period = mine.find((p) => p.concept === "period");
+    q = period ? `${base} ${period.text.trim()}` : null;
+  } else if (asked.about === "which kind of crime" && has("measure") && !has("place")) {
+    const place = read(asked.question).find((p) => p.concept === "place");
+    q = place ? `${followUp.trim().replace(/[?.!]+$/, "")} in ${bare(place.text)}` : null;
+  }
+  if (!q) return null;
+  const o = shadowAnswer(q, deps);
+  if (o.kind === "decline" || (o.kind === "clarify" && o.about === asked.about)) return null;
+  return { ...o, rewrite: q, rewriteKind: "new" };
+}
 /** The answer with a note after its title saying what came from the last question, and a button for the question as typed. */
 function carriedOver(o: ShadowOutcome, what: ("place" | "period")[], typed: string): ShadowOutcome {
   const x = o as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
@@ -1462,7 +1595,10 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
       period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
     } else period = { from: r.from, to: r.to };
   } catch { return null; }
-  const hq = hateQuestionOf(plan, period, deps.hate);
+  const hq0 = hateQuestionOf(plan, period, deps.hate);
+  // Several biases: the columns in the order the question names them (the plan's filters are in code order).
+  const at = (code: string) => ledger0.parts.find((p) => p.clause === 0 && p.concept === "filter" && p.value === `bias:${code}`)?.span?.[0] ?? Infinity;
+  const hq = !("why" in hq0) && hq0.biases ? { ...hq0, biases: [...hq0.biases].sort((a, b) => at(a.code) - at(b.code)) } : hq0;
   if ("why" in hq) {
     // A span wholly outside the data says where the data are (coverage), as every source does.
     if (hq.why === "before the data start") return decline("outside_release_coverage", `Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(period.from.slice(0, 4)), Number(period.to.slice(0, 4)))}.`);
@@ -2140,9 +2276,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
-    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps);
+    // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
+    // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
+    const nationalClearanceShare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "share") && CLEARANCE_WORDS.test(ledger0.question);
+    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins),
+      nationalClearanceShare ? { ...deps, deferChars: Number.MAX_SAFE_INTEGER } : deps);
     const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
-    const nationDefault = deps.noDefaults ? null : withDefault(nationOption, "No place was named, so the United States is shown.", placeButtons, "place");
+    // "By state" has the nation's states as its rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
+    const byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(ledger0.question);
+    const nationDefault = deps.noDefaults ? null : withDefault(nationOption, byStateRows ? "" : "No place was named, so the United States is shown.", byStateRows ? [] : placeButtons, "place");
     if (nationDefault) return nationDefault;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.

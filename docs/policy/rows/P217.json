@@ -1,0 +1,12 @@
+{
+  "id": "P217",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"a csv of 12 month annualized homicide indexed to january 2018\", \"can you give a spreadsheet of murder rate per 100k for every state per year since 1960?\", \"can i download this by state?\"",
+  "what the app does today": "Answered as the figures with no word about the file, or asked.",
+  "proposed behavior": "A request for a CSV, a spreadsheet or \"an export\" of a figure is answered with that table (the table is the data), with one line saying how to download it: \"This table can be downloaded as a CSV.\" (Jeff 2026-11-22: \"We will have the ability to download tables\"; the sentence names no place for the button because its place is not settled). \"Can I download this?\" with no figure named is answered with that one sentence, not a data answer.",
+  "exact default or choices offered": "The table, with the line \"This table can be downloaded as a CSV.\"",
+  "why": "Jeff 2026-11-22 (card through the coordinator): \"We will have the ability to download tables\".",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Capability (reader words) with the UI download option; the download sentence is fixed generically (coordinator 2026-11-22); the line is location-free: \"This table can be downloaded as a CSV.\" (coordinator 2026-11-22, Jeff not sure where the button will be)",
+  "test cases": "Labels QL-ct-7f584734cb, QL-hist-ab9b32bd71, QL-shr-2012735625 (answers) and QL-hist-b7bf61afa6 (a question about the app) with the build."
+}

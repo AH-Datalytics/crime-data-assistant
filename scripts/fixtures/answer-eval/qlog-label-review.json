@@ -5568,7 +5568,14 @@
 },
 "QL-ct-df0e43158d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-df6a291291": {
 "status": "reviewed",
@@ -5717,7 +5724,14 @@
 },
 "QL-ct-e7610c3d67": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which San Diego"
+]
+}
 },
 "QL-ct-e763fe102b": {
 "status": "reviewed",
@@ -11110,7 +11124,15 @@
 },
 "QL-hist-c3b02ec3c0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (Jeff 2026-11-22: the live scorecard) national form and P180 (no place named is the United States, with the note): the nine rows Violent Crime, Murder, Rape, Robbery, Aggravated Assault, Property Crime, Burglary, Theft, Motor Vehicle Theft, no clearance column, the change column comparing the latest FBI year with the year before, both named; the note says the year (P181). By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical"
+]
+}
 },
 "QL-hist-c3fccec664": {
 "status": "reviewed",
@@ -11673,7 +11695,14 @@
 },
 "QL-hist-df0e43158d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-df3e4191cb": {
 "status": "reviewed",
@@ -11888,7 +11917,14 @@
 },
 "QL-hist-e7610c3d67": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which San Diego"
+]
+}
 },
 "QL-hist-e7af5fa70e": {
 "status": "reviewed",
@@ -18918,12 +18954,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-c4945e9c9d": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P47 declines cases, although prosecutor-declined clearance itself is recorded.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P47: \"cases\" is declined, as not a NIBRS term; P203 covers a share of one type, not a count per state. The decline may offer the question with offenses (P66) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "decline",
-"reason": "Cases are not a supported counting unit."
+"reason": "\"cases\" is not a NIBRS term (P47)"
 }
 },
 "QL-nibrs-c4cecf2f76": {
@@ -19888,12 +19924,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-e8fd44815b": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 gives one clearance type per figure; by state and by each exceptional type is a second breakdown it does not cover; the decline may offer one type at a time By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"reason": "a state's clearance share is one clearance type at a time; by state and by every exceptional type at once is a second breakdown (P203)"
 }
 },
 "QL-nibrs-e9d606a061": {

@@ -18573,17 +18573,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which Los Angeles",
-     "period"
+     "which Los Angeles"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -19128,17 +19126,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which San Diego",
-     "period"
+     "which San Diego"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -38680,19 +38676,23 @@
    "question": "score card",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (Jeff 2026-11-22: the live scorecard) national form and P180 (no place named is the United States, with the note): the nine rows Violent Crime, Murder, Rape, Robbery, Aggravated Assault, Property Crime, Burglary, Theft, Motor Vehicle Theft, no clearance column, the change column comparing the latest FBI year with the year before, both named; the note says the year (P181). By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -40839,17 +40839,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which Los Angeles",
-     "period"
+     "which Los Angeles"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -41554,17 +41552,15 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which San Diego",
-     "period"
+     "which San Diego"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -65425,14 +65421,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "reason": "\"cases\" is not a NIBRS term (P47)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R03>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 declines cases, although prosecutor-declined clearance itself is recorded."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P47: \"cases\" is declined, as not a NIBRS term; P203 covers a share of one type, not a count per state. The decline may offer the question with offenses (P66) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -68803,14 +68799,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "State clearance rates are unavailable."
+    "reason": "a state's clearance share is one clearance type at a time; by state and by every exceptional type at once is a second breakdown (P203)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P18 prohibits state clearance shares."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P203 gives one clearance type per figure; by state and by each exceptional type is a second breakdown it does not cover; the decline may offer one type at a time By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {

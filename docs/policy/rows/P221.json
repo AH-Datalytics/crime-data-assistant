@@ -1,0 +1,12 @@
+{
+  "id": "P221",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"can you give me a list of nibrs offense codes with their descriptions?\", \"what are the different nibrs codes\", \"just show me a list of nibrs offense codes in the property category\", \"what is the nibrs code for trespassing\"",
+  "what the app does today": "Asked or declined: a question about the code list is not a data question.",
+  "proposed behavior": "A request for the NIBRS offense codes is answered with a table Code | Offense | Category from the app's own code list (the Group A offenses and their categories: crimes against persons, property and society), no figures, no period or place asked. A category named (\"in the property category\") or one offense named (\"the code for trespassing\") filters the table to it. The Source line says the codes are from the FBI NIBRS manual's offense list as the app uses them.",
+  "exact default or choices offered": "The code table, filtered when a category or an offense is named.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine (a lookup) with Capability's reader words",
+  "test cases": "Labels QL-nibrs-887edc0e07, QL-nibrs-9d3ea1d1ef, QL-nibrs-05e7df0f0e (answers) and the excluded code questions; the lookup answer kind."
+}

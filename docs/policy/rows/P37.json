@@ -7,6 +7,6 @@
   "proposed behavior": "Ask which period is meant, with buttons (for example the last 12 months; the last 3 complete years; another range).",
   "exact default or choices offered": "Ask for the period.",
   "why": "",
-  "status": "Decided 2026-10-29 (Jeff: 15 \"yes, ask for definition\")",
+  "status": "Decided 2026-10-29 (Jeff: 15 \"yes, ask for definition\"); where no period is named at all, P181 applies; a loose period word (\"recently\", \"lately\") still asks (cleanup 2026-11-22), audit C5",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

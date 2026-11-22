@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "After a definitions, sources, agencies-reporting or states-with-no-data answer: \"Carjackings per year\", \"murders in Texas in 2024\", \"by state\"",
   "what the app does today": "\"Carjackings per year\" after \"how is domestic violence defined?\" was rebuilt as \"how is Carjackings defined by year\" and answered with the definitions link.",
-  "proposed behavior": "An answer about the data itself has no figure to change, so the next question is a question of its own: \"Carjackings per year\" after a definitions answer asks which place, as it would first. Presentation follow-ups (a bar chart) keep their meaning.",
+  "proposed behavior": "An answer about the data itself has no figure to change, so the next question is a question of its own: \"Carjackings per year\" after a definitions answer is answered as it would be first (no place named: the United States, P180). A request to change a chart (a bar chart) is declined in one sentence (P157).",
   "exact default or choices offered": "The follow-up is asked as a question of its own.",
   "why": "Runner gate 2026-11-18 (the coordinator): QL-nibrs-534978cb8e was a wrong answer on dev; its label (clarify which place) is unchanged.",
-  "status": "Decided 2026-11-18 (the coordinator, a regression fix; label unchanged)",
+  "status": "Decided 2026-11-18 (the coordinator, a regression fix; label unchanged); a request to change a chart is declined in one sentence (P157) (cleanup 2026-11-22), audit B26, C21",
   "test cases": "scripts/test-nibrs-follow-up.ts (\"After an answer about the data itself\")."
 }

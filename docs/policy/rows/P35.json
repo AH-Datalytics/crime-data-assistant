@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"How many robberies were solved?\", \"solve rate\", \"closed cases\"",
   "what the app does today": "Not defined.",
-  "proposed behavior": "Solved, solve rate and closed mean cleared, by arrest or by exceptional means.",
+  "proposed behavior": "Solved, solve rate and closed mean cleared, by arrest or by exceptional means. \"Cases closed\" and \"cases solved\" are answered as clearances (the offenses cleared), with a note that cases are read as offenses (Jeff 2026-11-22); a bare \"cases\" still declines (P47).",
   "exact default or choices offered": "Cleared.",
   "why": "",
-  "status": "Decided 2026-10-29 (Jeff: 12 \"Cleared to all 3\")",
+  "status": "Decided 2026-10-29 (Jeff: 12 \"Cleared to all 3\"); Jeff 2026-11-22 (audit B22): \"cases closed/solved\" answers as clearances, with a note",
   "test cases": "No test found: no test cites this row or asks its example question."
 }
