@@ -69,6 +69,8 @@ export const POP_GROUP_SENTENCE = "This isn't available: population groups (pop_
 
 export function readOri(question: string, deps: ShadowDeps): OriReading | null {
   const q = question.replace(/\s+/g, " ").trim();
+  // "Is it not ORI AL00118?": "it" has no antecedent and no figure is named, so it stays the question asked back (Engine 2.0 and Model).
+  if (/^\W*(?:is|are|was|were)\s+(?:it|that|this)\b/i.test(q) && !POP_GROUP.test(q)) return null;
   if (POP_GROUP.test(q)) return { kind: "outcome", outcome: { kind: "decline", explanation: POP_GROUP_SENTENCE } };
   const m = ORI_RE.exec(q);
   if (m) {
@@ -123,7 +125,7 @@ export function scatterQuestions(question: string): string[] {
 
 /** "Can I download this?" with no figure named: one sentence (P217). */
 export const DOWNLOAD_ASK = /^\W*(?:(?:hi|hey|ok|okay|and|so|please)\W+)*(?:can|could|may|is\s+it\s+possible\s+to|how\s+(?:can|do)\s+i)\s+(?:i|we|you)?\s*(?:please\s+)?(?:download|export|save|get)\s+(?:this|that|it|the\s+(?:table|data|results?|numbers))(?:\s+(?:as\s+(?:an?\s+)?(?:csv|excel|spreadsheet)(?:\s+file)?|to\s+(?:csv|excel)|by\s+state))?\s*\??\W*$/i;
-export const DOWNLOAD_SENTENCE = "Use the CSV button under the table to download it.";
+export const DOWNLOAD_SENTENCE = "This table can be downloaded as a CSV.";
 export const downloadAnswer = (deps: ShadowDeps): CoverageAnswer => ({ ...sentence("Download", [DOWNLOAD_SENTENCE], deps), delivered: { table: { columns: [], rows: [] }, text: [DOWNLOAD_SENTENCE] } });
 
 /** A request for a CSV, a spreadsheet or an export of a figure: the figure's question without the request words (the table is the answer), or null. */

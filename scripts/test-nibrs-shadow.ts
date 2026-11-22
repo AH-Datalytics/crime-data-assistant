@@ -3238,11 +3238,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(sc.explanation, "This isn't available: a scatter plot, and a crime rate beside staffing in one table.");
   assert.deepEqual([sc.alternative?.question, ...(sc.more ?? []).map((m) => m.question)], ["violent crime rate per 100k in 2024 in cities of 250k or more", "officers per 100k in 2024 in cities of 250k or more"]);
   // "Can I download this?": one sentence. A CSV or spreadsheet of a figure is that figure's table, the request words dropped.
-  for (const q of ["Can I download this?", "can i download this by state?"]) assert.deepEqual(text(q), ["Use the CSV button under the table to download it."], q);
+  for (const q of ["Can I download this?", "can i download this by state?"]) assert.deepEqual(text(q), ["This table can be downloaded as a CSV."], q);
   assert.equal(withoutCsvWords("can you give a spreadsheet of murder rate per 100k for every state per year since 1960?"), "murder rate per 100k for every state per year since 1960?");
   assert.equal(withoutCsvWords("a csv of 12 month annualized homicide indexed to january 2018"), "12 month annualized homicide indexed to january 2018");
   assert.equal(withoutCsvWords("in the csv below"), null);
   const csvTable = as(ask2("a csv of carjackings in Houston in 2023"), "answer");
-  assert.deepEqual(csvTable.delivered.table.rows, as(ask2("carjackings in Houston in 2023"), "answer").delivered.table.rows, "the table is the answer");
+  const plainTable = as(ask2("carjackings in Houston in 2023"), "answer");
+  assert.deepEqual(csvTable.delivered.table.rows, plainTable.delivered.table.rows, "the table is the answer");
+  assert.deepEqual(csvTable.delivered.text.filter((t) => t !== "This table can be downloaded as a CSV."), plainTable.delivered.text, "plus the one download line, before the source line");
+  assert.equal(csvTable.delivered.text.at(-2), "This table can be downloaded as a CSV.");
+  // "Is it not ORI AL00118?": no antecedent and no figure: not read as an ID lookup.
+  assert.notEqual((ask2("Is it not ORI AL00118?") as { kind: string }).kind, "coverage");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
