@@ -7,6 +7,6 @@
   "proposed behavior": "Ask, with buttons, most likely choice first; never assume. Each button runs the whole question with that part filled in.",
   "exact default or choices offered": "See P05, P06 and P12 for the buttons offered.",
   "why": "A missing part changes the answer; one click is cheaper than a wrong assumption.",
-  "status": "Decided 2026-10-28 (Jeff: general rule)",
+  "status": "Superseded by P180, P181 and P182 (2026-11-21: a missing place, period or kind of crime takes the default, said in a note); Decided 2026-10-28 (Jeff: general rule)",
   "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-hate.ts."
 }

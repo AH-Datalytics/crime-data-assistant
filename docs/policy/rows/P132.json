@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Where does Houston stand on murder rate in 2024?\", \"where does Houston stand on murders in 2024 in the state\"",
   "what the app does today": "Declined: \"I didn't understand \\\"where does\\\" or \\\"stand on\\\".\"",
-  "proposed behavior": "\"Stand on\", \"stands in\" and \"stand for\" are read as \"rank\": where a city stands is where it ranks (the rankings decision of 2026-11-10). With the state or the nation named, the answer is its place out of how many, with the two cities above and the two below; with no scope named, it asks whether to rank among the state's cities or among U.S. cities of its size. One Part I crime, one year, a count or a rate per 100,000, as for \"rank\".",
+  "proposed behavior": "\"Stand on\", \"stands in\" and \"stand for\" are read as \"rank\": where a city stands is where it ranks (the rankings decision of 2026-11-10). With the state or the nation named, the answer is its place out of how many, with the two cities above and the two below; with no scope named, it asks with buttons \"among <state> cities\" and, by the city's own population, \"among U.S. cities of 250,000+\" (a city of 250,000 or more) or \"among U.S. cities of 100,000+\" (a smaller city): a fixed band, never peers the app chooses (P187; Jeff 2026-11-22: \"yes\" to the fixed size band). One Part I crime, one year, a count or a rate per 100,000, as for \"rank\".",
   "exact default or choices offered": "As for \"rank\": the state's cities or U.S. cities of its size.",
   "why": "Jeff 2026-11-17 (through the coordinator): approved as its own small change after P131.",
-  "status": "Decided 2026-11-17 (Jeff, through the coordinator)",
+  "status": "Decided 2026-11-17 (Jeff, through the coordinator); the size-band button is a fixed 250,000+ or 100,000+ band, not \"its size\" (Jeff 2026-11-22, audit P132)",
   "test cases": "scripts/test-nibrs-historical.ts (the block \"Where does X rank\", the stand-on cases)."
 }

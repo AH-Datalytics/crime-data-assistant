@@ -7,6 +7,6 @@
   "proposed behavior": "A rate asked at another base (per 1,000, per 10,000) is given at that base: Crime Index's published rate per 100,000 converted (divided by 100 for per 1,000), its decimals kept. The column is labeled with the asked base, and one line says the figures are derived from Crime Index's published rate per 100,000.",
   "exact default or choices offered": "The asked base; per 100,000 when none is named.",
   "why": "People ask officers per 1,000; the published figure answers it exactly once the base is converted, and the line keeps the source plain.",
-  "status": "Decided 2026-11-07 (Jeff: \"Convert to per 1,000\")",
+  "status": "Decided 2026-11-07 (Jeff: \"Convert to per 1,000\"); P199 (narrowed 2026-11-22): the staffing rate is computed from the counts only when the published rate is blank (cleanup 2026-11-22), audit B20, C26",
   "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts."
 }

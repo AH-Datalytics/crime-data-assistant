@@ -3027,6 +3027,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("What jurisdictions had the highest murder rates in 2024?"), "What cities had the highest murder rates in 2024?");
+  assert.ok(/jurisdictions/.test(rd("which jurisdictions are included in homicide reports")), "not a ranking");
+  assert.equal(rd("What cities (250k+) had the worst murder clearance rate in 2024?"), "What cities (250k+) had the lowest murder clearance rate in 2024?");
+  assert.equal(rd("worst murder rate for cities 250k+"), "highest murder rate for cities 250k+");
+  assert.equal(rd("What are the three cities with the highest murder rate?"), "What are top 3 cities with the highest murder rate?");
+  assert.equal(rd("What five cities are currently experiencing the greatest number of homicides?"), "What top 5 cities with the most homicides?");
+  assert.equal(rd("Give me a list of the 10 cities with the highest annual murder rate in 2024"), "Give me a list of the 10 cities with the highest murder rate in 2024");
+  assert.equal(rd("the five boroughs of New York"), "the five boroughs of New York", "not a ranking");
+}
 // P204 (Jeff 2026-11-22): "highlight", "show me", "give me" opening a question and "major" before a crime word are filler.
 {
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
