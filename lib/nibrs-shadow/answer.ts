@@ -3032,8 +3032,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       plan.measures[0] = { ...plan.measures[0], id: "offenders.person_crimes", unit: "offender" };
       plan.filters = plan.filters.map((f): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "incident" ? { ...f, scope: "offender" } : f));
     }
+    // B11 (Jeff 2026-11-22): an offender-age breakdown counts offenders (people), not crimes; the title names the unit. Other breakdowns still count crimes.
+    if (ppl.by && !ppl.by.paired && ppl.by.who === "offender" && ppl.by.attr === "age" && ["offense", "victim", "incident"].includes(plan.measures[0].unit)) {
+      const nm = plan.measures[0].id.replace(/^[a-z_]+\./, "");
+      if (MEASURE_CODES[nm] && !["violent_crime", "property_crime", "homicide_all"].includes(nm)) {
+        const toOffender = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" && f.scope !== "offender" ? { ...f, scope: "offender" } : f);
+        plan.measures[0] = { ...plan.measures[0], id: `offenders.${nm}`, unit: "offender", ...(plan.measures[0].filters ? { filters: plan.measures[0].filters.map(toOffender) } : {}) };
+        plan.filters = plan.filters.map(toOffender);
+        plan.defaults.push({ path: "measures[0].unit", value: "offender", reason: "B11: an offender-age breakdown counts offenders" });
+      }
+    }
     const unit = plan.measures[0].unit;
-    const between = (dimension: string, r: [number, number]) => ({ kind: "attribute" as const, dimension, op: "between" as const, values: r });
+    const between =(dimension: string, r: [number, number]) => ({ kind: "attribute" as const, dimension, op: "between" as const, values: r });
     for (const w of ppl.where) {
       if (w.attr === "relationship") {
         if (unit !== "offender") return decline("unsupported_capability", "This isn't available: a relationship to the victim, for anything but offenders.");

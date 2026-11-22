@@ -2032,7 +2032,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const g = (q: string) => planOf(q).groupings.map((x) => `${x.dimension}${x.multiValue ? "*" : ""}${x.bins ? "[bins]" : ""}`);
   const f = (q: string) => JSON.stringify(planOf(q).filters);
   assert.deepEqual(g("Aggravated assaults in Memphis in 2024 by offender race"), ["offender.race*"]);
-  assert.deepEqual(g("Robberies in Detroit in 2024 by offender age"), ["offender.age*[bins]"]);
+  // B11 (Jeff 2026-11-22): counted as offenders, so the grouping is the offender's own (no overlapping categories).
+  assert.deepEqual(g("Robberies in Detroit in 2024 by offender age"), ["offender.age[bins]"]);
   assert.deepEqual(g("According to NIBRS, murder victims in Memphis in 2024 by the race of the offender who killed them"), ["victim_offender.offender_race*"]);
   assert.deepEqual(g("Arrests in Denver in 2023 by arrestee age"), ["arrestee.age[bins]"]);
   assert.match(f("Aggravated assaults by juveniles in Memphis in 2024"), /"scope":"incident","entity":"offender".*"offender.age","op":"between","values":\[1,17\]/);
@@ -3180,6 +3181,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // B10 (Jeff 2026-11-22): P166 retired; a weapon question is counted by victim.
   assert.equal(byWeapon.plan.measures[0].id, "victims.aggravated_assault");
   assert.ok(!byWeapon.delivered.text.some((t) => /not victims/.test(t)), JSON.stringify(byWeapon.delivered.text));
+  // B11 (Jeff 2026-11-22): an offender-age breakdown counts offenders and the title says so; a victim-age breakdown still counts crimes' victims.
+  const offAge = as(ask("Robberies in Detroit in 2024 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(offAge.plan.measures[0].id, "offenders.robbery");
+  assert.match(offAge.delivered.text[0], /Offenders/, offAge.delivered.text[0]);
   assert.equal((as(ask("robbery victims by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "victims.robbery");
   const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
   assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
