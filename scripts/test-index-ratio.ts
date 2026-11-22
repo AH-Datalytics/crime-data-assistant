@@ -19,6 +19,9 @@ assert.deepEqual(readIndexed("murders in Chicago by year indexed to 100 in 2018"
 assert.deepEqual(readIndexed("murders in Chicago, indexed to 2019"), { plain: "murders in Chicago", base: "2019" });
 assert.deepEqual(readIndexed("compare murders in Baltimore and the nation both indexed to the earliest date you have"), { plain: "compare murders in Baltimore and the nation", base: "earliest" });
 assert.equal(readIndexed("murders in Chicago by year"), null);
+// Jeff 2026-11-22: "benchmarked to <year> levels" is the index, the loose "(i.e., ...)" after it taken out with it.
+assert.deepEqual(readIndexed("can you plot murders benchmarked to 2021 levels (i.e., % change year over year) for the cities A and B?"), { plain: "can you plot murders for the cities A and B?", base: "2021" });
+assert.deepEqual(readIndexed("murders in Chicago benchmarked to 2019"), { plain: "murders in Chicago", base: "2019" });
 
 // --- One place: index = value / base x 100, one decimal; raw figure beside it; the line; the title.
 {

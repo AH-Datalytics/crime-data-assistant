@@ -10,7 +10,7 @@
 import type { ResultTable } from "../nibrs-plan/result";
 import { seriesOf, type PartAnswer } from "./crime-over-time";
 
-export const INDEXED = /,?\s*\b(?:(?:both|each)\s+)?(?:are\s+)?indexed\s+(?:to|at)\s+(?:100\s+(?:in|at|for|=)\s+)?(?:the\s+)?(earliest\s+(?:date|period|year|point)(?:\s+(?:you\s+have|available|with\s+data))?|\d{4})\b/i;
+export const INDEXED = /,?\s*\b(?:(?:both|each)\s+)?(?:are\s+)?(?:indexed|benchmarked)\s+(?:to|at)\s+(?:100\s+(?:in|at|for|=)\s+)?(?:the\s+)?(earliest\s+(?:date|period|year|point)(?:\s+(?:you\s+have|available|with\s+data))?|\d{4}(?:\s+levels?)?)\b(?:\s*\((?:i\.e\.|e\.g\.)[^)]*\))?/i;
 
 type Column = ResultTable["columns"][number];
 
@@ -18,8 +18,8 @@ type Column = ResultTable["columns"][number];
 export function readIndexed(question: string): { plain: string; base: "earliest" | string } | null {
   const m = INDEXED.exec(question);
   if (!m) return null;
-  const plain = question.replace(m[0], " ").replace(/\s+/g, " ").replace(/\s+([?.!,])/g, "$1").trim();
-  return { plain, base: /earliest/i.test(m[1]) ? "earliest" : m[1] };
+  const plain = question.replace(m[0], " ").replace(/\bfor\s+the\s+cit(?:y|ies)\s+(?=[A-Z])/, "for ").replace(/\s+/g, " ").replace(/\s+([?.!,])/g, "$1").trim();
+  return { plain, base: /earliest/i.test(m[1]) ? "earliest" : m[1].slice(0, 4) };
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
