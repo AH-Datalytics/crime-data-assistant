@@ -3014,6 +3014,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P209 (Jeff 2026-11-22): one-word synonyms of what is already read.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("Show carjacking trend by month/year"), "Show carjacking trend by month");
+  assert.equal(rd("Where do most robberies occur - residences, streets, or commercial buildings?"), "robberies by location?");
+  assert.equal(rd("Where do robberies occur in Houston in 2024?"), "robberies by location in Houston in 2024?");
+  assert.equal(rd("Show me murder victims killed by shotgun by year from 2020-2024"), "Show me murder victims with shotgun by year from 2020-2024");
+  assert.ok(!/stem/.test(rd("How many murders stem from arguments")));
+  assert.equal(rd("he was killed by police"), "he was killed by police", "a justifiable homicide is not a weapon");
+  assert.equal(rd("Where do you get the data?"), "Where do you get the data?");
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.

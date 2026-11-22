@@ -514,6 +514,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // Circumstances (NIBRS data element 31, coordinator 2026-11-04): a victim's murder or aggravated assault circumstance,
   // read as a filter and taken out of the words. Domestic violence is a relationship, not read here (blocked until the
   // DV gap note); "drug-related" is left to the drug crimes.
+  // "Stems from" is "from" (a murder circumstance), read before the circumstance words are taken out.
+  text = text.replace(/\b(?:stems?|stemmed|stemming)\s+from\b/gi, (m) => { readings.push({ kind: "phrase", from: m, to: "from" }); return "from"; });
   let circumstance: string[] | null = null;
   for (const [re, codes, name] of [
     [/\bdrug[-\s]?deal(?:ing|er)[-\s]?related\s*|\bdrug[-\s]?dealing[-\s]related\s*|\bin\s+drug\s+deals?\b|\bover\s+drug\s+deals?\b/gi, ["03"], "drug dealing"],
@@ -559,6 +561,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
+  // One-word synonyms of what is already read (reader batch from the 284 gate, Jeff 2026-11-22): "by month/year" is by month; "stem from" is "from"
+  // (a murder circumstance); "killed by a shotgun" is the weapon; "where do most robberies occur - residences, streets, or commercial buildings" is
+  // the location breakdown (the list of places is the breakdown's own categories).
+  dropWord(/\bby\s+month\s*\/\s*year\b/gi, "by month");
+  dropWord(/\bkilled\s+by\s+(?=(?:an?\s+|the\s+)?(?:guns?|firearms?|handguns?|rifles?|shotguns?|knife|knives|blunt|clubs?|hammers?|poison|fire|strangulation|bare\s+hands|hands|feet|vehicles?|cars?)\b)/gi, "with ");
+  dropWord(/\bwhere\s+do(?:es)?\s+(?:most\s+|the\s+most\s+|the\s+majority\s+of\s+)?([a-z ]+?)\s+(?:occur|happen|take\s+place)\b(?:\s*[-–—:]\s*[a-z ,]*?(?:residen|home|street|road|highway|building|store|business|school|park|parking|bank|restaurant|apartment)[a-z ,]*?(?=\s*[?.!]?\s*$))?/gi, "$1 by location");
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
   // since the look-ahead would fail in PHRASES).
   dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
