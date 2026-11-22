@@ -1,0 +1,12 @@
+{
+  "id": "P209",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Show carjacking trend by month/year\", \"How many murders stem from arguments\", \"murder victims killed by shotgun by year from 2020-2024\", \"Where do most robberies occur - residences, streets, or commercial buildings?\"",
+  "what the app does today": "Said it did not understand \"/year\", \"stem\", \"killed by\" or \"where do ... occur\".",
+  "proposed behavior": "One-word synonyms of what is already read: \"by month/year\" is by month; \"stems from\" is \"from\" (a murder's circumstance); \"killed by (with, using) a <weapon>\" is the weapon (never \"killed by police\" or by a citizen, which are justifiable homicides); \"where do (most) <crime> occur\" is the crime by location, a list of places after it (residences, streets, commercial buildings) being the location categories themselves. Each is said in the reading note as the words taken.",
+  "exact default or choices offered": "The answer to the question as read.",
+  "why": "Jeff 2026-11-22 (through the coordinator): the one-word synonym batch from the reader failures of the defaults gate (PR 284).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P209\")."
+}
