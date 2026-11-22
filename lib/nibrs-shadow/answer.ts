@@ -57,8 +57,9 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrentClearance, answerStateClearanceSeries } from "./clearance-current";
-import { partOneMonthly, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
+import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -267,7 +268,11 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // example read "robberies in nationwide in 2025").
   const placePart = own.find((p) => p.concept === "place" && p.state === "recognized");
   const measure = text("measure"), place = placePart?.value === "national" ? "the United States" : placePart?.text.trim();
-  if (measure && place) {
+  // The simple forms below are built from the crime and the place only. When the crime is only the one the unit implies ("nationwide
+  // arrests": every crime), dropping the unit changes the question: "All crime in the United States by year" (crimes, not arrests)
+  // was offered once crime over time answered it.
+  const unitOnly = !!text("unit") && /^(?:all_crime|unspecified)$/.test(String(own.find((p) => p.concept === "measure" && p.state === "recognized")?.value ?? ""));
+  if (measure && place && !unitOnly) {
     const period = text("period") ?? `in ${Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1)}`;
     // The nearest question for the same place and crime (coordinator 2026-11-02): as asked with only its period, then
     // the place's whole series by year, then from the first year the data holds (a period before it, asked of NIBRS).
@@ -946,8 +951,21 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
+/**
+ * P188 (Jeff 2026-11-21): a loose word read as the meaning he decided ("current" is the latest complete year, "up" is the trend over five
+ * years) is said in the answer: one note line for each, just before the source line, whichever source answered.
+ */
+function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
+  const del = (o as { delivered?: { text?: unknown } }).delivered;
+  if (!del || !Array.isArray(del.text)) return o;
+  const said = [...new Set((readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence))];
+  if (!said.length) return o;
+  const text = del.text as string[];
+  const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
+  return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
+}
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  const o = applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps);
+  const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
@@ -1286,13 +1304,18 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     const o = shadowAnswer(followUp, deps);
     const r0 = deterministicRewriter.rewrite(previous, followUp);
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    // A new question with no period of its own, after a question with one, may have meant that period (real turns:
-    // "murder count in richmond" after "richmond virginia murders 2020-2025"): offered, never assumed.
+    // A new question with no period of its own, after a question with one (real turns: "murder count in richmond" after "richmond virginia
+    // murders 2020-2025"): follow-up #1 (Jeff 2026-11-21) carries the period over, says so, and offers the question as typed. Before, it was
+    // only offered.
     const year = Number(deps.release.lastMonth.slice(0, 4));
-    const prevPeriod = readQuestion(previous, year).ledger.parts.find((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized")?.text.trim();
+    const prevPeriod = carryablePeriod(previous, followUp, year);
     const ownPeriod = readQuestion(followUp, year).ledger.parts.some((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized");
     const withPeriod = !ownPeriod && prevPeriod ? `${followUp.trim().replace(/[?.!]+$/, "")} ${prevPeriod}` : null;
     const other = r0.kind === "rewrite" && norm(r0.question) !== norm(followUp) ? r0.question : withPeriod;
+    if (withPeriod && other === withPeriod && !deps.checkingOffer) {
+      const carried = shadowAnswer(withPeriod, deps);
+      if (ANSWER_KINDS.includes(carried.kind)) return { ...carriedOver(carried, ["period"], followUp), rewrite: withPeriod, rewriteKind: "new" };
+    }
     const offer: ShadowOption | null = other ? { label: `Did you mean a follow-up to your last question? "${other}"`, question: other } : null;
     const withOffer = !offer ? o : o.kind === "answer" ? { ...o, buttons: [...(o.buttons ?? []), offer] }
       : o.kind === "clarify" ? { ...o, options: [offer, ...o.options] } : o.kind === "decline" && !o.alternative ? { ...o, alternative: offer } : o;
@@ -1312,6 +1335,10 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // ("show me robberies and murders in the southwest" asked what it changes in the last question). Its first-turn answer or ask is given; when
   // that would be a decline (words unread, a combination not offered) the question back about the last turn stays, as before.
   if (r.kind === "ask" && !pointsBack(followUp) && followUp.trim().split(/\s+/).length >= 3) {
+    // Follow-up #1 (Jeff 2026-11-21): a place or period it leaves out comes from the previous question when that named one, before any
+    // default (P180, P181); the answer says what was carried.
+    const carried = carryOver(previous, followUp, guarded);
+    if (carried) return carried;
     const own = shadowAnswer(followUp, guarded);
     if (own.kind !== "decline") return { ...own, rewrite: followUp, rewriteKind: "new" };
   }
@@ -1326,6 +1353,57 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     return { ...asked, rewrite: null, rewriteKind: "ask" };
   }
   return { ...shadowAnswer(r.question, guarded), rewrite: r.question, rewriteKind: r.kind, ...(r.kind === "presentation" ? { presentation: true as const } : {}) };
+}
+
+const RANKING_WORDS = /\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best|largest|biggest|smallest)\b/i;
+// "knife murders nationally" names the nation in words the reader doesn't take as a place (PR 312 gate); the previous place is not carried.
+const NATIONAL_WORDS = /\b(?:national(?:ly)?|nation\s*wide|united states|usa|(?:in|across) the (?:country|nation))\b|\bu\.s\./i;
+const YEAR_SERIES =/\b(?:per|by|each|every)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[- ](?:by|over)[- ]year\b|\btrend\b/i;
+/**
+ * The previous question's period, when follow-up #1 may carry it (PR 312 gate): the previous turn must be a data question (its own crime;
+ * not "remove 2025 as it has missing data" or "why does county only exist ... around the 60s and 70s"), and one year is not carried into
+ * a turn asking for years ("murders per year in Kansas City" after "... cities of 250k or more in 2025").
+ */
+function carryablePeriod(previous: string, followUp: string, year: number): string | null {
+  const parts = readQuestion(previous, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  if (!parts.some((p) => p.concept === "measure")) return null;
+  const t = parts.find((p) => p.concept === "period")?.text.trim();
+  if (!t) return null;
+  const oneYear = (t.match(/\b\d{4}\b/g) ?? []).length === 1 && !/\b(?:since|from|past|last|through|to|until|after)\b|[-–]/i.test(t);
+  return oneYear && YEAR_SERIES.test(followUp) ? null : t;
+}
+/**
+ * Follow-up #1 (Jeff 2026-11-21): a follow-up read as its own question, with its own crime, that leaves out the place or the period gets them
+ * from the previous question when that one named them. A follow-up across places (a ranking, "cities", "agencies") keeps its own reading: the
+ * previous place would narrow it. Only an answer is taken; otherwise the follow-up goes on as before.
+ */
+function carryOver(previous: string, followUp: string, deps: ShadowDeps): FollowUpOutcome | null {
+  if (deps.checkingOffer) return null;
+  const year = Number(deps.release.lastMonth.slice(0, 4));
+  const read = (q: string) => readQuestion(q, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  const mine = read(followUp), prev = read(previous);
+  const has = (c: string) => mine.some((p) => p.concept === c);
+  if (!has("measure") || !prev.some((p) => p.concept === "measure")) return null;
+  const add: string[] = [], what: ("place" | "period")[] = [];
+  const place = prev.find((p) => p.concept === "place"), period = carryablePeriod(previous, followUp, year) ? prev.find((p) => p.concept === "period") : undefined;
+  if (place && !has("place") && !has("entity") && !RANKING_WORDS.test(followUp) && !NATIONAL_WORDS.test(followUp)) {
+    const t = place.text.trim();
+    add.push(/^(?:in|for|across)\b/i.test(t) ? t : `in ${t}`);
+    what.push("place");
+  }
+  if (period && !has("period")) { add.push(period.text.trim()); what.push("period"); }
+  if (!add.length) return null;
+  const q = `${followUp.trim().replace(/[?.!]+$/, "")} ${add.join(" ")}`;
+  const o = shadowAnswer(q, deps);
+  if (!ANSWER_KINDS.includes(o.kind)) return null;
+  return { ...carriedOver(o, what, followUp), rewrite: q, rewriteKind: "new" };
+}
+/** The answer with a note after its title saying what came from the last question, and a button for the question as typed. */
+function carriedOver(o: ShadowOutcome, what: ("place" | "period")[], typed: string): ShadowOutcome {
+  const x = o as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
+  const note = `The ${what.join(" and ")} ${what.length > 1 ? "are" : "is"} from your last question.`;
+  const text = [x.delivered.text[0], note, ...x.delivered.text.slice(1)];
+  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), { label: `As typed: "${typed}"`, question: typed }] } as ShadowOutcome;
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
@@ -1622,8 +1700,6 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
 
 /** P13's sentence, as Current Trends and Historical say it. */
 const SAFEST_SENTENCE = "There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.";
-/** P18's sentence, as the clearance answer says it for a state. */
-const STATE_CLEARANCE_SENTENCE = "A clearance rate for every state at once isn't available. Ask for one state and one year, for example \"Texas murder clearance rate in 2024\".";
 const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 /**
  * The same months of each year (Jeff 2026-11-16, Q1): "Murders through April from 2017 to 2025", "homicides in the first 6 months of each
@@ -1782,11 +1858,6 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (ledger0.parts.some((p) => p.clause === 0 && p.concept === "explain") && ledger0.parts.some((p) => p.clause === 0 && p.concept === "measure"))
     return decline("explanation_requested", "The data shows how many crimes were reported; it can't say why they rose or fell.", { detail: "I report what NIBRS records; I can't explain causes." });
   if (/\b(?:safest|most\s+dangerous|least\s+safe|most\s+unsafe)\b/i.test(ledger0.question)) return decline("unsupported_capability", SAFEST_SENTENCE);
-  if (clause0("clearance").some((p) => p.value === "rate") && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "entity" && p.state !== "context")
-    // Only where the existing path would ask first: "by state" (no place), or a state with no period, for a Part I crime (a crime NIBRS alone
-    // records has its own, longer sentence, said once a period is given).
-    && clause0("list").some((p) => p.value === "list:state"))
-    return decline("not_recorded_in_nibrs", STATE_CLEARANCE_SENTENCE);
   const term = flags(ledger0).undefinedTerm;
   if (term) {
     // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
@@ -1897,16 +1968,31 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
       { label: "Another year", entry: "which year" }] };
   }
-  // P148 (Jeff 2026-11-18): "crime", "overall crime" or "all crimes" by month for one place is Current Trends' violent and property
-  // crime beside their sum, the Part I total, not asked and not NIBRS's every offense. Only when both series answer as one agency's months.
+  // P148 (Jeff 2026-11-18), widened (crime in a place over time, Coordinator 2026-11-21): "crime", "overall crime", "all crimes" or a
+  // crime trend, by year (Crime Index) or by month (Current Trends), for one place or several, is violent and property crime beside
+  // their sum and the seven Part I offenses (crime-over-time.ts), not asked and not NIBRS's every offense. Only when all nine series
+  // answer as one source's series for the same places; otherwise the question keeps the path below.
   {
-    const ms = clause0("measure");
-    if (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && clause0("grain").some((g) => g.value === "month") && clause0("place").length === 1
-      && !flags(ledger0).comparison && !flags(ledger0).combined) {
-      const one = (m: string[]) => fromLedger(filledAll(ledger, "measure", [m]), deps, pins);
-      const merged = partOneMonthly(one(["violent_crime", "violent crime"]) as never, one(["property_crime", "property crime"]) as never);
+    const ms = clause0("measure"), grains = clause0("grain").map((g) => g.value);
+    // Nothing else asked: no unit (arrests, victims), breakdown, cohort, filter or source named; words not read are filler only.
+    const onlyCrimeOverTime = ledger0.parts.every((p) => p.clause !== 0 || p.state === "context" || ["measure", "place", "period", "grain", "statistic"].includes(p.concept)
+      || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
+      && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
+    const f0 = flags(ledger0);
+    if (onlyCrimeOverTime && ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && grains.length === 1 && (grains[0] === "month" || grains[0] === "year")
+      && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
+      const parts = COMPOSITE_PARTS.map((p) => fromLedger(filledAll(ledger, "measure", [[p.measure, p.words]]), deps, pins));
+      const rate = clause0("statistic").some((p) => /^(?:rate|per100k|percapita)$/.test(String(p.value ?? "")));
+      const merged = parts.every((o) => o.kind === "current" || o.kind === "historical" || o.kind === "srs") ? composeCrimeOverTime(parts as never, rate) : null;
       if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
-      if (merged) return merged;
+      if (merged) return merged as ShadowOutcome;
+      // Violent and property crime both answered with every cell blank (an agency Current Trends lists with no figures), the
+      // composite not built because an offense's answer is a decline: no data, as P148 said, not the ask of the kind.
+      const allBlank = (o: ShadowOutcome) => (o.kind === "current" || o.kind === "historical" || o.kind === "srs") && o.delivered.table.rows.every((r) => r.every((x) => typeof x !== "number"));
+      if (allBlank(parts[0]) && allBlank(parts[1])) {
+        const pq = (parts[0] as { question?: { place?: { label?: string }; agencies?: { label: string }[] } }).question;
+        return decline("outside_release_coverage", `No data is available for crime in ${pq?.place?.label ?? pq?.agencies?.[0]?.label ?? "this place"}.`);
+      }
     }
   }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
@@ -3021,6 +3107,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (rollingT && (plan.measures.length !== 1 || plan.transforms.length !== 1 || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
     || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month"))
     return decline("unsupported_capability", "This isn't available: rolling windows of a rate, a breakdown, or several crimes.");
+  // P173 (Jeff 2026-11-21): every state ranked by its clearance rate for one year, the offenses and agencies reporting beside each rate.
+  if (plan.transforms.length === 1 && plan.transforms[0].kind === "rank" && plan.transforms[0].by === "clearance_rate" && plan.geography.places[0].kind === "national"
+    && plan.groupings.length === 1 && plan.groupings[0].dimension === "geo.state" && plan.measures.length === 2)
+    return answerStateClearanceRanking(plan, plan.measures[0].id.split(".")[1], deps, statements, [], (why, detail) => decline("unsupported_capability", why, detail ? { detail } : undefined));
   if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison" && !(t.kind === "rank" && plan.geography.places[0].kind === "agency_set")))
     return decline("unsupported_capability", "This isn't available: rankings.");
   // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime; by category too (coordinator

@@ -18,8 +18,11 @@ import { agencyName, reportedBy, STATE_NAMES, type PlaceIndex } from "./places";
 import { CONSISTENT_WORDS, NIBRS_WORDS } from "./reading";
 import { SRS_MEASURE, type SrsAnswer } from "./srs";
 import type { StateSumMeta } from "./state-sum";
+import { compositeTableOnly, isComposite } from "./crime-over-time";
 
 /** A rate or percentage to one decimal, with thousands separators ("1,655.1"). */
+/** Crime in a place over time (crime-over-time.ts): the measure in the title, and the columns shown in the table only. */
+const COMPOSITE_WORDS = "violent and property crime";
 const one = (x: number) => x.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const CODE_BY_STATE = Object.fromEntries(Object.entries(STATE_NAMES).map(([c, n]) => [n, c]));
 const and = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
@@ -265,7 +268,7 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   const cmp = q.comparison;
   const yearly = q.byYear;
   const titleParts: TitleParts = {
-    places: placeTitle, measure: clearance ? `${m.name} clearance rate` : m.words, ratePer: q.statistic === "rate" ? 100000 : null,
+    places: placeTitle, measure: clearance ? `${m.name} clearance rate` : isComposite(o.delivered.table) ? COMPOSITE_WORDS : m.words, ratePer: q.statistic === "rate" ? 100000 : null,
     groupings: yearly ? ["year"] : [], period: cmp ? `${cmp.earlier} & ${cmp.later}` : titlePeriod(o.period, yearly), partialLastYear: null, rollingMonths: null, ranking: null,
   };
   const besideWho = beside.length ? `${agencies.length ? " and " : ""}law enforcement agencies in ${beside.map((p) => (p.kind === "national" ? "the United States" : srsName(p))).join(" and ")}` : "";
@@ -296,7 +299,7 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   const known = restated(o.delivered, lineFor ? [lineFor] : []);
   return {
     source: "historical", titleParts, lead, offers: [], ...notesFrom("historical", [], o.delivered.text, known),
-    coverage: { requested: false }, chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table),
+    coverage: { requested: false }, chart: chartOptionsOf(table, orderedOf(table), compositeTableOnly(table)), ordered: orderedOf(table),
     // Several agencies by year: one column each, labeled as the title names them.
     series: Object.fromEntries(table.columns.flatMap((c) => {
       const i = c.binding.kind === "statistic" ? /\.(\d+)$/.exec(c.binding.as) : null;
@@ -315,7 +318,7 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
   const placeTitle = q.agencies?.length && q.place.kind === "agency" ? [q.place, ...q.agencies].map((a) => shortLabel(a.label))
     : [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.label.replace(/^The /, "")];
   const rate = q.statistic === "rate";
-  const titleParts: TitleParts = { places: placeTitle, measure: m.words, ratePer: rate ? 100000 : null, groupings: monthly ? (q.agencies?.length ? ["agency", "month"] : ["month"]) : [], period: titlePeriod(o.period, false),
+  const titleParts: TitleParts = { places: placeTitle, measure: isComposite(o.delivered.table) ? COMPOSITE_WORDS : m.words, ratePer: rate ? 100000 : null, groupings: monthly ? (q.agencies?.length ? ["agency", "month"] : ["month"]) : [], period: titlePeriod(o.period, false),
     partialLastYear: null, rollingMonths: q.form === "rolling" ? 12 : null, ranking: null };
   const who = q.place.kind === "agency" ? reporter(places, [q.place, ...(q.agencies ?? [])].map((a) => a.ori)) : `the Consistent Reporting Agencies of ${q.place.label.replace(/^The /, "the ")}`;
   const table = o.delivered.table;
@@ -328,7 +331,7 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
     : { kind: "described", what: m.words, who, when, countedAs: rate ? "as rates per 100,000 people" : null, brokenDownBy: null };
   const known = restated(o.delivered, q.agencyLine ? [q.agencyLine] : []);
   return { source: "rtci", titleParts, lead, offers: [], ...notesFrom("rtci", [], o.delivered.text, known), coverage: { requested: false },
-    chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table), series: {} };
+    chart: chartOptionsOf(table, orderedOf(table), compositeTableOnly(table)), ordered: orderedOf(table), series: {} };
 }
 
 /** Homicide Reports (shr.ts): a place's murder victims or offenders, by year or month, with a detail. */

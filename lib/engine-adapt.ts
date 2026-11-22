@@ -13,11 +13,11 @@ type PreviewLike = {
 };
 const strings = (x: unknown): string[] => (Array.isArray(x) ? x.filter((t): t is string => typeof t === "string" && !!t.trim()) : []);
 
-export function adaptEngineResponse(req: EngineRequest, response: unknown, release: string, ms: number): QueryResponse & { engine: EngineMeta } {
+export function adaptEngineResponse(req: EngineRequest, response: unknown, release: string, ms: number, asked?: string): QueryResponse & { engine: EngineMeta } {
   const r = (response ?? {}) as PreviewLike;
   const kind = r.kind === "answer" || r.kind === "clarify" || r.kind === "decline" ? r.kind : "decline";
   const buttons = (Array.isArray(r.buttons) ? r.buttons : []).filter((b): b is EngineMeta["buttons"][number] => !!b && typeof (b as { label?: unknown }).label === "string" && Array.isArray((b as { path?: unknown }).path));
-  const engine: EngineMeta = { kind, release, question: req.question, ...(req.previous ? { previous: req.previous } : {}), path: req.path, buttons };
+  const engine: EngineMeta = { kind, release, question: req.question, ...(req.previous ? { previous: req.previous } : {}), ...(asked ? { asked } : {}), path: req.path, buttons };
   const base = { success: true as const, requestId: undefined, question: req.question, sql: "", truncated: false, chartMeta: null, executionTimeMs: Math.round(ms), engine };
   if (kind === "answer") {
     const text = strings(r.text);

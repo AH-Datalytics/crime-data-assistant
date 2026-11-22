@@ -18,8 +18,9 @@ import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliverTable, fmt, monthName, periodWords, runs } from "./deliver";
 import { HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
-import { agencySubject } from "./headline";
+import { agencySubject, seriesTitle } from "./headline";
 import { agencyHeaderSql, universeStates } from "./state-sum";
+import { postalState } from "../nibrs-plan/state-codes";
 import { NOT_YET } from "./wording";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 
@@ -40,6 +41,63 @@ function monthsOf(from: string, to: string): string[] {
  * Reporting Agencies of the current year's rate.
  */
 /**
+ * Every state ranked by its clearance rate for one completed year (P173, Jeff 2026-11-21): no minimum, the offenses and the agencies reporting beside each
+ * rate. One national grid of the crime's offenses and one of its cleared offenses, grouped by each agency's header state, each state's rate the
+ * single-state answer's own (the agencies that reported, the same months for both figures).
+ */
+export function answerStateClearanceRanking(plan: NibrsPlan, crime: string, deps: ShadowDeps, statements: AnswerStatement[],
+  readings: string[], decline: Decline): ShadowOutcome {
+  const all = plan.measures.find((m) => !m.as.endsWith("_cleared")), cleared = plan.measures.find((m) => m.as.endsWith("_cleared"));
+  const stat = plan.statistics[0];
+  if (!all || !cleared || plan.measures.length !== 2 || plan.statistics.length !== 1 || stat.kind !== "ratio" || plan.filters.length || plan.period.kind !== "absolute"
+    || plan.period.from.slice(0, 4) !== plan.period.to.slice(0, 4) || !plan.period.from.endsWith("-01") || !plan.period.to.endsWith("-12"))
+    return decline("This isn't available: a ranking of clearance rates for a span of years or part of a year. Ask for one year.");
+  const year = Number(plan.period.from.slice(0, 4)), period = { from: plan.period.from, to: plan.period.to };
+  const words = HISTORICAL_MEASURE[crime]?.words ?? crime.replace(/_/g, " ");
+  const header = deps.execute(agencyHeaderSql(deps.target.root, universeStates({ kind: "national" }), [year]));
+  const stateOf = new Map(header.map((r) => [String(r[0]), postalState(String(r[3]))]));
+  const oris = [...stateOf.keys()];
+  if (!oris.length) return decline(`No agency has a header in the data for ${year}.`);
+  const clearedFilter: NibrsPlan["filters"][number] = { kind: "attribute", op: "in", dimension: "offense.clearance_status", values: ["cleared"] };
+  const sub = (m: Measure, extra: NibrsPlan["filters"] = []): NibrsPlan => ({ ...plan, measures: [{ ...m, filters: undefined }], filters: [...(m.filters ?? []), ...extra], transforms: [],
+    groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }], statistics: [{ kind: "count", as: "n", measure: m.as }], geography: { ...plan.geography } });
+  const compile = (p: NibrsPlan) => compilePlan(p, { kind: "absolute", ...period }, { ...deps.target, agencies: oris });
+  const cAll = compile(sub(all)), cCleared = compile(sub({ ...cleared, id: cleared.id.replace(/_cleared$/, "") }, [clearedFilter]));
+  if (cAll.kind === "unsupported") return decline(NOT_YET, cAll.reason);
+  if (cCleared.kind === "unsupported") return decline(NOT_YET, cCleared.reason);
+  for (const s of cAll.query.statements) if (!statements.includes(s)) statements.push(s);
+  // (The same query as the one-state rate's and state-sum.ts's coverage read: ori, year, months, months reported, their sum, conflicts, months with crimes.)
+  const perAgency = (sql: string) => new Map(deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
+      count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
+      coalesce(sum(n) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')), 0) AS repsum,
+      count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts,
+      count(*) FILTER (WHERE n_status = 'VALUE') AS val
+    FROM (${sql}) GROUP BY ALL`).map((r) => [String(r[0]), { rep: Number(r[3]), sum: Number(r[4]) }]));
+  const gAll = perAgency(cAll.query.sql), gCleared = perAgency(cCleared.query.sql);
+  const by = new Map<string, { offenses: number; cleared: number; agencies: number }>();
+  for (const o of oris) {
+    const a = gAll.get(o), c = gCleared.get(o);
+    if (!a || a.rep <= 0 || c?.rep !== a.rep) continue;
+    const s = stateOf.get(o)!, t = by.get(s) ?? by.set(s, { offenses: 0, cleared: 0, agencies: 0 }).get(s)!;
+    t.offenses += a.sum; t.cleared += c.sum; t.agencies++;
+  }
+  const rate = (t: { offenses: number; cleared: number }) => (t.offenses ? Math.round((1000 * t.cleared) / t.offenses) / 10 : null);
+  const ranked = [...by.entries()].map(([s, t]) => ({ s, t, v: rate(t) }))
+    .sort((a, b) => (a.v === null ? 1 : b.v === null ? -1 : b.v - a.v) || b.t.offenses - a.t.offenses || stateName(a.s).localeCompare(stateName(b.s)));
+  if (!ranked.length) return decline(`No agency reported ${words} in ${year}.`);
+  const rows = ranked.map((r) => ({ key: stateName(r.s), value: r.v, status: r.v === null ? "UNAVAILABLE" : "VALUE" }));
+  const lines = [`${year} ${words[0].toUpperCase()}${words.slice(1)} Cleared (%) by State`,
+    `Every state, from the highest clearance rate to the lowest. Each rate is the offenses cleared over the offenses reported, summed over the agencies that reported in ${year}.`, "Includes all agencies."];
+  const plan2: NibrsPlan = { ...plan, statistics: [stat, { kind: "count", as: "offenses", measure: all.as }, { kind: "agencies", as: "agencies", measure: all.as }], transforms: [] };
+  const delivered = deliverTable(plan2, { dimension: "geo.state", header: "State" }, { as: stat.as, header: `${words[0].toUpperCase()}${words.slice(1)} cleared (%)` }, rows, lines, statements, deps.release.id, readings,
+    [{ as: "offenses", header: "Offenses", cells: ranked.map((r) => ({ value: r.t.offenses, status: "VALUE" })) },
+      { as: "agencies", header: "Agencies reporting", cells: ranked.map((r) => ({ value: r.t.agencies, status: "VALUE" })) }]);
+  if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
+  const text = [...lines, "Source: NIBRS."];
+  return { kind: "answer", plan: plan2, period, sql: cCleared.query.sql, delivered: { ...delivered, text, headline: text[0] } };
+}
+
+/**
  * A state's clearance rate for several completed years (P172): each year's rate over the agencies that reported that year, one row a year,
  * every figure the single-year answer's own. A year with no rate is a blank row, never a zero.
  */
@@ -59,8 +117,9 @@ export function answerStateClearanceSeries(plan: NibrsPlan, years: number[], cri
     if (o.kind === "answer") lastSql = o.sql;
   }
   if (!rows.some((r) => r.value !== null)) return first ?? decline(`No clearance rate is given: no ${words} were reported.`);
-  const span = years.length > 1 ? `${years[0]} to ${years[years.length - 1]}` : String(years[0]);
-  const title = `${span} ${words[0].toUpperCase()}${words.slice(1)} Cleared (%) by Year, ${Where}`;
+  // P159: place, what is counted, the series, then the timeframe ("Florida Rapes Cleared (%) Per Year, 2017-2025").
+  const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : String(years[0]);
+  const title = seriesTitle(span, `${words} Cleared (%)`, "year", Where);
   const lines = [title, "Each year's rate is the offenses cleared over the offenses reported, summed over the agencies that reported that year.", "Includes all agencies.", ...(note ? [note] : [])];
   const plan2: NibrsPlan = { ...plan, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] };
   const delivered = deliverTable(plan2, { dimension: "time.year", header: "Year" }, { as: stat.as, header: `${words[0].toUpperCase()}${words.slice(1)} cleared (%)` }, rows, lines, statements, deps.release.id, readings);

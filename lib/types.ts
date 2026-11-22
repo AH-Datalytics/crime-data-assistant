@@ -36,6 +36,8 @@ export interface EngineMeta {
   /** The question the engine ran (a button step re-runs it with the longer path). */
   question: string;
   previous?: string;
+  /** The whole question this reply answered or asked about (follow-ups #2): sent back as the next typed follow-up's `previous`. */
+  asked?: string;
   path: string[];
   buttons: { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built" | "question"; note?: string; question?: string }[];
 }
