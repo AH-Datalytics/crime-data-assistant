@@ -318,7 +318,12 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (byState) take(byStateParts);
     if (measures.length !== 1 || one("one place")) return { kind: "none" };
     if (breakdowns.length) return breakdownDecision();
-    const shareTime = [...monthPeriodParts, ...periodParts.filter((p) => /^years:/.test(p.value ?? "")), ...grainParts, ...of("rolling"), ...of("combine")];
+    // Several years of a clearance share for a state or the nation are a row for each year (Jeff 2026-11-22), so a range or "each year" is not a refusal there.
+    const yearlyClearanceShare = places.length === 1 && (places[0]!.kind === "state" || places[0]!.kind === "national") && !byState
+      && of("clearance-reason").length + filters.filter((f) => f.startsWith("clearance:")).length > 0;
+    const shareTime = [...monthPeriodParts, ...(yearlyClearanceShare ? [] : periodParts.filter((p) => /^years:/.test(p.value ?? ""))),
+      ...(yearlyClearanceShare ? grainParts.filter((p) => p.value !== "year") : grainParts), ...of("rolling"), ...of("combine")];
+    if (yearlyClearanceShare) take(grainParts.filter((p) => p.value === "year"));
     if (shareTime.length) return declineParts(shareTime, (p) => cannot(p, "a share covers one period as a whole; ask for each year on its own."));
     const shareStart = share[0].span[0];
     const structural = /\b(?:share|percent(?:age)?|proportion|portion)\s+of\b/i.test(share[0].text) || /\b(?:what|which)\s+(?:share|percent(?:age)?|proportion|portion)\s+of\b/i.test(ledger.question.slice(shareStart));
