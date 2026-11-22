@@ -85,7 +85,7 @@ export type ShadowDeps = {
   /** The hate crime export (hate.ts): with it, hate crime questions are answered from it; without it they are declined. Never NIBRS. */
   hate?: HateBuild;
   /** Set while a ranking of cities by a clearance share is answered (cityClearanceShare): the minimum offenses (null: the 250,000+ floor), the cut and the direction. */
-  cityShare?: { minOffenses: number | null; limit: number | null; direction: "top" | "bottom" };
+  cityShare?: { minOffenses: number | null; limit: number | null; direction: "top" | "bottom"; all?: boolean; note?: string };
   /** The question as the user asked it, set while it is answered (the county-wide decline offers it without the county-wide words). */
   asked?: string;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
@@ -1120,19 +1120,25 @@ export const isChartEdit = (turn: string) => CHART_MARKER.test(turn) || CHART_ED
  */
 export function cityClearanceShare(question: string, deps: ShadowDeps): { rewritten: string; cityShare: NonNullable<ShadowDeps["cityShare"]> } | null {
   const q = question.replace(/\s+/g, " ");
-  if (!/\bcities\b/i.test(q) || !/\bshares?\b|\bpercent(?:age)?\b|%/i.test(q)) return null;
+  if (!/\b(?:cities|agenc(?:y|ies))\b/i.test(q) || !/\bshares?\b|\bpercent(?:age)?\b|%/i.test(q)) return null;
   if (/\b(?:rates?|per\s+100,?000|by\s+(?:state|month|year|type)|each\s+(?:month|year|state)|compar\w+|vs\.?|versus|firearm|weapon|felony|misdemeanou?rs?|big|large\w*|major)\b/i.test(q)) return null;
   const clearance = /\bcleared\s+by\s+(exception(?:al)?(?:\s+means)?|arrest)\b/i.exec(q);
   const crime = /\b(murders?|homicides?|rapes?|robber(?:y|ies)|aggravated\s+assaults?|burglar(?:y|ies)|larcen(?:y|ies)(?:-theft)?s?|motor\s+vehicle\s+thefts?|arsons?)\b/i.exec(q);
   const years = [...q.matchAll(/\b(20\d{2}|19\d{2})\b/g)].map((m) => Number(m[1]));
-  if (!clearance || !crime || years.length !== 1) return null;
+  // One year, "since 2021", or "from 2021 to 2024" (several years are a ranking for each year, stacked, never pooled: P203/P173).
+  const since = /\bsince\s+(?:the\s+year\s+)?(\d{4})\b/i.exec(q);
+  const lastYear = Number(deps.release.lastMonth.slice(0, 4)), lastComplete = deps.release.lastMonth.endsWith("-12") ? lastYear : lastYear - 1;
+  // "Since 2021" is the whole years through the last complete one (part of a year is not ranked), said in a note.
+  const when = since ? (Number(since[1]) < lastComplete ? `from ${since[1]} to ${lastComplete}` : `in ${lastComplete}`) : years.length === 1 ? `in ${years[0]}` : years.length === 2 && /\b(?:to|through|thru|-|–|and)\b/i.test(q) ? `from ${Math.min(...years)} to ${Math.max(...years)}` : null;
+  if (!clearance || !crime || !when) return null;
+  const allAgencies = !/\bcities\b/i.test(q);
   const min = /\b(?:at\s+least|min(?:imum)?\.?\s+(?:of\s+)?)\s*(\d+)\s+(?:murders?|homicides?|rapes?|robber\w*|assaults?|burglar\w*|larcen\w*|thefts?|arsons?|offen[cs]es?)\b/i.exec(q);
   const limit = /\b(?:top|what|which|the)\s+(\d+)\s+cities\b/i.exec(q);
   const places = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
   if (places.length) return null;
   const how = /exception/i.test(clearance[1]) ? "by exception" : "by arrest";
-  return { rewritten: `what share of ${crime[1]} were cleared ${how} in ${years[0]} by state`,
-    cityShare: { minOffenses: min ? Number(min[1]) : null, limit: limit ? Number(limit[1]) : null, direction: /\b(?:lowest|fewest|bottom)\b|(?<!\bat\s)\bleast\b/i.test(q) ? "bottom" : "top" } };
+  return { rewritten: `what share of ${crime[1]} were cleared ${how} ${when} in the United States by state`,
+    cityShare: { ...(allAgencies ? { all: true } : {}), ...(since ? { note: `Since ${since[1]} is read as the whole years ${since[1]} to ${lastComplete}: the ${lastYear} data is not a whole year yet.` } : {}), minOffenses: min ? Number(min[1]) : null, limit: limit ? Number(limit[1]) : null, direction: /\b(?:lowest|fewest|bottom)\b|(?<!\bat\s)\bleast\b/i.test(q) ? "bottom" : "top" } };
 }
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);

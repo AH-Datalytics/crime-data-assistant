@@ -3299,6 +3299,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // The minimum is a count of the crime reported that year: 100 leaves Houston (108) only; "lowest" and "at least" are different words.
   assert.deepEqual(names("What cities with at least 100 murders in 2024 had the lowest share of murders cleared by exception ?"), ["Houston, Texas"]);
   assert.ok(as(ask("What cities with at least 30 murders in 2024 had the lowest share of murders cleared by exception ?"), "answer").delivered.table.rows[0][0] === "Austin, Texas", "Austin's June is missing in the stub: the lowest share");
+  // No city meets the minimum: a decline naming it, never the place ask.
+  const none = as(ask("cities with at least 9999 murders in 2024 with the highest share of murders cleared by exception"), "decline");
+  assert.equal(none.explanation, "No city had at least 9999 murders in 2024.");
+  // Several years (QL-nibrs-77ef8b10f0): a ranking for each year, stacked, never pooled; "any agency" is every agency, not only cities.
+  const multi = as(ask("A list of the highest share of murders cleared by exception for any agency in any year since 2021 (min 20 murders reported in that year)"), "answer");
+  assert.deepEqual(multi.delivered.table.columns.map((c) => c.header).slice(0, 3), ["Agency", "Year", "Share (%)"], JSON.stringify(multi.delivered.table.columns));
+  const yrs = multi.delivered.table.rows.map((r) => String(r[1]));
+  assert.ok(yrs.length > 3 && new Set(yrs).size > 1 && yrs.every((y, i) => i === 0 || y >= yrs[i - 1]), "a block for each year, in year order: " + JSON.stringify(yrs));
+  assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), JSON.stringify(multi.delivered.text));
+  assert.ok(multi.delivered.text.includes("Since 2021 is read as the whole years 2021 to 2025: the 2026 data is not a whole year yet."), JSON.stringify(multi.delivered.text));
+  const threeYears = as(ask("top 2 cities by share of murders cleared by exception from 2022 to 2024"), "answer");
+  assert.deepEqual(threeYears.delivered.table.rows.map((r) => r[1]), ["2022", "2022", "2023", "2023", "2024", "2024"], "the first 2 of each year");
   // A place, a rate or another grouping is not this ranking.
   assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
   assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
