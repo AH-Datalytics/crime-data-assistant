@@ -1,0 +1,12 @@
+{
+  "id": "P11",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many theft victims in Ohio in 2024?\" and \"How many thefts in Ohio in 2024?\"",
+  "what the app does today": "NIBRS answers \"thefts\" by offense, and declines \"theft victims\" when no table counts that crime by victim. Current Trends declines any \"victims\" question.",
+  "proposed behavior": "Property crimes are always counted by offense. When the user asks for victims of a property crime, answer with offenses and state plainly that property crimes are counted by offense, not by victim. Crimes against persons are counted by victim.",
+  "exact default or choices offered": "\"Theft victims\" -> theft offenses, with the sentence \"Property crimes are counted by offense, not by victim.\"",
+  "why": "One counting unit per kind of crime, as the FBI counts them, stated plainly when the question asked for another.",
+  "status": "Decided 2026-10-28 (Jeff: give offenses and state plainly that property crimes are not counted by victim)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-plan-language.ts, scripts/test-nibrs-shadow.ts."
+}

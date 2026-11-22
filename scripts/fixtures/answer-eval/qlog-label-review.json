@@ -174,15 +174,10 @@
 },
 "QL-ct-0ccd61a7cd": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period",
-"crime"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-0d002d35e7": {
@@ -204,15 +199,10 @@
 },
 "QL-ct-0d825bc231": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"place",
-"crime"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-0d990fbc20": {
@@ -3476,14 +3466,10 @@
 },
 "QL-ct-c5febb0077": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"crime"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-c605731327": {

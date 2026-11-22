@@ -1,0 +1,12 @@
+{
+  "id": "P151",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Oakland murders per month in 2021\", \"Monthly Rape data in New Orleans\", \"violent crime by month in Lawrence Kansas\" (all-blank monthly series), and a Crime Index series by year whose latest years have no figure",
+  "what the app does today": "The all-blank decline had no way on; a yearly series showed trailing blank rows.",
+  "proposed behavior": "Under the all-blank decline (P147) of one agency's Part I crime, the yearly Crime Index answer is offered as \"Ask instead: murders in Oakland, California in 2021\" (\"by year\" when the months spanned more than one year), only when that yearly series has a figure. The table opened from that button ends at its last year with a figure: the years after it are named in a note (\"Crime Index has no rape figures for New Orleans, Louisiana from 2024 to 2025, so the chart and table end in 2023.\"), with no trailing blank rows. Other Crime Index series by year are unchanged.",
+  "exact default or choices offered": "The decline sentence with the button; the series with a note instead of blank rows.",
+  "why": "Jeff 2026-11-19 (through the coordinator): yes add the yearly Ask instead button; cut the table at the last year with data, no trailing blank rows.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P151\")."
+}

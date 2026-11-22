@@ -1,0 +1,12 @@
+{
+  "id": "P54",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Did shoplifting go up in Memphis in 2024?\" (a change asked with no comparison year)",
+  "what the app does today": "Declined: the reader does not read \"go up\".",
+  "proposed behavior": "Compare with the year before, over the same months: give both counts, the change and the percent change, with no adjectives (\"sharply\", \"slightly\").",
+  "exact default or choices offered": "Comparison year: the year before; the same months in both.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: \"Agreed\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-historical.ts, scripts/test-nibrs-shadow-reading.ts."
+}

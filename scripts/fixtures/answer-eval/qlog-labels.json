@@ -852,21 +852,16 @@
    "question": "i want to know how crime in nashville compares to peer citites",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "period",
-     "crime"
-    ],
-    "about": "violent, property or both"
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -952,21 +947,16 @@
    "question": "compare crime trends in San Francisco per 100k to similar sized cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "place",
-     "crime"
-    ],
-    "about": "violent, property or both"
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -15623,20 +15613,16 @@
    "question": "Crime trends in Philadelphia compared to similar cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "crime"
-    ],
-    "about": "violent, property or both"
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {

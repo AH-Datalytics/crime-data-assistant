@@ -1,0 +1,12 @@
+{
+  "id": "D21",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Flash mob shoplifting\"",
+  "what the app does today": "Not answered by the active paths; an old model instruction defined it as shoplifting with six or more offenders at a store.",
+  "proposed behavior": "Shoplifting with six or more offenders at a business location (bank, bar or nightclub, office building, convenience store, department or discount store, drug store or hospital, grocery, hotel, liquor store, rental storage, restaurant, gas station, specialty store, ATM, auto dealership, casino, shopping mall), with at most one business victim.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "definition check: flash mob"
+}

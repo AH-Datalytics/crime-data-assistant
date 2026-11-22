@@ -1,0 +1,12 @@
+{
+  "id": "P147",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"carjackings per month in New Orleans\" (a place that does not report NIBRS); any monthly count series with no figure in any month",
+  "what the app does today": "A table with every month blank and the note \"No data is known for January 2017 to October 2026: shown blank, not zero.\"",
+  "proposed behavior": "A monthly count series with every month blank is not an answer. It is declined in one sentence with no timeframe: \"No data is available for carjackings in New Orleans, Louisiana.\" Several places: the sentence names them all when every place is blank; one place or some months blank keeps the table and its gap sentences. Rates keep their own sentences.",
+  "exact default or choices offered": "The one sentence.",
+  "why": "Jeff 2026-11-18 (through the coordinator): decline when every month is blank, without the timeframe (\"Why add the timeframe?\").",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P147\")."
+}

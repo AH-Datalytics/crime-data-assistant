@@ -1,0 +1,12 @@
+{
+  "id": "P156",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Which Texas cities had the most carjackings in 2024?\" (22 shown for 20 asked), \"Which Colorado cities had the fewest carjackings in 2024?\" (108 tied at 0)",
+  "what the app does today": "Every agency tied at the last place is shown, however many: 22 for Texas, and 108 rows of zeros for Colorado.",
+  "proposed behavior": "A ranking shows exactly the number asked for, ordered by value and then by agency name (P17). When agencies tie at the last place, every tied agency is shown if that adds no more than the number asked for (Texas carjackings, 20 asked: 22 shown, and the answer says \"A, B and C tie for 20th, so 22 agencies are shown.\"). When more than that tie, the list is cut at the number asked, in name order, and the answer says how many tie (Colorado fewest carjackings: \"108 agencies tie at 0; the first 20 by name are shown.\"). A rate says \"tie at 3.4 per 100,000\". The count of agencies in the first line is the number shown.",
+  "exact default or choices offered": "The tie sentence, as above.",
+  "why": "Jeff 2026-11-19 (typed card answer, through the coordinator): the hybrid. It amends P17 and replaces the coordinator's 2026-11-06 rule that every tied place is always shown.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-transforms.ts, scripts/test-nibrs-shadow.ts."
+}

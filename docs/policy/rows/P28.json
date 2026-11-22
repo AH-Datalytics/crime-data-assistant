@@ -1,0 +1,12 @@
+{
+  "id": "P28",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Shoplifting in Kansas City in 2024\", \"... in Baltimore\", \"... in Washington\" (a place name that fits more than one place)",
+  "what the app does today": "Each path picks one reading: the reader fills in a state it was not given (\"Columbus\" -> Ohio), or declines the name as ambiguous.",
+  "proposed behavior": "A city named without a state: when two or more states have a city of that name with at least 100,000 people, ask which, with a button for each; otherwise use the most populous, without asking. The same rule when the name fits agencies of different kinds: a city and a county (Baltimore city or Baltimore County), with the same 100,000 floor for the county's agency. A name that is also a state (\"Washington\") always offers the state beside its large cities and counties. A state named in the question narrows the choice to that state. A city name means the city's principal police agency, named in the answer (a combined city-county agency such as Las Vegas included). A county name means the county police department where one polices the county (Montgomery County, Maryland; Fairfax County, Virginia), otherwise the sheriff's agency, named in the answer (rule 10). The wording settles the ask when it names one reading: \"city of X\", \"X city\" or \"X Police Department\" is the city's principal agency, \"NYPD\" or \"New York City\" is the city, \"New York State\" or a statewide measure is the state; a county named by itself stays the county. A name that fits both the city and the state (\"New York\" alone) is asked about, with two buttons.",
+  "exact default or choices offered": "Buttons, one per real candidate, most likely first: e.g. Kansas City, Missouri; Kansas City, Kansas. Baltimore city, Maryland; Baltimore County, Maryland. Washington, D.C.; Washington state; Washington County, Oregon; Washington County, Maryland. New York City (NYPD); New York State.",
+  "why": "A city in another state, or a county beside its city, is a different place with a different count; asking costs one click.",
+  "status": "Decided 2026-10-29 (Jeff: \"Yes, 100%, same issue with a city/county that share a name (Baltimore, Washington, etc)\")",
+  "test cases": "labeled cases LS-140, LS-151, LS-223, LS-224, LS-231, LS-242, LS-243, LS-244, LS-245, LS-144, LS-149, LS-159, LS-208 (rule 10); the city-of case: scripts/test-nibrs-shadow.ts (PR 177)"
+}

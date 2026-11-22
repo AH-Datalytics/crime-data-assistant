@@ -487,7 +487,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   text.push(SOURCE_STATEMENT(release));
   // Charts bind one series per statistic: a time series of a single count only. Category charts wait until a series
   // can bind to each category (Codex plan review).
-  const chart = time && !cats.length && tableRows.length > 1 ? { kind: time === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${time}`], y: [header] } : null;
+  // A breakdown of one period by one category (Jeff 2026-11-21, issue 3: "Robberies by weapon in Texas in 2024" had no chart): a bar chart of the
+  // count, the categories in the table's order (largest first, natural order for ages and hours, Unknown last); the panel turns it sideways when
+  // the labels crowd.
+  const chart = time && !cats.length && tableRows.length > 1 ? { kind: time === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${time}`], y: [header] }
+    : !time && cats.length === 1 && tableRows.length > 1 && labels[`grouping:${cats[0]}`] ? { kind: "bar" as const, x: labels[`grouping:${cats[0]}`], y: [header] } : null;
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   for (const e of evidence) {
     const col = tableCols.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === e.statistic);
@@ -689,7 +693,9 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
   for (const s of sup) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });
-  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
+  // A table of places or years with one figure each: a bar chart of the figure in the table's order (a ranking in rank order); months a line.
+  const chart = grouping && rows.length > 1 && rows.some((r) => r.value !== null) ? { kind: grouping.dimension === "time.month" ? "line" as const : "bar" as const, x: grouping.header, y: [stat.header] } : null;
+  return { table, evidence, chart, text, headline: text[0], answerStatements: statements, contractProblems };
 }
 
 /**
@@ -711,5 +717,7 @@ export function deliverMonthly(plan: NibrsPlan, geo: { dimension: string; header
   const text = [...lines, ...readings, ...shownStatements(statements), SOURCE_STATEMENT(release)];
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   ordered.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
-  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
+  // Several places over time: a line per place (the panel pivots the place column into one line each).
+  const chart = ordered.length > 1 ? { kind: "line" as const, x: "Month", y: [stat.header] } : null;
+  return { table, evidence, chart, text, headline: text[0], answerStatements: statements, contractProblems };
 }

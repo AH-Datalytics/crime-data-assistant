@@ -1,7 +1,7 @@
 /**
  * The labeled interaction set (scripts/fixtures/answer-eval/cases.json) is well formed: every case parses, ids are
  * unique, a group never straddles the held-out split, buttons answer an earlier clarifying case, and every policy
- * row a case cites exists in docs/policy/nibrsai-answer-policy.csv. Offline: no database, no model, no network.
+ * row a case cites exists in docs/policy/rows/. Offline: no database, no model, no network.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -10,7 +10,8 @@ import { Case, scorable } from "../lib/answer-eval/case";
 
 const ROOT = path.join(__dirname, "..");
 const file = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/answer-eval/cases.json"), "utf8"));
-const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-policy.csv"), "utf8");
+// The policy rows (docs/policy/rows/<id>.json), as the generated CSV's text.
+const policyCsv = (require("./lib/policy-rows.cjs") as { policyCsv: () => string }).policyCsv();
 const policyIds = new Set([...policyCsv.matchAll(/^﻿?([PD]\d{2,3}),/gm)].map((m) => m[1]));
 const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2,3}),.*Needs Jeff/gm)].map((m) => m[1]));
 

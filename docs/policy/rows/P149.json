@@ -1,0 +1,12 @@
+{
+  "id": "P149",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"DUI arrests by arrestee race in Texas in 2025\" (a Group B arrest)",
+  "what the app does today": "A title with the internal unit name: \"2025 DUI Group_b_arrest by Arrestee Race, Texas\".",
+  "proposed behavior": "A Group B arrest is counted in arrests, like any other: \"2025 DUI Arrests by Arrestee Race, Texas\". No internal name reaches a title, a note or a sentence.",
+  "exact default or choices offered": "As for any arrest count.",
+  "why": "Runner scorecard 2026-11-19 (through the coordinator): the title showed the internal word.",
+  "status": "Decided 2026-11-19 (the coordinator, a wording fix)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P149\")."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P79",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Launching the new engine's Historical answers",
+  "what the app does today": "The live site answers Historical from its own tables.",
+  "proposed behavior": "At launch, Historical questions are routed to the new engine. The live Historical tables stay untouched, so a rollback is a route switch. A reconciliation report (the engine's Crime Index data against a pinned extract of the live tables) comes before the switch.",
+  "exact default or choices offered": "Switch by routing; leave the old tables; rollback is a route switch.",
+  "why": "Jeff deferred this to the coordinator.",
+  "status": "Decided 2026-11-01 (coordinator, at Jeff's direction: \"defer to you on 5\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts."
+}

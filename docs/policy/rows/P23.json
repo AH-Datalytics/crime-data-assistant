@@ -1,0 +1,12 @@
+{
+  "id": "P23",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Follow-up \"What about Dallas?\" after a Houston question",
+  "what the app does today": "Replaces the place; keeps the source, offense, filters, measure, grouping and period.",
+  "proposed behavior": "Keep today's behavior.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "It is what users expect.",
+  "status": "Decided 2026-10-28 (Jeff: yes)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-follow-up.ts."
+}

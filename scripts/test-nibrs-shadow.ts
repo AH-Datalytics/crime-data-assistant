@@ -26,6 +26,8 @@ import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/co
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 import { titleCase } from "../lib/nibrs-shadow/titles";
+// P185 (Jeff 2026-11-21): the FBI master-files sentence follows the note under a NIBRS state or national sum (never under one agency's answer).
+const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
 import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
 import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
@@ -882,7 +884,7 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     }
     // The rewrites (read no data; the tests' stub has no Crime Index build, so its crime choices can't run here):
     // the question without the filler, and the words left out that mean something, to be said (Codex 01.2).
-    const { fillerRewrite, peerRewrite, covers } = askInsteadChecks;
+    const { fillerRewrite, covers } = askInsteadChecks;
     assert.deepEqual(fillerRewrite("Minneapolis scorecard"), { rest: "Minneapolis", left: [] });
     assert.deepEqual(fillerRewrite("Toledo crime scorecard"), { rest: "Toledo crime", left: [] });
     assert.deepEqual(fillerRewrite("is crime up in milwaukee"), { rest: "is crime milwaukee", left: ["up in"] });
@@ -900,11 +902,11 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");
-    // Peers: the place alone; "compared to" is read as "and" and still rewritten (Codex 01.3).
-    assert.deepEqual(peerRewrite("Crime trends in Philadelphia compared to similar cities"), { rest: "Crime trends in Philadelphia", peer: "similar cities" });
-    assert.deepEqual(peerRewrite("i want to know how crime in nashville compares to peer cities"), { rest: "i want to know crime in nashville", peer: "peer" });
-    assert.equal(peerRewrite("robberies in Philadelphia compared to similar cities in 2024"), null);
-    assert.equal(peerRewrite("is crime up in Philadelphia in 2024 compared to similar cities"), null);
+    // Peers (Jeff 2026-11-21: no partial answers): never the place alone; the reader's decline, which asks for the agencies to compare.
+    for (const q of ["Crime trends in Philadelphia compared to similar cities", "i want to know how crime in nashville compares to peer cities"]) {
+      const o = ask(q);
+      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    }
     for (const q of ["Do you have any data for NYC?", "Do we have data for the United States?", "does Olathe KS report NIBRS data?"]) assert.ok(covers(q), q);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
@@ -1318,7 +1320,8 @@ assert.ok(!("ordered" in bySex.delivered.table.columns[0]), "categories by count
 assert.deepEqual(bySex.delivered.table.rows, [["Female", 30, 60], ["Male", 20, 40], ["Unknown", null, null]]);
 assert.ok(!bySex.delivered.text.some((t) => /^Each share is/.test(t)), "P86: the share's header says what it is");
 assert.ok(bySex.delivered.text.includes("Shown blank, not zero, because reporting isn't complete: Unknown."));
-assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
+// A one-period breakdown by one category is a bar chart of the count, in the table's order (Jeff 2026-11-21, issue 3).
+assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], { kind: "bar", x: "Victim sex", y: ["Simple assault victims"] }]);
 assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").kind === "answer", false, "two-way breakdowns are not built");
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
 const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
@@ -1914,7 +1917,7 @@ assert.equal(txCj.buttons![0].label, "Consistent Reporting Agencies");
 assert.deepEqual(txCj.stateSum!.years.map((y) => [y.agencies, y.partial, y.every.agencies, y.every.sum]), [[4, 1, 3, 252]]);
 // One short note line, then the source (Jeff 2026-11-01).
 // Jeff (2026-11-01): his note, then the source; nothing else.
-assert.deepEqual(txCj.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
+assert.deepEqual(txCj.delivered.text.slice(1), ["Includes all agencies.", FBI_MASTER_FILES, "Source: FBI NIBRS."]);
 const txEvery = txCj.buttons![0].continuation as Extract<ShadowOutcome, { kind: "answer" }>;
 assert.deepEqual([txEvery.plan.coverage.cohort, txEvery.delivered.table.rows], ["same_agencies", [[252]]]);
 assert.deepEqual(txEvery.delivered.table.columns.map((c) => c.header), ["Carjacking offenses"]);
@@ -1966,7 +1969,7 @@ CONFLICT = null;
 assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /^No rate is given for North Carolina in 2024, because 1 of the agencies counted have no FBI population/);
 const nc = as(ask("Shoplifting in North Carolina in 2024, with the number of agencies reporting"), "answer");
 assert.match(String(nc.delivered.table.rows[0][2]), /^≥[\d.]+%$/, "a lower bound is marked in its cell");
-assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
+assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", FBI_MASTER_FILES, "Source: FBI NIBRS."]);
 // 6. A span reaching this year: its completed years, this year named; a future year is declined.
 const toNow = srs("Robberies in Texas by year from 2020 to 2026");
 assert.deepEqual([toNow.delivered.table.rows.map((x) => x[0]), toNow.delivered.text[1]], [["2020", "2021", "2022", "2023", "2024", "2025"], "2026 is this year: its figures come from Current Trends (Crime Index) and are not included here."]);
@@ -2881,6 +2884,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const gun = as(ask("Firearm carjackings per month in Houston since 2019"), "answer");
   assert.ok(gun.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "offense"), "a firearm on carjackings is the offense's weapon");
   assert.notEqual(ask("Give me the carjacking trend in Houston by month and year").kind, "answer", "month and year together is still not answered as one");
+}
+// P190 (Jeff 2026-11-21, reader class): small words and slips read as the question they are, never "I didn't understand".
+{
+  const readerDecline = (q: string) => { const o = ask(q); return o.kind === "decline" && o.reason === "reader"; };
+  for (const q of ["how many murders ocurred in Memphis in 2024", "how many murders occurredin Memphis in 2024", "how mnay murders in Memphis in 2024", "murders in Memphis for year 2024",
+    "Houston retail theft in 2024", "Houston larceny from auto in 2024", "Houston murders sincce 2020 by year"])
+    assert.ok(!readerDecline(q), q);
+  // A sentence that merely holds a similar word keeps its own handling: "occurred in" still reads as "in" and nothing else.
+  assert.deepEqual(ask("how many murders occurred in Memphis in 2024").kind, ask("how many murders in Memphis in 2024").kind);
+  assert.deepEqual(ask("Houston retail theft in 2024").kind, ask("Houston shoplifting in 2024").kind);
 }
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {

@@ -1,0 +1,12 @@
+{
+  "id": "P162",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"what percentage of murder victims in Texas were male in 2023\", \"What percentage of murder victims are female nationally in 2022?\", \"what share of murder victims are in each race in Houston since 2020\"",
+  "what the app does today": "Declined (\"Which part of the total should the share measure?\", \"I didn't understand ...\").",
+  "proposed behavior": "The share of murder victims (or offenders) who were a sex, or in each race, is the table of the victims by that detail with each category's count and its share of the total, from Homicide Reports. The sex or race asked is a row of the table; the other categories show beside it.",
+  "exact default or choices offered": "The victims' (or offenders') counts and shares by sex, or by race.",
+  "why": "Jeff 2026-11-19 (through the coordinator): a detail broken down is the table; the share is shown with it.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P162\")."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P111",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"robberies by time of day nationally\"",
+  "what the app does today": "Declined: a breakdown by two things at once.",
+  "proposed behavior": "A breakdown by the incident's hour in four groups, each shown with its count and share, and an Unknown row for an hour not recorded, with one line naming the hours.",
+  "exact default or choices offered": "Morning 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight, night midnight to 6 AM. Line: \"Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.\"",
+  "why": "Jeff 2026-11-15: \"Yes on drug and time of day\" (the coordinator's buckets).",
+  "status": "Decided (Jeff 2026-11-15)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

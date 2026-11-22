@@ -1,0 +1,12 @@
+{
+  "id": "P119",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Any decline, ask or note that said \"yet\" (\"This isn't available yet: ...\", \"I can't answer this combination yet\", \"aren't available here yet\")",
+  "what the app does today": "The engine said what it could not do now with the word yet.",
+  "proposed behavior": "The word \"yet\" is never said to a reader by the new engine: it is dropped and the sentence otherwise left as it was (\"not yet by how much\" becomes \"not by how much\"). A test fails if a shown sentence contains it. The older tabs are not changed.",
+  "exact default or choices offered": "Check: scripts/test-no-yet.js. The before and after of every sentence: nibrsai-review/yet-sentences-before-after-2026-11-15.md.",
+  "why": "Jeff 2026-11-15: \"Drop 'yet'. We can either figure out how to do that or not.\" (the new engine only).",
+  "status": "Decided (Jeff 2026-11-15)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

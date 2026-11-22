@@ -1,0 +1,12 @@
+{
+  "id": "P35",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many robberies were solved?\", \"solve rate\", \"closed cases\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Solved, solve rate and closed mean cleared, by arrest or by exceptional means.",
+  "exact default or choices offered": "Cleared.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 12 \"Cleared to all 3\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

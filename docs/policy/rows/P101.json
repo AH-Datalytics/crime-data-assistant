@@ -1,0 +1,12 @@
+{
+  "id": "P101",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How has police staffing changed in Chicago since 1980?\", \"number of officers per capita\", \"sworn officers in 1,000 in Salem\"",
+  "what the app does today": "Declined (the reader's change, count and rate words kept the question from being read as staffing).",
+  "proposed behavior": "A neutral \"changed\" is the series by year, with no computed percent change unless asked. \"The number of officers per capita\" and \"per population\" are the rate, not a count asked beside a rate; \"in 1,000\" is per 1,000. A period left out is asked.",
+  "exact default or choices offered": "By year; the rate per 100,000 unless another base is named.",
+  "why": "The labels expect answers; people say \"number of officers per capita\" for the rate.",
+  "status": "Decided 2026-11-11 (Jeff: \"P101 - agreed\")",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-historical.ts."
+}
