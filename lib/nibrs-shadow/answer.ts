@@ -59,6 +59,7 @@ import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, a
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
+import { DOWNLOAD_ASK, downloadAnswer, readOri, SCATTER, SCATTER_SENTENCE, scatterQuestions, withoutCsvWords } from "./ori";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
@@ -1055,6 +1056,28 @@ export const isChartEdit = (turn: string) => CHART_MARKER.test(turn) || CHART_ED
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
+  // A scatter plot is declined with one sentence, the two questions offered separately (P216).
+  if (SCATTER.test(question)) {
+    const two = scatterQuestions(question);
+    const opts = two.map((t): ShadowOption => ({ label: `Ask instead: "${t}"`, question: t }));
+    return { ...(decline("unsupported_capability", SCATTER_SENTENCE, opts.length ? { alternative: opts[0] } : {}) as Extract<ShadowOutcome, { kind: "decline" }>), ...(opts.length > 1 ? { more: opts.slice(1) } : {}) };
+  }
+  // An agency ID (P218): looked up both ways, or the place of the question with a note, or declined naming it.
+  if (!deps.checkingOffer) {
+    const ori = readOri(question, deps);
+    if (ori?.kind === "outcome") return ori.outcome.kind === "decline" ? decline("unsupported_capability", ori.outcome.explanation) : ori.outcome;
+    if (ori?.kind === "rewrite") {
+      const o = shadowAnswer(ori.rewritten, deps);
+      const del = (o as { delivered?: { text?: unknown } }).delivered;
+      if (!del || !Array.isArray(del.text)) return o;
+      const text = del.text as string[], at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
+      return { ...o, delivered: { ...del, text: [...text.slice(0, at), ori.note, ...text.slice(at)] } } as ShadowOutcome;
+    }
+  }
+  // "Can I download this?": one sentence. A CSV, spreadsheet or export of a figure is that figure's table (P217: the table is the data).
+  if (DOWNLOAD_ASK.test(question)) return downloadAnswer(deps);
+  const noCsv = withoutCsvWords(question);
+  if (noCsv) return shadowAnswer(noCsv, deps);
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
