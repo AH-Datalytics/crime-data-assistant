@@ -561,6 +561,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     text = text.replace(/\b(?:the\s+)?(closed|solved|cleared)\s+((?:[a-z]+\s+){0,3}?)cases\b/gi, (_m, v: string, crime: string) => { readings.push({ kind: "meaning", from: `${v.toLowerCase()} cases`, to: "offenses cleared" }); return crime.trim(); });
     if (text !== before) text = text.replace(/\s*([?.!]*)\s*$/, ` that were cleared$1`);
   }
+  // "Solved" on its own is "cleared" (P35): "How many murders were solved in Houston", "murders solved in 2024".
+  text = text.replace(/(?:\b(?:were|was|are|is|been|get|got)\s+)?\bsolved\b(?=\s*(?:$|[?.!,]|(?:in|for|during|by|across|since|from|between|nationwide|last|this|per|each)\b|\d))/gi,
+    () => { readings.push({ kind: "meaning", from: "solved", to: "cleared" }); return "that were cleared"; });
   // Filler (Jeff 2026-11-22, QL-ct-d20e00174a): "are we seeing" after what is asked about ("What crime trends are we seeing in Baltimore") adds nothing.
   text = text.replace(/(?<=\b(?:trends?|crimes?|changes?|patterns?|numbers|figures))\s+(?:are|do)\s+we\s+(?:seeing|see)\b(?=\s+(?:in|for|across)\b)/gi,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
