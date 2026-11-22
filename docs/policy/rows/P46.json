@@ -7,6 +7,6 @@
   "proposed behavior": "\"People arrested\" and \"arrestees\" mean arrests: each arrest counts once, and the answer says NIBRS cannot tell when one person was arrested twice. \"Charged\" and \"booked\" are declined: the data has no charging or booking records.",
   "exact default or choices offered": "",
   "why": "",
-  "status": "Decided 2026-10-29 (Jeff: 25 \"yes on people arrested and arrestees, no on the others since we don't collect charge and booking data\")",
+  "status": "Decided 2026-10-29 (Jeff: 25 \"yes on people arrested and arrestees, no on the others since we don't collect charge and booking data\"); the statement that one person arrested twice counts twice is carried, not shown (P86) (cleanup 2026-11-22), audit B28",
   "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts, scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
 }

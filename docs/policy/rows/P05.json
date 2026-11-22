@@ -7,6 +7,6 @@
   "proposed behavior": "Ask which year, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed).",
   "exact default or choices offered": "Buttons, most likely first: the latest complete year (named); this year so far (months named); another year.",
   "why": "The year changes the ranking; asking costs one click and assumes nothing.",
-  "status": "Decided 2026-10-28 (Jeff: ask, as for any missing part; general rule)",
+  "status": "Superseded by P181 (2026-11-21: a ranking with no period is the latest complete year, said, with a button for another year); Decided 2026-10-28 (Jeff: ask, as for any missing part; general rule)",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

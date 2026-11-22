@@ -7,6 +7,6 @@
   "proposed behavior": "Ask which place, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed).",
   "exact default or choices offered": "Buttons: the United States (first); a state; a city or agency.",
   "why": "The place changes the population counted; nothing is assumed.",
-  "status": "Decided 2026-10-28 (Jeff: ask, as for any missing part; general rule)",
+  "status": "Superseded by P180 (2026-11-21: no place named is the United States, with a note and buttons to pick a state or an agency); Decided 2026-10-28 (Jeff: ask, as for any missing part; general rule)",
   "test cases": "Tests that cite this row: scripts/test-nibrs-plan-language.ts."
 }

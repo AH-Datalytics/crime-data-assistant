@@ -7,6 +7,6 @@
   "proposed behavior": "Single figure: ask which period, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed). A trend or a series by year or month with no years named (\"murders in Houston over time\", \"Houston murders per year\"): answer with every year the source has, no question asked (Jeff 2026-11-04).",
   "exact default or choices offered": "Single figure, buttons: the latest complete year (named); this year so far; another year. Trend or series: every year (or month) available.",
   "why": "The period changes the answer; one rule on every source, and nothing assumed.",
-  "status": "Decided 2026-10-28 (Jeff: ask, as for any missing part); amended 2026-11-04 for trends and series (Jeff: \"show every year we have\")",
+  "status": "Decided 2026-10-28 (Jeff: ask, as for any missing part); amended 2026-11-04 for trends and series (Jeff: \"show every year we have\"); the single-figure ask superseded by P181 (2026-11-21: no period named is every year by year)",
   "test cases": "No test found: no test cites this row or asks its example question."
 }
