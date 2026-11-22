@@ -21,6 +21,16 @@ assert.equal(q(rw(P, "what about Nashville?")), "Shoplifting in Nashville by yea
 assert.equal(q(rw(P, "rate instead")), "Shoplifting rate in Memphis by year from 2021 to 2024");
 assert.equal(q(rw(P, "by month")), "Shoplifting in Memphis by month from 2021 to 2024");
 assert.equal(q(rw("carjackings in Memphis TN by month in 2025", "make it quarterly")), "carjackings in Memphis TN by quarter in 2025");
+// A swap in one follow-up (Engine 2.0 / coordinator 2026-11-22, QL-ct-0fa509b9b4): one place out, another in, in the same spot.
+const FIVE = "can you plot murders benchmarked to 2021 levels for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?";
+assert.equal(q(rw(FIVE, "exclude boston but include Baltimore")), "can you plot murders benchmarked to 2021 levels for the cities Philadelphia, New York, Baltimore, Los Angeles, and Chicago?");
+assert.equal(q(rw(FIVE, "remove Boston and add Baltimore")), q(rw(FIVE, "exclude boston but include Baltimore")));
+assert.equal(q(rw(FIVE, "replace Boston with Baltimore")), q(rw(FIVE, "exclude boston but include Baltimore")));
+assert.equal(q(rw("Murders in Memphis and Nashville in 2024", "exclude Memphis but include Knoxville")), "Murders in Knoxville and Nashville in 2024");
+// A place that is not in the previous question, or one already in it, or a single place, is asked about, never guessed.
+asked(rw(FIVE, "exclude Denver but include Baltimore"));
+asked(rw(FIVE, "exclude Boston but include Chicago"));
+asked(rw("Murders in Memphis in 2024", "exclude Memphis but include Knoxville"));
 // P72: a population column goes with a rate; agencies reporting with a state or national total.
 assert.equal(q(rw("Shoplifting rate in Wichita in 2024", "add a column for population")), "Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate");
 assert.equal(q(rw("Shoplifting in Kansas in 2024", "how many agencies reported")), "Shoplifting in Kansas in 2024, with the number of agencies reporting");

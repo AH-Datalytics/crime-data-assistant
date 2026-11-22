@@ -581,6 +581,27 @@ export const deterministicRewriter: FollowUpRewriter = {
     // A bare year after a lead-in ("show me 2023", "give me 2023") is the year alone, replaced or added below; the
     // lead-ins "show me", "give me" and "in" never route other words to the place and period forms.
     if (asPeriod !== f && /^(?:19|20)\d{2}$/.test(asPeriod)) f = asPeriod;
+    // A swap: "exclude Boston but include Baltimore", "remove Boston and add Baltimore", "replace Boston with Baltimore", "swap Boston for Baltimore":
+    // one place of the previous question out and another in, in the same spot (Engine 2.0 / coordinator 2026-11-22, QL-ct-0fa509b9b4). Both must be
+    // places the reader finds, the one out one of the previous question's places; anything else is asked.
+    const swap = /^(?:please\s+)?(?:(?:exclude|remove|drop|take out|leave out|without)\s+(.+?)\s*(?:,\s*)?(?:but|and|then|,)\s+(?:also\s+)?(?:include|add|use|put in)\s+(.+)|(?:replace|swap(?: out)?|change)\s+(.+?)\s+(?:with|for|by|to)\s+(.+))$/i.exec(f.replace(/[?.!\s]+$/, ""));
+    if (swap) {
+      const out = (swap[1] ?? swap[3]).replace(/^the\s+/i, "").trim(), into = (swap[2] ?? swap[4]).replace(/^the\s+/i, "").trim();
+      const one = (name: string) => { const t = partsOf(`Shoplifting in ${name}`); return t.places.length === 1 && t.places[0].text.replace(/^the\s+/i, "").toLowerCase() === name.toLowerCase()
+        && t.all.every((p) => ["measure", "place", "filler"].includes(p.concept)) ? t.places[0] : null; };
+      const po = one(out), pi = one(into);
+      if (!po || !pi) return ask(`What "${f}" changes in the previous question.`);
+      const at = prevParts.places.findIndex((p) => p.value === po.value);
+      const pw = placeWords(prev, prevParts.places);
+      if (at < 0 || !pw || prevParts.places.length < 2) return ask(`Which place to take out: ${out} is not one of the places in the previous question.`);
+      if (prevParts.places.some((p) => p.value === pi.value)) return ask(`${into} is already one of the places in the previous question.`);
+      if (/\bcombined\b/i.test(prev)) return ask(`Whether ${into} joins the combined total in place of ${out}.`);
+      // The place's words in the previous question as typed (the reader's spans are in its own rewritten text).
+      const words = prevParts.places[at].text.replace(/^the\s+/i, "").trim();
+      const found = new RegExp(`(?<![A-Za-z])${words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`, "i").exec(prev);
+      if (!found) return ask(`Which place to take out: ${out} is not written as such in the previous question.`);
+      return ok(prev.slice(0, found.index) + into + prev.slice(found.index + found[0].length), "one place replaced by another");
+    }
     // Two places side by side ("Chicago vs Memphis", "Memphis and Nashville", "compare Memphis and Nashville"): both
     // replace the previous question's place, and nothing else changes (coordinator 2026-11-02: deterministic, no model).
     const pair = /^(?:compare\s+)?(.+?)\s+(?:vs\.?|versus|and|with)\s+(.+?)$/i.exec(f);
