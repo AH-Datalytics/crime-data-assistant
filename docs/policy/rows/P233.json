@@ -1,0 +1,12 @@
+{
+ "id": "P233",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"When was violent crime the highest?\", \"what year was murder the highest\"",
+ "what the app does today": "Asks which place, then declines (reader).",
+ "proposed behavior": "\"When was <crime> the highest\" is the year with the highest figure in the Crime Index series, the nation by default (P180), the series starting in 1960 (P198). Asked for a count it is the count; otherwise the rate per 100,000. One sentence with the year and the figure, and the next-highest year beside it when it is within 1 percent. A place named is that place's own peak year. \"Lowest\" is the same with the lowest year.",
+ "exact default or choices offered": "One sentence: the peak year and its rate per 100,000, with the Source line.",
+ "why": "Jeff 2026-11-22 (card through the coordinator).",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+ "test cases": "Label QL-ct-032604ee4d (answer historical; expected value to be set from the build)."
+}

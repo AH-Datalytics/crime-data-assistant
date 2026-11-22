@@ -1,0 +1,12 @@
+{
+ "id": "P231",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"3 month rolling % change in murder relative to same 3 months the previous year\", \"can we look at murder in terms of percentage change by month?\", \"Can you compare year to date homicide statistics with 2021?\", \"a csv of 12 month annualized homicide indexed to january 2018\"",
+ "what the app does today": "Asks which place, then declines (reader).",
+ "proposed behavior": "A rolling or year-to-date question is answered as a monthly series, shown the same way as every other time series (the series chart with its table beneath), never a table only. A rolling N-month percent change is, for each month, the sum of the last N months against the sum of the same N months a year earlier. A 12-month annualized figure is the sum of the last 12 months, each month. Year to date against a past year compares January through the latest month with data of the latest year against January through that same month of the named year, shown as two figures and the percent change. No place is the nation (P180); a place named is that place. A month with no figure is a gap, never 0.",
+ "exact default or choices offered": "The monthly series (chart and table) for the nation, from the first month with a full comparison to the latest month, with the Source line; year to date answers with the two figures, the change, and the months compared in the note.",
+ "why": "Jeff 2026-11-22 (card through the coordinator).",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+ "test cases": "Labels QL-ct-0cb8a87be2, QL-ct-6ecc7c51d8, QL-ct-08e88ef9b9, QL-ct-f454755cc1, QL-ct-7f584734cb (answers; expected values to be set from the build)."
+}
