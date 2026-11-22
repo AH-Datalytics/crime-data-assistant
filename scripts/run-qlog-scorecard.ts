@@ -30,6 +30,10 @@
  *     a flag or the SCORECARD_DUCKDB_* variables name them. The outcomes do not depend on N: the same labels give the same
  *     outcomes, folded into --progress in the labels' order, and "outcomes digest" (below the counts) is one hash of every
  *     outcome without its timing: equal digests are equal runs (test: scripts/test-scorecard-workers.ts).
+ *     Measured 2026-11-22 (12 cores, 32 GB, Idle priority, no SQL cache, all 3,709 labels): one process 1,905 s, four workers 1,621 s, the
+ *     same digest. The gain is small because 34 national questions take over 10 s each (1,063 of the 1,895 s) and four of them at once run
+ *     5 to 8 times slower each: 612 s of work was the most any shard had, 1,621 s was what it took (the cause, disk or memory, is not
+ *     isolated). Not measured yet: a warm --sql-cache, or any N but 4 on a full run; first 1,500 labels: one process 162 s, four workers 103 s.
  *   - --compare <outcomes.jsonl> lists every question whose outcome differs from that run's (dev's), for the PR.
  *
  * Buckets (one per label):
