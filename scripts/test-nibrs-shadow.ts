@@ -710,6 +710,21 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
     assert.equal(d.text[0], "Texas Murder Count by City, Population 250,000 or More, 2024", q);
     assert.deepEqual(d.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"], q);
   }
+  // P208 (Jeff 2026-11-22): "<City> compared to other large cities in <state>" is the state's cities of 100,000 or more, ranked, the named city highlighted.
+  {
+    const cx2 = (sql: string): unknown[][] => { if (!/agency_crime\.parquet/.test(sql)) return []; const f = /population >= (\d+)/.exec(sql); const floor = f ? Number(f[1]) : 0, tx = /state = 'TX'/.test(sql);
+      return CITIES.filter((c) => Number(c[2]) >= floor && (!tx || c[5] === "TX")); };
+    const dd = { ...cdeps, execute: cx2 } as unknown as ShadowDeps;
+    for (const q of ["El Paso, Texas murders compared to other Texas large cities in 2024", "murders in El Paso compared to other large cities in Texas in 2024"]) {
+      const v = as(shadowAnswer(q, dd), "historical") as unknown as { delivered: { table: { rows: unknown[][] }; text: string[]; highlight?: number } };
+      assert.equal(v.delivered.text[0], "Texas Murder Count by City, Population 100,000 or More, 2024", q);
+      assert.deepEqual(v.delivered.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"], q);
+      assert.equal(v.delivered.highlight, 2, q);
+      assert.ok(v.delivered.text.includes("El Paso is highlighted: it is 3rd of the 4 Texas cities of 100,000 or more people, ranked from the highest figure to the lowest."), v.delivered.text.join(" | "));
+    }
+    // No state named: the old reading (P128, P132).
+    assert.ok(!(shadowAnswer("los angeles homicide rate in 2025 vs. other large cities", dd) as { delivered?: { highlight?: number } }).delivered?.highlight);
+  }
   assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "United States Murder Rate by City, Population 250,000 or More, 2024");
   assert.equal(cities("murder rate in all U.S. cities 2024").text[1], "The 5 cities with the highest rates are shown.");
   // "Major cities" with no rank word, and no place, are the nation's, said (the old reading gave the national total).
