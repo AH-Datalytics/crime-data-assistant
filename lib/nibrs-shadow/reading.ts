@@ -262,7 +262,7 @@ const PHRASES: [RegExp, string][] = [
   [/\b(?:for|in|across|throughout|of)\s+(?:the\s+)?(?:entire|whole|full)\s+(?:u\.?s\.?a?\.?|united\s+states(?:\s+of\s+america)?|country|nation)(?=[\s,.?!]|$)/gi, "nationwide"],
   // P191 (Jeff 2026-11-21, reader class): "cleared by arrest versus exceptional means" is the clearance types (arrest, each exceptional type,
   // uncleared); "exceptional clearances by type" is the exceptional types; "exceptional means" alone is the exception.
-  [/,?\s*\b(?:were\s+|was\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional\s+means|exception|exceptional\s+clearance)\b/gi, " by clearance type"],
+  [/,?\s*\b(?:were\s+|was\s+|are\s+|is\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional(?:\s+means|\s+clearances?)?|exception)\b/gi, " by clearance type"],
   [/\bexceptional\s+((?:[a-z]+\s+){0,1}?)clearances?\b/gi, "$1cleared by exception"],
   [/(\bcleared\s+by\s+exception\b[^?.]*?)\b(?:per|by)\s+year\s+and\s+type\b/gi, "$1by type by year"],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
@@ -569,6 +569,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
   // since the look-ahead would fail in PHRASES).
   dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
+  // The share of both ("what percentage of murders are cleared by arrest vs exceptional nationally") is the clearance types side by side
+  // (P191's table), not one share: the share words are dropped here (look-ahead, so not in PHRASES).
+  dropWord(/\b(?:what|which)\s+(?:percent(?:age)?|share|proportion|fraction)\s+of\s+(?=[^?]*\bcleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?exception)/gi, "");
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
@@ -738,6 +741,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   if ((cm = /^\s*how\s+many\s+(.+?)\s+(?:were|was)\s+cleared(?:\s+by\s+(arrest|exceptional\s+means))?\s*\??\s*$/i.exec(text))) {
     text = `how many ${cm[1]}`; set({ only: !cm[2] ? "cleared" : /arrest/i.test(cm[2]) ? "arrest" : "exceptional" });
   }
+  // "Exceptional clearance rate for robbery in Texas" (QL-nibrs-e04248e56d): the share of the robberies cleared by exception (P203), said in a note.
+  text = text.replace(/\b(?:exceptional\s+clearance|cleared\s+by\s+exception)\s+rates?\s+(?:for|of)\s+((?:[a-z]+\s+){0,2}?[a-z]+?)(?=\s+(?:in|across|nationwide|nationally|statewide)\b|\s*[?.]?\s*$)/i,
+    (m, crime: string) => { readings.push({ kind: "meaning", from: m.trim(), to: `the share of ${crime} cleared by exceptional means` }); return `what share of ${crime} were cleared by exception`; });
+  // "What share of rapes were cleared by exceptional means" is the share of one clearance type (P203), which the ledger's own "by exception" filter reads.
+  if (/\b(?:share|percent(?:age)?|proportion|fraction)\s+of\b/i.test(text))
+    text = text.replace(/\bcleared\s+by\s+exceptional\s+means\b/gi, (m) => { readings.push({ kind: "phrase", from: m, to: "cleared by exception" }); return "cleared by exception"; });
   text = text.replace(/,?\s*\b(?:that\s+were\s+|which\s+were\s+)?cleared\s+by\s+(arrest|exceptional\s+means)\b/i, (_m, how: string) => (set({ only: /arrest/i.test(how) ? "arrest" : "exceptional" }), ""));
   text = text.replace(/\b(?:uncleared|unsolved|not\s+cleared)\s+/i, () => (set({ only: "uncleared" }), ""));
   text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+not\s+cleared\b/i, () => (set({ only: "uncleared" }), ""));
