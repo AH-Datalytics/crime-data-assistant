@@ -10,6 +10,7 @@ import path from "node:path";
 import { cubeFromEnv } from "../nibrs-plan/cube";
 import { duckdbExecutor, type DuckdbExecutor } from "../nibrs-shadow/duckdb";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../nibrs-shadow/answer";
+import { asSourceTab } from "../nibrs-shadow/source-description";
 import { loadPlaceIndex } from "../nibrs-shadow/places";
 import { follow, toPreview } from "../nibrs-shadow/preview";
 import { loadNibrsRelease } from "../nibrs-shadow/release";
@@ -50,6 +51,8 @@ export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
         release: { id: rel.id, firstMonth: rel.firstMonth, lastMonth: rel.lastMonth, asOf: new Date().toISOString().slice(0, 10) },
         target: { root: t.root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
         execute: exec,
+        // P234: the tab a question is asked on, so "what data do you have" is answered with that source's description.
+        ...(asSourceTab(tab) ? { tab: asSourceTab(tab) } : {}),
       };
       b = { deps, exec, release: rel.id };
       built.set(tab, b);

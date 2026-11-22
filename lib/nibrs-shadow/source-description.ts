@@ -10,6 +10,11 @@
 import { monthName } from "./deliver";
 
 export type SourceTab = "historical" | "current" | "nibrs" | "shr" | "hate_crime";
+/** The tab names of the five sources: the app's tab ids, the qlog labels' `tab` and the engine service's tab keys are all these words. */
+export const SOURCE_TABS: readonly SourceTab[] = ["historical", "current", "nibrs", "shr", "hate_crime"];
+export function asSourceTab(t: unknown): SourceTab | undefined {
+  return SOURCE_TABS.find((s) => s === t);
+}
 /** The latest data of each source the texts mention; a source without a release here has no text to give. */
 export type SourceLatest = { historicalYear?: number | null; nibrsMonth?: string | null; shrMonth?: string | null; currentMonth?: string | null; hateYear?: number | null };
 export type SourceDescriptionQuestion = { source: SourceTab | null; other: string | null };

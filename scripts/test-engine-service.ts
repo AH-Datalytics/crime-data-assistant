@@ -3,6 +3,8 @@
  * worker, shutdown, the token and body limits, and the configuration read from the environment. Fake workers stand in for the engine (no data, no Python, no network but loopback).
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { asSourceTab, SOURCE_TABS } from "../lib/nibrs-shadow/source-description";
 import type { AddressInfo } from "node:net";
 import { askedOf, configFromEnv, createCore } from "../lib/engine-service/core";
 import { createEngineServer } from "../lib/engine-service/http";
@@ -155,6 +157,20 @@ function fakes() {
   assert.ok(!r.ok && r.kind === "unavailable", "a source with no root is not available (no engine is built for it)");
   assert.deepEqual(core.info().tabs, []);
   core.close();
+}
+
+// --- P234: the tab names the service, the app and the labels use are one set, and the service tells the engine the tab
+{
+  const labels = JSON.parse(readFileSync("scripts/fixtures/answer-eval/qlog-labels.json", "utf8")) as { labels?: { tab: string }[] } | { tab: string }[];
+  const labelTabs = [...new Set((Array.isArray(labels) ? labels : labels.labels ?? []).map((l) => l.tab))].sort();
+  assert.deepEqual(labelTabs, [...SOURCE_TABS].sort(), "the qlog labels' tab names are the five source tabs");
+  const ui = /type TabId = ([^;]+);/.exec(readFileSync("components/ChatInterface.tsx", "utf8"))?.[1] ?? "";
+  const uiTabs = [...ui.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).filter((t) => t !== "explainer").sort();
+  assert.deepEqual(uiTabs, [...SOURCE_TABS].sort(), "the app's tab ids are the five source tabs");
+  assert.deepEqual(Object.keys(configFromEnv({ ENGINE_NIBRS_ROOT: "/r" }).tabs).filter((t) => !asSourceTab(t)), [], "every tab key the service configures is a source tab");
+  assert.equal(asSourceTab("hate_crime"), "hate_crime");
+  assert.equal(asSourceTab("hate"), undefined, "a name that is not a source tab is not one");
+  assert.equal(asSourceTab(undefined), undefined);
 }
 
   console.log("engine service: pool, protocol and HTTP face: ok");
