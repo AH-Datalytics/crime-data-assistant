@@ -298,12 +298,13 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     : o.kind === "decline" ? !o.alternative || (!o.alternative.otherSource && (!!o.alternative.question || (!!o.alternative.continuation && o.alternative.continuation.kind !== "decline" && runnable(o.alternative.continuation))))
     : true;
   // "Memphis crime per month in 2023" and its rewrites ("show me 2022", "the year before"): violent and property totals
-  // are annual (no NIBRS total yet), so a plain decline with the whole-year question, which asks the kind and answers.
+  // are annual (no NIBRS total yet), so a plain decline with the whole-year question, which answers violent and property
+  // crime and their parts by year (crime in a place over time, 2026-11-21; it asked the kind before).
   for (const q of ["Memphis crime per month in 2023", "Memphis crime per month in 2022", "Memphis crime by month in 2023"]) {
     const o = withBuild(q);
     assert.ok(o.kind === "decline" && /whole years only/.test(o.explanation) && runnable(o), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
     const by = o.kind === "decline" ? o.alternative?.continuation : undefined;
-    assert.ok(by?.kind === "clarify" && by.options.every((x) => x.continuation?.kind === "historical"), JSON.stringify(by).slice(0, 300));
+    assert.ok(by?.kind === "historical" && by.delivered.table.columns.map((c) => c.header).join("|").startsWith("Year|Violent crime|Property crime|Part I crime|Murder"), JSON.stringify(by).slice(0, 300));
   }
   // Codex routing review 01: rolling windows never recurse; a route to Current Trends (not loaded) is not a button.
   assert.ok(runnable(withBuild("violent crime in Memphis rolling 12 months in 2023")));

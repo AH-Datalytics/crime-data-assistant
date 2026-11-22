@@ -18,7 +18,7 @@ import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliverTable, fmt, monthName, periodWords, runs } from "./deliver";
 import { HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
-import { agencySubject } from "./headline";
+import { agencySubject, seriesTitle } from "./headline";
 import { agencyHeaderSql, universeStates } from "./state-sum";
 import { postalState } from "../nibrs-plan/state-codes";
 import { NOT_YET } from "./wording";
@@ -117,8 +117,9 @@ export function answerStateClearanceSeries(plan: NibrsPlan, years: number[], cri
     if (o.kind === "answer") lastSql = o.sql;
   }
   if (!rows.some((r) => r.value !== null)) return first ?? decline(`No clearance rate is given: no ${words} were reported.`);
-  const span = years.length > 1 ? `${years[0]} to ${years[years.length - 1]}` : String(years[0]);
-  const title = `${span} ${words[0].toUpperCase()}${words.slice(1)} Cleared (%) by Year, ${Where}`;
+  // P159: place, what is counted, the series, then the timeframe ("Florida Rapes Cleared (%) Per Year, 2017-2025").
+  const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : String(years[0]);
+  const title = seriesTitle(span, `${words} Cleared (%)`, "year", Where);
   const lines = [title, "Each year's rate is the offenses cleared over the offenses reported, summed over the agencies that reported that year.", "Includes all agencies.", ...(note ? [note] : [])];
   const plan2: NibrsPlan = { ...plan, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] };
   const delivered = deliverTable(plan2, { dimension: "time.year", header: "Year" }, { as: stat.as, header: `${words[0].toUpperCase()}${words.slice(1)} cleared (%)` }, rows, lines, statements, deps.release.id, readings);
