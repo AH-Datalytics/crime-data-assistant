@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Shootings in Chicago\", \"shooting incidents in Houston\", \"people shot in Dallas\" (a shootings question; \"gun violence\" keeps its own decline, P31)",
   "what the app does today": "Asked \"fatal or non-fatal shootings\" (D14's wording), which overclaims: the data has no non-fatal shooting counts.",
-  "proposed behavior": "The app says: \"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).\" Two buttons (the firearm murders answer names its own source, Homicide Reports; \"SHR\" is an internal name and is never shown): \"Firearm murders\" and \"Aggravated assault involving a firearm (NIBRS)\". A choice that can't run for the question (NIBRS starts in 2017; no Homicide Reports filing) is left out and a note says why; the firearm murders button is offered only when the answer really comes from Homicide Reports.",
+  "proposed behavior": "The app says: \"We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).\" Two buttons (the firearm murders answer names its own source, Homicide Reports; \"SHR\" is an internal name and is never shown): \"Firearm murders\" and \"Aggravated assault involving a firearm (NIBRS)\". A choice that can't run for the question (NIBRS starts in 2017; no Homicide Reports filing) is not shown, with no note (P103); the firearm murders button is offered only when the answer really comes from Homicide Reports.",
   "exact default or choices offered": "Firearm murders; aggravated assault involving a firearm (NIBRS).",
   "why": "Jeff: \"We solved this many times ages ago ... If somebody asks for shootings it says we don't track non-fatal shootings but they can choose firearm murders (SHR) or aggravated assault involving a firearm (NIBRS)\". Replaces D14's wording.",
-  "status": "Decided 2026-11-14 (Jeff: \"yes on both\", then \"it shouldn't say (SHR), that's just the source\")",
+  "status": "Decided 2026-11-14 (Jeff: \"yes on both\", then \"it shouldn't say (SHR), that's just the source\"); a button whose answer cannot run is not shown, with no note (P103) (cleanup 2026-11-22), audit B23",
   "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
 }

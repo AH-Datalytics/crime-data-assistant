@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Hate crimes in Texas in 2023\"",
   "what the app does today": "The Hate Crime tab uses the FBI file; the NIBRS tab uses NIBRS.",
-  "proposed behavior": "The FBI Hate Crime file answers; NIBRS only for details only NIBRS records.",
+  "proposed behavior": "The FBI Hate Crime file answers; a detail only NIBRS records is not answered (P117: never from NIBRS).",
   "exact default or choices offered": "Not applicable.",
   "why": "",
-  "status": "Decided 2026-10-28",
+  "status": "Decided 2026-10-28; superseded in part by P117: a hate crime detail only NIBRS records is not answered from NIBRS (cleanup 2026-11-22), audit B16, C16",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

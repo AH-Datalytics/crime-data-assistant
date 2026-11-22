@@ -7,6 +7,6 @@
   "proposed behavior": "Decline: there is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and a figure from reporting agencies is not a state rate.",
   "exact default or choices offered": "Not applicable: a decline.",
   "why": "A state clearance rate built from the agencies that report would be read as the state's rate.",
-  "status": "Decided 2026-10-28 (Jeff, on reflection: decline)",
+  "status": "Superseded by P172 (2026-11-21: a state's clearance rate is answered, summed over the agencies that reported) and P173 (every state ranked); Decided 2026-10-28 (Jeff, on reflection: decline)",
   "test cases": "GC-092, GC-103, GC-104, GC-105, GC-106, GC-107, GC-108, GC-109, GC-110, GC-111"
 }
