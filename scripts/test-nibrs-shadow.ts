@@ -2925,4 +2925,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A crime already counted by offense, and the murder path, are left as they were.
   assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
 }
+// P193 (census 2026-11-21): "in these cities: A, B, C" names the places in the list; "per year and clearance type" is the clearance type by year.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("murders in 2025 in these cities: Chicago, IL, Houston, TX, Dallas, TX"), "murders in 2025 in Chicago, IL, Houston, TX, Dallas, TX");
+  assert.equal(rd("murder rate in 2024 for the following cities: Chicago, Houston"), "murder rate in 2024 in Chicago, Houston");
+  // The words alone, with no list after them, are left as written.
+  assert.equal(rd("murders in 2025 in these cities"), "murders in 2025 in these cities");
+  assert.equal(rd("Chicago murder clearances per year and clearance type since 2022"), "Chicago murder clearances by type by year since 2022");
+  assert.equal(rd("Murder clearances by year and clearance type in Detroit from 2022 to 2025"), "Murder clearances by type by year in Detroit from 2022 to 2025");
+  // The same wording as "by type by year", which answers.
+  assert.equal(ask("Detroit murder clearances by year and clearance type in 2023 and 2024").kind, ask("Detroit murder clearances by type by year in 2023 and 2024").kind);
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
