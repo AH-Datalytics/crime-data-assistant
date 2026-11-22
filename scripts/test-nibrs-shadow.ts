@@ -2696,6 +2696,35 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const gk = shadowAnswer("Compare gun murders vs knife murders nationally in 2024", cdeps);
   assert.equal(gk.kind, "shr", JSON.stringify(gk).slice(0, 300));
   if (gk.kind === "shr") assert.deepEqual(gk.delivered.table.rows.map((r) => r[0]), ["Knife or cutting instrument", "Firearm"]);
+  // "Female vs male murder victims per year": the two sexes are two categories of one breakdown, never two filters ANDed (every year was 0).
+  const sqls: string[] = [];
+  const sdeps = { ...cdeps, execute: (sql: string) => { sqls.push(sql); return cstub(sql); } } as unknown as ShadowDeps;
+  const fm = shadowAnswer("female vs male murder victims nationally per year from 2020 to 2024", sdeps);
+  assert.equal(fm.kind, "shr", JSON.stringify(fm).slice(0, 300));
+  const body = sqls.find((s) => /shr_victim/.test(s)) ?? "";
+  assert.ok(/IN \('F'\) THEN '0' WHEN .* IN \('M'\) THEN '1'/.test(body) && /p\.sex IN \('F', 'M'\)/.test(body) && !/p\.sex IN \('F'\) AND/.test(body), body);
+  // The same with a weapon beside it (QL-shr-b31e79fb3a, c674f79a08): the firearm is the filter, the sexes the breakdown.
+  const sqls2: string[] = [];
+  const fdeps = { ...cdeps, execute: (sql: string) => { sqls2.push(sql); return cstub(sql); } } as unknown as ShadowDeps;
+  const ff = shadowAnswer("female vs male firearm murder victims nationally per year from 2020 to 2024", fdeps);
+  assert.equal(ff.kind, "shr", JSON.stringify(ff).slice(0, 300));
+  const fbody = sqls2.find((s) => /shr_victim/.test(s)) ?? "";
+  assert.ok(/IN \('F'\) THEN '0'/.test(fbody) && /r\.weapon IN/.test(fbody) && !/p\.sex IN \('F'\) AND/.test(fbody), fbody);
+  // Months after the last one with any report are blank, never 0 (the final year is still being filed).
+  const mstub = (sql: string): unknown[][] => (/max\(r\.offense_month\)/.test(sql) ? [[2]] : /GROUP BY/.test(sql) ? [[2026, 1, 5], [2026, 2, 6]] : cstub(sql));
+  const mon = shadowAnswer("female murder victims nationally per month in 2026", { ...cdeps, execute: mstub } as unknown as ShadowDeps);
+  if (mon.kind === "shr") {
+    assert.deepEqual(mon.delivered.table.rows.map((r) => r[1]), [5, 6, null, null, null, null, null, null, null], JSON.stringify(mon.delivered.table.rows));
+    assert.ok(mon.delivered.text.some((t) => /^A blank month is one after the last month in which any agency filed/.test(t)), mon.delivered.text.join(" | "));
+  } else assert.fail(JSON.stringify(mon).slice(0, 300));
+  // An agency too, in the year still being filed (Jeff via the Engine, PR 364): Houston's months after its last filed month are blank, said; a complete past year is not.
+  const hou = shadowAnswer("murders in Houston per month in 2026 according to Homicide Reports", { ...cdeps, execute: mstub } as unknown as ShadowDeps);
+  if (hou.kind === "shr") {
+    assert.deepEqual(hou.delivered.table.rows.slice(0, 4).map((r) => r[1]), [5, 6, null, null], JSON.stringify(hou.delivered.table.rows));
+    assert.ok(hou.delivered.text.some((t) => /^A blank month is one after the last month in which Houston, Texas filed Homicide Reports\.$/.test(t)), hou.delivered.text.join(" | "));
+  } else assert.fail(JSON.stringify(hou).slice(0, 300));
+  const past = shadowAnswer("murders in Houston per month in 2024 according to Homicide Reports", { ...cdeps, execute: mstub } as unknown as ShadowDeps);
+  assert.ok(past.kind !== "shr" || !past.delivered.text.some((t) => /A blank month is one after the last month/.test(t)), "a complete past year keeps its real zeros");
   const ip = shadowAnswer("How have intimate partner homicides trended nationwide?", cdeps);
   assert.equal(ip.kind, "shr", JSON.stringify(ip).slice(0, 300));
   if (ip.kind === "shr") assert.ok(ip.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."));
