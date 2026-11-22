@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The shadow slice, question to delivered answer, for single-agency NIBRS counts on a pinned canonical build. SHADOW
  * ONLY: no route imports it, nothing here is deployed, and it reads the canonical parquet files read-only.
  *
@@ -1642,6 +1642,18 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
     const said = [ledger0.question, ...(flags(ledger0).readings ?? []).filter((r) => r.kind === "phrase").map((r) => r.from)].join(" ");
     const police = /\b(?:police|officers?|law\s+enforcement)\b/i.test(said), civilian = /\b(?:civilians?|private\s+citizens?|citizens?)\b/i.test(said);
     if (police !== civilian) sq.filters.push({ dim: "circumstance", codes: [police ? "81" : "80"] });
+  }
+  // Jeff 2026-11-22: the victims by sex, asked as a ratio of one sex to the other, are shown as both counts and the ratio.
+  const said = [ledger0.question, ...(flags(ledger0).readings ?? []).filter((r) => r.kind === "phrase").map((r) => r.from)].join(" ");
+  const SEXW = "(male|female|men|women)s?";
+  const ratioAsked = new RegExp(`\\bratio\\s+of\\s+${SEXW}\\s*(?:to|vs\\.?|versus|:)\\s*${SEXW}\\b|\\b${SEXW}[-\\s]*(?:to|vs\\.?|versus|:)[-\\s]*${SEXW}\\s+(?:(?:homicide|murder)\\s+)?(?:victims?\\s+)?ratios?\\b`, "i").exec(said);
+  if (ratioAsked) {
+    const w = ratioAsked.slice(1).filter(Boolean);
+    const first = /^(?:male|men)/i.test(w[0]) ? "male" : "female", second = /^(?:male|men)/i.test(w[1]) ? "male" : "female";
+    if (first === second || sq.unit !== "victims" || sq.breakdown?.dim !== "victim.sex" || sq.breakdown2 || sq.rolling)
+      return decline("unsupported_capability", "A ratio of male to female victims is available for homicide victims, for a place and a period, as a total or by year or month.");
+    sq.share = false; // the by-sex table carries a share by default; the ratio replaces it
+    sq.sexRatio = first === "male" ? "male_to_female" : "female_to_male";
   }
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
   if (a.kind === "shr" && detailEveryYear)

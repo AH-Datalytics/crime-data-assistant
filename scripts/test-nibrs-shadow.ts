@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The shadow slice (lib/nibrs-shadow) takes a question to an answer, a clarifying question or a decline as the decided
  * policy says, and its scoring (lib/answer-eval/shadow.ts) judges those outcomes. Offline: the DuckDB step is a stub
  * that returns rows shaped like the compiled query's, so this checks the pipeline and the delivered answer, never the
@@ -616,6 +616,20 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(every.delivered.text.includes("No years were given, so every year in the data is shown: 1985 through 2026."), JSON.stringify(every.delivered.text));
     const share = as(shadowAnswer("What percentage of murder victims in Houston were male in 2023?", ddeps), "shr");
     assert.ok(share.delivered.table.columns.some((c) => c.header === "Share (%)") && share.delivered.table.columns.some((c) => c.header === "Victim's sex"), JSON.stringify(share.delivered.table.columns));
+    // Jeff 2026-11-22: the male:female ratio of victims is one row per year: the male count, the female count, and male per female, with the unit in the title.
+    const sexStub = (sql: string): unknown[][] => {
+      const got = dstub(sql);
+      if (!/AS k0/.test(sql)) return got;
+      return got.map((r) => (r.length === 3 ? [r[0], r[1] === "W" ? "F" : "M", r[1] === "W" ? 3 : 6] : r));
+    };
+    for (const q of ["ratio of male to female homicide victims in Houston by year since 2010", "ratio of male:female homicide victims in Houston since 2010 by year", "male-to-female homicide victim ratio in Houston by year since 2010"]) {
+      const rr = as(shadowAnswer(q, { ...ddeps, execute: sexStub } as ShadowDeps), "shr");
+      assert.deepEqual(rr.delivered.table.columns.map((c) => c.header), ["Year", "Male", "Female", "Male per female"], `${q}: ${JSON.stringify(rr.delivered.table.columns)}`);
+      assert.deepEqual(rr.delivered.table.rows[0], ["2010", 6, 3, 2], `${q}: ${JSON.stringify(rr.delivered.table.rows[0])}`);
+      assert.match(rr.delivered.text[0], /male victims per female victim/i, rr.delivered.text[0]);
+    }
+    const rf = as(shadowAnswer("ratio of female to male homicide victims in Houston by year since 2010", { ...ddeps, execute: sexStub } as ShadowDeps), "shr");
+    assert.deepEqual([rf.delivered.table.columns[3].header, rf.delivered.table.rows[0][3]], ["Female per male", 0.5]);
     }
   }
   // Runner gate 2026-11-17: no year named is not "every year in the data" (the old decline stays); no place and "each year" asks the place, as before.
@@ -2845,9 +2859,9 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // Rolling 12 months from Homicide Reports (shared helper rolling.ts): a state's firearm murders, with no step left for a
 // year or a window the source can't give.
 {
-  const rstub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [2017, 2018, 2019, 2020].map((y) => [y, 10, ["ori9:A"]])
+  const sexStub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [2017, 2018, 2019, 2020].map((y) => [y, 10, ["ori9:A"]])
     : /state_crime|sum\(population\)/.test(sql) ? [] : /GROUP BY/.test(sql) ? [2017, 2018, 2019, 2020].flatMap((y) => Array.from({ length: 12 }, (_, m) => [y, m + 1, 2])) : []);
-  const rdeps2 = { ...deps, execute: rstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2020-12", crosswalk: "cw" },
+  const rdeps2 = { ...deps, execute: sexStub, shr: { root: "/shr", release: "shr-test", latestMonth: "2020-12", crosswalk: "cw" },
     historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
   const nc = shadowAnswer("North Carolina firearm homicides rolling over 12 months since 2018", rdeps2);
   assert.equal(nc.kind, "shr", JSON.stringify(nc).slice(0, 300));
@@ -2871,9 +2885,9 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 }
 // Jeff 2026-11-15: a Homicide Reports rate is per 100,000 people of the agencies that reported, one year or by year.
 {
-  const rstub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [[2023, 3, ["ori9:A", "ori9:B"]]] : /nation_crime|state_crime/.test(sql) ? []
+  const sexStub = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [[2023, 3, ["ori9:A", "ori9:B"]]] : /nation_crime|state_crime/.test(sql) ? []
     : /sum\(population\)/.test(sql) ? [[2_000_000]] : /shr_victim/.test(sql) ? [[100]] : []);
-  const rdeps3 = { ...deps, execute: rstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+  const rdeps3 = { ...deps, execute: sexStub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
     historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
   const pa = shadowAnswer("What is the firearm murder rate in Pennsylvania in 2023?", rdeps3);
   assert.equal(pa.kind, "shr", JSON.stringify(pa).slice(0, 300));

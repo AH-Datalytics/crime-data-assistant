@@ -276,6 +276,10 @@ const PHRASES: [RegExp, string][] = [
   [/\b(victim|offender)s?\s+(?:demographics|demographic\s+breakdown)\s+by\s+(race|sex|gender|ethnicity|age)\b/gi, "$1s by $2"],
   [/\b(?:the\s+)?racial\s+(?:breakdown|makeup|composition|distribution)\s+of\s+((?:[a-z]+\s+){0,3}?(?:victims|offenders))\b/gi, "$1 by race"],
   [/\b(murder|homicide|killing)s?\s+circumstances?\b/gi, "$1s by circumstance"],
+  // Jeff 2026-11-22: "ratio of male to female homicide victims" (also "male:female", "male-to-female victim ratio") is the victims by sex; the shadow
+  // (shrOutcome) shows them as the male count, the female count and the ratio.
+  [/\b(?:the\s+)?ratio\s+of\s+(?:male|female|men|women)s?\s*(?:to|vs\.?|versus|:)\s*(?:male|female|men|women)s?\s+((?:[a-z]+\s+){0,2}?(?:murder|homicide)\s+victims)\b/gi, "$1 by sex"],
+  [/\b(?:male|female|men|women)s?[-\s]*(?:to|vs\.?|versus|:)[-\s]*(?:male|female|men|women)s?\s+((?:(?:murder|homicide)\s+)?)victims?\s+ratios?\b/gi, "$1victims by sex"],
   // P162 (Jeff 2026-11-19): "what percentage of murder victims were female" is the victims by sex with each sex's share; the table
   // carries the asked share and the other. "...are in each race" is the same by race.
   [/\b(?:what\s+|how\s+much\s+)?(?:percentage|percent|share|proportion)\s+of\s+((?:[a-z]+\s+){0,2}?(?:murder|homicide)\s+(?:victims|offenders))\s+in\s+((?:[a-z.'-]+\s+){1,3}?)(?:were|are|was|is|have\s+been)\s+(?:male|female|men|women|males|females)\b/gi, "share of $1 by sex in $2"],
