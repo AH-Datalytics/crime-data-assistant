@@ -889,6 +889,10 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
   let years = false;
+  let placeDefaulted = false;
+  // Whether a question asks a breakdown: a ledger breakdown, or a person's attribute the reader moved out of the words ("arrests by age": people.by).
+  const yr = Number(deps.release.lastMonth.slice(0, 4));
+  const asksBreakdown = (q: string) => { const r = readQuestion(q, yr, deps.release.lastMonth); return r.ledger.parts.some((p) => p.clause === 0 && p.concept === "breakdown") || !!r.people?.by; };
   for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
     const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
@@ -897,6 +901,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     const more: ShadowOption[] = [];
     if (c.about === "which place") {
       option = find(/^The United States$/);
+      if (option) placeDefaulted = true;
       note = "No place was named, so the United States is shown.";
       more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
@@ -907,7 +912,11 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         try {
           // Built against the heavy-statement probe; a deferred (national) series is then built for real: P170's every year is an answer, not
           // an ask (coordinator 2026-11-22; every year nationally took 13-21 s with no cube).
-          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
+          // The ask's text is the ledger's, and the reader took a person's attribute ("by age") out of it: when the question as typed asks a breakdown the ask's text
+          // has lost, the every-year question is built from the typed one (with the place the default chose), so the answer keeps the breakdown by every year.
+          const typedBase = question.replace(/[?.!\s]+$/, "");
+          const base = asksBreakdown(question) && !asksBreakdown(c.question) ? `${typedBase}${placeDefaulted ? " in the United States" : ""}` : c.question.replace(/[?.!\s]+$/, "");
+          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${base} by year`, d), deps);
           if (o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
