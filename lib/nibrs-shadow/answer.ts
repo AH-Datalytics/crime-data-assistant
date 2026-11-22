@@ -57,7 +57,9 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrentClearance, answerStateClearanceSeries } from "./clearance-current";
+import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
+import { answerClearanceShare } from "./clearance-share";
+import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
@@ -951,8 +953,21 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
+/**
+ * P188 (Jeff 2026-11-21): a loose word read as the meaning he decided ("current" is the latest complete year, "up" is the trend over five
+ * years) is said in the answer: one note line for each, just before the source line, whichever source answered.
+ */
+function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
+  const del = (o as { delivered?: { text?: unknown } }).delivered;
+  if (!del || !Array.isArray(del.text)) return o;
+  const said = [...new Set((readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence))];
+  if (!said.length) return o;
+  const text = del.text as string[];
+  const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
+  return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
+}
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  const o = applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps);
+  const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
@@ -1690,8 +1705,6 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
 
 /** P13's sentence, as Current Trends and Historical say it. */
 const SAFEST_SENTENCE = "There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.";
-/** P18's sentence, as the clearance answer says it for a state. */
-const STATE_CLEARANCE_SENTENCE = "A clearance rate for every state at once isn't available. Ask for one state and one year, for example \"Texas murder clearance rate in 2024\".";
 const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 /**
  * The same months of each year (Jeff 2026-11-16, Q1): "Murders through April from 2017 to 2025", "homicides in the first 6 months of each
@@ -1850,11 +1863,6 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (ledger0.parts.some((p) => p.clause === 0 && p.concept === "explain") && ledger0.parts.some((p) => p.clause === 0 && p.concept === "measure"))
     return decline("explanation_requested", "The data shows how many crimes were reported; it can't say why they rose or fell.", { detail: "I report what NIBRS records; I can't explain causes." });
   if (/\b(?:safest|most\s+dangerous|least\s+safe|most\s+unsafe)\b/i.test(ledger0.question)) return decline("unsupported_capability", SAFEST_SENTENCE);
-  if (clause0("clearance").some((p) => p.value === "rate") && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "entity" && p.state !== "context")
-    // Only where the existing path would ask first: "by state" (no place), or a state with no period, for a Part I crime (a crime NIBRS alone
-    // records has its own, longer sentence, said once a period is given).
-    && clause0("list").some((p) => p.value === "list:state"))
-    return decline("not_recorded_in_nibrs", STATE_CLEARANCE_SENTENCE);
   const term = flags(ledger0).undefinedTerm;
   if (term) {
     // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
@@ -3104,6 +3112,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (rollingT && (plan.measures.length !== 1 || plan.transforms.length !== 1 || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
     || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month"))
     return decline("unsupported_capability", "This isn't available: rolling windows of a rate, a breakdown, or several crimes.");
+  // P173 (Jeff 2026-11-21): every state ranked by its clearance rate for one year, the offenses and agencies reporting beside each rate.
+  if (plan.transforms.length === 1 && plan.transforms[0].kind === "rank" && plan.transforms[0].by === "clearance_rate" && plan.geography.places[0].kind === "national"
+    && plan.groupings.length === 1 && plan.groupings[0].dimension === "geo.state" && plan.measures.length === 2)
+    return answerStateClearanceRanking(plan, plan.measures[0].id.split(".")[1], deps, statements, [], (why, detail) => decline("unsupported_capability", why, detail ? { detail } : undefined));
   if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison" && !(t.kind === "rank" && plan.geography.places[0].kind === "agency_set")))
     return decline("unsupported_capability", "This isn't available: rankings.");
   // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime; by category too (coordinator
@@ -3195,30 +3207,36 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports; this form of the question isn't available here." };
   } else if (stateMode && !deps.shr && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide_all|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports, which count the homicides agencies reported to the FBI. Homicide Reports aren't available here. NIBRS has its own counts when asked for by name." };
+  // P203 (Jeff 2026-11-21): what share of a crime's clearances (or offenses) were of one clearance type, for a state or the nation.
+  const clearanceShare = d.spec.type === "share" && stateMode && plan.geography.places.length === 1 && d.spec.population.length === 0 && d.spec.subset.length === 1
+    && d.spec.subset[0].startsWith("clearance:") && plan.transforms.length === 0 && !plan.defaults.some((x) => x.path === "unit");
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
-  if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
+  if (stateMode && !stateBreakdown && !clearanceShare && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
     return decline("unsupported_capability", "This isn't available: a state or national sum of several crimes, a breakdown, a change or a ranking.");
   const placesMode = !stateMode && (plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate"));
-  if (placesMode && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
+  // P194 (Jeff 2026-11-21): several named agencies' clearance by type is a row for each, never summed.
+  const multiClearance = placesMode && catG.length === 1 && catG[0].dimension === "offense.clearance_type" && plan.measures.length === 1
+    && plan.geography.places.length > 1 && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length && plan.geography.combine !== "combined";
+  if (placesMode && !multiClearance && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
     return decline("unsupported_capability", "This isn't available: several agencies or rates with several crimes, a breakdown, a change or rolling windows.");
   const [first, second, ...more] = plan.statistics;
   const counts = plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
-  if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
-    || (several && (catG.length || !counts)) || (combined && timeG.length && combined.label !== "drug crimes"))
+  if (!clearanceShare && (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
+    || (several && (catG.length || !counts)) || (combined && timeG.length && combined.label !== "drug crimes")))
     return decline("unsupported_capability", "This isn't available: this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share.");
 
   // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
   // with the same groupings and filters, as a second count. One agency only for now.
-  if (clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
+  if (!clearanceShare && clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
     // P171 (Jeff 2026-11-21): clearance by type for a state is the reporting agencies' sum (one clearance grouping); the nation
     // and the nation too (the runner timed it: 4.3 s for the nation in 2024).
     const stateClearance = stateMode && stateBreakdown && catG.some((g) => g.dimension.startsWith("offense.clearance_"))
       && (plan.geography.places[0].kind === "state" || plan.geography.places[0].kind === "national");
-    if ((stateMode && !stateClearance) || placesMode || cmpFlag || rollingT || several)
+    if ((stateMode && !stateClearance) || (placesMode && !multiClearance) || cmpFlag || rollingT || several)
       return decline("unsupported_capability", "This isn't available: clearance for a state, the nation or several agencies, for several crimes, or as a change or rolling windows.");
     plan.statistics.splice(1, 0, { kind: "incidents", as: `${plan.measures[0].as}_incidents`, measure: plan.measures[0].as });
   }
@@ -3454,9 +3472,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const by = checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => { const [who, attr] = g.dimension.split("."); return who === "offender" || who === "victim" || who === "arrestee" ? `${who} ${attr.replace(/_/g, " ")}` : attr.replace(/_/g, " "); }).join(" and ");
     return decline("unsupported_capability", heavyNationalSentence("property crime", by, lastYear));
   }
+  if (clearanceShare && d.spec.type === "share") return answerClearanceShare(checked, d.spec, period, yearSet, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
   const placesNote = sheriffNote(deps, checked.geography.places.flatMap((p) => (p.kind === "agency" ? [p.ori] : [])), ledger0.question);
+  if (multiClearance) return answerClearanceTypePlaces(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (placesMode) return answerPlaces(checked, period, deps, statements, [...notes0, ...(placesNote ? [placesNote] : [])], (why, detail) => decline("unsupported_capability", why, { detail }));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).
   const reported = (d: Delivered): Delivered => {
