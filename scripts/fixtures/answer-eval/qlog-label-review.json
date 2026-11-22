@@ -4406,15 +4406,15 @@
 }
 },
 "QL-ct-ab73c4c2c2": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires distinguishing Baltimore city and county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P182 (no crime named is violent plus property), P181 (no period is every year by year), P196 (Baltimore beside Washington, DC is the Baltimore police; the DC name needs no state offer): the counts per city per year, with the agency named in a note. By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"which Baltimore",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"rtci"
 ]
 }
 },
