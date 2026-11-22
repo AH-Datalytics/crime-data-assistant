@@ -1302,6 +1302,12 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // A question about the data itself ("Sources?", "what states are not represented?") is answered on its own, whatever came before.
   const about = coverageOf(followUp, deps);
   if (about) return { ...about, rewrite: followUp, rewriteKind: "new" };
+  // Follow-up #4 (coordinator 2026-11-22): a short reply to the app's own ask ("mass" after "which Springfield", "2", "for the us", "murder
+  // trends" after "which kind of crime") is that button pressed, or the asked-for part filled in.
+  if (!standsAlone(followUp)) {
+    const replied = replyToAsk(previous, followUp, deps);
+    if (replied) return replied;
+  }
   // A turn that stands on its own (its own crime and place, nothing pointing back) is a new question: answered as a
   // first question would be, the previous turn ignored (Jeff 2026-11-01). When the rules would have read it as a
   // follow-up meaning something else, that reading is offered as a button, run only when chosen.
@@ -1402,6 +1408,73 @@ function carryOver(previous: string, followUp: string, deps: ShadowDeps): Follow
   const o = shadowAnswer(q, deps);
   if (!ANSWER_KINDS.includes(o.kind)) return null;
   return { ...carriedOver(o, what, followUp), rewrite: q, rewriteKind: "new" };
+}
+const REPLY_FILLER = /\b(?:please|pls|thanks?|thank you|great|ok(?:ay)?|yes|yeah|sure|is good|is fine|works|the|one|option|number|choice|i want|i meant?|just|go with|lets do|let's do)\b/g;
+const ORDINALS = ["first", "second", "third", "fourth", "fifth"];
+/**
+ * Follow-up #4 (coordinator 2026-11-22, 153 real turns typed after an ask): when the previous turn was the app's ask, a short reply is read
+ * as the answer to it. A choice named or numbered ("Massachusetts", "violent", "2", "the first one") is that button pressed. Otherwise the
+ * part that was asked for is filled in from the reply: a place ("In Tucson Arizona", "for the us"), a period ("2024 is good"), or a crime
+ * ("murder trends" after "Tacoma"). A reply that adds anything else, or leads nowhere new, goes on as before.
+ */
+function replyToAsk(previous: string, followUp: string, deps: ShadowDeps): FollowUpOutcome | null {
+  if (deps.checkingOffer || followUp.trim().split(/\s+/).length > 6) return null;
+  // Whether the previous turn was an ask needs no data: read it with an executor that returns nothing, so an answered previous
+  // question is not run again just to find that out.
+  let asked: ReturnType<typeof shadowAnswer>;
+  try { asked = shadowAnswer(previous, { ...deps, execute: () => [] }); } catch { return null; }
+  if (asked.kind !== "clarify" || !asked.question.trim()) return null;
+  // It was an ask: read it again with the real executor, since its buttons carry the continuations that the data builds.
+  asked = shadowAnswer(previous, deps);
+  if (asked.kind !== "clarify" || !asked.question.trim()) return null;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(REPLY_FILLER, " ").replace(/\s+/g, " ").trim();
+  const t = norm(followUp);
+  const pressable = asked.options.filter((o) => !o.entry && !o.otherSource && (o.question || "continuation" in o));
+  const press = (o: ShadowOption): FollowUpOutcome => {
+    // Which of two places of one name ("which Springfield"): the place chosen stands where the name was typed.
+    const base = asked.question.trim().replace(/[?.!]+$/, "");
+    const name = /^which /.test(asked.about) ? asked.about.slice(6) : "";
+    const at = name && o.label.toLowerCase().startsWith(name.toLowerCase()) ? new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i") : null;
+    const q = o.question ?? (at && at.test(base) ? base.replace(at, o.label) : `${base}, ${o.label}`);
+    // Typed as a question, the choice gets the defaults a first question gets (P180-P182); a button built inside the ask doesn't, so it is
+    // the fallback.
+    const typed = shadowAnswer(q, deps);
+    const out = o.question || ANSWER_KINDS.includes(typed.kind) ? typed : o.continuation!;
+    return { ...out, rewrite: q, rewriteKind: "new" } as FollowUpOutcome;
+  };
+  // A choice by number or order.
+  const n = /^#?(\d)$/.test(t) ? Number(t.replace("#", "")) : ORDINALS.indexOf(t.replace(/^(\d)(?:st|nd|rd|th)$/, (_, d) => ORDINALS[Number(d) - 1] ?? "")) + 1;
+  if (n >= 1 && n <= asked.options.length) { const o = asked.options[n - 1]; return pressable.includes(o) ? press(o) : null; }
+  // A choice by name: every word typed starts a word of exactly one button's label.
+  const words = t.split(" ").filter((w) => w.length >= 2);
+  if (words.length) {
+    const hits = pressable.filter((o) => { const lw = norm(o.label).split(" "); return words.every((w) => lw.some((l) => l === w || (w.length >= 3 && l.startsWith(w)))); });
+    if (hits.length === 1) return press(hits[0]);
+    if (hits.length > 1) return null;
+  }
+  // The part asked for, filled in from the reply; never a reply that points back or compares ("Compare this to Raleigh", "Now give me Dallas").
+  const reply = followUp.replace(/^\s*(?:what|how)\s+about\s+/i, "");
+  if (pointsBack(reply) || /\b(?:compar\w*|vs\.?|versus|against|now|instead)\b/i.test(reply)) return null;
+  const year = Number(deps.release.lastMonth.slice(0, 4));
+  const read = (q: string) => readQuestion(q, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  const mine = read(followUp), has = (c: string) => mine.some((p) => p.concept === c);
+  const base = asked.question.trim().replace(/[?.!]+$/, "");
+  const bare = (s: string) => s.trim().replace(/^(?:in|for|across|from|during)\s+/i, "");
+  let q: string | null = null;
+  if (asked.about === "which place" && !has("measure")) {
+    const place = mine.find((p) => p.concept === "place");
+    q = NATIONAL_WORDS.test(followUp) || /\b(?:the (?:us|whole country|country)|america)\b/i.test(followUp) ? `${base} nationally` : place ? `${base} in ${bare(place.text)}` : null;
+  } else if (asked.about === "which period" && !has("measure")) {
+    const period = mine.find((p) => p.concept === "period");
+    q = period ? `${base} ${period.text.trim()}` : null;
+  } else if (asked.about === "which kind of crime" && has("measure") && !has("place")) {
+    const place = read(asked.question).find((p) => p.concept === "place");
+    q = place ? `${followUp.trim().replace(/[?.!]+$/, "")} in ${bare(place.text)}` : null;
+  }
+  if (!q) return null;
+  const o = shadowAnswer(q, deps);
+  if (o.kind === "decline" || (o.kind === "clarify" && o.about === asked.about)) return null;
+  return { ...o, rewrite: q, rewriteKind: "new" };
 }
 /** The answer with a note after its title saying what came from the last question, and a button for the question as typed. */
 function carriedOver(o: ShadowOutcome, what: ("place" | "period")[], typed: string): ShadowOutcome {
