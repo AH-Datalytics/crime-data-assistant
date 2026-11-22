@@ -1890,7 +1890,8 @@ assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_r
     assert.deepEqual(by.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], q);
     // (2024 is 34.5: the stub's Austin did not report June 2024, so its other months are summed without it.)
     assert.deepEqual(by.delivered.table.rows.map((r) => r[1]), [34.6, 34.5, 34.6], JSON.stringify(by.delivered.table.rows));
-    assert.ok(/^2023 to 2025 Murders Cleared \(%\) by Year, Texas$/.test(by.delivered.text[0]), by.delivered.text[0]);
+    // P159's title shape: place, what is counted, the series, the timeframe.
+    assert.equal(by.delivered.text[0], "Texas Murders Cleared (%) Per Year, 2023-2025");
   }
   const early = as(ask("Show the burglary clearance rate in Texas since 2000"), "answer");
   assert.ok(early.delivered.text.includes("NIBRS state figures start in 2017; 2000 through 2016 are outside them."), JSON.stringify(early.delivered.text));
