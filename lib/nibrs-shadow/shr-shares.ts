@@ -156,14 +156,15 @@ export function shrCityShareQuestion(question: string, build: ShrBuild): ShrRank
   if (years.length !== 1 || years[0] < SHR_FIRST_YEAR || years[0] > latest || (years[0] === latest && !build.latestMonth.endsWith("-12"))) return null;
   const min = /\bmin(?:imum)?\.?\s+(?:of\s+)?(\d+)\s+(?:murders?|homicides?|victims?)\b|\bat\s+least\s+(\d+)\s+(?:murders?|homicides?|victims?)\b/i.exec(q);
   const setBy = /\b(?:the\s+)?(\d+)\s+cities\s+with\s+the\s+most\s+(?:murders?|homicides?)\b/i.exec(q);
-  if (!min && !setBy) return null;
+  // Neither bound named: the cities of 250,000 or more, as for "all cities" (P128; Jeff 2026-11-22), the floor in the title and a note.
+  const defaultFloor = !min && !setBy;
   const limitM = /\b(?:top|which|the)\s+(\d+)\s+cities\b/i.exec(q);
   const places = readQuestion(question, latest, build.latestMonth).ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
   if (places.length) return null;
   const measure = /\bhomicides?\b/i.test(q) && !/\bmurders?\b/i.test(q) ? "homicide" : "murder";
   const year = years[0];
   return { measure, filters: [{ dim: "weapon", codes: FIREARM_CODES }], share: true, from: `${year}-01`, to: `${year}-12`, direction: /\b(?:lowest|fewest|bottom|least)\b/i.test(q) ? "bottom" : "top",
-    limit: setBy ? null : limitM ? Number(limitM[1]) : null, minPopulation: null, ...(min ? { minVictims: Number(min[1] ?? min[2]) } : {}), ...(setBy ? { setByVictims: Number(setBy[1]) } : {}) };
+    limit: setBy ? null : limitM ? Number(limitM[1]) : null, minPopulation: defaultFloor ? 250000 : null, ...(defaultFloor ? { floorSaid: true } : {}), ...(min ? { minVictims: Number(min[1] ?? min[2]) } : {}), ...(setBy ? { setByVictims: Number(setBy[1]) } : {}) };
 }
 
 /** The question for the nation or a state, its period as a row per year (several years, or none named: every year the source has), or null. */

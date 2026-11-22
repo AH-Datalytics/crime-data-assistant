@@ -2665,8 +2665,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const top = shadowAnswer("Give me the share of murders committed via firearm in 2024 in the 30 cities with the most murders that year", rdeps) as unknown as typeof mn;
     assert.equal(top.kind, "shr", JSON.stringify(top).slice(0, 300));
     assert.deepEqual(top.delivered.table.rows, [["HOUSTON, TX", 300, 80], ["DALLAS, TX", 100, 90]], "the most murders first, each with its share");
-    // Neither bound named: not read here (no decided floor for bare "cities").
-    assert.notEqual((shadowAnswer("Cities with highest share of murders via firearm in 2024", rdeps) as { kind: string }).kind, "shr");
+    // Neither bound named: the cities of 250,000 or more (Jeff 2026-11-22), the floor in the title and a note (QL-shr-5bbb3b1cc3).
+    const bare = shadowAnswer("Cities with highest share of murders via firearm in 2024", rdeps) as unknown as typeof mn;
+    assert.equal(bare.kind, "shr", JSON.stringify(bare).slice(0, 300));
+    assert.deepEqual(bare.delivered.table.rows, [["DALLAS, TX", 90], ["HOUSTON, TX", 80]]);
+    assert.ok(/Population 250,000 or More/.test(bare.delivered.text[0]) && bare.delivered.text.includes("No city size was named, so the cities of 250,000 or more are ranked."), JSON.stringify(bare.delivered.text));
   }
   // Without a release it stays Homicide Reports' (the tab has them), as before.
   const old = shadowAnswer("Big cities with highest share of murders via firearm in 2024", deps);

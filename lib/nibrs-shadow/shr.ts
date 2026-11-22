@@ -585,6 +585,8 @@ export function filterWords(f: ShrFilter): string {
 export type ShrRanking = { measure: "murder" | "homicide" | "homicide_all"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number | null; minPopulation: number | null;
   /** Only cities with at least this many of the period's murder victims are ranked ("min 30 murders"). */
   minVictims?: number;
+  /** The population floor was not asked for: say that cities of this size are ranked. */
+  floorSaid?: boolean;
   /** The set is the N cities with the most murder victims, shown with their share (a count first, then the share of each). */
   setByVictims?: number };
 
@@ -661,6 +663,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
     : rk.measure === "homicide_all" ? "All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides (a felon killed by police or by a private citizen)."
     : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.");
   if (rk.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
+  if (rk.floorSaid && rk.minPopulation) text.push(`No city size was named, so the cities of ${fmt(rk.minPopulation)} or more are ranked.`);
   if (rk.minVictims) text.push(`Only cities with at least ${rk.minVictims} murder victims in the period are ranked.`);
   if (rk.share) text.push("Share = the city's victims with this detail out of all its murder victims in the period.");
   text.push(SHR_SOURCE);
