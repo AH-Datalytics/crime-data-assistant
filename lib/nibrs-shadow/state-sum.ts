@@ -83,10 +83,9 @@ export function categorySumsFromGrid(rows: unknown[][], everySet: string[], head
 const ONCE_LIMIT = 40_000;
 /** Each agency's most recent FBI population in the build (P90). */
 export function currentPopulationSql(root: string, oris: string[]): string {
-  // P184: the latest population above zero (a zero is "none held": the Crime Index's takes its place below).
   return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
     FROM read_parquet('${root.replace(/'/g, "''")}/agency/data.parquet'), unnest(by_year) AS t(u)
-    WHERE ${oriIn("ori", oris)} AND u.population > 0 GROUP BY ori`;
+    WHERE ${oriIn("ori", oris)} AND u.population IS NOT NULL GROUP BY ori`;
 }
 
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
@@ -126,17 +125,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const inYear = new Map<number, Set<string>>(years.map((y) => [y, new Set<string>()]));
   for (const r of header) { inYear.get(Number(r[1]))?.add(String(r[0])); pop.set(`${r[0]}|${r[1]}`, r[2] === null ? null : Number(r[2])); }
   const oris = [...new Set(header.map((r) => String(r[0])))];
+  // P184 (Jeff 2026-11-21, second decision): each agency's own NIBRS population only. A zero adds 0 people and its crimes stay; the FBI gives zero
+  // to agencies whose people another agency already counts (a Crime Index fill counted them twice: Pennsylvania's 2024 sum reached 127% of the state).
   if (!oris.length) return decline(`No agency in ${where} has a header in the data for ${periodWords(period.from, period.to)}.`);
-  // P184 (Jeff 2026-11-21): an agency's own NIBRS population where it is above zero; where NIBRS holds zero or none, the Crime Index's population
-  // of that agency and year (the 2024 file holds a zero for 150 agencies that have one: county and state agencies, 6.4 million people).
-  if (deps.historical) {
-    const zero = [...new Set([...pop.entries()].filter(([, v]) => !v).map(([k]) => k.split("|")[0]))];
-    if (zero.length) {
-      const fill = deps.execute(`SELECT ori, year, population FROM read_parquet('${deps.historical.root.replace(/'/g, "''")}/agency_crime.parquet')
-        WHERE ${oriIn("ori", zero)} AND year IN (${years.map(Number).join(", ")}) AND population > 0`);
-      for (const r of fill) { const k = `${r[0]}|${r[1]}`; if (pop.has(k) && !pop.get(k)) pop.set(k, Number(r[2])); }
-    }
-  }
   const ciPop: Record<number, number> = {};
   for (const y of years) { const p = srsPopulation(place.kind === "national" ? { kind: "national" } : { kind: "state", code: (place as { code: string }).code }, y); if (!p) return decline(`The Crime Index has no ${y} population for ${where}, so coverage cannot be stated.`); ciPop[y] = p; }
 
@@ -226,11 +217,6 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, every: ev };
   });
   const current = new Map(everySet.length ? deps.execute(currentPopulationSql(deps.target.root, everySet)).map((r) => [String(r[0]), Number(r[1])]) : []);
-  if (deps.historical) {
-    const none = everySet.filter((o) => !current.get(o));
-    if (none.length) for (const r of deps.execute(`SELECT ori, arg_max(population, year) FROM read_parquet('${deps.historical.root.replace(/'/g, "''")}/agency_crime.parquet')
-      WHERE ${oriIn("ori", none)} AND population > 0 GROUP BY ori`)) current.set(String(r[0]), Number(r[1]));
-  }
   const everyCurrentPopulation = { sum: everySet.reduce((a, o) => a + (current.get(o) ?? 0), 0), missing: everySet.filter((o) => !current.has(o)).length };
   const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop, everyCurrentPopulation };
 

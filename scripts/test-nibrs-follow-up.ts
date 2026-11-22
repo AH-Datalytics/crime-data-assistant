@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { deterministicRewriter as R, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
-import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 
@@ -216,6 +216,13 @@ const before = ran, b = shadowFollowUp(P, "why did it go up?", deps);
 assert.equal(b.kind, "clarify");
 assert.equal(b.rewrite, null);
 assert.equal(ran, before, "an ask with no options runs nothing");
+
+// The same question sent again is a first question (follow-ups #5): its own answer or ask, never "what does this change".
+{
+  const again = shadowFollowUp("violent crime counts by city in 2025", "Violent crime counts by city in 2025?", deps);
+  assert.equal(again.rewriteKind, "new");
+  assert.deepEqual({ ...again, rewrite: undefined, rewriteKind: undefined }, { ...shadowAnswer("Violent crime counts by city in 2025?", deps), rewrite: undefined, rewriteKind: undefined });
+}
 
 // A verdict is not given (Jeff 2026-11-18): "Is it getting better?" is declined with one sentence; the offer is the latest complete year against
 // the year before, for the previous question's one crime and place (a stub that holds no data offers nothing: an offer must run).

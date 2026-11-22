@@ -34,8 +34,43 @@ function monthsOf(from: string, to: string): string[] {
   return out;
 }
 
+/**
+ * `reported` (P172, Jeff 2026-11-21: "the agencies that reported cleared X% of murders"): a completed year's clearance rate for a state or the
+ * nation, over every agency that reported (the cleared offenses over the offenses of the months each reported), instead of the Consistent
+ * Reporting Agencies of the current year's rate.
+ */
+/**
+ * A state's clearance rate for several completed years (P172): each year's rate over the agencies that reported that year, one row a year,
+ * every figure the single-year answer's own. A year with no rate is a blank row, never a zero.
+ */
+export function answerStateClearanceSeries(plan: NibrsPlan, years: number[], crime: string, deps: ShadowDeps, statements: AnswerStatement[],
+  readings: string[], decline: Decline, note: string | null): ShadowOutcome {
+  const stat = plan.statistics[0];
+  const words = HISTORICAL_MEASURE[crime]?.words ?? crime.replace(/_/g, " ");
+  const place = plan.geography.places[0];
+  const Where = place.kind === "state" ? stateName(place.code) : "United States";
+  const rows: { key: string; value: number | null; status: string }[] = [];
+  let first: ShadowOutcome | null = null, lastSql = "";
+  for (const y of years) {
+    const o = answerCurrentClearance({ ...plan, groupings: [] }, { from: `${y}-01`, to: `${y}-12` }, crime, deps, statements, readings, decline, true);
+    const m = o.kind === "answer" ? /cleared ([\d.]+)% of/.exec(o.delivered.text[0]) : null;
+    if (!m) { first ??= o; rows.push({ key: String(y), value: null, status: "UNAVAILABLE" }); continue; }
+    rows.push({ key: String(y), value: Number(m[1]), status: "VALUE" });
+    if (o.kind === "answer") lastSql = o.sql;
+  }
+  if (!rows.some((r) => r.value !== null)) return first ?? decline(`No clearance rate is given: no ${words} were reported.`);
+  const span = years.length > 1 ? `${years[0]} to ${years[years.length - 1]}` : String(years[0]);
+  const title = `${span} ${words[0].toUpperCase()}${words.slice(1)} Cleared (%) by Year, ${Where}`;
+  const lines = [title, "Each year's rate is the offenses cleared over the offenses reported, summed over the agencies that reported that year.", "Includes all agencies.", ...(note ? [note] : [])];
+  const plan2: NibrsPlan = { ...plan, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] };
+  const delivered = deliverTable(plan2, { dimension: "time.year", header: "Year" }, { as: stat.as, header: `${words[0].toUpperCase()}${words.slice(1)} cleared (%)` }, rows, lines, statements, deps.release.id, readings);
+  if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
+  const text = [...lines, "Source: NIBRS."];
+  return { kind: "answer", plan: plan2, period: { from: `${years[0]}-01`, to: `${years[years.length - 1]}-12` }, sql: lastSql, delivered: { ...delivered, text, headline: text[0] } };
+}
+
 export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; to: string }, crime: string, deps: ShadowDeps, statements: AnswerStatement[],
-  readings: string[], decline: Decline): ShadowOutcome {
+  readings: string[], decline: Decline, reported = false): ShadowOutcome {
   const place = plan.geography.places[0];
   const all = plan.measures.find((m) => !m.as.endsWith("_cleared")), cleared = plan.measures.find((m) => m.as.endsWith("_cleared"));
   const stat = plan.statistics[0];
@@ -98,8 +133,16 @@ export function answerCurrentClearance(plan: NibrsPlan, period: { from: string; 
     return deliver(c.sum, a.sum, [`${agencySubject(place.label, place.ori).text} cleared ${rateOf(c.sum, a.sum)}% of the ${words} reported in ${when}.`]);
   }
 
+  // A completed year for a state or the nation (P172): every agency that reported at least one month, the same months for both figures.
+  if (reported) {
+    const every = oris.filter((o) => withHeader.has(o) && (gAll.get(o)?.rep ?? 0) > 0 && gCleared.get(o)?.rep === gAll.get(o)?.rep);
+    if (!every.length) return decline(`No agency in ${where} reported crimes in ${when}.`);
+    const d = every.reduce((n, o) => n + gAll.get(o)!.sum, 0), c = every.reduce((n, o) => n + gCleared.get(o)!.sum, 0);
+    if (!d) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
+    return deliver(c, d, [`${place.kind === "national" ? "The United States" : Where} cleared ${rateOf(c, d)}% of the ${words} reported in ${when}, summed over the ${fmt(every.length)} agencies that reported.`, "Includes all agencies."]);
+  }
   // A state or the nation: the Consistent Reporting Agencies, one set for both figures.
-  const set = oris.filter((o) => withHeader.has(o) && gAll.get(o)?.val === gAll.get(o)?.months && gAll.get(o)!.months === span0 && gCleared.get(o)?.rep === span0);
+  const set =oris.filter((o) => withHeader.has(o) && gAll.get(o)?.val === gAll.get(o)?.months && gAll.get(o)!.months === span0 && gCleared.get(o)?.rep === span0);
   if (!set.length) return decline(`No agency reported crimes in every month ${span}, so there are no Consistent Reporting Agencies for ${Where}.`);
   const den = set.reduce((n, o) => n + gAll.get(o)!.sum, 0), num = set.reduce((n, o) => n + gCleared.get(o)!.sum, 0);
   if (!den) return decline(`No clearance rate is given: no ${words} were reported in ${when}.`);
