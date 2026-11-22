@@ -328,6 +328,13 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         const n = Number(hit?.[2] ?? 0), den = total(y);
         rows.push([...(yearG ? [String(y)] : []), k, n, "VALUE", ...(incOut ? [Number(hit?.[3] ?? 0), "VALUE"] : []), ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);
       }
+      // P192: a clearance-type table lists every type even when none occurred: a placeholder row for a year with agencies counted and no type
+      // gives the table its zero rows (the delivery drops the placeholder itself).
+      if (g === "offense.clearance_type") for (const y of keptYears) {
+        const b = byYear.find((x) => x.year === y)!;
+        if ((every ? b.every.agencies : b.agencies) > 0 && !rows.some((r) => !yearG || r[0] === String(y)))
+          rows.push([...(yearG ? [String(y)] : []), NO_CATEGORY, 0, "VALUE", ...(incOut ? [0, "VALUE"] : []), ...(share ? [null, "UNAVAILABLE"] : [])]);
+      }
       const columns = [...(yearG ? ["period"] : []), g, count.as, `${count.as}_status`, ...(incOut ? [incOut.as, `${incOut.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
       const d = deliverRows(p, period, period.to, columns, rows, statements, deps.release.id, readings);
       // The state sum's coverage, in its words (Jeff 2026-11-01), after the headline.
