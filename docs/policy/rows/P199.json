@@ -1,0 +1,12 @@
+{
+  "id": "P199",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Hillsboro, Oregon sworn officers per 1,000 by year\": a year whose published officers-per-100,000 is blank in the Crime Index build while the officer count and the population are there (Hillsboro 1995: 48 officers, 45,262 people)",
+  "what the app does today": "The engine computes the rate from the counts (48 / 45,262 x 1,000 = 1.06); the blind checker scaled the published rate, which is blank, and had nothing (loop 2 finding 4).",
+  "proposed behavior": "A staffing rate (officers, civilians or all employees per 1,000, per 100,000 or another base) is the count over the population, scaled to the base asked for, computed from the counts whenever both are there, including a year whose published rate is blank. It is blank only when the count or the population is missing. The same rule as a crime rate. Checkers compute it from the counts too.",
+  "exact default or choices offered": "Count / population x base; blank only when either is missing.",
+  "why": "Jeff 2026-11-22 (through the coordinator), loop 2 finding 4: compute officers per 1,000 from the counts when the published rate is blank.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "Blind-check scripts (staffing rates); scripts/test-nibrs-shadow.ts staffing tests."
+}

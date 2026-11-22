@@ -46,7 +46,8 @@ import { accountNibrsRequest } from "../nibrs-request-accounting";
 import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
 import { isCommonEnglishWord } from "../english-common-words";
 
-export type Reading = { kind: "spelling" | "phrase" | "period"; from: string; to: string };
+/** `meaning`: a loose word read as the meaning Jeff decided (P188); the answer says it ("Current is read as the latest complete year, 2025."). */
+export type Reading = { kind: "spelling" | "phrase" | "period" | "meaning"; from: string; to: string };
 export type Composite = "firearm" | "knife";
 export type Span = { from: string; to: string };
 /** What makes a question about all the cities more than a plain count or rate of one crime for one year (see the reader's all-cities rule). */
@@ -218,6 +219,10 @@ const PHRASES: [RegExp, string][] = [
   [/\bretail\s+thefts?\b/gi, "shoplifting"],
   [/\blarcen(?:y|ies)\s+(?:from|of)\s+(?:an?\s+)?(?:auto|autos|motor\s+vehicles?|vehicles?|cars?)\b/gi, "theft from motor vehicle"],
   [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
+  // P193 (census 2026-11-21, real asks): "by year and clearance type" is the clearance type by year (the shape that is built), with "per" for "by".
+  [/\b(?:per|by)\s+(year|month)\s+(?:and|&)\s+(?:by\s+)?clearance\s+type\b/gi, "by type by $1"],
+  // "Murders cleared by clearance type" is the murder clearances by type.
+  [/\bcleared\s+by\s+(?:the\s+)?(?:clearance\s+)?type\b/gi, "clearances by type"],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
@@ -240,6 +245,8 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P173 (Jeff 2026-11-21): "murder clearance rates by state" is every state ranked by its clearance rate.
+  [/\b((?:[a-z]+\s+){0,2}?)clearance\s+rates?\s+(?:by|per|for\s+(?:each|every)|in\s+each)\s+state\b/gi, "rank states by $1clearance rate"],
   // P163 (Jeff 2026-11-19): justifiable homicides "by police vs civilians" are the two kinds of justifiable homicide side by side (the
   // circumstance breakdown); "by police" alone (or "by civilians" alone) is read from the question text where the answer is made.
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
@@ -251,6 +258,13 @@ const PHRASES: [RegExp, string][] = [
   [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
   [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
   [/\s+analysis\s+for\s+/gi, " in "],
+  // P191: "for the entire US", "across the whole country" are the nation ("nationwide").
+  [/\b(?:for|in|across|throughout|of)\s+(?:the\s+)?(?:entire|whole|full)\s+(?:u\.?s\.?a?\.?|united\s+states(?:\s+of\s+america)?|country|nation)(?=[\s,.?!]|$)/gi, "nationwide"],
+  // P191 (Jeff 2026-11-21, reader class): "cleared by arrest versus exceptional means" is the clearance types (arrest, each exceptional type,
+  // uncleared); "exceptional clearances by type" is the exceptional types; "exceptional means" alone is the exception.
+  [/,?\s*\b(?:were\s+|was\s+)?cleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:exceptional\s+means|exception|exceptional\s+clearance)\b/gi, " by clearance type"],
+  [/\bexceptional\s+((?:[a-z]+\s+){0,1}?)clearances?\b/gi, "$1cleared by exception"],
+  [/(\bcleared\s+by\s+exception\b[^?.]*?)\b(?:per|by)\s+year\s+and\s+type\b/gi, "$1by type by year"],
   // P170 (Jeff 2026-11-19): intimate partner violence and family violence are domestic violence by that kind of relationship.
   [/\b(?:intimate[-\s]partner\s+violence|ipv)\b/gi, "domestic violence by intimate partners"],
   [/\bfamily\s+violence\b/gi, "domestic violence by family members"],
@@ -545,17 +559,20 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
+  // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
+  // since the look-ahead would fail in PHRASES).
+  dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
   // answer, not a rewrite, so not here.)
-  const loose = (re: RegExp, repl: string, to: string) => { text = text.replace(re, (m) => { readings.push({ kind: "phrase", from: m.trim(), to }); return repl; }); };
+  const loose = (re: RegExp, repl: string, to: string, kind: Reading["kind"] = "meaning") => { text = text.replace(re, (m) => { readings.push({ kind, from: m.trim(), to }); return repl; }); };
   const endWith = (add: string) => { text = text.replace(/\s*([?.!]*)\s*$/, ` ${add}$1`); };
-  const CRIME_WORD = /\b(?:crimes?|homicides?|murders?|robber\w*|burglar\w*|assaults?|rapes?|thefts?|larcen\w*|shootings?|violent|property|arsons?)\b/i;
+  const CRIME_WORD = /\b(?:crimes?|homicides?|murders?|robber\w*|burglar\w*|assaults?|rapes?|thefts?|larcen\w*|shootings?|violent|property|arsons?|shoplift\w*|carjack\w*|vandal\w*|fraud\w*|drug\w*|kidnap\w*|stolen|offen[cs]es?|incidents?|arrests?|victims?|firearm\w*|gun\w*|weapon\w*|trafficking|stalking|extortion|embezzl\w*|counterfeit\w*|trespass\w*)\b/i;
   const TIMEFRAME = /\b(?:19|20)\d{2}\b|\b(?:since|from|between|through|during|until|ytd|today|now|present|last|past|previous|this|so\s+far|to\s+date|recent\w*|over\s+time)\b/i;
   const GRAIN = /\b(?:by|per|each|every)\s+(?:year|month|quarter|week|day)s?\b|\b(?:annual\w*|monthly|quarterly|yearly|weekly|daily)\b/i;
   loose(/\bthe\s+rest\s+of\s+the\s+(?:nation|country|U\.?S\.?A?|United\s+States)\b/gi, "the nation", "the nation");
-  loose(/\boverall\s+(?=(?:violent|property)\b)/gi, "", "left out, since the crime is named");
+  loose(/\boverall\s+(?=(?:violent|property)\b)/gi, "", "left out, since the crime is named", "phrase");
   loose(/\boverall\b(?=\s+(?:and|&)\s+violent\b)/gi, "violent crime and property crime", "violent crime plus property crime");
   // Not a clearance question (P57's current year) and not a trend ("current murder trends" is a series, never one year).
   // "Right now" and "these days" are "current" (Jeff 2026-11-21).
@@ -563,7 +580,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   if (!/\bclearance|cleared|trend\w*\b/i.test(text) && !TIMEFRAME.test(text.replace(NOW_WORDS, ""))) {
     const before = text;
     text = text.replace(/\b(?:the\s+)?(?:current(?:ly)?|right\s+now|these\s+days)\b(?!\s*[-\s]?(?:year|month|date|day|week|population|trends?|data|situation|status|events?|officers?|staffing|rolling))\s*/gi, (m) => {
-      readings.push({ kind: "phrase", from: m.trim(), to: `the latest complete year, ${currentYear - 1}` });
+      readings.push({ kind: "meaning", from: m.trim(), to: `the latest complete year, ${currentYear - 1}` });
       return "";
     });
     if (text !== before) endWith(`in ${currentYear - 1}`);
@@ -575,7 +592,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     const [lead, x, w, rest]: string[] = t1 ? [t1[1], t1[2], t1[3], t1[4] ?? ""] : t2 ? [t2[1], "", t2[2], t2[3] ?? ""] : ["", "", "", ""];
     // Not with peers ("similar cities" stays the ask from PR 295).
     if (w && !/\bhow\b/i.test(`${lead}${x}`) && CRIME_WORD.test(`${lead}${x}`) && !/\b(?:similar|peers?|comparable)\b/i.test(rest)) {
-      readings.push({ kind: "phrase", from: w, to: TIMEFRAME.test(rest) ? "its trend by year over the period asked" : "its trend by year over the past five years" });
+      readings.push({ kind: "meaning", from: w, to: TIMEFRAME.test(rest) ? "its trend by year over the period asked" : "its trend by year over the past five years" });
       text = `${lead}${x}${rest}`.replace(/\s+/g, " ").trim();
       if (!GRAIN.test(text)) endWith("by year");
       if (!TIMEFRAME.test(text)) endWith("over the past 5 years");
@@ -625,7 +642,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
       if (/\brate\b/i.test(m) && !rateBefore) return m;
       // A national total against a rate asked mixes units: left as written (Codex comparison confirmation 01).
       if (/\b(?:total|figures?)\b/i.test(m) && rateBefore) return m;
-      readings.push({ kind: "phrase", from: m, to: "and the United States" });
+      // "The national average" is the nation's figures beside the place's (Jeff 2026-11-21): said in a note.
+      readings.push(/\baverage\b/i.test(m) ? { kind: "meaning", from: m.replace(/^and\s+(?:to\s+)?/i, ""), to: "the United States, the place's figures beside the nation's" } : { kind: "phrase", from: m, to: "and the United States" });
       return "and the United States";
     });
   let composite: Composite | null = null;
@@ -885,4 +903,8 @@ export const FORECAST_TEXT = /^(?:\s|\b(?:will|would|can|could|you|please|what|b
 export const COURT_TEXT = /^(?:\s|\b(?:led|lead|leads|resulted|result|results|went|go|goes|going|gone|sent|were|was|to|in|a|an|the|trial|trials|sentenc\w*|acquit\w*|plea\w*|guilty|conviction\w*|convicted|charged|charges|filed|brought|people|for|with)\b)+$/i;
 
 /** How a rewrite is disclosed in an answer: only spellings change what the user typed into another word. */
-export const readingSentence = (r: Reading) => `Read "${r.from}" as ${r.to}.`;
+export const readingSentence = (r: Reading) => {
+  if (r.kind !== "meaning") return `Read "${r.from}" as ${r.to}.`;
+  const from = r.from.replace(/^(?:and\s+(?:to\s+)?)?(?:the\s+)?/i, "");
+  return `${from[0].toUpperCase()}${from.slice(1)} is read as ${r.to}.`;
+};

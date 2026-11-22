@@ -81,6 +81,11 @@ export function categorySumsFromGrid(rows: unknown[][], everySet: string[], head
 }
 /** Agency-years (agencies x years) up to which a category sum is read from one grid evaluation instead of two (answerStateSum). */
 const ONCE_LIMIT = 40_000;
+
+/** The statement without its closing top-level ORDER BY (one with no parenthesis or quote after it); else unchanged. */
+export function unordered(sql: string): string {
+  return sql.replace(/\s+ORDER BY [^()']*$/i, "");
+}
 /** Each agency's most recent FBI population in the build (P90). */
 export function currentPopulationSql(root: string, oris: string[]): string {
   return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
@@ -150,8 +155,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // By category (coordinator 2026-11-04), a month is one row per category: its status and its own total (den) are the
   // agency-month's, read once per month, so the year's total is the sum of the months' totals, never of the categories
   // (which can overlap). Two passes over the grid: this one for coverage, one below for both views' category sums.
+  // The grid is only ever read here inside a GROUP BY, so its own closing ORDER BY is dropped: sorting it cost the nation by
+  // location for five years more than 5.5 GiB (agencies x months x locations, about 58 million rows) and changes no sum.
+  const grid = unordered(c.query.sql);
   const monthly = catDims.length
-    ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${c.query.sql}) GROUP BY ori, period`
+    ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${grid}) GROUP BY ori, period`
     : c.query.sql;
   const covSelect = (from: string) => `SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
       count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
@@ -167,7 +175,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   let catRows: unknown[][] | null = null;
   let covRows: unknown[][];
   if (once) {
-    const both = deps.execute(`WITH g AS MATERIALIZED (${c.query.sql}),
+    const both = deps.execute(`WITH g AS MATERIALIZED (${grid}),
       m AS (SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM g GROUP BY ori, period),
       cov AS (${covSelect("m")}),
       cat AS (SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n${incStat ? ", sum(ni) AS ni" : ""} FROM g
@@ -313,7 +321,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0) AS n_every,
         ${incStat ? "sum(ni)" : "CAST(0 AS BIGINT)"} AS i_all,
         ${incStat ? `coalesce(sum(ni) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0)` : "CAST(0 AS BIGINT)"} AS i_every
-      FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
+      FROM (${grid})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
      ` : ""} WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
     // The query's rows are (year, category, all, every, incidents all, incidents every); the grid's, the same (categorySumsFromGrid).
     const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2], every ? r[5] : r[4]]);
