@@ -38,3 +38,5 @@ __pycache__/
 # the engine service bundle (scripts/build-engine-service.mjs)
 /services/engine/dist
 scripts/fixtures/nibrs-capability-matrix.jsonl
+# the answer policy CSV, generated from docs/policy/rows/<id>.json (node scripts/build-answer-policy-csv.js)
+/docs/policy/nibrsai-answer-policy.csv

@@ -1,0 +1,12 @@
+{
+  "id": "P24",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Burglaries in Denver in 2027\" (a year not yet in the data)",
+  "what the app does today": "Declines and states the covered range; some tabs point to another source.",
+  "proposed behavior": "Decline, state the latest month or year available, and offer it as a button. Never answer another year silently.",
+  "exact default or choices offered": "Offer: the same question for the latest year available.",
+  "why": "Rule 4 already requires stating the range; the button saves a retype.",
+  "status": "Decided 2026-10-28 (Jeff: yes)",
+  "test cases": "GC-010, GC-040, GC-041, GC-042, GC-043, GC-044, GC-046, GC-047, GC-048, GC-088"
+}

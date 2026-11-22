@@ -1,0 +1,12 @@
+{
+  "id": "D31",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "A question that leaves out its year, place or crime",
+  "what the app does today": "Some paths assume a default (latest year, the nation, all years); bare \"crime\" is asked about (rule 9).",
+  "proposed behavior": "Ask, with buttons, most likely choice first; never assume. Each button runs the whole question with that part filled in.",
+  "exact default or choices offered": "See P05, P06 and P12 for the buttons offered.",
+  "why": "A missing part changes the answer; one click is cheaper than a wrong assumption.",
+  "status": "Decided 2026-10-28 (Jeff: general rule)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-hate.ts."
+}

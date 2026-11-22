@@ -1,0 +1,12 @@
+{
+  "id": "P80",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Carjackings in Tennessee by year from 2021 to 2024\": the button for agencies that reported every month (P61)",
+  "what the app does today": "The button reads \"Show only agencies that reported every month\".",
+  "proposed behavior": "The button and the answer's statement call them \"Consistent Reporting Agencies\" (Savant's term), with the plain explanation beside it: the agencies that reported every month of the period. The rule is unchanged (P61).",
+  "exact default or choices offered": "Label: \"Consistent Reporting Agencies\", with the one-line explanation.",
+  "why": "Savant's term, which readers of both tools see.",
+  "status": "Decided 2026-11-01 (Jeff: the label is \"Consistent Reporting Agencies\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

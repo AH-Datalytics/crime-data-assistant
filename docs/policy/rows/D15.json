@@ -1,0 +1,12 @@
+{
+  "id": "D15",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "A question too large or too slow to run",
+  "what the app does today": "Suggests a narrower question.",
+  "proposed behavior": "Keep: name a specific narrower question.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 15)",
+  "test cases": "GC-112, GC-113, GC-114"
+}

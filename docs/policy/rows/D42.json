@@ -1,0 +1,12 @@
+{
+  "id": "D42",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"homicide in philadelphia by months since 2015\", \"Birmingham, AL murders per month from 1999 to 2019\" (a monthly murder or homicide count for one agency whose span starts before Current Trends' first month)",
+  "what the app does today": "Current Trends' months only (the earlier part was dropped) or a four-button ask.",
+  "proposed behavior": "Answer directly from Homicide Reports by month, no ask. The answer shows its own span; where Homicide Reports start or end is not said again. The partial-year note stays as in D37. Months are never joined across sources (P14). A span inside Current Trends keeps answering from Current Trends.",
+  "exact default or choices offered": "Homicide Reports' months from 1985 through its latest month (or the asked end if earlier); no extra line.",
+  "why": "Jeff 2026-11-14: \"wouldn't it be better to just give the SHR data since that's the only source that covers that?\"; scope: \"only if it's asking monthly outside of the current trends dataset\".",
+  "status": "Decided (Jeff 2026-11-14)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

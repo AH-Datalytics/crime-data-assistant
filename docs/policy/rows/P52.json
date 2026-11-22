@@ -1,0 +1,12 @@
+{
+  "id": "P52",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Shoplifting in Memphis so far this year\" when the latest FBI file was uploaded in October",
+  "what the app does today": "Runs through the latest month in the file, including the month of the upload.",
+  "proposed behavior": "The month the FBI uploaded its latest file is partial and is not reported. Data runs through the month before (the 2026 file, uploaded 2026-10-15: through September 2026). A question reaching into the upload month is answered through the last reported month, with the months covered named.",
+  "exact default or choices offered": "Last reported month = the month before the upload month. Otherwise the current year's incompleteness is stated as today (D06), not month by month.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: \"not report the month of the update\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/nibrs-compile-gate.ts."
+}

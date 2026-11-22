@@ -1,0 +1,12 @@
+{
+  "id": "P39",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Mass shootings in 2024\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "Decline and explain: there is no standard definition, and the data does not count everyone shot.",
+  "exact default or choices offered": "Decline with an explanation.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 17 \"Decline and explain\")",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P60",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year (revises P04's button)",
+  "what the app does today": "P04: full-year reporters ranked, with a button to include the others.",
+  "proposed behavior": "A completed-year ranking (counts or rates) ranks only agencies that reported all 12 months, in both the chart and the table. A one-line note names who was left out and why, e.g. \"Chicago (9 months) and Phoenix (11 months) aren't ranked because data is missing for some of the 12 months.\" When the list is long, it gives the count and names the largest few by population. No button to include them, and no unranked partial list: agencies with missing months never appear in the chart or the table. (The current year, as P04: every month available so far.)",
+  "exact default or choices offered": "Only agencies with data for all 12 months are ranked. Note: those left out, with their months; when more than five, the count and the five largest by population.",
+  "why": "An agency with missing months has no established total (D6) and no rate (P58), so it cannot be ranked or listed beside those that do.",
+  "status": "Decided 2026-10-30 (Jeff: \"That way is better\", on ranking only full-year reporters and naming those left out, with no include button)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-transforms.ts."
+}

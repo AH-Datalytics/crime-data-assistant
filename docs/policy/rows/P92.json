@@ -1,0 +1,12 @@
+{
+  "id": "P92",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Homicide Reports (SHR): a sum of agencies",
+  "what the app does today": "Not built in the new engine.",
+  "proposed behavior": "SHR has a Consistent Reporting Agencies view, offered as a link; the default answer uses all reporting agencies.",
+  "exact default or choices offered": "All reporting agencies by default; the consistent view as a link.",
+  "why": "As NIBRS's sums (P61, P80).",
+  "status": "Decided 2026-11-02 (Jeff: \"Yes on SHR but don't default to that\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

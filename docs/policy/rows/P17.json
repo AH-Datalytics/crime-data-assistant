@@ -1,0 +1,12 @@
+{
+  "id": "P17",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Top 10 cities by murders\" where the 10th and 11th are tied",
+  "what the app does today": "Cuts at 10. Some rankings break ties by agency code, others in no fixed order.",
+  "proposed behavior": "Show exactly the number asked for (frozen rule 5). Within a tie, order by agency name, so the same question always gives the same list. A tie at the last place follows P156.",
+  "exact default or choices offered": "Ties: alphabetical by agency name.",
+  "why": "An unordered tie can change between runs.",
+  "status": "Decided 2026-10-28 (Jeff: exactly N, alphabetical within ties)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-transforms.ts."
+}

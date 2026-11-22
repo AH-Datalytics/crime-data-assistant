@@ -1,0 +1,12 @@
+{
+  "id": "P140",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Did shoplifting go up in Detroit in 2024?\" with a month of 2024 unknown; a title with a slash (\"drug/narcotic violation offenses by year\"); a place or agencies by month or year; two agencies combined",
+  "what the app does today": "\"No change in Detroit's shoplifting offenses is given between 2023 and 2024.\" with the 2023 figure on a later line; \"Drug/narcotic Violation Offenses\"; \"Place: what by year, when.\" and \"A and B, combined: 120 ...\" as first lines.",
+  "proposed behavior": "A change that cannot be established because a month is missing says what is known and what is not in one sentence: \"Detroit had 84 shoplifting offenses in 2023, but the data for 2024 is incomplete, so no change is given.\" The note naming the missing month follows. A Title Case title capitalizes each part after a slash (\"Drug/Narcotic Violation Offenses\"). The last first lines of the form \"Place: ...\" are now titles (a place or agencies by month or year, several places by year) or sentences (\"A and B had a combined 120 shoplifting offenses in 2024.\").",
+  "exact default or choices offered": "The sentence, or the Title Case title with its notes.",
+  "why": "Jeff 2026-11-18 (through the coordinator): two nits left from P137, and the sweep for first lines in the old Place: style.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P140\"), scripts/test-nibrs-historical.ts."
+}

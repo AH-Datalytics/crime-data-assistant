@@ -1,0 +1,12 @@
+{
+  "id": "P166",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Aggravated assault victims by weapon type in Texas 2022-2024\", \"aggravated assaults by weapon in Houston in 2024\"",
+  "what the app does today": "Declined (\"v0 cannot group victim by offense_weapon.weapon\") as \"I can't answer this combination\".",
+  "proposed behavior": "A crime counted by victim, broken down by weapon, is counted by offense (the weapon belongs to the offense), and the answer says so in one sentence: \"Counts are aggravated assault offenses by weapon, not victims.\" A crime already counted by offense (robbery) is unchanged.",
+  "exact default or choices offered": "The offenses by weapon, with the one sentence.",
+  "why": "Jeff 2026-11-19 (through the coordinator): answer in offense counts from the weapon data and say so in one sentence.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P166\")."
+}

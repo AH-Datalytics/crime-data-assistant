@@ -1,0 +1,12 @@
+{
+  "id": "P06",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murders in Houston\" (one figure, no period) and \"murders in Houston over time\" (a trend, no period)",
+  "what the app does today": "Differs by tab: Current Trends uses every month it has; Historical every year; NIBRS the latest complete year (another NIBRS path uses the last 5 years); Homicide Reports every year since 1976; Hate Crime the last 10 years.",
+  "proposed behavior": "Single figure: ask which period, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed). A trend or a series by year or month with no years named (\"murders in Houston over time\", \"Houston murders per year\"): answer with every year the source has, no question asked (Jeff 2026-11-04).",
+  "exact default or choices offered": "Single figure, buttons: the latest complete year (named); this year so far; another year. Trend or series: every year (or month) available.",
+  "why": "The period changes the answer; one rule on every source, and nothing assumed.",
+  "status": "Decided 2026-10-28 (Jeff: ask, as for any missing part); amended 2026-11-04 for trends and series (Jeff: \"show every year we have\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

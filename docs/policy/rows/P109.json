@@ -1,0 +1,12 @@
+{
+  "id": "P109",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"drug offenses in Houston from 2020 to 2024\" (drug crimes over several years)",
+  "what the app does today": "Declined: a combined total by period was not built.",
+  "proposed behavior": "A table by year with each part per year and a third column \"Drug crimes together\" (the sum, blank when a part is not established), under the definition line. Gun crime and stabbings by year are not built.",
+  "exact default or choices offered": "Column \"Drug crimes together\"; definition line \"Drug crimes are drug/narcotic violations plus drug equipment violations.\"",
+  "why": "Jeff 2026-11-15: \"Yes on drug and time of day\".",
+  "status": "Decided (Jeff 2026-11-15)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

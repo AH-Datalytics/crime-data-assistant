@@ -1,0 +1,12 @@
+{
+  "id": "P164",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Houston murder victim race and gender in 2025\", \"Victim age and sex breakdown for murders in California in 2022\", \"murder victims by race and sex in Texas\"",
+  "what the app does today": "Declined (\"I can break the numbers down one way at a time; \\\"and sex\\\" would be a second breakdown.\").",
+  "proposed behavior": "Two details of the same people (the victims', or the offenders') are one table from Homicide Reports: the first detail down the side, the second across, a column for each category of the second, counts only. The table is asked of the same place, period and conditions as each detail alone. A detail twice, or a victim's detail with an offender's, stays declined as a second breakdown.",
+  "exact default or choices offered": "Race (or age) down the side, sex across.",
+  "why": "Jeff 2026-11-19 (through the coordinator): a two-way table, race down the side, sex across.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P164\")."
+}

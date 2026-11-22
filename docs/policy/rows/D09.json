@@ -1,0 +1,12 @@
+{
+  "id": "D09",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Crime in Chicago in 2024\" (the bare word \"crime\")",
+  "what the app does today": "Asks once: violent, property or both. The Hate Crime tab is exempt.",
+  "proposed behavior": "Keep.",
+  "exact default or choices offered": "Choices: violent crime; property crime; both.",
+  "why": "\"Crime\" alone has no single count.",
+  "status": "Decided 2026-09-06 (frozen rule 9)",
+  "test cases": "GC-056, GC-075, GC-076, GC-077, GC-078, GC-117"
+}

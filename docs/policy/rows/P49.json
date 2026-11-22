@@ -1,0 +1,12 @@
+{
+  "id": "P49",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Simple assaults by men and women in Memphis in 2024\" (an offender breakdown, P29)",
+  "what the app does today": "Not answered (offender breakdowns not built).",
+  "proposed behavior": "Count the crimes, not the offenders: the crimes in their usual unit (D18: victims for crimes against persons, offenses for property crimes), broken down by the sex (or age, race) of the offenders in the same incident. A crime with offenders in more than one category counts once in each, so the categories can add up to more than the total, and the answer says so.",
+  "exact default or choices offered": "Count the crimes by offender category.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: A \"should count the offenses\"; read as the crimes in their D18 unit, confirm if literal offense records were meant); P65 adds the pair-linked reading when the question names the pairing",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-compile.ts, scripts/test-nibrs-shadow-reading.ts."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P127",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"YTD 2026 compared to 2025\", \"shoplifting in Detroit year to date 2026 vs 2025\", \"2026 YTD versus 2025 YTD\", \"so far this year compared to the same period last year\", \"this year to date compared with 2025\"",
+  "what the app does today": "Declined: \"I can answer for one period at a time; 2026 would be a second one.\"",
+  "proposed behavior": "The year to date against another year is the same comparison as \"this year compared with last year\" (P54, D06): both years count January through the latest month the data holds, the answer names those months, and it gives the two totals and the change. A to-date word (year to date, YTD, so far this year) is what makes it this form; without one, \"this year compared with last year\" keeps its own reading.",
+  "exact default or choices offered": "Two totals, the change and the percent change, for the same months of both years.",
+  "why": "Jeff 2026-11-16 (through the coordinator): \"YTD 2026 compared to 2025: same months through the latest month in both years.\"",
+  "status": "Decided 2026-11-16 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (the block \"The year to date against another year\")."
+}

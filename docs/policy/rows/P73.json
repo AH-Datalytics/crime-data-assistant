@@ -1,0 +1,12 @@
+{
+  "id": "P73",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "A follow-up the rule-based rewriter cannot place, rewritten by a model: \"Can you do rates instead of counts?\", \"show the same chart for Chicago\"",
+  "what the app does today": "P69: a follow-up the rewriter cannot place is asked about.",
+  "proposed behavior": "Amends P69. A rewrite the rule-based rewriter places with certainty runs directly. A model's rewrite is proposed instead: \"Did you mean: <question>?\", with Run and Edit; nothing runs until the user confirms or edits it, and an edited question runs as a new question. A follow-up neither can place is still asked about. A model never changes only the presentation: chart and table edits are the rule-based rewriter's.",
+  "exact default or choices offered": "Propose model rewrites for confirmation; run rule-based rewrites directly.",
+  "why": "Tested in the shadow (Gemini 3.8 Flash): 4 of 50 hand-checked model rewrites changed the meaning (\"Please do that!\", \"new orleans ori\", \"what rate is this?\", \"since 2019\"), and on LS-422 the model replaced two places where the label asks. Shown first, each is a suggestion the user can fix, not a wrong answer.",
+  "status": "Decided 2026-10-31 (Jeff, through the coordinator: \"yes to both\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}
