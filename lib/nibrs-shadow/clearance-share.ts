@@ -15,12 +15,23 @@ import type { AnswerStatement } from "../nibrs-plan/result";
 import type { ShareSpec } from "../nibrs-question-types";
 import { postalState } from "../nibrs-plan/state-codes";
 import { deliverTable, deliverTable2, fmt, periodWords } from "./deliver";
-import { stateName } from "./places";
+import { agencyLabel, agencyName, stateName } from "./places";
 import { agencyHeaderSql, universeStates } from "./state-sum";
 import { NOT_YET } from "./wording";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 
 type Decline = (explanation: string, detail?: string) => ShadowOutcome;
+/** The city agencies of the place index (ORI to "Houston, Texas"), for a ranking of cities (deps.cityShare). */
+const CITY_LABELS = new WeakMap<object, Map<string, string>>();
+function cityLabels(deps: ShadowDeps): Map<string, string> {
+  const hit = CITY_LABELS.get(deps.places);
+  if (hit) return hit;
+  const m = new Map<string, string>();
+  for (const list of deps.places.byName.values()) for (const a of list) if (a.kind === "city") m.set(a.ori, agencyLabel(a));
+  CITY_LABELS.set(deps.places, m);
+  return m;
+}
+const cityAgencies = (deps: ShadowDeps) => cityLabels(deps);
 const EXCEPTIONAL = ["A", "B", "C", "D", "E"];
 /** The clearance types a filter names, and the words for them (as a share of offenses, of clearances, and as a title). */
 const TYPE_WORDS: Record<string, { types: string[]; ofOffenses: string; ofClearances: string; title: string }> = {
@@ -82,9 +93,15 @@ export function answerClearanceShare(plan: NibrsPlan, spec: ShareSpec, period: {
   type Bucket = { agencies: number; offenses: number; byType: Map<string, number> };
   const buckets = new Map<string, Bucket>();
   // One bucket for each state (one year), or for each year.
-  const bucketOf = (ori: string, y: number) => { const k = byState ? `${stateOf.get(ori) ?? ""}|${y}` : String(y); return buckets.get(k) ?? buckets.set(k, { agencies: 0, offenses: 0, byType: new Map() }).get(k)!; };
-  for (const r of both.filter((x) => x[0] === "c")) if (reported.has(`${r[1]}|${r[2]}`) && oris.includes(String(r[1]))) { const b = bucketOf(String(r[1]), Number(r[2])); b.agencies++; b.offenses += Number(r[5] ?? 0); }
-  for (const r of both.filter((x) => x[0] === "s")) if (reported.has(`${r[1]}|${r[2]}`)) { const b = bucketOf(String(r[1]), Number(r[2])); b.byType.set(String(r[8]), (b.byType.get(String(r[8])) ?? 0) + Number(r[3] ?? 0)); }
+  // City ranking (deps.cityShare): one bucket for each city agency instead of each state.
+  const cityOris = deps.cityShare && byState ? cityAgencies(deps) : null;
+  const bucketOf = (ori: string, y: number) => {
+    if (cityOris && !deps.cityShare!.all && !cityOris.has(ori)) return null;
+    const k = cityOris ? `${ori}|${y}` : byState ? `${stateOf.get(ori) ?? ""}|${y}` : String(y);
+    return buckets.get(k) ?? buckets.set(k, { agencies: 0, offenses: 0, byType: new Map() }).get(k)!;
+  };
+  for (const r of both.filter((x) => x[0] === "c")) if (reported.has(`${r[1]}|${r[2]}`) && oris.includes(String(r[1]))) { const b = bucketOf(String(r[1]), Number(r[2])); if (b) { b.agencies++; b.offenses += Number(r[5] ?? 0); } }
+  for (const r of both.filter((x) => x[0] === "s")) if (reported.has(`${r[1]}|${r[2]}`)) { const b = bucketOf(String(r[1]), Number(r[2])); b?.byType.set(String(r[8]), (b.byType.get(String(r[8])) ?? 0) + Number(r[3] ?? 0)); }
   const figures = (b: Bucket) => {
     const sum = (ks: string[]) => ks.reduce((n, k) => n + (b.byType.get(k) ?? 0), 0);
     const cleared = sum(["arrest", ...EXCEPTIONAL]);
@@ -125,6 +142,41 @@ export function answerClearanceShare(plan: NibrsPlan, spec: ShareSpec, period: {
     if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
     const text = [...lines, "Source: NIBRS."];
     return { kind: "answer", plan, period, sql: c.query.sql, delivered: { ...delivered, text, headline: text[0] } };
+  }
+
+  // Cities ranked by the share (deps.cityShare): the city agencies with at least N of the crime reported that year (the only bound when N is named), or the
+  // cities of 250,000 or more (P128) when no N is named; the highest share first, one year.
+  if (cityOris) {
+    const cs = deps.cityShare!;
+    const labels = cityLabels(deps);
+    const noun = cs.all ? "Agency" : "City", nouns = cs.all ? "agencies" : "cities";
+    const popOf = new Map(header.map((r) => [`${r[0]}|${r[1]}`, Number(r[2] ?? 0)]));
+    // Each year its own ranking, never pooled (P203/P173; Jeff 2026-11-22): the agencies that reported that year, those with at least N of the crime
+    // (the only bound when N is named), else the cities of 250,000 or more.
+    type CRow = { y: number; ori: string; name: string; b: Bucket; f: ReturnType<typeof figures> };
+    const sign = cs.direction === "bottom" ? 1 : -1;
+    const shownAll: CRow[] = [];
+    for (const y of years) {
+      const kept: CRow[] = [...buckets.entries()].filter(([k, b]) => b.agencies && Number(k.split("|")[1]) === y).map(([k, b]) => { const ori = k.split("|")[0]; return { y, ori, name: labels.get(ori) ?? agencyName(deps.places, ori), b, f: figures(b) }; })
+        .filter((r) => r.f.value !== null && (cs.minOffenses !== null ? r.b.offenses >= cs.minOffenses : (popOf.get(`${r.ori}|${y}`) ?? 0) >= 250000));
+      kept.sort((a, z) => sign * ((a.f.value as number) - (z.f.value as number)) || z.b.offenses - a.b.offenses || a.name.localeCompare(z.name));
+      shownAll.push(...(cs.limit !== null ? kept.slice(0, cs.limit) : kept));
+    }
+    if (!shownAll.length) return decline(cs.minOffenses !== null ? `No ${noun.toLowerCase()} had at least ${cs.minOffenses} ${crimes} in ${when}.` : `No city of 250,000 or more reported ${crimes} in ${when}.`);
+    const multiY = years.length > 1;
+    const floorTitle = cs.minOffenses !== null ? "" : ", Population 250,000 or More";
+    const lines = [`Share of ${share} (%) by ${noun}${floorTitle}, ${multiY ? `${years[0]}-${years[years.length - 1]}` : year}`,
+      `Each share is ${spec.denominator === "clearances" ? `the ${crime} clearances that were ${words.ofClearances}, out of all ${crime} clearances` : `the ${crimes} ${words.ofOffenses}, out of all ${crimes} reported`} by the ${noun.toLowerCase()}'s agency in ${multiY ? "that year" : when}; the ${nouns} are ranked from the ${cs.direction === "bottom" ? "lowest" : "highest"} share${multiY ? " within each year, and the years are not added together" : ""}${cs.limit !== null ? `, the first ${cs.limit} of each shown` : ""}.`,
+      cs.minOffenses !== null ? `Only ${nouns} with at least ${cs.minOffenses} ${crimes} reported in ${multiY ? "that year" : year} are ranked.` : "No city size was named, so the cities of 250,000 or more are ranked.", ...(cs.note ? [cs.note] : []), "Includes all agencies."];
+    const plan2: NibrsPlan = { ...plan, groupings: [...plan.groupings.map((g) => (g.dimension === "geo.state" ? { ...g, dimension: "geo.agency" } : g)), ...(multiY && !plan.groupings.some((g) => g.dimension === "time.year") ? [{ dimension: "time.year", unknown: "visible" as const, absent: "show" as const }] : [])],
+      statistics: [...plan.statistics, { kind: "count" as const, as: "denominator", measure: base.as }] };
+    const supportsC = [{ as: "denominator", header: denomWord, cells: shownAll.map((r) => ({ value: r.f.denominator, status: "VALUE" })) }];
+    const delivered = multiY
+      ? deliverTable2(plan2, { dimension: "geo.agency", header: noun }, { dimension: "time.year", header: "Year" }, { as: "share", header: "Share (%)" }, shownAll.map((r) => ({ k1: r.name, k2: String(r.y), value: r.f.value, status: "VALUE" })), lines, statements, deps.release.id, readings, supportsC)
+      : deliverTable(plan2, { dimension: "geo.agency", header: noun }, { as: "share", header: "Share (%)" }, shownAll.map((r) => ({ key: r.name, value: r.f.value, status: "VALUE" })), lines, statements, deps.release.id, readings, supportsC);
+    if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
+    const text = [...lines, "Source: NIBRS."];
+    return { kind: "answer", plan: plan2, period, sql: c.query.sql, delivered: { ...delivered, text, headline: text[0] } };
   }
 
   // By state (Jeff 2026-11-22): the states with an agency that reported, ranked by the share, highest first (a state with no share, nothing to divide, last);

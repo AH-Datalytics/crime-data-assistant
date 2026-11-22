@@ -82,6 +82,8 @@ export type ShadowDeps = {
   shr?: ShrBuild;
   /** The hate crime export (hate.ts): with it, hate crime questions are answered from it; without it they are declined. Never NIBRS. */
   hate?: HateBuild;
+  /** Set while a ranking of cities by a clearance share is answered (cityClearanceShare): the minimum offenses (null: the 250,000+ floor), the cut and the direction. */
+  cityShare?: { minOffenses: number | null; limit: number | null; direction: "top" | "bottom"; all?: boolean; note?: string };
   /** The question as the user asked it, set while it is answered (the county-wide decline offers it without the county-wide words). */
   asked?: string;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
@@ -1053,11 +1055,42 @@ export const CHART_EDIT = new RegExp([
 /** A request to change a chart (a date marker or any other change the page cannot make). */
 export const isChartEdit = (turn: string) => CHART_MARKER.test(turn) || CHART_EDIT.test(turn);
 
+/**
+ * Cities ranked by the share of a crime cleared one way ("What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by
+ * exception?", QL-nibrs-cff5d76134): read as the by-state share question of the same crime, clearance and year, answered per city agency (clearance-share.ts)
+ * with the question's own bound: the cities with at least N of the crime reported that year, else the cities of 250,000 or more (P128; Jeff 2026-11-22).
+ * One crime, one clearance (arrest or exception), one year, no place; anything else keeps its own path.
+ */
+export function cityClearanceShare(question: string, deps: ShadowDeps): { rewritten: string; cityShare: NonNullable<ShadowDeps["cityShare"]> } | null {
+  const q = question.replace(/\s+/g, " ");
+  if (!/\b(?:cities|agenc(?:y|ies))\b/i.test(q) || !/\bshares?\b|\bpercent(?:age)?\b|%/i.test(q)) return null;
+  if (/\b(?:rates?|per\s+100,?000|by\s+(?:state|month|year|type)|each\s+(?:month|year|state)|compar\w+|vs\.?|versus|firearm|weapon|felony|misdemeanou?rs?|big|large\w*|major)\b/i.test(q)) return null;
+  const clearance = /\bcleared\s+by\s+(exception(?:al)?(?:\s+means)?|arrest)\b/i.exec(q);
+  const crime = /\b(murders?|homicides?|rapes?|robber(?:y|ies)|aggravated\s+assaults?|burglar(?:y|ies)|larcen(?:y|ies)(?:-theft)?s?|motor\s+vehicle\s+thefts?|arsons?)\b/i.exec(q);
+  const years = [...q.matchAll(/\b(20\d{2}|19\d{2})\b/g)].map((m) => Number(m[1]));
+  // One year, "since 2021", or "from 2021 to 2024" (several years are a ranking for each year, stacked, never pooled: P203/P173).
+  const since = /\bsince\s+(?:the\s+year\s+)?(\d{4})\b/i.exec(q);
+  const lastYear = Number(deps.release.lastMonth.slice(0, 4)), lastComplete = deps.release.lastMonth.endsWith("-12") ? lastYear : lastYear - 1;
+  // "Since 2021" is the whole years through the last complete one (part of a year is not ranked), said in a note.
+  const when = since ? (Number(since[1]) < lastComplete ? `from ${since[1]} to ${lastComplete}` : `in ${lastComplete}`) : years.length === 1 ? `in ${years[0]}` : years.length === 2 && /\b(?:to|through|thru|-|–|and)\b/i.test(q) ? `from ${Math.min(...years)} to ${Math.max(...years)}` : null;
+  if (!clearance || !crime || !when) return null;
+  const allAgencies = !/\bcities\b/i.test(q);
+  const min = /\b(?:at\s+least|min(?:imum)?\.?\s+(?:of\s+)?)\s*(\d+)\s+(?:murders?|homicides?|rapes?|robber\w*|assaults?|burglar\w*|larcen\w*|thefts?|arsons?|offen[cs]es?)\b/i.exec(q);
+  const limit = /\b(?:top|what|which|the)\s+(\d+)\s+cities\b/i.exec(q);
+  const places = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
+  if (places.length) return null;
+  const how = /exception/i.test(clearance[1]) ? "by exception" : "by arrest";
+  return { rewritten: `what share of ${crime[1]} were cleared ${how} ${when} in the United States by state`,
+    cityShare: { ...(allAgencies ? { all: true } : {}), ...(since ? { note: `Since ${since[1]} is read as the whole years ${since[1]} to ${lastComplete}: the ${lastYear} data is not a whole year yet.` } : {}), minOffenses: min ? Number(min[1]) : null, limit: limit ? Number(limit[1]) : null, direction: /\b(?:lowest|fewest|bottom)\b|(?<!\bat\s)\bleast\b/i.test(q) ? "bottom" : "top" } };
+}
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
+  // Cities ranked by a clearance share, answered per city agency (clearance-share.ts).
+  const cityClear = deps.cityShare ? null : cityClearanceShare(question, deps);
+  if (cityClear) return shadowAnswer(cityClear.rewritten, { ...deps, cityShare: cityClear.cityShare, rewritten: true });
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).

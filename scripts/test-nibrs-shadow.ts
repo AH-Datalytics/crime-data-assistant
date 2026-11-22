@@ -29,6 +29,7 @@ import { titleCase } from "../lib/nibrs-shadow/titles";
 // P185 (Jeff 2026-11-21): the FBI master-files sentence follows the note under a NIBRS state or national sum (never under one agency's answer).
 const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
 import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
+import { cityClearanceShare } from "../lib/nibrs-shadow/answer";
 import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
@@ -3277,5 +3278,41 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/cleared by exception by type by year/.test(readQuestion(q, 2026, "2026-09").text), q);
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
+}
+// Cities ranked by the share of a crime cleared one way (QL-nibrs-cff5d76134): the question's own "at least N murders" is the only bound; none named is the
+// cities of 250,000 or more (P128, Jeff 2026-11-22).
+{
+  const ask = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  const names = (q: string) => as(ask(q), "answer").delivered.table.rows.map((r) => String(r[0]));
+  const n30 = names("What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by exception ?");
+  assert.deepEqual(n30.slice(0, 3), ["Houston, Texas", "Dallas, Texas", "Austin, Texas"], "equal shares: more murders first");
+  assert.ok(n30.includes("Greensboro, North Carolina"), "a city under 250,000 is ranked when the question's minimum is the only bound");
+  const t = as(ask("What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by exception ?"), "answer");
+  assert.equal(t.delivered.text[0], "Share of Murders Cleared by Exceptional Means (%) by City, 2025");
+  assert.ok(t.delivered.text.includes("Only cities with at least 30 murders reported in 2025 are ranked."), JSON.stringify(t.delivered.text));
+  assert.deepEqual(t.delivered.table.columns.map((c) => c.header), ["City", "Share (%)", "Offenses"]);
+  // No N named: the floor is the 250,000 or more, said in the title and a note; the cut is the one asked.
+  const big = as(ask("top 2 cities by share of murders cleared by exception in 2024"), "answer");
+  assert.equal(big.delivered.text[0], "Share of Murders Cleared by Exceptional Means (%) by City, Population 250,000 or More, 2024");
+  assert.deepEqual(big.delivered.table.rows.map((r) => r[0]), ["Houston, Texas", "Dallas, Texas"]);
+  assert.ok(big.delivered.text.includes("No city size was named, so the cities of 250,000 or more are ranked."));
+  // The minimum is a count of the crime reported that year: 100 leaves Houston (108) only; "lowest" and "at least" are different words.
+  assert.deepEqual(names("What cities with at least 100 murders in 2024 had the lowest share of murders cleared by exception ?"), ["Houston, Texas"]);
+  assert.ok(as(ask("What cities with at least 30 murders in 2024 had the lowest share of murders cleared by exception ?"), "answer").delivered.table.rows[0][0] === "Austin, Texas", "Austin's June is missing in the stub: the lowest share");
+  // No city meets the minimum: a decline naming it, never the place ask.
+  const none = as(ask("cities with at least 9999 murders in 2024 with the highest share of murders cleared by exception"), "decline");
+  assert.equal(none.explanation, "No city had at least 9999 murders in 2024.");
+  // Several years (QL-nibrs-77ef8b10f0): a ranking for each year, stacked, never pooled; "any agency" is every agency, not only cities.
+  const multi = as(ask("A list of the highest share of murders cleared by exception for any agency in any year since 2021 (min 20 murders reported in that year)"), "answer");
+  assert.deepEqual(multi.delivered.table.columns.map((c) => c.header).slice(0, 3), ["Agency", "Year", "Share (%)"], JSON.stringify(multi.delivered.table.columns));
+  const yrs = multi.delivered.table.rows.map((r) => String(r[1]));
+  assert.ok(yrs.length > 3 && new Set(yrs).size > 1 && yrs.every((y, i) => i === 0 || y >= yrs[i - 1]), "a block for each year, in year order: " + JSON.stringify(yrs));
+  assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), JSON.stringify(multi.delivered.text));
+  assert.ok(multi.delivered.text.includes("Since 2021 is read as the whole years 2021 to 2025: the 2026 data is not a whole year yet."), JSON.stringify(multi.delivered.text));
+  const threeYears = as(ask("top 2 cities by share of murders cleared by exception from 2022 to 2024"), "answer");
+  assert.deepEqual(threeYears.delivered.table.rows.map((r) => r[1]), ["2022", "2022", "2023", "2023", "2024", "2024"], "the first 2 of each year");
+  // A place, a rate or another grouping is not this ranking.
+  assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
+  assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
