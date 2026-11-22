@@ -219,6 +219,12 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const combined = withBuild("Murders in Memphis and Dallas combined in 2023");
   assert.ok(combined.kind === "decline" && /can't be combined across agencies/.test(combined.explanation) && combined.alternative?.question === "Murders in Memphis and Dallas in 2023", JSON.stringify(combined).slice(0, 300));
   assert.notEqual(withBuild("Robberies in Memphis in 2023 according to NIBRS").kind, "historical");
+  // Jeff 2026-11-22 ("Answer from NIBRS"): a one-year count or rate the Crime Index has blank is answered from NIBRS when NIBRS has a figure
+  // (Pontiac MI robberies 2024: 39, real data, said so); where NIBRS has none (this stub holds no NIBRS rows) it stays the plain decline.
+  for (const q of ["Murders in Memphis in 2021", "Murder rate in Memphis in 2021"]) {
+    const blank = withBuild(q);
+    assert.ok(blank.kind === "decline" && /^Crime Index has no murder(?:s| rate) for Memphis, Tennessee in 2021/.test(blank.explanation), `${q}: ${JSON.stringify(blank).slice(0, 300)}`);
+  }
   // Jeff 2026-11-14, span choices: monthly for one agency back before any monthly source. With Crime Index and NIBRS both
   // reaching it, the choices are asked, yearly first, each running the same question on its own source.
   {
