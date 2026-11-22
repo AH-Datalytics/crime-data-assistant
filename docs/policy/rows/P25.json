@@ -1,0 +1,12 @@
+{
+  "id": "P25",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Crime in Montgomery County, Maryland\" or \"Fairfax County, Virginia\", where the county has its own county police department",
+  "what the app does today": "Frozen rule 10: a county name means the sheriff's agency, named in the answer.",
+  "proposed behavior": "See P28.",
+  "exact default or choices offered": "See P28.",
+  "why": "In those counties the sheriff mainly runs the jail and courts; the county police report the county's crime.",
+  "status": "Superseded by P28 (2026-11-16)",
+  "test cases": "GC-075, GC-080, GC-081, GC-082, GC-083, GC-084; labeled cases LS-144, LS-149"
+}

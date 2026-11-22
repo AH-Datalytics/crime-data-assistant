@@ -19,7 +19,7 @@ function parseCsv(text) {
   if (f || row.length) { row.push(f); rows.push(row); }
   return rows;
 }
-const [, ...rows] = parseCsv(fs.readFileSync(path.join(DIR, "nibrsai-answer-policy.csv"), "utf8").replace(/^﻿/, ""));
+const [, ...rows] = parseCsv(require("./lib/policy-rows.cjs").policyCsv().replace(/^﻿/, ""));
 // Columns: id, topic, decision needed, situation, today, proposed, choices, why, status, tests.
 const open = rows.filter((r) => r[8] === "Needs Jeff");
 const decided = rows.filter((r) => r[8] !== "Needs Jeff");

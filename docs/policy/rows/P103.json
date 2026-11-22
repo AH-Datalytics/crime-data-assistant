@@ -1,0 +1,12 @@
+{
+  "id": "P103",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "An ask whose choice leads to a decline: \"Compare total crime in Miami and Fort Worth\" (a button \"The United States\" that cannot answer), \"Naperville, IL crime per month\" (a range of years that cannot run), \"how bad is crime in LA right now?\" (both Los Angeles and Louisiana decline)",
+  "what the app does today": "Some asks offered a button whose answer was a decline (884 of 1,791 asks had at least one, 57 of them ending in \"I can't answer this combination yet\"); the ask counted as correct but the button was dead.",
+  "proposed behavior": "No ask ever offers a button that leads to a decline, at any depth of choices. A button whose answer cannot run is simply not shown, with no note. An ask left with exactly one button stays an ask with that one button. An ask left with no button is the decline its buttons ended in, with that real reason (for \"how bad is crime in LA right now?\": \"I didn't understand \"how bad is\" or \"right now\"\").",
+  "exact default or choices offered": "Buttons that run; or the real reason when none does.",
+  "why": "Jeff 2026-11-14: \"no note when hidden. agreed on 2, one pr\" (the engine's standing rule, coordinator 2026-11-02: never a dead button).",
+  "status": "Decided 2026-11-14 (Jeff)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

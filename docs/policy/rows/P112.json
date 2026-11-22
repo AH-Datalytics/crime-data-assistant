@@ -1,0 +1,12 @@
+{
+  "id": "P112",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Any answer, ask or note that gave a population in words",
+  "what the app does today": "Some wording said residents.",
+  "proposed behavior": "Never the word for the people who live in a place: say \"people\" or \"population\" (\"per 1,000 people\", \"largest populations\", \"the people in the agencies' areas\").",
+  "exact default or choices offered": "Check: the banned-wording test, which reads the engine's text and these rows' rule text.",
+  "why": "Jeff 2026-11-15: \"we dont say residents\"; \"1,000 people\".",
+  "status": "Decided (Jeff 2026-11-15)",
+  "test cases": "scripts/test-no-residents.js"
+}

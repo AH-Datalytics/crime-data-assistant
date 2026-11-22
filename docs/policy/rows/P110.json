@@ -1,0 +1,12 @@
+{
+  "id": "P110",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"marijuana possession arrests in Texas since 2020\"",
+  "what the app does today": "Declined with a misleading weapon-or-relationship sentence.",
+  "proposed behavior": "Answer arrests on incidents where marijuana was recorded among the drugs, named \"Marijuana possession arrests\", with one definition line.",
+  "exact default or choices offered": "Line: \"Counts arrests on incidents where marijuana was recorded among the drugs.\"",
+  "why": "Jeff 2026-11-15: \"Those work\" (marijuana form).",
+  "status": "Decided (Jeff 2026-11-15)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

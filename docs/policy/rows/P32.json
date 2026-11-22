@@ -1,0 +1,12 @@
+{
+  "id": "P32",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Sexual assaults in Ohio in 2024\"",
+  "what the app does today": "Not defined; some paths count rape only.",
+  "proposed behavior": "Ask which sex offenses are meant, with buttons (for example rape; all forcible sex offenses; another), rather than choose a definition.",
+  "exact default or choices offered": "Ask which type of sex offense.",
+  "why": "\"Sexual assault\" covers different offenses in different uses.",
+  "status": "Decided 2026-10-29 (Jeff: 8 \"Decline with a request for clarification for which type of sex offense they are interested in\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

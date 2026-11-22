@@ -1,0 +1,12 @@
+{
+  "id": "D07",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Which cities saw the biggest rise in murders?\"",
+  "what the app does today": "Leaves out incomplete reporters and says how many.",
+  "proposed behavior": "Keep.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "Change between incomplete years is not real change.",
+  "status": "Decided 2026-09-06 (frozen rule 7)",
+  "test cases": "GC-065, GC-066, GC-067, GC-068, GC-069, GC-118"
+}

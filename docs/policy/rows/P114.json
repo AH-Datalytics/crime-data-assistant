@@ -1,0 +1,12 @@
+{
+  "id": "P114",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"North Carolina firearm homicides rolling over 12 months since 2018\", \"what is the homicide rate by firearm in Pennsylvania ...\" (not this)",
+  "what the app does today": "Routed to the Homicide Reports tab: \"this form of the question isn't available here yet\".",
+  "proposed behavior": "A rolling window of a place's victims for the word asked (murder or homicide, as P10 says) by month comes from Homicide Reports: each month shows the total of that month and the 11 months before it (the window length asked). A month with no Homicide Reports filing for the place, or before 1985, makes every window that reaches it blank, never 0, and one line names the months with no total. Counts only (no rate, breakdown or several crimes).",
+  "exact default or choices offered": "\"North Carolina firearm homicides rolling over 12 months since 2018\" shows Month and the rolling 12-month total.",
+  "why": "Coordinator 2026-11-15: GO on the rolling window helper and its first use; the wording lines are Engine 2.0's, for Jeff to confirm.",
+  "status": "Built 2026-11-15; wording to confirm",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

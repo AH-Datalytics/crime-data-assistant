@@ -174,15 +174,10 @@
 },
 "QL-ct-0ccd61a7cd": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period",
-"crime"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-0d002d35e7": {
@@ -204,15 +199,10 @@
 },
 "QL-ct-0d825bc231": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"place",
-"crime"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-0d990fbc20": {
@@ -3476,14 +3466,10 @@
 },
 "QL-ct-c5febb0077": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-21",
+"why": "no partial answers: Jeff 2026-11-21",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"crime"
-]
+"outcome": "decline"
 }
 },
 "QL-ct-c605731327": {
@@ -6685,7 +6671,15 @@
 },
 "QL-hist-6ebd4f2228": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-hist-6f624e6886": {
 "status": "draft",
@@ -7112,7 +7106,15 @@
 },
 "QL-hist-8a21c198a8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-hist-8b55b24a6f": {
 "status": "reviewed",
@@ -8727,7 +8729,15 @@
 },
 "QL-hist-f18108068c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-hist-f1a5516075": {
 "status": "reviewed",
@@ -8932,7 +8942,15 @@
 },
 "QL-hist-fffdd52afc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-nibrs-00b7c6b3c9": {
 "status": "reviewed",
@@ -14654,7 +14672,15 @@
 },
 "QL-shr-0b47c2ecf0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-shr-0c808347cd": {
 "status": "reviewed",
@@ -15203,13 +15229,15 @@
 "by": "codex-second-1"
 },
 "QL-shr-395acf3f23": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Missouri and Minnesota have qualifying counties.",
+"status": "reviewed",
+"by": "jeff-2026-11-20",
+"why": "P28: Jeff 2026-11-20, St. Louis County uses Missouri",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which St Louis County"
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
 ]
 }
 },
@@ -16889,7 +16917,12 @@
 },
 "QL-shr-c6b8a6f2a1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-21",
+"why": "state clearance rate: Jeff 2026-11-21",
+"expected": {
+"outcome": "clarify",
+"about": "period"
+}
 },
 "QL-shr-c6d44e39ca": {
 "status": "reviewed",

@@ -1,0 +1,12 @@
+{
+  "id": "P09",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many assaults in Phoenix in 2024?\" (the word \"assault\" alone)",
+  "what the app does today": "Current Trends counts aggravated assault only. NIBRS counts all assaults (aggravated, simple, intimidation). The pre-submit helper offers a choice.",
+  "proposed behavior": "Count aggravated assault and say so. Count all assaults, or simple assault, only when asked.",
+  "exact default or choices offered": "Default: aggravated assault. On request: all assaults; simple assault.",
+  "why": "Aggravated assault is the FBI's violent-crime measure, and today the same word gives two different counts on two tabs.",
+  "status": "Decided 2026-10-28 (Jeff: aggravated assault, stated in the answer)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

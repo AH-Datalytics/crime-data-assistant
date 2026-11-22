@@ -1,0 +1,12 @@
+{
+  "id": "D34",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Victims by age group\", \"arrests by age\" (any age breakdown, any source in the new engine)",
+  "what the app does today": "The new engine cuts every source's ages the same way: Under 18, 18-24, 25-34, 35-44, 45-54, 55-64, 65 and older, Unknown last. The live Homicide Reports tab (old engine) uses 0-17, 18-24, 25-34, 35-49, 50-64, 65+.",
+  "proposed behavior": "No change: keep the new engine's groups everywhere. The live tab's different set goes away when the old engine is replaced.",
+  "exact default or choices offered": "Under 18, 18-24, 25-34, 35-44, 45-54, 55-64, 65 and older, Unknown last.",
+  "why": "Jeff 2026-11-13, agreeing with the coordinator's recommendation (shared notes: age-brackets-by-source-2026-11-12.md).",
+  "status": "Decided (Jeff 2026-11-13)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-plan-adapter.ts, scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
+}

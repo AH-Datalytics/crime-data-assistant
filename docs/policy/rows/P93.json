@@ -1,0 +1,12 @@
+{
+  "id": "P93",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "The latest month of NIBRS, SHR and Hate Crime (the FBI's monthly CDE releases, around the 15th)",
+  "what the app does today": "Through a configured month (2026-09).",
+  "proposed behavior": "The latest month shown is the one before the latest release's month: month M appears only after the update of month M+1. Keyed to the release date recorded with the build (scripts/fixtures/nibrs-shadow/release.json), never the calendar; a partial month that trickled in early is never shown. Not Current Trends, which follows Crime Index's own publishing.",
+  "exact default or choices offered": "Through the month before the release's month.",
+  "why": "A release month holds only the reports that arrived before the upload, so it would read as a drop.",
+  "status": "Decided 2026-11-03 (Jeff, relayed by the coordinator)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

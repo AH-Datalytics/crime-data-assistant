@@ -1244,7 +1244,7 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     const st = /^names the state \((.+)\)$/.exec(s);
     const ag = /^names the agency \((.+)\)$/.exec(s);
     if (src) ok = text[text.length - 1] === src[1] && text.filter((t) => /^Source: /.test(t)).length === 1;
-    // The first line is a sentence ("Texas had 19,935 robberies in 2024.") or a title ("2020 to 2025 Murders by Year, South Carolina"): it names the state.
+    // The first line is a sentence ("Texas had 19,935 robberies in 2024.") or a title ("South Carolina Murders Per Year, 2020-2025"): it names the state.
     else if (st) ok = new RegExp(`(?:^|, )${st[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:'s|\\s|$)`).test(text[0] ?? "");
     // Historical's agencies, named by their FBI names ("Figures for the Denver Police Department.").
     else if (ag) ok = all.includes(ag[1]);

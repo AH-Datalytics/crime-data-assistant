@@ -1,0 +1,12 @@
+{
+  "id": "D01",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"",
+  "what the app does today": "Answers police clearances; declines court outcomes.",
+  "proposed behavior": "Keep.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "Police clearance is in the data; court outcomes are not.",
+  "status": "Decided 2026-09-06 (frozen rule 1)",
+  "test cases": "GC-001, GC-002, GC-003, GC-004, GC-005, GC-006, GC-007, GC-008, GC-009, GC-010"
+}

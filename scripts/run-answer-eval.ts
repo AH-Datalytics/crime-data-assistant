@@ -77,8 +77,10 @@ const shadowDeps = (): ShadowDeps => {
 /** Independent expected values: nibrs-model's correctness/slice/V*.json on its main branch, read with git show (read-only). */
 function readSliceValues(repo: string): ExpectedValues {
   const git = (...a: string[]) => execFileSync("git", ["-C", repo, ...a], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  const names = git("ls-tree", "--name-only", "main", "correctness/slice/").split(/\r?\n/).filter((n) => /\/V\d+\.json$/.test(n));
-  return sliceValues(names.map((name) => ({ name, json: git("show", `main:${name}`) })));
+  // The ref the value files are read from: main, or a branch or commit that already holds newer files (--values-ref cube-pilot).
+  const ref = arg("--values-ref", "main")!;
+  const names = git("ls-tree", "--name-only", ref, "correctness/slice/").split(/\r?\n/).filter((n) => /\/V\d+\.json$/.test(n));
+  return sliceValues(names.map((name) => ({ name, json: git("show", `${ref}:${name}`) })));
 }
 const VALUES_REPO = arg("--values-repo", "C:/Users/jeffm/nibrs-model")!;
 const expectedValues: ExpectedValues | undefined = SHADOW ? readSliceValues(VALUES_REPO) : undefined;
@@ -90,7 +92,8 @@ const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : ["(any)"])
 const cases: Case[] = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/answer-eval/cases.json"), "utf8")).cases.map((c: unknown) => Case.parse(c));
 // Value files that don't list their cases (Current Trends') are bound by the cell each case names.
 if (expectedValues) bindValueSources(expectedValues, cases);
-const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-policy.csv"), "utf8");
+// The policy rows (docs/policy/rows/<id>.json), as the generated CSV's text.
+const policyCsv = (require("./lib/policy-rows.cjs") as { policyCsv: () => string }).policyCsv();
 const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2}),.*Needs Jeff/gm)].map((m) => m[1]));
 
 type Run = { actual: ActualAction; diffs: Diff[]; notes: string[] };

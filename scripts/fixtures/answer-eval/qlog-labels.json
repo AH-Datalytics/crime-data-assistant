@@ -852,21 +852,16 @@
    "question": "i want to know how crime in nashville compares to peer citites",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "period",
-     "crime"
-    ],
-    "about": "violent, property or both"
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -952,21 +947,16 @@
    "question": "compare crime trends in San Francisco per 100k to similar sized cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "place",
-     "crime"
-    ],
-    "about": "violent, property or both"
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -15623,20 +15613,16 @@
    "question": "Crime trends in Philadelphia compared to similar cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "crime"
-    ],
-    "about": "violent, property or both"
+    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "no partial answers: Jeff 2026-11-21"
    }
   },
   {
@@ -30401,16 +30387,23 @@
    "question": "What is the clearance rate for rape in Florida by year?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -32417,16 +32410,23 @@
    "question": "Show the burglary clearance rate in Ohio since 2000",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -40495,16 +40495,23 @@
    "question": "What is the rape clearance rate in Florida by year?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -41531,16 +41538,23 @@
    "question": "What is the murder clearance rate in Texas by year?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -68251,16 +68265,23 @@
    "question": "What is the homicide clearance rate over time for Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {
@@ -70520,19 +70541,24 @@
    "question": "What is the total number of gun homicides in St. Louis County 2026 year-to-date?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which St Louis County"
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
     ],
-    "about": "which St Louis County"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Missouri and Minnesota have qualifying counties."
+    "reviewed_by": "jeff-2026-11-20",
+    "notes": "P28: Jeff 2026-11-20, St. Louis County uses Missouri"
    }
   },
   {
@@ -77272,16 +77298,19 @@
    "question": "What is the homicide clearance rate in Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "state clearance rate: Jeff 2026-11-21"
    }
   },
   {

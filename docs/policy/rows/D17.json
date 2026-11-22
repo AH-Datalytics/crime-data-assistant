@@ -1,0 +1,12 @@
+{
+  "id": "D17",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Did murders go up this year?\" when the periods do not match",
+  "what the app does today": "Shows both figures; withholds an unverified change.",
+  "proposed behavior": "Keep: no change claim or ranking across mismatched periods.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 17)",
+  "test cases": "GC-042, GC-055, GC-066"
+}

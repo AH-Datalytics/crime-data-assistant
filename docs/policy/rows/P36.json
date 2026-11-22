@@ -1,0 +1,12 @@
+{
+  "id": "P36",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Assaults by strangers\", \"by someone they knew\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "\"By strangers\": the victim-offender relationship is stranger. \"By someone they knew\": every relationship except stranger and unknown.",
+  "exact default or choices offered": "",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 14 yes)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts, scripts/test-nibrs-shadow.ts."
+}

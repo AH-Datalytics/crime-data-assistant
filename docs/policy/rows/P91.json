@@ -1,0 +1,12 @@
+{
+  "id": "P91",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Current Trends: a sum of agencies (a state, the nation, a population group)",
+  "what the app does today": "Not built in the new engine.",
+  "proposed behavior": "Any Current Trends sum of agencies counts only the Consistent Reporting Agencies, with no all-agencies alternative. A single agency is shown as published.",
+  "exact default or choices offered": "Consistent Reporting Agencies only, for every sum; no alternative.",
+  "why": "Current Trends compares recent months, where agencies joining or leaving would read as change.",
+  "status": "Decided 2026-11-02 (Jeff: \"Current trends should only show consistent reporters when any group of agencies is summed (state/national/population group)\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-current.ts."
+}

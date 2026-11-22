@@ -1,0 +1,12 @@
+{
+  "id": "P172",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Texas murder clearance rate in 2024\", \"What is the clearance rate for rape in Florida by year?\", \"Show the burglary clearance rate in Ohio since 2020\", \"What is the homicide clearance rate over time for Kansas?\"",
+  "what the app does today": "Declined (\"There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states\", P18).",
+  "proposed behavior": "A state's clearance rate for a completed year is the offenses cleared over the offenses reported, summed over the agencies that reported that year (an agency counts the months it reported; the same months for both figures), from NIBRS: \"Texas cleared 34.6% of the murders reported in 2025, summed over the 4 agencies that reported.\" Several years are one row a year, each year its own reporting agencies; years before NIBRS's first are said, not answered. This reverses P18. The current year keeps P57's Consistent Reporting Agencies; the nation's completed years stay Crime Index's; a clearance rate for every state at once, a NIBRS-only offense, and a span reaching the current year stay declined.",
+  "exact default or choices offered": "The sentence (one year) or the table by year, the agencies line, then the Source line.",
+  "why": "Jeff 2026-11-21 (through the coordinator): answer state clearance rates, the agencies that reported cleared X% of the offenses.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P172\")."
+}

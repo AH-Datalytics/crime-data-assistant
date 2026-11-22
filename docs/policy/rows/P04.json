@@ -1,0 +1,12 @@
+{
+  "id": "P04",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year",
+  "what the app does today": "Includes them, with their first and last reported month and a caveat that spans differ.",
+  "proposed behavior": "For a completed year, leave out agencies that did not report all 12 months, state how many were left out, and offer a button to include them (rankings of change already do this, frozen rule 7). For the current year, where 12 months do not exist yet, rank agencies that reported every month available so far.",
+  "exact default or choices offered": "Completed year: full-year reporters only, with \"N agencies with fewer than 12 months were not ranked\" and a button to include them. Current year: every month so far.",
+  "why": "A city with 4 months of data ranks far too low on a count. Completeness is not size, so this is an exception to frozen rule 5 decided by Jeff.",
+  "status": "Decided 2026-10-28 (Jeff: yes, except the current year, where 12 months are not available); the button is removed by P60",
+  "test cases": "GC-065, GC-066, GC-067, GC-068, GC-069, GC-118 (rule 7); new cases to write"
+}

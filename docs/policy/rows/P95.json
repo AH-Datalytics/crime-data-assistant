@@ -1,0 +1,12 @@
+{
+  "id": "P95",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Homicide victims in Detroit by age\", \"firearm homicides in NYC in 2024\" (homicide in NIBRS)",
+  "what the app does today": "Homicide counted murder and nonnegligent manslaughter (09A) only, the same as murder.",
+  "proposed behavior": "See P10.",
+  "exact default or choices offered": "See P10.",
+  "why": "Negligent manslaughter is a homicide; leaving it out undercounted homicide (Detroit 2021-2025: 1,254 homicide victims with 09B against 1,231 without).",
+  "status": "Superseded by P10 (2026-11-16)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}
