@@ -3043,6 +3043,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(/^In the United States in 2025, [\d.]+% of the murders reported were cleared by exceptional means/.test(noPlace.delivered.text[0]), noPlace.delivered.text[0]);
   assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
   assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
+  // The national clearance share is exempt from the heavy-statement deferral (coordinator 2026-11-22), so a tiny limit still answers it.
+  assert.equal(shadowAnswer("what share of murders were cleared by exception in 2025?", { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
   const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
   assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
   assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));

@@ -2056,7 +2056,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
-    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins), deps);
+    // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
+    // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
+    const nationalClearanceShare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "share") && CLEARANCE_WORDS.test(ledger0.question);
+    const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins),
+      nationalClearanceShare ? { ...deps, deferChars: Number.MAX_SAFE_INTEGER } : deps);
     const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
     // "By state" has the nation's states as its rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
     const byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(ledger0.question);
