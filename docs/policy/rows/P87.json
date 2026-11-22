@@ -7,6 +7,6 @@
   "proposed behavior": "The two coverage columns are shown only when the question asks for the agencies reporting (\"..., with the number of agencies reporting\"); otherwise the table is the figure alone. The figures are still carried with the answer, and the Consistent Reporting Agencies view names its agencies in its first sentence.",
   "exact default or choices offered": "Coverage columns on request.",
   "why": "The columns crowded every state answer; the one-sentence note and the Consistent Reporting Agencies offer say what a reader needs.",
-  "status": "Decided 2026-11-01 (Jeff, through the coordinator: \"coverage columns only on request\")",
+  "status": "Decided 2026-11-01 (Jeff, through the coordinator: \"coverage columns only on request\"); Jeff 2026-11-22 (audit B29): the one-year state sum always carries the coverage line (P158); the two columns stay on request",
   "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
 }
