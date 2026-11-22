@@ -3120,6 +3120,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
   assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
   assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));
+  // Several years are a row for each year, never pooled (Jeff 2026-11-22): the same share for each year as for that year alone.
+  const multi = as(ask("what share of murders in Texas were cleared by exception from 2023 to 2025"), "answer") as unknown as Out;
+  assert.deepEqual(multi.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], JSON.stringify(multi.delivered.table.rows));
+  for (const y of [2023, 2024, 2025]) {
+    const one = as(ask(`what share of murders in Texas were cleared by exception in ${y}`), "answer") as unknown as Out;
+    assert.equal(multi.delivered.table.rows.find((r) => r[0] === String(y))![1], one.delivered.table.rows[0][0], `${y} equals the year alone`);
+  }
+  assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), multi.delivered.text.join(" | "));
+  assert.equal(multi.delivered.contractProblems?.length ?? 0, 0);
+  // By state over several years stays declined (one year).
+  const msb = ask("what share of all murder clearances in the United States were prosecution declined from 2023 to 2025 by state");
+  assert.equal(msb.kind, "decline");
 }
 // P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
 // not cleared), never summed.
