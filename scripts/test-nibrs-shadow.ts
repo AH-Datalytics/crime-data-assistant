@@ -4,7 +4,7 @@
  * that returns rows shaped like the compiled query's, so this checks the pipeline and the delivered answer, never the
  * numbers (scripts/nibrs-compile-gate.ts and the runner do that against a canonical build). No database, no model.
  */
-import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
+import { CIRCUMSTANCE, INJURY } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -2064,6 +2064,23 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
     assert.match(as(ask("Robberies during an argument in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
     assert.equal(as(ask("Murders during an argument in Tennessee in 2024"), "route").source, "shr");
+    // Element 33 (Jeff 2026-11-22, "every type, with a note"): injury type is recorded for each victim, up to five, each victim counted under
+    // every type they have, with a line saying the rows can add up to more than the victims; "injured" is any type other than none (P41).
+    {
+      const inj = as(ask("Aggravated assault victims in Memphis by injury type in 2024"), "answer");
+      assert.ok(inj.plan.groupings.some((x) => x.dimension === "victim_injury.injury" && x.multiValue === "each_value"));
+      assert.ok(inj.plan.measures.every((m) => m.unit === "victim"));
+      const stats = inj.plan.statistics.map((x) => x.as);
+      const cols = ["victim_injury.injury", ...stats.flatMap((x) => [x, `${x}_status`])];
+      const row = (c: string, n: number) => [c, ...stats.flatMap((x, i) => [i === 0 ? n : n / 251, "VALUE"])];
+      const d = deliver(inj.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("N", 120), row("M", 80), row("B", 9)], [], "r", [], null);
+      assert.deepEqual(d.table.rows.map((r) => r[0]), ["None", "Apparent minor injury", "Apparent broken bones"]);
+      assert.ok(d.text.includes("A victim can have several injury types, so the rows can add up to more than the number of victims."), JSON.stringify(d.text));
+      assert.ok(inj.delivered.answerStatements.includes("categories_overlap"));
+      assert.deepEqual(Object.keys(INJURY).sort(), ["B", "I", "L", "M", "N", "O", "T", "U"]);
+      // Asked in offenses, the unit is still the victim (injury is recorded for each victim).
+      assert.ok(as(ask("Aggravated assault offenses in Memphis by injury type in 2024"), "answer").plan.measures.every((m) => m.unit === "victim"));
+    }
     // Codex circumstance review 01.1: an offered question keeps the circumstance, or none is offered.
     const fb = ask("Aggravated assaults during an argument in Memphis by sex and race in 2024");
     if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /argument/i);

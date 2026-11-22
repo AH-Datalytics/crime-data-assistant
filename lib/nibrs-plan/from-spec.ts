@@ -10,6 +10,7 @@
  * Place identity is an input: the ORIs come from the app's geography resolver (resolveNibrsPlaces at run time), never
  * from the spec's display text.
  */
+import { INJURY } from "./draft-layer";
 import type { RequestLedger } from "../request-accounting";
 import { GROUP_B, MEASURE_CODES, PERSON_CODES, type NibrsSpec, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { COMMERCIAL_LOCATION_CODES } from "../nibrs-codes";
@@ -114,6 +115,8 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
     case "relationship": return { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", [val])] };
     case "circumstance": return { kind: "exists", scope: "victim", entity: "victim_circumstance", where: [attr("victim_circumstance.circumstance", val.split("+"))] };
     case "bias": return { kind: "exists", scope: "offense", entity: "offense_bias", where: [attr("offense_bias.bias", [val])] };
+    // P41 (Jeff): "injured" is any type of injury other than none; a named type is that type.
+    case "injury": return { kind: "exists", scope: "victim", entity: "victim_injury", where: [attr("victim_injury.injury", val === "any" ? Object.keys(INJURY).filter((c) => c !== "N") : val.split("+"))] };
     case "clearance":
       return ["arrest", "exceptional"].includes(val) ? onEntity("offense", attr("offense.clearance_method", [val])) : onEntity("offense", attr("offense.clearance_type", [val]));
     default: return null;
@@ -138,6 +141,8 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "relationship": return g("victim_offender.relationship", { multiValue: "each_value" });
     // Element 31 is on the victim: counted victims only (a murder or aggravated assault is counted by victim, D18).
     case "circumstance": return ent === "victim" ? g("victim_circumstance.circumstance", { multiValue: "each_value" }) : null;
+    // Element 33: up to five types per victim, each victim counted once under each (categories_overlap).
+    case "injury": return ent === "victim" ? g("victim_injury.injury", { multiValue: "each_value" }) : null;
     case "offense": return ent === "offense" ? g("offense.offense") : g("victim_offense.offense", { multiValue: "each_value" });
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
     case "hour": return g("incident.hour", { bins: HOUR_BINS });

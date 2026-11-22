@@ -48,6 +48,14 @@
       "binned": null,
       "binnedHour": null
     },
+    "victim_injury.injury": {
+      "col": "vi.injury",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(victim_injury) vi ON vi.data_year = v.data_year AND vi.ori = v.ori AND vi.incident_num = v.incident_num AND vi.victim_seq = v.victim_seq AND vi.key_occurrence = v.key_occurrence",
+      "binned": null,
+      "binnedHour": null
+    },
     "incident.hour": {
       "col": "ih.incident_hour",
       "multi": false,

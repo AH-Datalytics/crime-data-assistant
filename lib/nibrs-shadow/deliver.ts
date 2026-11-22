@@ -6,7 +6,7 @@
  * measures are columns side by side; a combined total (D19, P31) is a sentence that adds the table's own cells, given only
  * when every part is known. No commentary, no causes, no comparisons the question did not ask for.
  */
-import { CIRCUMSTANCE, CIRCUMSTANCE_HELD } from "../nibrs-plan/draft-layer";
+import { CIRCUMSTANCE, CIRCUMSTANCE_HELD, INJURY } from "../nibrs-plan/draft-layer";
 import { stateName } from "./places";
 import { NO_CATEGORY } from "../nibrs-plan/compile";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
@@ -76,6 +76,14 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     && f.where[0].dimension === "victim_circumstance.circumstance" && f.where[0].values?.length) {
     const names = f.where[0].values.map((v) => CIRCUMSTANCE[String(v)]?.toLowerCase());
     return names.every(Boolean) ? `where the circumstance was ${names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0]}` : null;
+  }
+  // Element 33 (P41): the victims with an injury other than none ("injured"), or with one of the types named.
+  if (f.kind === "exists" && !f.negate && f.entity === "victim_injury" && f.scope === "victim" && f.where.length === 1 && f.where[0].kind === "attribute"
+    && f.where[0].dimension === "victim_injury.injury" && f.where[0].values?.length) {
+    const codes = f.where[0].values.map(String);
+    if (codes.length === Object.keys(INJURY).length - 1 && !codes.includes("N")) return "where the victim had an injury other than none";
+    const names = codes.map((v) => INJURY[v]?.toLowerCase());
+    return names.every(Boolean) ? `where the injury was ${names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0]}` : null;
   }
   // Increment 6: a clearance selection (P64, P66): "cleared", "not cleared", "cleared by arrest", "cleared by exceptional means".
   if (f.kind === "attribute" && f.op === "in" && f.values?.length === 1) {
@@ -223,6 +231,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
   "victim_circumstance.circumstance": { header: "Circumstance", plural: "circumstance", names: CIRCUMSTANCE },
+  "victim_injury.injury": { header: "Injury type", plural: "injury type", names: INJURY },
   // A crime by its offenders' sexes, races, ethnicities or ages (P49), or offenders by their own (P44).
   "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
   "offender.race": { header: "Offender race", plural: "offender race", names: { ...RACE_CODES, unknown_offender: "Unknown offender" } },
@@ -522,8 +531,10 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
       : `Every category is shown blank, not zero: reporting for ${when} isn't complete.`);
     if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
   }
+  // Element 33 (Jeff 2026-11-22, "every type, with a note"): each type counts every victim who has it.
+  if (cats.includes("victim_injury.injury")) text.push("A victim can have several injury types, so the rows can add up to more than the number of victims.");
   if (held.length) {
-    const when1 = (p: string) => (/^\d{4}-\d{2}$/.test(p) ? monthName(p) : /^\d{4}-Q\d$/.test(p) ? `Q${p.slice(6)} ${p.slice(0, 4)}` : p);
+    const when1= (p: string) => (/^\d{4}-\d{2}$/.test(p) ? monthName(p) : /^\d{4}-Q\d$/.test(p) ? `Q${p.slice(6)} ${p.slice(0, 4)}` : p);
     const counts = held.map((h, i) => `${fmt(h.n)}${i === 0 ? ` ${one(h.n, what)}` : ""}${h.period && ip >= 0 ? ` in ${when1(h.period)}` : ""}`);
     text.push(`One circumstance category is left out of this table for now: ${andList(counts)} ${held.length === 1 && held[0].n === 1 ? "was" : "were"} recorded under it.`);
   }

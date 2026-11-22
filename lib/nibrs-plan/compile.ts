@@ -541,6 +541,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")
         // A victim with at least one of the circumstances (element 31), counted once.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_circumstance")} c2 WHERE ${sameVictim("c2", "v")} AND c2.circumstance IN (${list(values)}))`);
+      else if (on === "victim_injury victim_injury.injury victim victim")
+        // A victim with at least one of the injury types (element 33), counted once.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_injury")} i2 WHERE ${sameVictim("i2", "v")} AND i2.injury IN (${list(values)}))`);
       else return no(`v0 cannot apply an existence over ${f.entity} at ${f.scope} scope to ${entity} counts`);
       continue;
     }

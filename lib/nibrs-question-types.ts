@@ -391,6 +391,11 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
       if (bUnit && bUnit !== wanted) return declineParts([breakdowns[0], ...unitParts], (p) => cannot(p, `an age breakdown of ${whose[1]}s counts ${wanted}, not ${bUnit}.`));
       bUnit = wanted; dim = "age";
     }
+    // Element 33 is recorded for each victim (and only for crimes against persons): victims are counted, as an age breakdown counts its person.
+    if (dim === "injury") {
+      if (bUnit && bUnit !== "victims") return declineParts([breakdowns[0], ...unitParts], (p) => cannot(p, `injury is recorded for each victim, so a breakdown by injury type counts victims, not ${bUnit}.`));
+      bUnit = "victims";
+    }
     if (dim === "clearance-type" || dim === "clearance-method") {
       // Owner 2026-10-25 ("virginia murder clearances by exception by type in 2025"): "by exception" with the
       // clearance-TYPE breakdown is not a conflicting restriction; it asks for the exceptional types only (death of

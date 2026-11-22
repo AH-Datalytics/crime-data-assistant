@@ -187,6 +187,8 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "hour", pattern: R(String.raw`\bby\s+(?:hour(?:\s+of\s+(?:the\s+)?day)?|time\s+of\s+day)\b`) },
   { concept: "breakdown", value: () => "relationship", pattern: R(String.raw`\bby\s+relationship(?:\s+to\s+(?:the\s+)?offenders?)?\b`) },
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
+  // NIBRS element 33 (Jeff 2026-11-22, "every type, with a note"): a victim's types of injury, up to five each.
+  { concept: "breakdown", value: () => "injury", pattern: R(String.raw`\bby\s+(?:the\s+)?(?:type\s+of\s+)?injur(?:y|ies)(?:\s+types?)?\b|\binjury\s+types?\s+breakdown\b|\b(?:and|with)\s+(?:the\s+)?injury\s+types?\b`) },
   { concept: "breakdown", value: () => "drug", pattern: R(String.raw`\bby\s+drug\s+(?:type|category)\b`) },
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\bby\s+bias(?:\s+motivation)?\b`) },
   // "and sex" right after another breakdown is a second breakdown (declined by the types: one breakdown only).
