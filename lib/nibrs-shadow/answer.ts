@@ -1027,9 +1027,9 @@ function scorecardOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const places = own.filter((p) => p.concept === "place");
   const word = (p: Part) => /^score[ \t-]*cards?$/i.test(p.text.trim());
   const other = own.filter((p) => p.concept !== "place" && p.state !== "context" && !(p.concept === "measure" && p.value === "unspecified") && !(p.state === "not-interpreted" && word(p)));
-  if (places.length !== 1 || other.length || flags(read.ledger).comparison) return null;
+  if (places.length > 1 || other.length || flags(read.ledger).comparison) return null;
   const hb = deps.historical;
-  const value = String(places[0].value ?? "");
+  const value = places.length ? String(places[0].value ?? "") : "national";
   const run = (place: ScorecardPlace, label: string, scope: "agency" | "state" | "national", agency?: Agency): ShadowOutcome => {
     const r = buildScorecard(hb, deps.execute, place);
     if (r.kind === "none") return decline("outside_release_coverage", r.explanation);
