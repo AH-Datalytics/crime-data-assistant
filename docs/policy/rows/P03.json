@@ -7,6 +7,6 @@
   "proposed behavior": "Count every agency that reported in each year (keep today's default), with a prominently displayed note that the trend can be shown for consistently reporting agencies only, offered as a button. For a single national or state total of such a detail, say what share of the population the reporting agencies cover.",
   "exact default or choices offered": "Default: all reporting agencies. The participation change is disclosed by the lead's Consistent Reporting Agencies offer (P80, P85), not a sentence in the notes; the button (or the lead's link) opens the consistent view.",
   "why": "The full count is what was reported; the offer makes clear that participation changed and opens the consistent view.",
-  "status": "Decided 2026-10-28 (Jeff: show everything, with a prominent note offering consistent reporters); amended 2026-11-01 (Jeff's notes rule, P85: the lead's offer replaces the note); superseded by P158 for several years (Jeff 2026-11-21: \"one year all reporters; several years ask; NIBRS only\")",
+  "status": "Decided 2026-10-28 (Jeff: show everything, with a prominent note offering consistent reporters); amended 2026-11-01 (Jeff's notes rule, P85: the lead's offer replaces the note); confirmed 2026-11-22 (Jeff: \"Answer, with a button\"), over P158's withdrawn several-years ask",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

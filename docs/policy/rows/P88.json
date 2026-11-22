@@ -7,6 +7,6 @@
   "proposed behavior": "The lead adds Jeff's offer (\"Not every agency reported in every year, so part of this change could come from agencies starting or stopping reporting. To compare the same agencies across years, see only the Consistent Reporting Agencies that reported every month from ... through ...\") when the sum covers two or more years and the number of agencies reporting in some year differs from the first year's by 5% or more. Otherwise only the button.",
   "exact default or choices offered": "Threshold: 5% change in the agencies reporting, against the first year.",
   "why": "A small change in participation barely moves a total; a large one can make a trend that is only agencies joining. 5% is a starting point, easy to change (PARTICIPATION_CHANGE).",
-  "status": "Decided 2026-11-02 (Jeff: \"yes\" to 5%); superseded by P158 (Jeff 2026-11-21: several years ask first which agencies, so no lead offer is needed)",
+  "status": "Decided 2026-11-02 (Jeff: \"yes\" to 5%); stands (Jeff 2026-11-22: several years answer with all reporting agencies and the button, P158's ask withdrawn)",
   "test cases": "Tests that cite this row: scripts/test-answer-conformance.ts."
 }
