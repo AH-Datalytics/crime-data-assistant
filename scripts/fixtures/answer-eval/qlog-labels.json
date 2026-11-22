@@ -60683,14 +60683,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "State clearance rates are unavailable."
+    "reason": "a state's clearance share is given for one year; several years are declined, asking for one year (P203)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R06>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P18 prohibits state clearance rates including exceptional-clearance shares."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "Several years (2022-2025): P203 declines them, asking for one year. P18 no longer applies (P172) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -65425,14 +65425,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Cases are not a supported counting unit."
+    "reason": "\"cases\" is not a NIBRS term (P47)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R03>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P47 declines cases, although prosecutor-declined clearance itself is recorded."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P47: \"cases\" is declined, as not a NIBRS term; P203 covers a share of one type, not a count per state. The decline may offer the question with offenses (P66) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -66058,14 +66058,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "State clearance rates are unavailable."
+    "reason": "a state's clearance share is given for one year; several years are declined, asking for one year (P203)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P18 prohibits state clearance shares."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "Several years (2022-2025): P203 declines them, asking for one year. P18 no longer applies (P172) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -66992,16 +66992,23 @@
    "question": "Which states have the highest share of rapes cleared by exception in 2025?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "State clearance rates are unavailable."
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P18 prohibits state clearance shares."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P203 (one year, by state: the share of rape offenses cleared by exception, from the clearance-by-type sums over the agencies that reported, P171), ordered by share highest first as a ranking (P173), a state with nothing to divide blank, not 0. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -67974,14 +67981,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "reason": "a state's clearance share is given for one year; several years are declined, asking for one year (P203)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "No period: P181 every year, and P203 declines several years (ask one year). P18 no longer applies (P172) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -68803,14 +68810,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "State clearance rates are unavailable."
+    "reason": "a state's clearance share is one clearance type at a time; by state and by every exceptional type at once is a second breakdown (P203)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P18 prohibits state clearance shares."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P203 gives one clearance type per figure; by state and by each exceptional type is a second breakdown it does not cover; the decline may offer one type at a time By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
