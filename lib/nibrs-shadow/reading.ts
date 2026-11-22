@@ -569,6 +569,17 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
   // since the look-ahead would fail in PHRASES).
   dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
+  // Wording gaps from the 284 gate list (no decided row says otherwise): the steepest, sharpest, biggest or greatest decline/drop/decrease is the largest decrease and
+  // the same for an increase; "have seen the largest" is "had the largest"; "broken out by" is "by"; "by age range" is "by age"; "what does crime look like in" is "crime in".
+  text = text.replace(/\b(?:steepest|sharpest|biggest|greatest|largest)\s+(?:declines?|drops?|decreases?|reductions?|falls?)\b/gi, (m) => { if (!/^largest\s+decrease$/i.test(m)) readings.push({ kind: "phrase", from: m, to: "largest decrease" }); return "largest decrease"; });
+  text = text.replace(/\b(?:steepest|sharpest|biggest|greatest|largest)\s+(?:increases?|rises?|jumps?|growth|spikes?)\b/gi, (m) => { if (!/^largest\s+increase$/i.test(m)) readings.push({ kind: "phrase", from: m, to: "largest increase" }); return "largest increase"; });
+  text = text.replace(/\bhave\s+seen\s+(?=the\s+largest\b)/gi, (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "had" }); return "had "; });
+  text = text.replace(/\bbroken\s+out\s+(?=by\b)/gi, (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  text = text.replace(/\bby\s+age\s+ranges?\b/gi, (m) => { readings.push({ kind: "phrase", from: m, to: "by age" }); return "by age"; });
+  text = text.replace(/\bwhat\s+does\s+((?:violent\s+|property\s+)?crime|murder|homicide)\s+look\s+like\s+(?=in\b|for\b)/gi, (m, k: string) => { readings.push({ kind: "phrase", from: m.trim(), to: k }); return `${k} `; });
+  // Openers that ask for nothing ("I'm looking for the ...", "Look at the ...", "Can we look at ...", "Tell me more about ...", "an overview of ...").
+  text = text.replace(/^\s*(?:(?:hi|hello|hey|ok|okay|so|and)[,\s]+)?(?:i'?m\s+looking\s+for|i\s+(?:want|need|would\s+like)\s+(?:to\s+see\s+)?(?!to\b)|look\s+at|can\s+we\s+look\s+at|can\s+i\s+(?:please\s+)?see|let'?s\s+(?:see|look\s+at)|(?:give\s+me\s+)?an\s+overview\s+(?:of|for)|(?:can\s+you\s+)?tell\s+me\s+more\s+about)\s+(?:the\s+)?(?=[a-z0-9])/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
