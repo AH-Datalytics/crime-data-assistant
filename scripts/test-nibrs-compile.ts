@@ -69,6 +69,11 @@ assert.ok(onRobbery.sql.includes("o2.offense_code IN ('120')"));
 const every = ok(compilePlan({ ...allArrests, filters: [] }, year(2024), t));
 for (const s of ["group_b_arrest", "UNION ALL", "identical_to_line_no IS NULL", "<> 'M'"]) assert.ok(every.sql.includes(s), s);
 assert.deepEqual(every.statements, ["arrests_counted_once", "arrests_include_group_b"]);
+// P51/P121 (coordinator 2026-11-22, Miami FL0130600 in 2021): a month "reported" only through Group B rows is unknown for a crime counted
+// from Group A segments, never a 0; an arrest count keeps the month's flag (a Group B arrest is that month's arrest report).
+const groupAOnly = "CASE WHEN status = 'REPORTED_CRIMES' AND coalesce(group_a_rows, 0) = 0 AND coalesce(zero_flag, 'N') <> 'Y' THEN 'UNKNOWN' ELSE status END";
+assert.ok(n2.sql.includes(groupAOnly), "a crime count: a month with no Group A row is unknown");
+assert.ok(!every.sql.includes(groupAOnly), "arrests keep the month's flag");
 // Jeff 2026-11-12: a national arrest count says it is the arrests reported, not the FBI's estimate; an agency's does not.
 const nat = ok(compilePlan({ ...allArrests, filters: [], geography: { places: [{ kind: "national" }], combine: "separate" } }, year(2024), { ...t, agencies: ["TNMPD0000"] }));
 assert.ok(nat.statements.includes("arrests_not_estimated") && !every.statements.includes("arrests_not_estimated"), JSON.stringify(nat.statements));
