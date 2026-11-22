@@ -9373,24 +9373,19 @@
    "question": "annual murder rate nationwide and in Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Baltimore"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Baltimore"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; annual rate By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "reviewed_by": null,
+    "notes": "Baltimore city and county are ambiguous under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -31964,23 +31959,19 @@
    "question": "Compare robbery in Florida, Texas, and New York since 1990",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which New York"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which New York"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "\"New York\" beside two states is the state (not a city), from Crime Index's state figures (P53) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "reviewed_by": null,
+    "notes": "New York is not explicitly specified as state."
    }
   },
   {
