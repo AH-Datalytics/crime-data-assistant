@@ -3214,4 +3214,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
 }
+// Reader wording gaps from the 284 gate's list, second batch: each reads with no word left unread.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09");
+  const unread = (q: string) => rd(q).ledger.parts.filter((p) => p.clause === 0 && p.state === "not-interpreted").map((p) => p.text.trim());
+  assert.equal(rd("which city had the steepest decline in total violent crime?").text, "which city had the largest decrease in total violent crime?");
+  assert.equal(rd("what cities have seen the largest drops in homicide rate since 2019").text, "what cities had the largest decrease in homicide rate since 2019");
+  assert.equal(rd("which cities had the biggest rise in robbery since 2019").text, "which cities had the largest increase in robbery since 2019");
+  assert.equal(rd("which cities had the largest decrease in robbery since 2019").readings.some((x) => x.kind === "phrase" && /largest decrease/.test(x.to)), false, "already plain: no note");
+  assert.equal(rd("murders broken out by month in Houston in 2024").text, "murders by month in Houston in 2024");
+  assert.equal(rd("I want victims and offenders by age range for gun murders in 2025").text, "I want victims and offenders by age for gun murders in 2025");
+  assert.equal(rd("What does crime look like in pierce county?").text, "crime in pierce county?");
+  assert.equal(rd("Tell me more about crime in District of Columbia").text, "crime in District of Columbia");
+  assert.equal(rd("I'm looking for the murders in Houston in 2024").text, "murders in Houston in 2024");
+  assert.equal(rd("Can we look at murder in Houston by month in 2024").text, "murder in Houston by month in 2024");
+  assert.equal(rd("Give me an overview for trends in Iowa City, Iowa.").text, "trends in Iowa City, Iowa.");
+  assert.deepEqual(unread("which city had the steepest decline in total violent crime?"), []);
+  // "I want to know how ..." is not an opener that asks for nothing (P187: peer cities).
+  assert.ok(/^i want to know/i.test(rd("i want to know how crime in nashville compares to peer cities").text));
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
