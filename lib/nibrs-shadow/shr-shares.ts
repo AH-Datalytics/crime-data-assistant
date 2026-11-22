@@ -56,7 +56,7 @@ export function shrShareFamily(question: string): Family {
     const victimRace = /\b(white|black|asian)\s+(?:homicides?|murders?|victims?)\b/i.exec(q)?.[1];
     const label = `${by[1][0].toUpperCase()}${by[1].slice(1).toLowerCase()}${sex ? (sex === "M" ? " male" : " female") : ""} offender`;
     const known = `o.race IN ${KNOWN_RACE}`;
-    return { breakdown: { dim: "offender.race", header: "Offender", words: "the offender's race and sex", shareOfGroups: false, groups: [
+    return { breakdown: { dim: "offender.race", header: "Offender", words: sex ? "the offender's race and sex" : "the offender's race", shareOfGroups: false, groups: [
       { label, codes: [], when: `EXISTS (SELECT 1 FROM {shr_offender} o WHERE ${KEYS} AND o.race = '${race}'${sex ? ` AND o.sex = '${sex}'` : ""})` },
       { label: "Other offender", codes: [], when: `EXISTS (SELECT 1 FROM {shr_offender} o WHERE ${KEYS} AND ${known})` }], rest: "Offender not known" },
       filters: victimRace ? [{ dim: "victim.race", codes: [OFFENDER_RACE[victimRace.toLowerCase()]] }] : [],
