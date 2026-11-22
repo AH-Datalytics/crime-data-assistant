@@ -52948,20 +52948,16 @@
    "question": "What is the population and pop_group for Miami FL and Tampa FL agencies?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "population groups (pop_group) aren't defined here (P218)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P218 (Jeff 2026-11-22): pop_group stays declined, the app does not define population groups; the whole question is declined, no partial answer (P187), the offer of population and ORI without the group is an offer only. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -67872,20 +67868,16 @@
    "question": "How many agencies in Houston TX have pop_group starting with 1? Show ori, population, pop_group for year 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "population groups (pop_group) aren't defined here (P218)"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P218 (Jeff 2026-11-22): pop_group stays declined, the app does not define population groups; the whole question is declined, no partial answer (P187), the offer of population and ORI without the group is an offer only. By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
