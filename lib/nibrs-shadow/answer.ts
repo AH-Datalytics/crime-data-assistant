@@ -1538,7 +1538,10 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
       period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
     } else period = { from: r.from, to: r.to };
   } catch { return null; }
-  const hq = hateQuestionOf(plan, period, deps.hate);
+  const hq0 = hateQuestionOf(plan, period, deps.hate);
+  // Several biases: the columns in the order the question names them (the plan's filters are in code order).
+  const at = (code: string) => ledger0.parts.find((p) => p.clause === 0 && p.concept === "filter" && p.value === `bias:${code}`)?.span?.[0] ?? Infinity;
+  const hq = !("why" in hq0) && hq0.biases ? { ...hq0, biases: [...hq0.biases].sort((a, b) => at(a.code) - at(b.code)) } : hq0;
   if ("why" in hq) {
     // A span wholly outside the data says where the data are (coverage), as every source does.
     if (hq.why === "before the data start") return decline("outside_release_coverage", `Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(period.from.slice(0, 4)), Number(period.to.slice(0, 4)))}.`);
