@@ -1,0 +1,12 @@
+{
+  "id": "P222",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Which cities have the most officers per capita?\", \"provide a list of every city that had 500 or more officers in 2019 and the number of officers that agency had in 2019, 2022, 2023, 2024 and 2025\"",
+  "what the app does today": "Asked or declined: a ranking by staffing was not built.",
+  "proposed behavior": "A ranking by officers (\"which cities have the most officers per capita\") is the city agencies of 250,000 or more (P128's floor, in the title) ranked by sworn officers per 1,000 people, highest first, for the latest complete year with the year named (a rate by D33 and P101). \"N or more officers\" is that bound instead of the population floor: the list is the city agencies with at least N officers in the first year named, with the officer count for each year named, one column a year. Staffing and a crime stay separate questions (P99).",
+  "exact default or choices offered": "The ranked table with the floor or the bound in the title, then the Source line.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine (Crime Index staffing file)",
+  "test cases": "Labels QL-hist-dd420b81d2, QL-hist-094b0c44cc, QL-hist-07bf6d2063 (a decline today) and the officer-ranking questions."
+}
