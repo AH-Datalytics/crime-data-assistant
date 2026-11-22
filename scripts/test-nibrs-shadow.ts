@@ -2333,11 +2333,22 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(kept.rewriteKind, "ask", "a first-turn decline keeps the question about the last turn");
   const pointing = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime again", deps);
   assert.notEqual(pointing.rewriteKind, "new", "a turn that points back is not a new question");
-  // A new question with no period, after one with a period: that period is offered as a button, never assumed.
+  // Follow-up #1 (Jeff 2026-11-21): a new question with no period, after one with a period, takes that period, says so, and offers the
+  // question as typed (before, the period was only offered).
   const shop = shadowFollowUp("Shoplifting in Memphis in 2023", "Shoplifting in Detroit", deps);
   assert.equal(shop.rewriteKind, "new");
-  const offered = shop.kind === "answer" ? shop.buttons ?? [] : shop.kind === "clarify" ? shop.options : shop.kind === "decline" && shop.alternative ? [shop.alternative] : [];
-  assert.ok(offered.some((b) => b.question === "Shoplifting in Detroit in 2023" && !b.continuation), JSON.stringify(offered));
+  assert.equal(shop.rewrite, "Shoplifting in Detroit in 2023");
+  assert.equal(shop.kind, "answer", JSON.stringify(shop).slice(0, 300));
+  if (shop.kind === "answer") {
+    assert.equal(shop.delivered.text[1], "The period is from your last question.");
+    assert.ok((shop.buttons ?? []).some((b) => b.question === "Shoplifting in Detroit" && !b.continuation), JSON.stringify(shop.buttons));
+  }
+  // A place it leaves out comes from the last question too (read as its own question, with its own crime); a ranking keeps its own reading.
+  const placed = shadowFollowUp("Shoplifting in Memphis in 2023", "show me carjackings by year from 2021 to 2024", deps);
+  assert.equal(placed.rewrite, "show me carjackings by year from 2021 to 2024 in Memphis", JSON.stringify(placed).slice(0, 300));
+  if (placed.kind === "answer") assert.equal(placed.delivered.text[1], "The place is from your last question.");
+  const ranked = shadowFollowUp("Shoplifting in Memphis in 2023", "top 10 cities for robberies in 2024", deps);
+  assert.ok(!/Memphis/.test(String(ranked.rewrite ?? "")), String(ranked.rewrite));
   // A turn that points back stays a follow-up.
   assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
   // Codex review 1: a comparison is never answered as a single place; it stays on the follow-up path (asked or proposed).

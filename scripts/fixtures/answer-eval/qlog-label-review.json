@@ -25926,12 +25926,12 @@
 "QL-ct-d5b34c57bc": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "follow-up #1 (Jeff 2026-11-21): the previous question's period (2026) is carried; the current year is Current Trends. By rule from the question text",
 "expected": {
 "outcome": "answer",
-"source": "historical",
+"source": "rtci",
 "source_any": [
-"historical",
+"rtci",
 "nibrs"
 ]
 }

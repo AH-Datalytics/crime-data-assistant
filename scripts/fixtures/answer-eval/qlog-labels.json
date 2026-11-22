@@ -89627,9 +89627,9 @@
    "previous": "the 20 most populous cities in the dataset ranked by their 2026 murder rate",
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
+     "rtci",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -89643,7 +89643,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced."
+    "notes": "follow-up #1 (Jeff 2026-11-21): the previous question's period (2026) is carried; the current year is Current Trends. By rule from the question text"
    }
   },
   {
