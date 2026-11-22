@@ -1,0 +1,12 @@
+{
+  "id": "D08",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Caveats",
+  "what the app does today": "Given with every answer.",
+  "proposed behavior": "Keep: explanation sentences (coverage, sample, partial year) come with every answer they apply to. They are text, never table columns. P86 and P87 (Jeff 2026-11-01) win where they differ: a note is shown only where a reader would be misled, and coverage columns only when the question asks for them.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 8); amended by P86 and P87",
+  "test cases": "GC-031, GC-049, GC-050, GC-070, GC-071, GC-072, GC-073, GC-116"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P129",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murder clearance rate in Houston in 2026\", \"robbery clearance rate in Detroit so far this year\", \"murder clearance rate in Texas in 2026\", \"murder clearance rate in the US in 2026\" (a Part I offense, the current year)",
+  "what the app does today": "Declined as outside the historical clearances data (the last full year), or for a state or the nation, declined as not decided.",
+  "proposed behavior": "The current year's clearance rate is computed from NIBRS: the offenses cleared over the offenses reported, in the months of the year the data holds. Rate only, no counts, no method sentence. Jeff's answer: \"Houston, Texas: 41% of murders reported in January through September 2026 were cleared. Source: NIBRS.\" An agency needs a report for every month of the span; a month with no report is named and no rate is given (\"No clearance rate is given: no data is available for March 2026.\"). A state or the nation counts only the Consistent Reporting Agencies, the agencies that reported crimes in every month of the span, and says so with their number, in the existing consistent-reporters wording: \"United States: 39.7% of murders reported in January through September 2026 were cleared, counting only the 106 Consistent Reporting Agencies that reported every month from January 2026 through September 2026.\" and then \"Source: NIBRS.\" The rate is shown as the historical clearance answer shows its percentage: one decimal, a trailing zero dropped. The same agencies count the offenses and the cleared offenses. Completed years keep the FBI annual method from Crime Index (P57).",
+  "exact default or choices offered": "A one-line answer: the percentage, the months, the source.",
+  "why": "Jeff 2026-11-16 (through the coordinator): the answer is exactly the one sentence and \"Source: NIBRS.\" (\"That's it\"); \"Current year calcs for state or nation require only consistent reporting agencies and should say so.\"",
+  "status": "Decided 2026-11-16 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (the block \"The current year's clearance rate\")."
+}

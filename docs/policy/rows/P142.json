@@ -1,0 +1,12 @@
+{
+  "id": "P142",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Give me violent crime metrics in DC per month\", \"Do you have carjacking data for New Orleans by month?\", \"plot me the number of assaults in Glassboro NJ from 2010 to 2024\"",
+  "what the app does today": "Declined (\"I didn't understand \\\"metrics in\\\"\", \"... \\\"you have\\\"\").",
+  "proposed behavior": "Words that never restrict (\"metrics\", \"you have\", \"me the\") do not stop a question being read when they stand between the parts the reader recognized. A run of such words is filler when every word is and both ends touch a recognized part. \"do you have shootings data\" with no place is still a question about the data itself, not a figure.",
+  "exact default or choices offered": "As for the question without the filler words.",
+  "why": "Jeff 2026-11-18 (through the coordinator): option A, months, year to date and partial years (the group is \"should be answered\"); cluster 1, reader vocabulary.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow-reading.ts (\"P142\")."
+}

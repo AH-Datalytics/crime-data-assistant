@@ -1,0 +1,12 @@
+{
+  "id": "D28",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "General rule: when does the app ask a clarifying question?",
+  "what the app does today": "Several separate rules (bare \"crime\", shootings, place level, ambiguous place names), each with its own trigger.",
+  "proposed behavior": "Ask only when materially different readings remain after the explicit wording, the conversation so far and the approved defaults in this table; one question at a time, with buttons that run the whole original question with the choice filled in.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "Professional apps ask rarely and for a reason.",
+  "status": "Decided 2026-10-28 (plan approved by Jeff)",
+  "test cases": "GC-056, GC-075, GC-076, GC-077, GC-078, GC-117; GC-003, GC-110"
+}

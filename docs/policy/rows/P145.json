@@ -1,0 +1,12 @@
+{
+  "id": "P145",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "A monthly rate for one place (\"murder rate per month in Dallas\"); several places by month (\"Nashville vs New Orleans murders per month\")",
+  "what the app does today": "\"Each month's own count, not scaled to a full year.\" under the title; the several-place table's first column headed \"Agency\".",
+  "proposed behavior": "A rate by month needs no note saying what a rate is: the line \"Each month's own count, not scaled to a full year.\" is removed from the monthly rate of one place (Current Trends and NIBRS). The NIBRS note naming the population each month's rate uses stays. The first column of a monthly table of several places is headed \"Place\".",
+  "exact default or choices offered": "The title, then only the exceptions, then the Source line.",
+  "why": "Jeff 2026-11-18 (through the coordinator): \"a rate is self explanatory\"; \"Place\" instead of \"Agency\".",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-current.ts."
+}

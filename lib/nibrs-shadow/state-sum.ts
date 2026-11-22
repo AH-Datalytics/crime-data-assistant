@@ -83,9 +83,10 @@ export function categorySumsFromGrid(rows: unknown[][], everySet: string[], head
 const ONCE_LIMIT = 40_000;
 /** Each agency's most recent FBI population in the build (P90). */
 export function currentPopulationSql(root: string, oris: string[]): string {
+  // P184: the latest population above zero (a zero is "none held": the Crime Index's takes its place below).
   return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
     FROM read_parquet('${root.replace(/'/g, "''")}/agency/data.parquet'), unnest(by_year) AS t(u)
-    WHERE ${oriIn("ori", oris)} AND u.population IS NOT NULL GROUP BY ori`;
+    WHERE ${oriIn("ori", oris)} AND u.population > 0 GROUP BY ori`;
 }
 
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
@@ -126,6 +127,16 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   for (const r of header) { inYear.get(Number(r[1]))?.add(String(r[0])); pop.set(`${r[0]}|${r[1]}`, r[2] === null ? null : Number(r[2])); }
   const oris = [...new Set(header.map((r) => String(r[0])))];
   if (!oris.length) return decline(`No agency in ${where} has a header in the data for ${periodWords(period.from, period.to)}.`);
+  // P184 (Jeff 2026-11-21): an agency's own NIBRS population where it is above zero; where NIBRS holds zero or none, the Crime Index's population
+  // of that agency and year (the 2024 file holds a zero for 150 agencies that have one: county and state agencies, 6.4 million people).
+  if (deps.historical) {
+    const zero = [...new Set([...pop.entries()].filter(([, v]) => !v).map(([k]) => k.split("|")[0]))];
+    if (zero.length) {
+      const fill = deps.execute(`SELECT ori, year, population FROM read_parquet('${deps.historical.root.replace(/'/g, "''")}/agency_crime.parquet')
+        WHERE ${oriIn("ori", zero)} AND year IN (${years.map(Number).join(", ")}) AND population > 0`);
+      for (const r of fill) { const k = `${r[0]}|${r[1]}`; if (pop.has(k) && !pop.get(k)) pop.set(k, Number(r[2])); }
+    }
+  }
   const ciPop: Record<number, number> = {};
   for (const y of years) { const p = srsPopulation(place.kind === "national" ? { kind: "national" } : { kind: "state", code: (place as { code: string }).code }, y); if (!p) return decline(`The Crime Index has no ${y} population for ${where}, so coverage cannot be stated.`); ciPop[y] = p; }
 
@@ -215,6 +226,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, every: ev };
   });
   const current = new Map(everySet.length ? deps.execute(currentPopulationSql(deps.target.root, everySet)).map((r) => [String(r[0]), Number(r[1])]) : []);
+  if (deps.historical) {
+    const none = everySet.filter((o) => !current.get(o));
+    if (none.length) for (const r of deps.execute(`SELECT ori, arg_max(population, year) FROM read_parquet('${deps.historical.root.replace(/'/g, "''")}/agency_crime.parquet')
+      WHERE ${oriIn("ori", none)} AND population > 0 GROUP BY ori`)) current.set(String(r[0]), Number(r[1]));
+  }
   const everyCurrentPopulation = { sum: everySet.reduce((a, o) => a + (current.get(o) ?? 0), 0), missing: everySet.filter((o) => !current.has(o)).length };
   const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop, everyCurrentPopulation };
 
@@ -237,6 +253,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const CRA = "Consistent Reporting Agencies";
   // Jeff (2026-11-01): one note, his words, then the source; a rate adds its basis. Nothing else.
   const note = (every: boolean) => (every ? "Includes only agencies that reported complete data." : "Includes all agencies.");
+  // P185 (Jeff 2026-11-21, Savant's sentence): under a NIBRS sum over several agencies (a state or the nation), never under one agency's answer.
+  const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
   const view = (every: boolean): { lines: string[]; rows: Row[]; agencies: Cell[]; coverage: Cell[]; population: Cell[] } => {
     const lines: string[] = [];
     if (years.length === 1) {
@@ -252,7 +270,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         : every
         ? `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
         : `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, summed over the agencies that reported.`);
-      lines.push(note(every));
+      lines.push(note(every), FBI_MASTER_FILES);
       if (isRate && v !== null) lines.push(`The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
       return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }],
@@ -264,7 +282,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     lines.push(every
       ? `Counts only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
       : "Summed over the agencies that reported each year.");
-    lines.push(note(every));
+    lines.push(note(every), FBI_MASTER_FILES);
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),

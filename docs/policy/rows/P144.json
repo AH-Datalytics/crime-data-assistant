@@ -1,0 +1,12 @@
+{
+  "id": "P144",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Dallas vs Chicago murder rate per month since 2018\", \"monthly murder rates in Baltimore, Washington DC and Detroit\"",
+  "what the app does today": "Declined (\"This isn't available: several agencies by month, by year or by category.\").",
+  "proposed behavior": "Several named places by month as a rate (Current Trends): a Title Case title reading back the question (\"January 2018 to September 2026 Murder Rate by Month, Dallas, Texas and Chicago, Illinois\"), then the Source line, with a row for each place and month (\"Murder rate per 100,000\"). Each month's rate is that month's count per 100,000 of that month's population, not scaled to a full year; no note says so. Only exceptions are noted: a month with no figure or no population is blank and named; a place with no population is left out (\"Crime Index has no population for X, so no rate is given for it.\") and the answer declines only when no place has one. Up to 5 places; a sixth asks to name fewer.",
+  "exact default or choices offered": "The title, then the Source line.",
+  "why": "Jeff 2026-11-18 (through the coordinator): option A cluster 3; \"Those notes are unneeded, a rate is self explanatory.\"",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-current.ts (\"P144\")."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P70",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Countywide violent crime in Cook County\", \"all agencies in X County\", \"the Atlanta metro area\"",
+  "what the app does today": "A county name is P25's agency; county-wide and metro totals were not answered.",
+  "proposed behavior": "A plain county name stays P25 (the sheriff or county police), with a note that the cities in the county are not included. An explicit county-wide request (\"countywide\", \"whole county\", \"all agencies in X County\") is declined: no county-wide sum is given. The decline says whose figures the county's are and offers the question for that agency: \"County-wide sums aren't given; the figures for Cook County are those of the Cook County Sheriff's Office.\" with \"Ask instead: <the question without the county-wide words>\". Where no county agency exists, the decline says so and offers nothing: \"County-wide sums aren't given, and Crime Index has no agency for X County.\" Metro areas: declined.",
+  "exact default or choices offered": "County-wide: declined, with the county's own agency (the sheriff or county police) offered. Metro: declined.",
+  "why": "Jeff 2026-11-18 (through the coordinator): \"Whenever a countywide sum is requested it decline and offer the primary county agency (county sheriff or police). That's the policy.\" This overrides the 2026-10-30 ruling (\"We could add up all the agencies in a county or metro area, just makes me nervous since it isn't formal. Still, we should have that data.\").",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator; overrides 2026-10-30)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts."
+}

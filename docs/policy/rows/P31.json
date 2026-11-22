@@ -1,0 +1,12 @@
+{
+  "id": "P31",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Gun violence in Chicago\", \"gun crime\", \"armed robberies\", \"stabbings\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "\"Gun violence\" is declined, saying the data has no non-fatal shooting counts. \"Gun crime\" means murders, robberies and aggravated assaults where a firearm was used. \"Armed robbery\" means robbery with any weapon (gun, knife, other), not strong-arm or no weapon. \"Stabbings\" means murder and aggravated assault victims where a knife or cutting instrument was used.",
+  "exact default or choices offered": "Gun violence: decline with the note; gun crime, armed robbery, stabbings as defined.",
+  "why": "Each phrase picks a different count; gun violence is usually meant to include people shot and wounded, which the data does not count.",
+  "status": "Decided 2026-10-29 (Jeff: 5 \"Decline gun violence with note that we don't collect non-fatal shooting data, yes on gun crime\", 6 yes, 7 yes)",
+  "test cases": "Tests that cite this row: scripts/test-p3-1a-smoke-live-path.ts, scripts/test-subcity-geography.ts, scripts/test-request-decision-observer.ts."
+}

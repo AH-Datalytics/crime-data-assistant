@@ -1,0 +1,12 @@
+{
+  "id": "P22",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "The user clicks a button in a clarifying question",
+  "what the app does today": "The button rewrites the word in question and keeps the rest. Some questions are asked once only; the place-level question repeats until answered.",
+  "proposed behavior": "A button runs the original question with only that choice changed (place, period and filters kept). A choice already made is not asked again for that question or its follow-ups; a later question with a new ambiguity can still be asked about.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "Re-asking, or dropping parts of the question after the user answered, feels broken.",
+  "status": "Decided 2026-10-28 (Jeff: yes)",
+  "test cases": "GC-003; new cases to write"
+}

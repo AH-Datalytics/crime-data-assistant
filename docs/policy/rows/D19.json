@@ -1,0 +1,12 @@
+{
+  "id": "D19",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Drug crimes\"",
+  "what the app does today": "Drug/narcotic violations only.",
+  "proposed behavior": "Drug/narcotic violations plus drug equipment violations.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "definition check: drug crimes"
+}

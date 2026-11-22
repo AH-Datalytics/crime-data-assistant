@@ -1,0 +1,12 @@
+{
+  "id": "P29",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Assaults by men and women in Detroit\" and \"assaults against men and women in Detroit\"",
+  "what the app does today": "Read either way, or not read: one shadow rule read \"men and women\" as victims by sex wherever it appeared.",
+  "proposed behavior": "\"By\" names the offenders: crimes by men and women are broken down by offender sex. \"Against\" names the victims: crimes against men and women are broken down by victim sex. The same holds for other groups (\"by juveniles\", \"against children\"). Both are answered; an offender breakdown the engine cannot compute yet is declined with that reason, never answered as victims.",
+  "exact default or choices offered": "\"by <group>\" -> offenders; \"against <group>\" -> victims.",
+  "why": "The two give different counts of different people.",
+  "status": "Decided 2026-10-29 (Jeff: \"by means offenders, we will want that data too, against means victims\")",
+  "test cases": "shadow reading tests; new cases to write with the offender breakdowns (compiler increment 2)"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "D38",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Kansas City robberies per month since 1960\" (a monthly ask for one agency that reaches back before any monthly source)",
+  "what the app does today": "A decline: NIBRS figures here cover January 2017 through the latest month, with one \"By year instead\" button.",
+  "proposed behavior": "Ask which source: lead \"No single source has monthly figures for <agency> back to <year>. Which would you like?\", buttons only for what exists for that agency, yearly first. If only one exists, answer with it and say why in one line.",
+  "exact default or choices offered": "\"Yearly, 1960 to 2025 (Crime Index)\"; \"Monthly, January 2017 to September 2026 (Current Trends)\" (only if the agency is in Current Trends); \"Monthly, <first NIBRS month> to September 2026 (NIBRS)\". One choice: \"Monthly figures for <agency> start in <month year> (<source>); yearly figures go back to <year> in Crime Index. Showing <what was shown>.\" The asked end month is kept, never widened. A period entirely before every monthly source answers with the yearly figures and says so (\"No monthly figures for <agency> go back to <year>; yearly figures go back to <year> in Crime Index. Showing yearly figures from <year>.\").",
+  "why": "Jeff 2026-11-14: \"yes to all three\" (Block 1). The last two sentences are the engine's wording for the one-choice cases (Jeff approved the template; flagged).",
+  "status": "Decided (Jeff 2026-11-14)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

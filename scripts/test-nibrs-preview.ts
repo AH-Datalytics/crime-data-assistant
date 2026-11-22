@@ -49,7 +49,7 @@ const withP = toPreview(shadowAnswer("Shoplifting in Memphis by month in 2024", 
 assert.ok(withP && "titleParts" in withP && withP.source === "nibrs" && withP.titleParts.groupings[0] === "month" && withP.chart.default === "line", JSON.stringify(withP));
 // A breakdown with shares: no chart (category charts wait), rows keyed by headers.
 const bySex = toPreview(shadowAnswer("Simple assault victims in Memphis by sex in 2024", deps));
-assert.ok(bySex.kind === "answer" && bySex.chart === null && bySex.rows[0]["Victim sex"] === "Female");
+assert.ok(bySex.kind === "answer" && bySex.chart?.type === "bar" && bySex.chart.xAxis === "Victim sex" && bySex.rows[0]["Victim sex"] === "Female");
 // Exclusive categories (stacked and 100% charts only when honest): passed through; absent with no category grouping.
 assert.ok(bySex.kind === "answer" && bySex.exclusive === true);
 const byWeapon = toPreview(shadowAnswer("Robberies in Memphis in 2024 by weapon", deps));
