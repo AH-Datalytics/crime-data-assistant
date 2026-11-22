@@ -57,7 +57,7 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrentClearance, answerStateClearanceSeries } from "./clearance-current";
+import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
@@ -1700,8 +1700,6 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
 
 /** P13's sentence, as Current Trends and Historical say it. */
 const SAFEST_SENTENCE = "There's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.";
-/** P18's sentence, as the clearance answer says it for a state. */
-const STATE_CLEARANCE_SENTENCE = "A clearance rate for every state at once isn't available. Ask for one state and one year, for example \"Texas murder clearance rate in 2024\".";
 const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 /**
  * The same months of each year (Jeff 2026-11-16, Q1): "Murders through April from 2017 to 2025", "homicides in the first 6 months of each
@@ -1860,11 +1858,6 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (ledger0.parts.some((p) => p.clause === 0 && p.concept === "explain") && ledger0.parts.some((p) => p.clause === 0 && p.concept === "measure"))
     return decline("explanation_requested", "The data shows how many crimes were reported; it can't say why they rose or fell.", { detail: "I report what NIBRS records; I can't explain causes." });
   if (/\b(?:safest|most\s+dangerous|least\s+safe|most\s+unsafe)\b/i.test(ledger0.question)) return decline("unsupported_capability", SAFEST_SENTENCE);
-  if (clause0("clearance").some((p) => p.value === "rate") && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "entity" && p.state !== "context")
-    // Only where the existing path would ask first: "by state" (no place), or a state with no period, for a Part I crime (a crime NIBRS alone
-    // records has its own, longer sentence, said once a period is given).
-    && clause0("list").some((p) => p.value === "list:state"))
-    return decline("not_recorded_in_nibrs", STATE_CLEARANCE_SENTENCE);
   const term = flags(ledger0).undefinedTerm;
   if (term) {
     // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
@@ -3114,6 +3107,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (rollingT && (plan.measures.length !== 1 || plan.transforms.length !== 1 || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
     || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month"))
     return decline("unsupported_capability", "This isn't available: rolling windows of a rate, a breakdown, or several crimes.");
+  // P173 (Jeff 2026-11-21): every state ranked by its clearance rate for one year, the offenses and agencies reporting beside each rate.
+  if (plan.transforms.length === 1 && plan.transforms[0].kind === "rank" && plan.transforms[0].by === "clearance_rate" && plan.geography.places[0].kind === "national"
+    && plan.groupings.length === 1 && plan.groupings[0].dimension === "geo.state" && plan.measures.length === 2)
+    return answerStateClearanceRanking(plan, plan.measures[0].id.split(".")[1], deps, statements, [], (why, detail) => decline("unsupported_capability", why, detail ? { detail } : undefined));
   if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison" && !(t.kind === "rank" && plan.geography.places[0].kind === "agency_set")))
     return decline("unsupported_capability", "This isn't available: rankings.");
   // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime; by category too (coordinator

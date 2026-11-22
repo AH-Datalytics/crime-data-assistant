@@ -241,6 +241,8 @@ const PHRASES: [RegExp, string][] = [
   // city and the state (P26); "NY city" is the city.
   [/\bny\s+city\b/gi, "New York City"],
   [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
+  // P173 (Jeff 2026-11-21): "murder clearance rates by state" is every state ranked by its clearance rate.
+  [/\b((?:[a-z]+\s+){0,2}?)clearance\s+rates?\s+(?:by|per|for\s+(?:each|every)|in\s+each)\s+state\b/gi, "rank states by $1clearance rate"],
   // P163 (Jeff 2026-11-19): justifiable homicides "by police vs civilians" are the two kinds of justifiable homicide side by side (the
   // circumstance breakdown); "by police" alone (or "by civilians" alone) is read from the question text where the answer is made.
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement)\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with)|against)\s+(?:by\s+)?(?:private\s+)?(?:civilians?|citizens?)\b/gi, "$1 by circumstance"],
