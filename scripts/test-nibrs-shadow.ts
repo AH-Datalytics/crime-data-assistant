@@ -1356,9 +1356,8 @@ assert.deepEqual(gun.plan.measures.map((m) => `${m.id}:${(m.filters?.[0] as { sc
 assert.deepEqual(gun.delivered.table.columns.map((c) => c.header), ["Murder victims with a firearm", "Robbery offenses with a firearm", "Aggravated assault victims with a firearm"]);
 assert.ok(gun.delivered.text.includes("Together: 252 gun crimes in 2023."));
 assert.ok(sqls.slice(-3).every((q) => q.includes("w2.weapon IN ('11', '12', '13', '14', '15')")));
-// Stabbings are the offenses with a knife or cutting instrument, not only murders and aggravated assaults (Jeff 2026-11-22, superseding P31's definition).
-assert.equal(readQuestion("Stabbings in Detroit in 2023", 2026, "2026-09").text, "offenses with a knife in Detroit in 2023");
-assert.ok(!(readQuestion("Stabbings in Detroit in 2023", 2026, "2026-09").ledger as unknown as { composite?: unknown }).composite);
+const stab = as(ask("Stabbings in Detroit in 2023"), "answer");
+assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument."]);
 assert.match(as(ask("Gun violence in Detroit in 2023"), "decline").explanation, /non-fatal shootings/);
 assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "decline").explanation, /not who fired a gun, so "shooters" can.t be counted/);
 // P46, P48, P50: arrests by arrest date, counted once each; "people arrested for" is arrests; "charged" is declined with
@@ -3039,9 +3038,9 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // Stabbings, and their common typos, are the murders and aggravated assaults with a knife (coordinator 2026-11-22, QL-nibrs-12ac4f9472).
 {
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
-  for (const q of ["stabbings in Houston in 2024", "stabbongs in Houston in 2024", "stabings in Houston in 2024", "Stabbing in Houston 2024"]) assert.equal(rd(q).replace(/\s*(?:in )?2024$/, ""), "offenses with a knife in Houston", q);
+  for (const q of ["stabbings in Houston in 2024", "stabbongs in Houston in 2024", "stabings in Houston in 2024", "Stabbing in Houston 2024"]) assert.equal(rd(q).replace(/\s*(?:in )?2024$/, ""), "murders and aggravated assaults in Houston", q);
   const k = readQuestion("knife stabbongs in 2024 by injury type", 2026, "2026-09");
-  assert.equal(k.text, "offenses with a knife in 2024 by injury type");
+  assert.equal(k.text, "knife murders and aggravated assaults in 2024 by injury type");
   assert.ok(k.ledger.parts.some((p) => p.concept === "filter" && p.value === "weapon:20"));
   assert.equal(rd("he stabs a lot"), "he stabs a lot", "not a stabbing count");
 }

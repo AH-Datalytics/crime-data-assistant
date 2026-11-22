@@ -285,13 +285,12 @@ const PHRASES: [RegExp, string][] = [
   [/\bwhat\s+(race|sex|gender|ethnicity|age)\s+(?:are|were)\s+(?:the\s+)?(offenders|victims)\s+(?:in|of|for)\s+(.+?)\s+(murder|homicide)s\b/gi, "$4 $2 by $1 in $3"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
-  // Stabbings are the offenses in which a knife or cutting instrument was used (Jeff 2026-11-22, superseding P31's murders and aggravated assaults); typos
-  // too ("stabbongs", "stabings"; QL-nibrs-12ac4f9472 "knife stabbongs in 2024 by injury type"), and a "knife" before it is the same knife.
-  [/(?:\b(?:knife|knives)\s+)?\bstab+[a-z]{0,2}ngs?\b/gi, "offenses with a knife"],
 ];
 /** P31's composites: the crimes each counts, and its weapon. */
 const COMPOSITES: [RegExp, string, Composite][] = [
   [/\bgun\s+crimes?\b/gi, "murders, robberies and aggravated assaults", "firearm"],
+  // (Typos too: "stabbongs", "stabings"; the coordinator 2026-11-22, QL-nibrs-12ac4f9472 "knife stabbongs in 2024 by injury type".)
+  [/\bstab+[a-z]{0,2}ngs?\b/gi, "murders and aggravated assaults", "knife"],
 ];
 const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const MON = `(${MONTH_NAMES.join("|")})`;
