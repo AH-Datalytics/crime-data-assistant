@@ -7,6 +7,6 @@
   "proposed behavior": "Clearance by type for a state is the reporting agencies' sum, as for one agency (P64, P66, P67): the crime's offenses cleared by arrest, cleared by exceptional means (A to E, or as one group) and not cleared, with the incidents beside each count, summed over the agencies that reported (each year's reporting agencies), with the Consistent Reporting Agencies as the button. A clearance rate for a state is P172's (every state ranked: P173). The nation is the same sum over every state. Several crimes and a change stay declined.",
   "exact default or choices offered": "The table of clearance types with their offense counts and incidents, the title, the agencies line, the date-of-file note, then the Source line.",
   "why": "Jeff 2026-11-21 (through the coordinator): build state clearance by type; the same P66 rule as one agency plus the reporting-agencies line.",
-  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator); \"or as one group\" is narrowed by P192: the seven rows are always shown (cleanup 2026-11-22), audit A16",
   "test cases": "scripts/test-nibrs-shadow.ts (\"P171\")."
 }

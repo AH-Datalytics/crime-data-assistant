@@ -7,6 +7,6 @@
   "proposed behavior": "When built, one shared every-month test (a month with crimes reported, VALUE, in every month of the span, with a header every year; a zero report is not a reported month, P121), but each kind keeps its own row: state and national sums P61 (everything reported, with the Consistent Reporting Agencies button); several named agencies combined P58 (a figure only when every month is known for every agency, the missing months named); rankings P60 (complete reporters only, those left out named, no button to include them).",
   "exact default or choices offered": "Each kind's own row; one shared test.",
   "why": "Reusing P61's default for rankings or named agencies would let reporting gaps decide a ranking or give a rate P58 forbids (Codex design check 01).",
-  "status": "Decided 2026-11-01 (coordinator, as technical; Jeff: \"yes\" to the note's recommendations)",
+  "status": "Decided 2026-11-01 (coordinator, as technical; Jeff: \"yes\" to the note's recommendations); several years: answered with all reporting agencies and the CRA button (P158, as amended 2026-11-22) (cleanup 2026-11-22), audit D7",
   "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
 }

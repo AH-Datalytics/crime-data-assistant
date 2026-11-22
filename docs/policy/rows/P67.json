@@ -7,6 +7,6 @@
   "proposed behavior": "Cleared by arrest wins: the incident has one status, cleared by arrest, and the answer says so.",
   "exact default or choices offered": "One status per incident: arrest over exceptional.",
   "why": "An arrest clears an incident; exceptional clearance applies when an arrest could not be made.",
-  "status": "Decided 2026-10-30 (Jeff: \"agreed\")",
+  "status": "Decided 2026-10-30 (Jeff: \"agreed\"); \"and the answer says so\" is carried, not shown (P86) (cleanup 2026-11-22), audit B28",
   "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts."
 }
