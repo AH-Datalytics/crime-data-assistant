@@ -1248,6 +1248,16 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.equal(built.kind, same.kind, "chosen, it answers as the eager one did");
   if (built.kind === "answer" && same.kind === "answer") assert.deepEqual(built.delivered.table.rows, same.delivered.table.rows);
   assert.ok(sqls.length >= mark0, "its statements run when it is chosen");
+  // A deferred choice built inside another's probed build (the national place choice whose answer asks which kind of crime, the kind choice itself heavy) runs its
+  // statement when it is chosen: it is not refused by the probe it was built under (the Runner found an empty "deferred answer failed:" on the injury questions).
+  {
+    const nested = as(shadowAnswer("Firearm crimes in 2024 by injury type", heavy), "clarify");
+    const nat = nested.options.find((o) => o.label === "The United States")!;
+    const kindAsk = as(nat.continuation!, "clarify");
+    const kindChoice = kindAsk.options[0];
+    const out = kindChoice.continuation!;
+    assert.ok(!/deferred answer failed/.test(JSON.stringify((out as { detail?: unknown }).detail ?? "")), JSON.stringify(out).slice(0, 300));
+  }
   // The preview lists it without building it.
   const again = as(shadowAnswer(q, heavy), "clarify");
   const mark = sqls.length;

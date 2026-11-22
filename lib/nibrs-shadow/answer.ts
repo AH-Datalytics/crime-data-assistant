@@ -379,9 +379,13 @@ class HeavyStatement extends Error {}
 function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
   let heavy = false;
   const limit = deps.deferChars ?? HEAVY_STATEMENT;
-  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
+  // The probe refuses a heavy statement only while it is probing. A button built inside the probed build (a deferred "which kind of crime" in the
+  // place default's answer) keeps these deps for its own lazy build later: it must run its statement then, not throw the probe's refusal (an
+  // empty "deferred answer failed:" decline, found by the Runner on the injury questions, 2026-11-22).
+  let probing = true;
+  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (probing && sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
   let first: ShadowOutcome | null = null;
-  try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
+  try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; } finally { probing = false; }
   if (!heavy) return { label, continuation: first!, ...extra };
   // Something between the executor and here swallowed the refusal and made an outcome of it: not a plan that reached its statement; built for real.
   if (first) return { label, continuation: build(deps), ...extra };
