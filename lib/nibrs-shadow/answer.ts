@@ -879,18 +879,38 @@ const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:c
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 let defaultDepth = 0;
+/** P229: the words of a trend or per-capita question. */
+const P229_TREND = /\b(?:rates?|per capita|per 100,?000|trends?|over time)\b/i;
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
  * with the default instead, when the option that carries it answers now (not a heavy statement deferred, not a decline), and the chain of asks
  * (a place, then a period, then a kind of crime) ends in an answer. The notes say each default, after the title; buttons let the user change the
  * place or the year. Otherwise the ask stays as before (a ranking with no period, a heavy national shape, a question the reader cannot place).
  */
+/**
+ * P229 (Jeff 2026-11-22): the United States by year, 2019 through the latest complete year; the NIBRS series counts the Consistent Reporting Agencies
+ * (an All agencies button beside it). The national NIBRS statement is heavy (~12 s): this default is the one that runs it. null when it does not answer.
+ */
+function p229Since(q: string, deps: ShadowDeps): { option: ShadowOption; more: ShadowOption[]; note: string } | null {
+  const lcy = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
+  defaultDepth++;
+  try {
+    const all = shadowAnswer(`${q.replace(/[?.!\s]+$/, "")} in the United States by year from 2019 to ${lcy}`, deps) as ShadowOutcome & { buttons?: ShadowOption[] };
+    if (!ANSWER_KINDS.includes(all.kind)) return null;
+    const note = `No years were given, so 2019 through ${lcy} is shown.`;
+    const cons = all.buttons?.find((x: ShadowOption) => x.role === "consistent_agencies");
+    if (cons?.continuation && ANSWER_KINDS.includes(cons.continuation.kind))
+      return { option: { label: "Since 2019", continuation: cons.continuation } as ShadowOption, more: [{ label: "All agencies", continuation: all, targetSource: "nibrs" } as ShadowOption], note };
+    return { option: { label: "Since 2019", continuation: all } as ShadowOption, more: [], note };
+  } finally { defaultDepth--; }
+}
 export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
   if (deps.checkingOffer || deps.noDefaults || defaultDepth > 1 || o0.kind !== "clarify") return o0;
   const notes: string[] = [];
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
   let years = false;
+  let placeDefaulted = false;
   for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
     const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
@@ -903,11 +923,18 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // "By state" names the nation's states as the rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
       byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(question);
       note = byStateRows ? "" : "No place was named, so the United States is shown.";
+      placeDefaulted = !byStateRows;
       if (!byStateRows) more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
       option = find(/^Every year available$/);
+      // P229 (Jeff 2026-11-22): a trend or per-capita question with no place and no period is the United States by year since 2019, said; the NIBRS
+      // answer counts the Consistent Reporting Agencies only (the other sources since 2019 as they are). Not a ranking (one year).
+      if (placeDefaulted && P229_TREND.test(c.question) && !RANKING_WORDS.test(c.question)) {
+        const s = p229Since(c.question, deps);
+        if (s) { option = s.option; more.push(...s.more); note = s.note; }
+      }
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
-      if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
+      if (!option && !RANKING_WORDS.test(c.question)) {
         defaultDepth++;
         try {
           // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
@@ -927,6 +954,17 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+    }
+    // P229: the nation's trend question whose national statement is heavy (NIBRS): the place step builds the since-2019 series itself (the period ask is never reached).
+    if (c.about === "which place" && !byStateRows && option && isDeferred(option) && P229_TREND.test(c.question) && !RANKING_WORDS.test(c.question)) {
+      const s = p229Since(question, deps);
+      if (s) {
+        notes.push(note, s.note);
+        buttons.push(...more, ...s.more, { label: "Another year", entry: "which year" });
+        years = true;
+        cur = s.option.continuation!;
+        break;
+      }
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     if (!byStateRows) notes.push(note);
