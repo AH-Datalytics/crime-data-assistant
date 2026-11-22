@@ -319,7 +319,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (measures.length !== 1 || one("one place")) return { kind: "none" };
     if (breakdowns.length) return breakdownDecision();
     // Several years of a clearance share for a state or the nation are a row for each year (Jeff 2026-11-22), so a range or "each year" is not a refusal there.
-    const yearlyClearanceShare = places.length === 1 && (places[0]!.kind === "state" || places[0]!.kind === "national") && !byState
+    const yearlyClearanceShare = places.length === 1 && (places[0]!.kind === "state" || places[0]!.kind === "national")
       && of("clearance-reason").length + filters.filter((f) => f.startsWith("clearance:")).length > 0;
     const shareTime = [...monthPeriodParts, ...(yearlyClearanceShare ? [] : periodParts.filter((p) => /^years:/.test(p.value ?? ""))),
       ...(yearlyClearanceShare ? grainParts.filter((p) => p.value !== "year") : grainParts), ...of("rolling"), ...of("combine")];

@@ -746,6 +746,26 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
 }
 
 /**
+ * A table of two groupings with one figure each, the rows in the order given (a block for each year, each ranked within it): the first
+ * grouping's column, the second's, the figure, then the supporting statistics row by row. No chart.
+ */
+export function deliverTable2(plan: NibrsPlan, g1: { dimension: string; header: string }, g2: { dimension: string; header: string }, stat: { as: string; header: string },
+  rows: { k1: string; k2: string; value: number | null; status: string }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = [],
+  supports: Support[] = []): Delivered {
+  const labels: Record<string, string> = { [`statistic:${stat.as}`]: stat.header, [`grouping:${g1.dimension}`]: g1.header, [`grouping:${g2.dimension}`]: g2.header };
+  const col = (g: { dimension: string; header: string }): ResultColumn => ({ binding: { kind: "grouping", dimension: g.dimension }, header: g.header, ...(g.dimension.startsWith("time.") ? { ordered: true as const } : {}) });
+  const tableCols: ResultColumn[] = [col(g1), col(g2), { binding: { kind: "statistic", as: stat.as }, header: stat.header }];
+  for (const s of supports) { labels[`statistic:${s.as}`] = s.header; tableCols.push({ binding: { kind: "statistic", as: s.as }, header: s.header }); }
+  const evidence: CellEvidence[] = rows.flatMap((r, i) => [{ row: i, statistic: stat.as, status: r.status as CellStatus }, ...supports.map((s) => ({ row: i, statistic: s.as, status: s.cells[i].status as CellStatus }))]);
+  const table: ResultTable = { columns: tableCols, rows: rows.map((r, i) => [r.k1, r.k2, r.value, ...supports.map((s) => s.cells[i].value)]) };
+  const text = [...lines, ...readings, ...shownStatements(statements), SOURCE_STATEMENT(release)];
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
+  for (const s of supports) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });
+  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
+}
+
+/**
  * Several agencies by month (group 5): a row for each month and agency, the months in order within each agency's block,
  * each cell keeping its own status (a month not reported is blank, never 0). The columns are the plan's two groupings and
  * its statistic, in the plan's order.

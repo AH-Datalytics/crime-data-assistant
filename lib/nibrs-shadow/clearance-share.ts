@@ -14,7 +14,7 @@ import { compilePlan, NO_CATEGORY } from "../nibrs-plan/compile";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import type { ShareSpec } from "../nibrs-question-types";
 import { postalState } from "../nibrs-plan/state-codes";
-import { deliverTable, fmt, periodWords } from "./deliver";
+import { deliverTable, deliverTable2, fmt, periodWords } from "./deliver";
 import { stateName } from "./places";
 import { agencyHeaderSql, universeStates } from "./state-sum";
 import { NOT_YET } from "./wording";
@@ -44,7 +44,8 @@ export function answerClearanceShare(plan: NibrsPlan, spec: ShareSpec, period: {
   const years = yearSet ? [...yearSet].sort((a, b) => a - b) : Array.from({ length: toYear - fromYear + 1 }, (_, i) => fromYear + i);
   const byState = !!spec.byState && place.kind === "national";
   if (spec.byState && !byState) return decline("This isn't available: a share by state for one state.");
-  if (byState && years.length > 1) return decline("This isn't available: a share by state over several years. Ask for one year.");
+  // Several years by state are a block for each year, each ranked on its own (Jeff 2026-11-22); part of a year is still declined.
+  if (byState && years.length > 1 && !(period.from.endsWith("-01") && period.to.endsWith("-12"))) return decline("This isn't available: a share by state over part of a year. Ask for whole years or one year.");
   const year = years[0];
   const where = place.kind === "national" ? "the United States" : stateName(place.code);
   const when = periodWords(period.from, period.to);
@@ -81,7 +82,7 @@ export function answerClearanceShare(plan: NibrsPlan, spec: ShareSpec, period: {
   type Bucket = { agencies: number; offenses: number; byType: Map<string, number> };
   const buckets = new Map<string, Bucket>();
   // One bucket for each state (one year), or for each year.
-  const bucketOf = (ori: string, y: number) => { const k = byState ? stateOf.get(ori) ?? "" : String(y); return buckets.get(k) ?? buckets.set(k, { agencies: 0, offenses: 0, byType: new Map() }).get(k)!; };
+  const bucketOf = (ori: string, y: number) => { const k = byState ? `${stateOf.get(ori) ?? ""}|${y}` : String(y); return buckets.get(k) ?? buckets.set(k, { agencies: 0, offenses: 0, byType: new Map() }).get(k)!; };
   for (const r of both.filter((x) => x[0] === "c")) if (reported.has(`${r[1]}|${r[2]}`) && oris.includes(String(r[1]))) { const b = bucketOf(String(r[1]), Number(r[2])); b.agencies++; b.offenses += Number(r[5] ?? 0); }
   for (const r of both.filter((x) => x[0] === "s")) if (reported.has(`${r[1]}|${r[2]}`)) { const b = bucketOf(String(r[1]), Number(r[2])); b.byType.set(String(r[8]), (b.byType.get(String(r[8])) ?? 0) + Number(r[3] ?? 0)); }
   const figures = (b: Bucket) => {
@@ -126,17 +127,31 @@ export function answerClearanceShare(plan: NibrsPlan, spec: ShareSpec, period: {
     return { kind: "answer", plan, period, sql: c.query.sql, delivered: { ...delivered, text, headline: text[0] } };
   }
 
-  // By state: a row for each state with an agency that reported, in alphabetical order; a state with no share (nothing to divide) is blank.
-  const states = [...buckets.entries()].filter(([k, b]) => k && b.agencies).sort((a, b) => stateName(a[0]).localeCompare(stateName(b[0])));
-  if (!states.length) return decline(`No agency reported ${crimes} in ${when}.`);
-  const rows = states.map(([k, b]) => { const f = figures(b); return { key: stateName(k), value: f.value, status: f.value === null ? "UNAVAILABLE" : "VALUE" }; });
-  const lines = [`Share of ${share} (%) by State, ${year}`,
-    `Each share is ${spec.denominator === "clearances" ? `the ${crime} clearances that were ${words.ofClearances}, out of all ${crime} clearances` : `the ${crimes} ${words.ofOffenses}, out of all ${crimes} reported`}, summed over the agencies that reported in ${when}.`,
+  // By state (Jeff 2026-11-22): the states with an agency that reported, ranked by the share, highest first (a state with no share, nothing to divide, last);
+  // over several years a block for each year, each ranked on its own, never pooled.
+  type Row = { state: string; y: number; b: Bucket; f: ReturnType<typeof figures> };
+  const all: Row[] = [...buckets.entries()].filter(([k, b]) => b.agencies && k.split("|")[0]).map(([k, b]) => ({ state: k.split("|")[0], y: Number(k.split("|")[1]), b, f: figures(b) }));
+  all.sort((a, z) => a.y - z.y || (z.f.value ?? -1) - (a.f.value ?? -1) || stateName(a.state).localeCompare(stateName(z.state)));
+  if (!all.length) return decline(`No agency reported ${crimes} in ${when}.`);
+  const multi = years.length > 1;
+  const rankedBy = "ranked from the highest share to the lowest";
+  const lines = [`Share of ${share} (%) by State, ${multi ? `${years[0]}-${years[years.length - 1]}` : year}`,
+    `Each share is ${spec.denominator === "clearances" ? `the ${crime} clearances that were ${words.ofClearances}, out of all ${crime} clearances` : `the ${crimes} ${words.ofOffenses}, out of all ${crimes} reported`}, summed over the agencies that reported in ${multi ? "that year" : when}; the states are ${rankedBy}${multi ? " within each year, and the years are not added together" : ""}.`,
     "Includes all agencies."];
-  const plan2: NibrsPlan = { ...plan, statistics: [...plan.statistics, { kind: "count", as: "denominator", measure: base.as }, { kind: "agencies", as: "agencies", measure: base.as }] };
-  const delivered = deliverTable(plan2, { dimension: "geo.state", header: "State" }, { as: "share", header: "Share (%)" }, rows, lines, statements, deps.release.id, readings,
-    [{ as: "denominator", header: denomWord, cells: states.map(([, b]) => ({ value: figures(b).denominator, status: "VALUE" })) },
-      { as: "agencies", header: "Agencies reporting", cells: states.map(([, b]) => ({ value: b.agencies, status: "VALUE" })) }]);
+  const statusOf = (r: Row) => (r.f.value === null ? "UNAVAILABLE" : "VALUE");
+  const stats = [...plan.statistics, { kind: "count" as const, as: "denominator", measure: base.as }, { kind: "agencies" as const, as: "agencies", measure: base.as }];
+  const supports = [{ as: "denominator", header: denomWord, cells: all.map((r) => ({ value: r.f.denominator, status: "VALUE" })) },
+    { as: "agencies", header: "Agencies reporting", cells: all.map((r) => ({ value: r.b.agencies, status: "VALUE" })) }];
+  if (!multi) {
+    const plan2: NibrsPlan = { ...plan, statistics: stats };
+    const delivered = deliverTable(plan2, { dimension: "geo.state", header: "State" }, { as: "share", header: "Share (%)" }, all.map((r) => ({ key: stateName(r.state), value: r.f.value, status: statusOf(r) })), lines, statements, deps.release.id, readings, supports);
+    if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
+    const text = [...lines, "Source: NIBRS."];
+    return { kind: "answer", plan: plan2, period, sql: c.query.sql, delivered: { ...delivered, text, headline: text[0] } };
+  }
+  const plan2: NibrsPlan = { ...plan, statistics: stats, groupings: plan.groupings.some((g) => g.dimension === "time.year") ? plan.groupings : [...plan.groupings, { dimension: "time.year", unknown: "visible" as const, absent: "show" as const }] };
+  const delivered = deliverTable2(plan2, { dimension: "geo.state", header: "State" }, { dimension: "time.year", header: "Year" }, { as: "share", header: "Share (%)" },
+    all.map((r) => ({ k1: stateName(r.state), k2: String(r.y), value: r.f.value, status: statusOf(r) })), lines, statements, deps.release.id, readings, supports);
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
   const text = [...lines, "Source: NIBRS."];
   return { kind: "answer", plan: plan2, period, sql: c.query.sql, delivered: { ...delivered, text, headline: text[0] } };
