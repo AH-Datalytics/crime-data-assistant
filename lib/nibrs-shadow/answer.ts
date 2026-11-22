@@ -1278,9 +1278,26 @@ function nibrsHasNoReports(o: ShadowOutcome, ledger0: RequestLedger, deps: Shado
     });
   }
   if (!bad.length) return o;
-  const named = places.length === 1 ? `the ${agencyName(deps.places, bad[0].ori)}` : (() => { const n = bad.map((p) => p.label.split(",")[0]); return n.length > 2 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n.join(" and "); })();
   const question = ledger0.question.replace(/[?.!\s]+$/, "");
-  return decline("not_recorded_in_nibrs", `NIBRS has no data from ${named} in this period.`,
+  // Jeff 2026-11-22 (audit batch 2, B18): "<Agency>'s NIBRS data isn't complete for <period> (N of M months reported)." when some months of the period were
+  // reported, so the blank is the missing months and not an agency with nothing; "NIBRS has no data from <agency> in <period>." only when none were.
+  const [from, to] = [(o as { period: { from: string; to: string } }).period.from, (o as { period: { from: string; to: string } }).period.to];
+  const total = (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(to.slice(5)) - Number(from.slice(5)) + 1;
+  const arrests = o.plan.measures.length > 0 && o.plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
+  const reportedMonths = (ori: string): number => {
+    try {
+      const r = deps.execute(`SELECT count(*) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori.replace(/'/g, "''")}' AND data_year * 100 + month BETWEEN ${Number(from.replace("-", ""))} AND ${Number(to.replace("-", ""))} AND ${arrests ? ARREST_MONTH_REPORTED : CRIME_MONTH_REPORTED}`)[0]?.[0];
+      return Number(r) || 0;
+    } catch { return 0; }
+  };
+  const counted = bad.map((p) => ({ p, n: reportedMonths(p.ori) }));
+  const when = periodWords(from, to);
+  const shortName = (p: { label: string }) => p.label.split(",")[0];
+  const partial = counted.filter((c) => c.n > 0).map((c) => `${shortName(c.p)}'s NIBRS data isn't complete for ${when} (${c.n} of ${total} months reported).`);
+  const none = counted.filter((c) => c.n === 0).map((c) => c.p);
+  const named = places.length === 1 ? `the ${agencyName(deps.places, bad[0].ori)}` : (() => { const n = none.map(shortName); return n.length > 2 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : n.join(" and "); })();
+  const explanation = [...partial, ...(none.length ? [`NIBRS has no data from ${named} in ${when}.`] : [])].join(" ");
+  return decline("not_recorded_in_nibrs", explanation,
     { alternative: { label: `Ask instead: "${question}"`, question, role: "other_source", targetSource: "historical" } });
 }
 

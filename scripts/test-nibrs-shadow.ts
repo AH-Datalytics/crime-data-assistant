@@ -2808,7 +2808,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
   const none = { ...deps, execute: (sql: string) => stub(sql).map((r) => (typeof r[r.length - 1] === "string" && /^(VALUE|UNKNOWN|REPORTED_ZERO|EVIDENCE_CONFLICT)$/.test(String(r[r.length - 1])) ? [...r.slice(0, -2), null, "UNKNOWN"] : r)) } as unknown as ShadowDeps;
   const dec = shadowAnswer("Dallas murders per month in 2024 according to NIBRS", none);
-  assert.ok(dec.kind === "decline" && /^NIBRS has no data from the Dallas Police Department in this period\./.test(dec.explanation), JSON.stringify(dec).slice(0, 300));
+  assert.ok(dec.kind === "decline" && /^NIBRS has no data from the Dallas Police Department in 2024\./.test(dec.explanation), JSON.stringify(dec).slice(0, 300));
   // P147: in this stub the Current Trends series the button would lead to has every month blank too, so it is not offered.
   if (dec.kind === "decline") assert.equal(dec.alternative, null);
   // P151 (Jeff 2026-11-19): when the yearly Crime Index answer has a figure it is offered under the all-blank decline.
