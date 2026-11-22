@@ -3037,6 +3037,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
   const names = byState.delivered.table.rows.map((r) => String(r[0]));
   assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+  // P180: no place named is the United States, with the note and the place buttons; "by state" needs neither.
+  const liveAsk = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  const noPlace = as(liveAsk("what share of murders were cleared by exception in 2025?"), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(/^In the United States in 2025, [\d.]+% of the murders reported were cleared by exceptional means/.test(noPlace.delivered.text[0]), noPlace.delivered.text[0]);
+  assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
+  assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
+  const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
+  assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));
 }
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
