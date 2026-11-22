@@ -579,6 +579,18 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const TIMEFRAME = /\b(?:19|20)\d{2}\b|\b(?:since|from|between|through|during|until|ytd|today|now|present|last|past|previous|this|so\s+far|to\s+date|recent\w*|over\s+time)\b/i;
   const GRAIN = /\b(?:by|per|each|every)\s+(?:year|month|quarter|week|day)s?\b|\b(?:annual\w*|monthly|quarterly|yearly|weekly|daily)\b/i;
   loose(/\bthe\s+rest\s+of\s+the\s+(?:nation|country|U\.?S\.?A?|United\s+States)\b/gi, "the nation", "the nation");
+  // Ranking words (Jeff 2026-11-22, reader batch from the 284 gate): "worst" is the highest (the lowest for a clearance rate), "the greatest
+  // number of" is "the most", "jurisdictions" are cities, "five cities" is "5 cities", "cites" a typo; "annual" and "currently experiencing"
+  // add nothing beside a rate or a ranking.
+  loose(/\bworst\b(?=[^?.]*\bclearance\b)/gi, "lowest", "lowest");
+  loose(/\bworst\b/gi, "highest", "highest");
+  loose(/\bthe\s+greatest\s+number\s+of\b/gi, "the most", "the most");
+  loose(/\b(?:are\s+|is\s+)?(?:currently\s+)?experiencing\s+(?=the\s+(?:most|highest|lowest))/gi, "with ", "with");
+  loose(/\bjurisdictions(?=\s+(?:had|have|has|with)\b[^?.]*\b(?:highest|lowest|most|fewest|worst|best)\b)/gi, "cities", "cities");
+  loose(/\bcites\b/gi, "cities", "cities");
+  for (const [w, d] of [["three", "3"], ["four", "4"], ["five", "5"], ["six", "6"], ["seven", "7"], ["eight", "8"], ["nine", "9"], ["ten", "10"], ["fifteen", "15"], ["twenty", "20"]])
+    loose(new RegExp(`(?<!\\btop\\s+)\\b(?:the\\s+)?${w}(?=\\s+(?:cities|states|agencies|counties)\\b[^?.]*\\b(?:highest|lowest|most|fewest|worst|best)\\b)`, "gi"), `top ${d}`, `top ${d}`);
+  dropWord(/\b(highest|lowest|top|most)\s+annual\s+(?=(?:murder|homicide|robbery|assault|rape|burglary|theft|crime)\b)/gi, "$1 ");
   loose(/\boverall\s+(?=(?:violent|property)\b)/gi, "", "left out, since the crime is named", "phrase");
   loose(/\boverall\b(?=\s+(?:and|&)\s+violent\b)/gi, "violent crime and property crime", "violent crime plus property crime");
   // Not a clearance question (P57's current year) and not a trend ("current murder trends" is a series, never one year).
