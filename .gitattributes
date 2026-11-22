@@ -75,3 +75,6 @@ scripts/fixtures/nibrs-shadow/crimeindex/** -text
 
 # Policy row ids (scripts/test-policy-rows.js): two PRs that each add rows keep both sets of ids.
 scripts/fixtures/policy-row-ids.txt merge=union
+
+# Reference tables are compared byte for byte with their generators (scripts/test_agency_reference.py, scripts/test-agency-reference-agrees.ts).
+data/reference/*.csv text eol=lf

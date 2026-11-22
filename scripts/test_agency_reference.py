@@ -126,7 +126,7 @@ def main():
 
     if a.release:
         import duckdb
-        root = Path(a.release) / "canonical" / "agency_year"
+        root = Path(a.release) / "agency_year"
         years = sorted(int(p.name.split("=")[1]) for p in root.glob("data_year=*"))
         latest = years[-1]
         con = duckdb.connect()
