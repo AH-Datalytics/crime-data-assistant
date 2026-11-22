@@ -1,0 +1,12 @@
+{
+  "id": "P210",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"share of murders from arguments\", \"arguments versus other circumstances\", \"felony murder vs argument murder trend\", \"what are the count of felony assaults in new york city in 2025\", \"misdemeanor arrests nationally since 1991\"",
+  "what the app does today": "A felony request is declined for assaults; felony murder, felony and misdemeanor elsewhere were answered, asked or left out.",
+  "proposed behavior": "Circumstance shares come from Homicide Reports (SHR) murders, by the circumstance code. ARGUMENT = 44 argument over money or property plus 45 other argument; brawls (42, 43) and lover's triangle (40) are not arguments. The share of murders from arguments, or arguments versus the other circumstances, answers: the denominator is ALL murders for the place and period, undetermined (99) and every other circumstance included; the table shows argument, the other circumstances as groups and undetermined with counts and shares, and a share asked for is one sentence (N of M) under the title. A nation or state is the agencies that filed (coverage lines as today). FELONY and MISDEMEANOR are not counted: a request for felony or misdemeanor murders, assaults, crimes or arrests (a share, a count, a trend, a comparison, \"felony vs argument\") is declined as a whole, with the sentence \"This isn't available: felony and misdemeanor are charging classifications, and the data doesn't record them.\" and the question offered without that word where one exists (for example \"murders\" for \"felony murders\"). No part of a felony or misdemeanor request is answered (no partial answers).",
+  "exact default or choices offered": "Argument shares: the table by circumstance with counts and shares. Felony or misdemeanor: the decline sentence.",
+  "why": "Jeff 2026-11-22 (card through the coordinator): \"No, we don't count felonies as that's a charging device. Felonies and misdemeanor requests should be declined noting why.\" Argument shares still answer.",
+  "status": "Decided 2026-11-22 (Jeff)",
+  "test cases": "Comes with the build (the decline); labels QL-shr-ac647c9aee, QL-ct-c605731327 and the misdemeanor arrest questions."
+}

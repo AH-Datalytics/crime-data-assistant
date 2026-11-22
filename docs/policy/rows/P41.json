@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"How many people were injured in assaults in Memphis?\", \"hurt\", \"wounded\"",
   "what the app does today": "Not defined.",
-  "proposed behavior": "Declined, unless the question is a NIBRS-type question about injuries recorded for a crime (\"assaults with an injured victim\"), which counts victims with an injury recorded.",
-  "exact default or choices offered": "Decline; NIBRS injury questions only.",
-  "why": "Injury is recorded only for some crimes, and only as the agency reported it.",
-  "status": "Decided 2026-10-29 (Jeff: 19 \"decline unless asked specifically in the context of a nibrs-type query (assaults with an injured victim)\")",
+  "proposed behavior": "Declined, unless the question is a NIBRS-type question about injuries recorded for a crime (\"assaults with an injured victim\"), which counts victims with an injury recorded. Victim injury TYPE (Jeff 2026-11-22, \"Every type, with a note\"): the table lists every injury type recorded for the victims, each type counting every victim who has it, with one line saying that a victim can have several injuries, so the types add to more than the victims. \"Injured\" is any injury other than none. A single type asked for (\"stabbed\", \"with a broken bone\") is that type's count with the same line.",
+  "exact default or choices offered": "Decline; NIBRS injury questions only. For a victim injury type: every type, each counting every victim who has it, with the several-injuries line; \"injured\" = any injury other than none.",
+  "why": "Injury is recorded only for some crimes, and only as the agency reported it. Jeff 2026-11-22 (card through the coordinator): every type, with a note.",
+  "status": "Decided 2026-10-29 (Jeff: 19 \"decline unless asked specifically in the context of a nibrs-type query (assaults with an injured victim)\"); injury type amended 2026-11-22 (Jeff: \"Every type, with a note\")",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

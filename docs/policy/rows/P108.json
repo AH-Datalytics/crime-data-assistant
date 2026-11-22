@@ -7,6 +7,6 @@
   "proposed behavior": "Ask victim or offender when the question does not say (the existing Victims / Offenders ask). Answer from NIBRS crimes against persons (homicide, kidnapping, sex offenses, assault, intimidation and human trafficking; no robbery, no justifiable homicide) counted per victim for victim age and per offender for offender age, and say so in one line. Offender age may show Unknown. Nationally over several years: declined in words (too large to count here), as arrests are.",
   "exact default or choices offered": "Line: \"Counts NIBRS crimes against persons: homicide, kidnapping, sex offenses, assault, intimidation and human trafficking.\" Offender with a firearm is not built.",
   "why": "Jeff 2026-11-15: \"Violent crime by age should ask offender or victim and then give NIBRS violent crimes and say so, NOT the 4 SRS ones\"; \"No need to call out robbery\".",
-  "status": "Decided (Jeff 2026-11-15)",
+  "status": "Decided (Jeff 2026-11-15); Jeff 2026-11-22 (audit B11: \"Offenders (people)\"): an offender-age breakdown counts offenders",
   "test cases": "Tests that ask its example question: scripts/test-nibrs-scope-deterministic.ts, scripts/test-nibrs-shadow.ts."
 }

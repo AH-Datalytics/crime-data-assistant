@@ -145,6 +145,8 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
     case "hour": return g("incident.hour", { bins: HOUR_BINS });
     case "drug": return g("property_drug.drug", { multiValue: "each_value" });
+    // Hate crimes by bias (H2, Jeff 2026-11-21): answered from the hate crime data only (planFromSpec allows it for hate crimes alone).
+    case "bias": return g("offense_bias.bias", { multiValue: "each_value" });
     default: return null;
   }
 }
@@ -250,12 +252,21 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
         reason: whose ? ASKED_AS_VIOLENT : ASKED_AS_PROPERTY });
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
-      const p = resolve(spec.place);
-      if (!p) return { kind: "unmapped", reason: "the place did not resolve" };
-      places = [p];
+      if (spec.places && spec.places.length > 1) {
+        // P194: several named agencies, a row each (the place grouping first, then the clearance type).
+        places = spec.places.map(resolve).filter((x): x is Place => !!x);
+        if (places.length !== spec.places.length) return { kind: "unmapped", reason: "a place did not resolve" };
+        groupings.push({ dimension: "geo.place", unknown: "visible", absent: "show" });
+      } else {
+        const p = resolve(spec.place);
+        if (!p) return { kind: "unmapped", reason: "the place did not resolve" };
+        places = [p];
+      }
       periodValue = periodOf(spec.period, false);
       if (spec.byYear) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
       if (spec.byMonth) groupings.push({ dimension: "time.month", unknown: "visible", absent: "show" });
+      // By bias is a hate crime breakdown (the hate crime data), never NIBRS's offense bias records for another crime.
+      if (spec.dim === "bias" && spec.measure !== "hate_crime") return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by bias: bias is answered for hate crimes only, from the hate crime data` };
       const g = groupingFor(spec.dim, unit);
       if (!g) return { kind: "unmapped", reason: `breakdown ${spec.dim} has no plan form` };
       groupings.push(g);
@@ -345,7 +356,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
   const gi = (pred: (g: Grouping) => boolean) => plan.groupings.findIndex(pred);
   const si = (pred: (s: Statistic) => boolean) => plan.statistics.findIndex(pred);
   const ti = (kind: Transform["kind"]) => plan.transforms.findIndex((t) => t.kind === kind);
-  const placeValues = spec.type === "series" ? spec.places : spec.type === "rank" ? [] : [spec.place];
+  const placeValues = spec.type === "series" ? spec.places : spec.type === "rank" ? [] : spec.type === "breakdown" && spec.places ? spec.places : [spec.place];
   const pathFor = (p: PartRef): string | null => {
     const v = p.value ?? "";
     switch (p.concept) {

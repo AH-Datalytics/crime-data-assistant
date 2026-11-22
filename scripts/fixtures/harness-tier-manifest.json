@@ -2601,6 +2601,15 @@
       "note": "A default never answers without the asked breakdown and keeps it by every year: arrests by age with no period (the reader moves the age out of the words) answer Year by Arrestee age, built from the question as typed; the nation stays an ask. Executed on a tiny canonical folder; uses the harness Python's duckdb and is skipped without it."
     },
     {
+      "id": "test-scorecard-workers",
+      "tier": "F",
+      "script": "scripts/test-scorecard-workers.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The scorecard's shard launcher (scripts/scorecard-shards.cjs, run-qlog-scorecard.ts --workers N) with real child processes: shards that finish; a shard that stalls once is stopped by the watchdog (its process tree), the question it was on is recorded as an error and it resumes after it; a shard that keeps stalling is given up after its restarts; a shard that fails is a bad shard, not a stall. Offline: fake shards, no data, no DuckDB."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",
