@@ -15,7 +15,7 @@ import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
-import { shrShareQuestion } from "../lib/nibrs-shadow/shr-shares";
+import { shrShareQuestion, withoutFelonyWords } from "../lib/nibrs-shadow/shr-shares";
 import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
 import { presentationOf, sentencesOf, unsaid } from "../lib/nibrs-shadow/presentation";
 import { ANSWER_STATEMENTS } from "../lib/nibrs-plan/result";
@@ -2699,6 +2699,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       assert.equal(fd.kind, "decline", q);
       assert.match(fd.explanation ?? "", /felony and misdemeanor are charging classifications, and the data doesn't record them/, q);
     }
+    assert.equal(withoutFelonyWords("What is the count of felony assaults and simply assaults in New York City between 2018 and 2025"), "What is the count of aggravated assaults and simple assaults in New York City between 2018 and 2025");
+    assert.equal(withoutFelonyWords("Show me the trends in misdemeanor arrests in the ten largest cities"), "Show me the trends in arrests in the ten largest cities");
     // Any question that counts, filters or compares by felony or misdemeanor (Jeff 2026-11-22, widened by the coordinator), with the question without the word offered.
     for (const q of ["Show me the trends in misdemeanor arrests in the ten largest cities", "murders during another felony in Houston in 2024", "what are the count of felony assaults in new york city in 2025"]) {
       const fd = shadowAnswer(q, sdeps3) as unknown as { kind: string; explanation?: string; alternative?: { label: string } | null };

@@ -33,7 +33,10 @@ export function shrShareDecline(question: string): string | null {
 }
 /** The question without the word ("felony murders" is "murders"), or null when nothing is left to ask. */
 export function withoutFelonyWords(question: string): string | null {
-  const s = question.replace(/\b(?:felony|felonies|felonious|misdemeanou?rs?)\b\s*(?:vs\.?|versus|and|or|,)?\s*/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([?.!,])/g, "$1").trim();
+  // "Felony assaults" and "misdemeanor assaults" are offered as the aggravated and the simple assaults (Jeff 2026-11-22, QL-ct-c605731327); the rest lose the word.
+  const named = question.replace(/\bfelony\s+assaults?\b/gi, (m) => (/s$/i.test(m) ? "aggravated assaults" : "aggravated assault"))
+    .replace(/\bmisdemeanou?r\s+assaults?\b/gi, (m) => (/s$/i.test(m) ? "simple assaults" : "simple assault")).replace(/\bsimply\s+assaults?\b/gi, (m) => (/s$/i.test(m) ? "simple assaults" : "simple assault"));
+  const s = named.replace(/\b(?:felony|felonies|felonious|misdemeanou?rs?)\b\s*(?:vs\.?|versus|and|or|,)?\s*/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([?.!,])/g, "$1").trim();
   return s && s !== question && /[a-z]{3}/i.test(s) ? s : null;
 }
 
