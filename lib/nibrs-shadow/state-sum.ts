@@ -263,7 +263,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         ? `No rate is given for ${Where} in ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
         : every
         ? `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
-        : `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, summed over the agencies that reported.`);
+        : `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}.`);
       lines.push(note(every), FBI_MASTER_FILES);
       if (isRate && v !== null) lines.push(`The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
@@ -348,10 +348,10 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       // The state sum's coverage, in its words (Jeff 2026-11-01), after the headline.
       const span = yearSet && yearSet.length > 1 ? `in ${yearSet.join(", ")}` : `from ${monthName(period.from)} through ${monthName(period.to)}`;
       const covered = every ? `Counting only the ${fmt(meta.everyAgencies)} Consistent Reporting Agencies that reported every month ${span}.`
-        : keptYears.length === 1 ? `Summed over the ${fmt(byYear.find((x) => x.year === keptYears[0])!.agencies)} agencies that reported.` : "Summed over the agencies that reported each year.";
+        : keptYears.length === 1 ? "" : "Summed over the agencies that reported each year.";
       // No units at all in the agencies counted: a verified zero, said (Codex state-categories review 01.1).
       const none = !rows.length && (every ? meta.everyAgencies : byYear.some((x) => x.agencies)) ? [`None were reported${every ? " by the Consistent Reporting Agencies" : ""} in ${periodWords(period.from, period.to)}.`] : [];
-      return { ...d, text: [d.text[0], covered, ...none, every ? "Includes only agencies that reported complete data." : "Includes all agencies.", ...d.text.slice(1)] };
+      return { ...d, text: [d.text[0], ...(covered ? [covered] : []), ...none, every ? "Includes only agencies that reported complete data." : "Includes all agencies.", ...d.text.slice(1)] };
     };
     const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
     const everyDelivered = deliverView(true, everyPlan);

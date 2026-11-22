@@ -759,7 +759,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("teen arrests for robbery in Houston in 2024 by month"), "Houston, Texas Robbery Arrests of Arrestees Aged 13 to 19 Per Month, 2024");
   assert.equal(title("juvenile arrests for robbery in Houston in 2024 by month"), "Houston, Texas Robbery Arrests of Arrestees Under 18 Per Month, 2024");
   assert.equal(title("juvenile robbery offenders in Houston in 2024 by month"), "Houston, Texas Robbery Offenders Under 18 Per Month, 2024");
-  assert.ok(/^Ohio had [\d,]+ robbery offenders aged 13 to 19 in 2024, summed over the agencies that reported\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
+  assert.ok(/^Ohio had [\d,]+ robbery offenders aged 13 to 19 in 2024\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
   assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas Murder Victims Aged 13 to 19 Per Month, 2024");
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas Murder Victims Under 18 Per Month, 2024");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
@@ -3152,7 +3152,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Houston 108 + Dallas 84 + Austin 60 + Smallville 60 = 312 units; arrest 54 + 42 + 30 + 30 = 156, each exceptional type 9 + 7 + 5 + 5 = 26; the rest 26; incidents one fewer per agency.
   assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
   assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
-  assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
+  // B29 (Jeff 2026-11-22): a one-year state sum carries the one sentence, not a coverage line.
+  assert.ok(tx.delivered.text.includes("Includes all agencies.") && !tx.delivered.text.some((t) => /Summed over the/.test(t)), tx.delivered.text.join(" | "));
   // The nation is the same sum over every state (the runner timed it: 4.3 s); a state's clearance rate is answered (P172).
   const us = as(ask("murder clearance by type in the United States in 2025"), "answer");
   assert.ok(us.stateSum && us.delivered.table.rows.length >= 2, "the nation by clearance type");
