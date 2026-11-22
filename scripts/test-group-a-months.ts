@@ -2,13 +2,14 @@
  * A month reported only through Group B arrest rows is not a crime report (P51, P121; lib/nibrs-plan/month-status.ts), executed on a tiny canonical folder
  * (the independent review of PR 347 asked for executed tests, not SQL string matches): five agencies in 2024, each with one odd month.
  *
- *   Memphis TN   every month has Group A rows                                 -> 12 months, 12 victims
- *   Denver CO    June has Group B rows only, no zero report                    -> June unknown (blank), no yearly total
- *   Boise ID     June has Group B rows and the agency's own zero report        -> a reported zero: blank, left out, an 11-month total
- *   Tulsa OK     June is a plain zero report                                   -> the same
- *   Omaha NE     January to March Group B rows only, Group A from April        -> the first month that reported crimes is April; for arrests, January
+ *   Memphis TN   every month has Group A rows                                 -> 12 months, 12 victims; in the Consistent Reporting Agencies
+ *   Denver CO    June has Group B rows only, no zero flag                      -> June not reported (blank), no yearly total: "11 of 12 months reported"
+ *   Boise ID     June has Group B rows and the zero flag                       -> the same: a Group B-only month is not reported whatever the flag says
+ *   Tulsa OK     June is a formal zero report (flag set, no rows at all)       -> a reported 0: June shows 0 and the year is 11; out of the Consistent set
+ *   Omaha NE     January to March Group B rows only, Group A from April        -> "9 of 12"; the first month that reported crimes is April; for arrests, January
+ *   Austin AR    no month with any evidence                                    -> "NIBRS has no data from the Austin Police Department in 2024."
  *
- * and the national sum over the five (the grid path), the coverage question, and the first-reported-month condition. Needs a Python with duckdb
+ * and the national sum over them (the grid path) with its Consistent Reporting Agencies (Memphis alone), the coverage rule, and the first-reported-month condition.
  * (NIBRS_SHADOW_PYTHON, else "python"); skipped without one.
  */
 import assert from "node:assert/strict";
@@ -47,6 +48,7 @@ AG = {
   "ID0010100": ("ID", months(lambda m: ("REPORTED_CRIMES", 0, 2, "Y", "Y") if m == 6 else None)),
   "OK0720500": ("OK", months(lambda m: ("REPORTED_ZERO", 0, 0, "Y", "N") if m == 6 else None)),
   "NB0280200": ("NE", months(lambda m: ("REPORTED_CRIMES", 0, 2, "N", "Y") if m <= 3 else None)),
+  "AR0430500": ("AR", months(lambda m: ("UNKNOWN", 0, 0, "N", "N"))),
 }
 ams, vic, vo = [], [], []
 for ori, (st, ms) in AG.items():
@@ -86,25 +88,30 @@ put("agency", "SELECT * FROM (VALUES " + ag + ") t(ori, by_year)", partition=Fal
   const denver = byMonth("Aggravated assault victims in Denver, CO by month in 2024 according to NIBRS");
   assert.equal(denver["2024-06"], null, JSON.stringify(denver));
   assert.equal(Object.values(denver).filter((v) => v === 1).length, 11, JSON.stringify(denver));
-  // The agency's own zero report, with Group B rows (Boise) or without (Tulsa): a reported zero, blank like any zero report, never a 0 either.
-  for (const q of ["Aggravated assault victims in Boise, ID by month in 2024", "Aggravated assault victims in Tulsa, OK by month in 2024"]) {
-    const m = byMonth(q);
-    assert.equal(m["2024-06"], null, q + JSON.stringify(m));
-    assert.equal(Object.values(m).filter((v) => v === 1).length, 11, q);
-  }
-  // Yearly: the unknown month stops the total (as any missing month does); a zero report is left out and the other eleven months are the total.
+  // Group B rows with the zero flag (Boise) are still not a crime report, whatever the flag says: blank.
+  const boise = byMonth("Aggravated assault victims in Boise, ID by month in 2024");
+  assert.equal(boise["2024-06"], null, JSON.stringify(boise));
+  assert.equal(Object.values(boise).filter((v) => v === 1).length, 11);
+  // A formal zero report (Tulsa: the flag, no rows at all) is a reported 0.
+  const tulsa = byMonth("Aggravated assault victims in Tulsa, OK by month in 2024");
+  assert.equal(tulsa["2024-06"], 0, JSON.stringify(tulsa));
+  assert.equal(Object.values(tulsa).filter((v) => v === 1).length, 11);
+  // Yearly: the formal zero adds 0 to the year; a month not reported leaves the year blank, never a partial sum, and says how many months were (audit batch 2, B18).
   assert.equal(total("Aggravated assault victims in Memphis, TN in 2024 according to NIBRS"), 12);
-  assert.equal(total("Aggravated assault victims in Boise, ID in 2024 according to NIBRS"), 11);
-  assert.equal(total("Aggravated assault victims in Tulsa, OK in 2024 according to NIBRS"), 11);
-  // Denver: one unknown month in the year, so no yearly total, exactly as a month with no status at all (UNKNOWN) does today; the question is declined, not a 0.
-  const denverYear = ask("Aggravated assault victims in Denver, CO in 2024 according to NIBRS");
-  assert.equal(denverYear.kind, "decline", JSON.stringify(denverYear).slice(0, 300));
+  assert.equal(total("Aggravated assault victims in Tulsa, OK in 2024 according to NIBRS"), 11, "the zero report adds 0 to the year");
+  const why = (q: string) => { const a = ask(q); assert.equal(a.kind, "decline", q + JSON.stringify(a).slice(0, 200)); return a.explanation ?? ""; };
+  assert.match(why("Aggravated assault victims in Denver, CO in 2024 according to NIBRS"), /^Denver's NIBRS data isn't complete for 2024 \(11 of 12 months reported\)\./);
+  assert.match(why("Aggravated assault victims in Boise, ID in 2024 according to NIBRS"), /^Boise's NIBRS data isn't complete for 2024 \(11 of 12 months reported\)\./);
+  assert.match(why("Aggravated assault victims in Omaha, NE in 2024 according to NIBRS"), /^Omaha's NIBRS data isn't complete for 2024 \(9 of 12 months reported\)\./);
+  assert.match(why("Aggravated assault victims in Austin, AR in 2024 according to NIBRS"), /^NIBRS has no data from the Austin Police Department in 2024\./);
 
   // The grid path (the national sum over the five agencies): no group-B-only month adds a victim, a zero report adds none, and the total is the victims there are.
   const nat = ask("Aggravated assault victims in the United States in 2024 according to NIBRS");
   assert.equal(nat.kind, "answer", JSON.stringify(nat).slice(0, 300));
   // 12 (Memphis) + 11 (Denver) + 11 (Boise) + 11 (Tulsa) + 9 (Omaha, April on): every victim of a Group A month, none made up for a Group B-only or zero-report month.
   assert.deepEqual(nat.delivered!.table.rows, [[54]], JSON.stringify(nat.delivered!.table.rows) + JSON.stringify(nat.delivered!.text));
+  // The Consistent Reporting Agencies need a Group A row in every month: Memphis alone (a zero report, a Group B-only month, a missing month each exclude an agency).
+  assert.equal((nat as unknown as { stateSum?: { everyAgencies: number } }).stateSum?.everyAgencies, 1, JSON.stringify(nat.delivered!.text));
 
   // The first month that reported crimes: Omaha's January to March are Group B rows only, so April; for arrests the status as built, so January.
   const first = (cond: string) => Number(execute(`SELECT min(data_year * 100 + month) FROM read_parquet('${root}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = 'NB0280200' AND ${cond}`)[0][0]);
@@ -112,7 +119,7 @@ put("agency", "SELECT * FROM (VALUES " + ag + ") t(ori, by_year)", partition=Fal
   assert.equal(first(ARREST_MONTH_REPORTED), 202401);
   // Agencies that reported in 2024 (the coverage rule): all five, Denver's June not counted as a reported month.
   const monthsReported = (ori: string) => Number(execute(`SELECT count(*) FROM read_parquet('${root}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true) WHERE ori = '${ori}' AND ${CRIME_MONTH_REPORTED}`)[0][0]);
-  assert.deepEqual(["TNMPD0000", "CODPD0000", "ID0010100", "OK0720500", "NB0280200"].map(monthsReported), [12, 11, 12, 12, 9]);
+  assert.deepEqual(["TNMPD0000", "CODPD0000", "ID0010100", "OK0720500", "NB0280200", "AR0430500"].map(monthsReported), [12, 11, 11, 12, 9, 0]);
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

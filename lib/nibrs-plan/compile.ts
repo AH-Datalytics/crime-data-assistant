@@ -660,9 +660,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         "'VALUE'"}${anyArrest ? `
            WHEN aa.ym IS NOT NULL THEN 'VALUE'` : ""}
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN ${
-        // One agency (Jeff 2026-11-16): a month reported as zero crimes is NOT reported: left out, blank, never 0. A state or
-        // group sum (grid) keeps the zero report: it adds nothing, and the month is present when any agency has rows.
-        grid ? "'REPORTED_ZERO'" : "'NOT_REPORTED'"}
+        // A formal zero report (the zero flag set, no rows at all) is a reported 0 (Jeff 2026-11-22, audit batch 2, replacing 2026-11-16): it counts
+        // as 0 in one agency's total, and in a state or group sum (grid) it adds nothing; the month is present when any agency has rows.
+        "'REPORTED_ZERO'"}
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
       FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym)${anyArrest ? ` LEFT JOIN any_arrest aa USING (${O}ym)` : ""})`,

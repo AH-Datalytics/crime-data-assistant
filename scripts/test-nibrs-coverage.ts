@@ -53,7 +53,7 @@ assert.deepEqual(a23.delivered.text, ["2023 Agencies Reporting NIBRS Data, Unite
   "14,569 of the 22,105 agencies in the FBI's agency list reported at least one month in 2023.", "12,242 of them reported all 12 months.",
   "An agency reports a month when it sends crime counts or says it had none.", "Source: FBI NIBRS."]);
 assert.deepEqual(a23.delivered.table.rows, [[14569, 12242, 22105]]);
-assert.ok(sqls.some((s) => /\(CASE WHEN status = 'REPORTED_CRIMES' AND coalesce\(group_a_rows, 0\) = 0 THEN CASE WHEN coalesce\(zero_flag, 'N'\) = 'Y' THEN 'REPORTED_ZERO' ELSE 'UNKNOWN' END ELSE status END\) IN \('REPORTED_CRIMES', 'REPORTED_ZERO'\)/.test(s) && /agency_year/.test(s) && /agency_month_status/.test(s)), "reads the release's agency lists by the crime month rule (a Group B-only month did not report)");
+assert.ok(sqls.some((s) => /\(CASE WHEN status = 'REPORTED_CRIMES' AND coalesce\(group_a_rows, 0\) = 0 THEN 'UNKNOWN' ELSE status END\) IN \('REPORTED_CRIMES', 'REPORTED_ZERO'\)/.test(s) && /agency_year/.test(s) && /agency_month_status/.test(s)), "reads the release's agency lists by the crime month rule (a Group B-only month did not report)");
 // The year that is not over says "every month so far"; a state is its own filter, Nebraska as NB too.
 const a26 = ask("how many agencies reported in 2026?");
 assert.ok(a26.delivered.text.includes("7,129 of them reported every month from January through September."), a26.delivered.text.join(" / "));
