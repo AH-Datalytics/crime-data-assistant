@@ -580,7 +580,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       return [];
     };
     const rdeps = { ...sdeps, execute: rstub } as ShadowDeps;
-    for (const q of ["domestic murders in Houston in 2023", "domestic violence murders in Houston in 2023", "domestic homicides in Houston in 2023"]) {
+    // B31 (Jeff 2026-11-22): "domestic violence murders" is domestic violence (NIBRS, any offender), not the Homicide Reports route.
+    assert.notEqual(shadowAnswer("domestic violence murders in Houston in 2023", rdeps).kind, "shr");
+    for (const q of ["domestic murders in Houston in 2023", "domestic killings in Houston in 2023", "domestic homicides in Houston in 2023"]) {
       const o = as(shadowAnswer(q, rdeps), "shr");
       assert.ok(/where the victim was an intimate partner or a family member of the offender/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
       assert.ok(o.delivered.text.includes("Homicide Reports do not record a child of a boyfriend or girlfriend, a babysittee, a foster parent, a foster child or a cohabitant, so those relationships are not counted."), JSON.stringify(o.delivered.text));
