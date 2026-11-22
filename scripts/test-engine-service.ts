@@ -154,7 +154,12 @@ function fakes() {
   const r = core.answer(req("q", { tab: "historical" }));
   assert.ok(!r.ok && r.kind === "unavailable", "a source with no root is not available (no engine is built for it)");
   assert.deepEqual(core.info().tabs, []);
+  // Slow-list (f): warming is a head start and never an error: no source is a no-op, and a source whose files are missing does not stop the worker.
+  core.warm();
   core.close();
+  const broken = createCore(configFromEnv({ ENGINE_NIBRS_ROOT: "/no/such/canonical", ENGINE_PYTHON: "/no/such/python" }));
+  assert.doesNotThrow(() => broken.warm(), "a source that cannot start is left to answer (and decline) on its own");
+  broken.close();
 }
 
   console.log("engine service: pool, protocol and HTTP face: ok");
