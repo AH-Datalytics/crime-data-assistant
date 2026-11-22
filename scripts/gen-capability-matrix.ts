@@ -88,9 +88,17 @@ const isGroupB = (m: string) => codesOf(m).length > 0 && codesOf(m).every((c) =>
 const isPersonOnly = (m: string) => codesOf(m).length > 0 && codesOf(m).every((c) => PERSON_CODES.has(c));
 // Group A crimes with no victim record (against society, or no victim segment): victims and offenders are not defined (kept from the first version of the matrix).
 const NO_VICTIM = new Set(["bad_checks", "runaway", "all_other_offenses", "family_offense_nonviolent", "peeping_tom", "curfew_loitering", "drunkenness", "liquor_law", "disorderly_conduct", "trespass", "drug_equipment", "drug_possession", "drug_crimes", "dui", "weapon_law", "all_crime"]);
+/**
+ * NIBRS crimes against persons and against property have no words of their own: the engine reaches them only through "violent crimes" / "property crimes"
+ * by a victim's or offender's age group (Jeff 2026-11-15; lib/nibrs-plan/from-spec.ts). Everywhere else their noun asks the violent / property crime
+ * question, whose codes are not these rows' codes (Savant's cross-check, 2026-11-22), so those rows are excluded, not asked under the wrong code list.
+ */
+const AGE_ONLY: Record<string, string[]> = { person_crimes: ["victims_age group", "offenders_age group"], against_property: ["victims_age group"] };
 function excluded(measure: string, b: B, grain: string): string | null {
   // A grain that is already a time series beside a category breakdown is NOT excluded: it is asked, and a decline is recorded as the answer (the point of the matrix).
   void grain;
+  if (AGE_ONLY[measure] && !AGE_ONLY[measure].includes(b.breakdown))
+    return "not askable on its own: violent / property crime reach NIBRS crimes against persons / property only by a victim's or offender's age group (Jeff 2026-11-15)";
   // (b) Group B arrests are standalone arrest records: no incident, so only arrests (and the plain count) exist.
   if (isGroupB(measure) && ["victims", "offenders", "offenses", "incidents"].includes(b.family))
     return "Group B arrests have no incident: no weapon, location, clearance, offender or victim attribute, no property";
