@@ -3072,4 +3072,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A crime already counted by offense, and the murder path, are left as they were.
   assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
 }
+// P191 (Jeff 2026-11-21, reader class): clearance wording and "the entire US" are read, never "I didn't understand".
+{
+  const readerDecline = (q: string) => { const o = ask(q); return o.kind === "decline" && o.reason === "reader"; };
+  for (const q of ["robberies in Chicago in 2024 cleared by arrest versus exceptional means", "How many robberies in Chicago were cleared by arrest vs exceptional means in 2024?",
+    "Chicago robbery exceptional clearances by type in 2024", "newark exceptional clearances for murder in 2024 broken down by type", "robberies in Chicago in 2024 cleared by exceptional means"])
+    assert.ok(!readerDecline(q), q);
+  assert.equal(ask("robberies in Chicago in 2024 cleared by arrest versus exceptional means").kind, ask("robberies in Chicago in 2024 by clearance type").kind);
+  for (const q of ["annual murder rates for the entire US", "murder rate across the whole country by year", "show me the annual murder rate in the entire United States since 2000"])
+    assert.equal(ask(q).kind, ask(q.replace(/(?:for|in|across)\s+the\s+(?:entire|whole)\s+(?:US|United States|country)/i, "nationwide")).kind, q);
+  // "Per year and type" beside exceptional clearances is the year and the clearance type together, answered like "by type by year".
+  // (The read text is compared: a decline here would come from the test's stub rows, not the wording.)
+  for (const q of ["newark exceptional murder clearances per year and type from 2022 to 2025", "Tulsa exceptional homicide clearances per year and type since 2019"])
+    assert.ok(/cleared by exception by type by year/.test(readQuestion(q, 2026, "2026-09").text), q);
+  // "type" with no clearance word beside it is not the clearance type.
+  assert.ok(readerDecline("Houston homicides per year and type since 2019"));
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
