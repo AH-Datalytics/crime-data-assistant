@@ -29,7 +29,7 @@ import { titleCase } from "../lib/nibrs-shadow/titles";
 // P185 (Jeff 2026-11-21): the FBI master-files sentence follows the note under a NIBRS state or national sum (never under one agency's answer).
 const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
 import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
-import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
+import { allBlankMonthly, allBlankYearly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
 {
@@ -49,6 +49,21 @@ import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
   assert.equal(allBlankMonthly(nibrsTwo([null, null], [1, null])), null, "one column has a figure: the table stays");
   assert.equal(allBlankMonthly(series([4, null], [null, null])), null, "some months have figures: the table stays");
   assert.equal(allBlankMonthly(series([null, null], [3, 3])), null, "one place blank only: the table and its gap sentence stay");
+}
+// P147 by year (coordinator 2026-11-22): every year blank and no month reported in the span -> "no data"; a month reported -> the table stays.
+{
+  const yearly = (vals: (number | null)[]) => ({ kind: "answer", plan: { measures: [{ id: "victims.simple_assault", unit: "victim" }], statistics: [{ kind: "count", as: "x" }],
+    filters: [], defaults: [], geography: { places: [{ kind: "agency", ori: "AZ0070000", label: "Maricopa County, Arizona" }] } },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year" }, { binding: { kind: "statistic", as: "x" }, header: "Victims" }],
+      rows: vals.map((v, i) => [String(2020 + i), v]) }, text: [] } }) as never;
+  const sqls: string[] = [];
+  const stub = (reported: number) => ({ target: { root: "R" }, execute: (sql: string) => { sqls.push(sql); return [[reported]]; } }) as never;
+  const none = allBlankYearly(yearly([null, null, null]), stub(0));
+  assert.ok(none && none.kind === "decline" && none.explanation === "No data is available for simple assault victims in Maricopa County, Arizona.", JSON.stringify(none));
+  assert.ok(/ori IN \('AZ0070000'\) AND data_year BETWEEN 2020 AND 2022/.test(sqls[0]), sqls[0]);
+  assert.equal(allBlankYearly(yearly([null, null, null]), stub(5)), null, "some months reported, every year incomplete: the table and its gap sentence stay");
+  assert.equal(allBlankYearly(yearly([null, 4, null]), stub(0)), null, "a year has a figure: the table stays");
+  assert.equal(allBlankYearly(yearly([null]), stub(0)), null, "one year alone keeps its own sentence");
 }
 // P143: phrases with one plain meaning.
 assert.equal(plainMeanings("Baltimore carjackings per month until January 2026 in a bar chart", "2017-01"), "Baltimore carjackings per month from January 2017 through January 2026 in a bar chart");
