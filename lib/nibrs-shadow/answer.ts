@@ -1291,13 +1291,18 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     const o = shadowAnswer(followUp, deps);
     const r0 = deterministicRewriter.rewrite(previous, followUp);
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    // A new question with no period of its own, after a question with one, may have meant that period (real turns:
-    // "murder count in richmond" after "richmond virginia murders 2020-2025"): offered, never assumed.
+    // A new question with no period of its own, after a question with one (real turns: "murder count in richmond" after "richmond virginia
+    // murders 2020-2025"): follow-up #1 (Jeff 2026-11-21) carries the period over, says so, and offers the question as typed. Before, it was
+    // only offered.
     const year = Number(deps.release.lastMonth.slice(0, 4));
-    const prevPeriod = readQuestion(previous, year).ledger.parts.find((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized")?.text.trim();
+    const prevPeriod = carryablePeriod(previous, followUp, year);
     const ownPeriod = readQuestion(followUp, year).ledger.parts.some((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized");
     const withPeriod = !ownPeriod && prevPeriod ? `${followUp.trim().replace(/[?.!]+$/, "")} ${prevPeriod}` : null;
     const other = r0.kind === "rewrite" && norm(r0.question) !== norm(followUp) ? r0.question : withPeriod;
+    if (withPeriod && other === withPeriod && !deps.checkingOffer) {
+      const carried = shadowAnswer(withPeriod, deps);
+      if (ANSWER_KINDS.includes(carried.kind)) return { ...carriedOver(carried, ["period"], followUp), rewrite: withPeriod, rewriteKind: "new" };
+    }
     const offer: ShadowOption | null = other ? { label: `Did you mean a follow-up to your last question? "${other}"`, question: other } : null;
     const withOffer = !offer ? o : o.kind === "answer" ? { ...o, buttons: [...(o.buttons ?? []), offer] }
       : o.kind === "clarify" ? { ...o, options: [offer, ...o.options] } : o.kind === "decline" && !o.alternative ? { ...o, alternative: offer } : o;
@@ -1317,6 +1322,10 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // ("show me robberies and murders in the southwest" asked what it changes in the last question). Its first-turn answer or ask is given; when
   // that would be a decline (words unread, a combination not offered) the question back about the last turn stays, as before.
   if (r.kind === "ask" && !pointsBack(followUp) && followUp.trim().split(/\s+/).length >= 3) {
+    // Follow-up #1 (Jeff 2026-11-21): a place or period it leaves out comes from the previous question when that named one, before any
+    // default (P180, P181); the answer says what was carried.
+    const carried = carryOver(previous, followUp, guarded);
+    if (carried) return carried;
     const own = shadowAnswer(followUp, guarded);
     if (own.kind !== "decline") return { ...own, rewrite: followUp, rewriteKind: "new" };
   }
@@ -1331,6 +1340,57 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
     return { ...asked, rewrite: null, rewriteKind: "ask" };
   }
   return { ...shadowAnswer(r.question, guarded), rewrite: r.question, rewriteKind: r.kind, ...(r.kind === "presentation" ? { presentation: true as const } : {}) };
+}
+
+const RANKING_WORDS = /\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best|largest|biggest|smallest)\b/i;
+// "knife murders nationally" names the nation in words the reader doesn't take as a place (PR 312 gate); the previous place is not carried.
+const NATIONAL_WORDS = /\b(?:national(?:ly)?|nation\s*wide|united states|usa|(?:in|across) the (?:country|nation))\b|\bu\.s\./i;
+const YEAR_SERIES =/\b(?:per|by|each|every)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[- ](?:by|over)[- ]year\b|\btrend\b/i;
+/**
+ * The previous question's period, when follow-up #1 may carry it (PR 312 gate): the previous turn must be a data question (its own crime;
+ * not "remove 2025 as it has missing data" or "why does county only exist ... around the 60s and 70s"), and one year is not carried into
+ * a turn asking for years ("murders per year in Kansas City" after "... cities of 250k or more in 2025").
+ */
+function carryablePeriod(previous: string, followUp: string, year: number): string | null {
+  const parts = readQuestion(previous, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  if (!parts.some((p) => p.concept === "measure")) return null;
+  const t = parts.find((p) => p.concept === "period")?.text.trim();
+  if (!t) return null;
+  const oneYear = (t.match(/\b\d{4}\b/g) ?? []).length === 1 && !/\b(?:since|from|past|last|through|to|until|after)\b|[-–]/i.test(t);
+  return oneYear && YEAR_SERIES.test(followUp) ? null : t;
+}
+/**
+ * Follow-up #1 (Jeff 2026-11-21): a follow-up read as its own question, with its own crime, that leaves out the place or the period gets them
+ * from the previous question when that one named them. A follow-up across places (a ranking, "cities", "agencies") keeps its own reading: the
+ * previous place would narrow it. Only an answer is taken; otherwise the follow-up goes on as before.
+ */
+function carryOver(previous: string, followUp: string, deps: ShadowDeps): FollowUpOutcome | null {
+  if (deps.checkingOffer) return null;
+  const year = Number(deps.release.lastMonth.slice(0, 4));
+  const read = (q: string) => readQuestion(q, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
+  const mine = read(followUp), prev = read(previous);
+  const has = (c: string) => mine.some((p) => p.concept === c);
+  if (!has("measure") || !prev.some((p) => p.concept === "measure")) return null;
+  const add: string[] = [], what: ("place" | "period")[] = [];
+  const place = prev.find((p) => p.concept === "place"), period = carryablePeriod(previous, followUp, year) ? prev.find((p) => p.concept === "period") : undefined;
+  if (place && !has("place") && !has("entity") && !RANKING_WORDS.test(followUp) && !NATIONAL_WORDS.test(followUp)) {
+    const t = place.text.trim();
+    add.push(/^(?:in|for|across)\b/i.test(t) ? t : `in ${t}`);
+    what.push("place");
+  }
+  if (period && !has("period")) { add.push(period.text.trim()); what.push("period"); }
+  if (!add.length) return null;
+  const q = `${followUp.trim().replace(/[?.!]+$/, "")} ${add.join(" ")}`;
+  const o = shadowAnswer(q, deps);
+  if (!ANSWER_KINDS.includes(o.kind)) return null;
+  return { ...carriedOver(o, what, followUp), rewrite: q, rewriteKind: "new" };
+}
+/** The answer with a note after its title saying what came from the last question, and a button for the question as typed. */
+function carriedOver(o: ShadowOutcome, what: ("place" | "period")[], typed: string): ShadowOutcome {
+  const x = o as ShadowOutcome & { delivered: { text: string[] }; buttons?: ShadowOption[] };
+  const note = `The ${what.join(" and ")} ${what.length > 1 ? "are" : "is"} from your last question.`;
+  const text = [x.delivered.text[0], note, ...x.delivered.text.slice(1)];
+  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), { label: `As typed: "${typed}"`, question: typed }] } as ShadowOutcome;
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */

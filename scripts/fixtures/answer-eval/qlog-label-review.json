@@ -24658,7 +24658,8 @@
 },
 "QL-ct-0dddb2a05c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"San fran agg assaults since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-0eab9f4129": {
 "status": "draft",
@@ -24991,7 +24992,8 @@
 },
 "QL-ct-440c1df6a2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (2022) is carried from the previous question (\"Motor vehicle thefts per month in the 5 cities with the most motor vehicle thefts in 2022\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-4599e4866c": {
 "status": "reviewed",
@@ -25008,7 +25010,8 @@
 },
 "QL-ct-46e5213672": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2020) is carried from the previous question (\"San Francisco aggravated assaults per month since 2020\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-4731af7180": {
 "status": "reviewed",
@@ -25482,7 +25485,8 @@
 },
 "QL-ct-8bfb354d8d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"monthly murders in Houston since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-8db47a3e22": {
 "status": "reviewed",
@@ -25716,7 +25720,8 @@
 },
 "QL-ct-b424005f06": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2023) is carried from the previous question (\"san francisco violent crimes by type and month since 2023\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-b6d74b6d74": {
 "status": "draft",
@@ -25872,7 +25877,8 @@
 },
 "QL-ct-cc32aea160": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (2021 to 2025) is carried from the previous question (\"10 cities with largest declines in murder from 2021 to 2025\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-cdad672651": {
 "status": "draft",
@@ -25929,12 +25935,12 @@
 "QL-ct-d5b34c57bc": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"why": "follow-up #1 (Jeff 2026-11-21): the previous question's period (2026) is carried; the current year is Current Trends. By rule from the question text",
 "expected": {
 "outcome": "answer",
-"source": "historical",
+"source": "rtci",
 "source_any": [
-"historical",
+"rtci",
 "nibrs"
 ]
 }
@@ -26196,7 +26202,8 @@
 },
 "QL-ct-f960533ecf": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (the past 5 years) is carried from the previous question (\"How is the Richmond, VA murder rate trending for the past 5 years?\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-fa9b98a798": {
 "status": "disputed",
@@ -26279,7 +26286,8 @@
 },
 "QL-hc-3bc7bb6c1d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2000) is carried from the previous question (\"Houston hate crimes rolling over 12 months since 2000\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-hc-4cef33c1eb": {
 "status": "reviewed",
@@ -27368,7 +27376,8 @@
 },
 "QL-hist-adcbedb4fb": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (2000-2020) is carried from the previous question (\"National murder trend, 2000–2020\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-hist-ae930d19bd": {
 "status": "draft",
@@ -27447,7 +27456,8 @@
 },
 "QL-hist-c136595d3a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (the past decade) is carried from the previous question (\"homicide rates in new york city over the past decade\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-hist-c147452c40": {
 "status": "reviewed",
@@ -28887,7 +28897,8 @@
 },
 "QL-nibrs-9bbed83a5e": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"Vehicle burglaries per year in Denver, Houston and Minneapolis since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-nibrs-9c5d719791": {
 "status": "reviewed",
@@ -29343,7 +29354,8 @@
 },
 "QL-nibrs-ec32dca905": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2019) is carried from the previous question (\"houston vehicle burglaries rolling over 12 months since 2019\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-nibrs-ee67a5bd50": {
 "status": "reviewed",
@@ -29536,15 +29548,15 @@
 },
 "QL-shr-0b297d35d9": {
 "status": "reviewed",
-"by": "jeff-2026-11-19",
-"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 1980) is carried from the previous question (\"domestic homicides in California since 1980\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "shr",
-"source_any": [
-"shr",
-"nibrs"
-]
+ "outcome": "answer",
+ "source": "shr",
+ "source_any": [
+  "shr",
+  "nibrs"
+ ]
 }
 },
 "QL-shr-0c9ba27c5d": {
@@ -29756,15 +29768,15 @@
 },
 "QL-shr-3afd6400d5": {
 "status": "reviewed",
-"by": "jeff-2026-11-19",
-"why": "A murder victim's or offender's detail broken down with no period is every year by year from 1985, with the no-years sentence (P161, Jeff 2026-11-19)",
+"by": "jeff-2026-11-22",
+"why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2000) is carried from the previous question (\"domestic homicides in Texas since 2000\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "shr",
-"source_any": [
-"shr",
-"nibrs"
-]
+ "outcome": "answer",
+ "source": "shr",
+ "source_any": [
+  "shr",
+  "nibrs"
+ ]
 }
 },
 "QL-shr-400d5cda3d": {
