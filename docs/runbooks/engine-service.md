@@ -1,4 +1,4 @@
-# Engine service runbook (stage 1: the NIBRS tab, private flag)
+﻿# Engine service runbook (stage 1: the NIBRS tab, private flag)
 
 The engine service answers questions from the canonical NIBRS release, in its own capped processes, so a slow question can never freeze the website. Nothing in this file has been installed anywhere yet. Every server step below needs the owner's typed OK first, one step at a time.
 
@@ -21,8 +21,9 @@ The engine service answers questions from the canonical NIBRS release, in its ow
 | `ENGINE_WORKERS` | worker processes | 2 (the runner measurement decides) |
 | `ENGINE_QUEUE_MAX` | waiting requests beyond the busy workers; more is answered "busy" | 8 |
 | `ENGINE_TIMEOUT_MS` | a worker that overruns is killed and replaced | 120000 |
-| `ENGINE_DUCKDB_MEMORY`, `ENGINE_DUCKDB_THREADS` | per worker | 2GB, 1 |
+| `ENGINE_DUCKDB_MEMORY`, `ENGINE_DUCKDB_THREADS` | per worker: one DuckDB process serves every tab, so memory is workers x this, not tabs x workers x this | 2GB, 1 |
 | `ENGINE_NIBRS_ROOT` | the canonical release folder, `.../canonical` | `/opt/nibrs/engine/releases/<release id>/canonical` |
+| `ENGINE_CRIME_INDEX_ROOT`, `ENGINE_SHR_ROOT`, `ENGINE_HATE_ROOT` | the data folder of each other source (Crime Index serves both Historical and Current). A tab with no root, or whose source fails to load, answers "unavailable" and the other tabs keep answering; a failed source is tried again after 30 seconds. NIBRS stays the base: without `ENGINE_NIBRS_ROOT` no tab answers. A source answers only once its builder ships; setting a root early does nothing. | unset until that source is switched on |
 | `ENGINE_PYTHON` | python with duckdb | `/opt/nibrs/engine/venv/bin/python` |
 | `NIBRS_CUBE`, `NIBRS_CUBE_SET`, `NIBRS_CUBE_SET_SHA256` | the cubes (the set manifest and its pinned hash) | `on`, `/opt/nibrs/engine/cubes/<release id>/cube-set-<release id>-<n>.json`, its sha256 |
 
@@ -39,3 +40,4 @@ The service reads `scripts/fixtures/nibrs-shadow/{release,agencies,agency-names}
 ## Rollback
 
 The site never depends on the service in stage 1: the page calls it only for a visitor holding the private cookie. Rollback = stop the service (`systemctl stop nibrs-engine`) or remove the cookie. A new release or cube set is a new folder and a new pin in the environment file; the previous folders stay on disk.
+

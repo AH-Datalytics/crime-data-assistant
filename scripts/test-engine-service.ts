@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The engine service's pool, protocol and HTTP face (lib/engine-service): worker count and queue bound, the busy answer, the timeout that kills and replaces a worker, a crashed
  * worker, shutdown, the token and body limits, and the configuration read from the environment. Fake workers stand in for the engine (no data, no Python, no network but loopback).
  */
@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { asSourceTab, SOURCE_TABS } from "../lib/nibrs-shadow/source-description";
 import type { AddressInfo } from "node:net";
-import { askedOf, configFromEnv, createCore } from "../lib/engine-service/core";
+import type { ShadowDeps, ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { askedOf, configFromEnv, createCore, TAB_SOURCE, type CoreHooks } from "../lib/engine-service/core";
 import { createEngineServer } from "../lib/engine-service/http";
 import { EnginePool, type PoolWorker } from "../lib/engine-service/pool";
 import { parseEngineRequest, statusOf, type EngineRequest, type EngineResult } from "../lib/engine-service/protocol";
@@ -143,8 +144,9 @@ function fakes() {
 // --- configuration and the core's refusal of an unconfigured source
 {
   const c = configFromEnv({ ENGINE_NIBRS_ROOT: "/r/canonical", ENGINE_PYTHON: "/p/python", ENGINE_DUCKDB_MEMORY: "3GB", ENGINE_DUCKDB_THREADS: "2", ENGINE_TIMEOUT_MS: "90000" });
-  assert.deepEqual(c, { tabs: { nibrs: { root: "/r/canonical", python: "/p/python" } }, memoryLimit: "3GB", threads: 2, timeoutMs: 90000 });
-  assert.deepEqual(configFromEnv({}), { tabs: {}, memoryLimit: "2GB", threads: 1, timeoutMs: 120000 }, "defaults: no tab, 2 GB, one thread");
+  assert.deepEqual(c, { roots: { nibrs: "/r/canonical" }, python: "/p/python", memoryLimit: "3GB", threads: 2, timeoutMs: 90000 });
+  assert.deepEqual(configFromEnv({}), { roots: {}, python: "python3", memoryLimit: "2GB", threads: 1, timeoutMs: 120000 }, "defaults: no source, 2 GB, one thread");
+  assert.deepEqual(configFromEnv({ ENGINE_CRIME_INDEX_ROOT: "/ci", ENGINE_SHR_ROOT: "/s", ENGINE_HATE_ROOT: "/h" }).roots, { crimeIndex: "/ci", shr: "/s", hate: "/h" }, "one root per source");
   assert.equal(configFromEnv({ ENGINE_DUCKDB_THREADS: "0" }).threads, 1, "a bad thread count falls back to one");
   // Follow-ups #2: the whole question a reply answered or asked about, which the page sends back as the next follow-up's `previous`.
   assert.equal(askedOf({ question: "violent crime in Houston by year" }, { kind: "answer" }), "violent crime in Houston by year", "a first question is itself");
@@ -167,12 +169,52 @@ function fakes() {
   const ui = /type TabId = ([^;]+);/.exec(readFileSync("components/ChatInterface.tsx", "utf8"))?.[1] ?? "";
   const uiTabs = [...ui.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).filter((t) => t !== "explainer").sort();
   assert.deepEqual(uiTabs, [...SOURCE_TABS].sort(), "the app's tab ids are the five source tabs");
-  assert.deepEqual(Object.keys(configFromEnv({ ENGINE_NIBRS_ROOT: "/r" }).tabs).filter((t) => !asSourceTab(t)), [], "every tab key the service configures is a source tab");
+  assert.deepEqual(Object.keys(TAB_SOURCE).sort(), [...SOURCE_TABS].sort(), "every source tab has a source in the service config");
   assert.equal(asSourceTab("hate_crime"), "hate_crime");
   assert.equal(asSourceTab("hate"), undefined, "a name that is not a source tab is not one");
   assert.equal(asSourceTab(undefined), undefined);
 }
 
+// --- piece 1: one shared executor, per-source loading, a failed source stays its own tabs' problem
+{
+  const exec = (() => []) as unknown as ShadowDeps["execute"];
+  const baseDeps = { places: {} as ShadowDeps["places"], release: { id: "n-1", firstMonth: "1991-01", lastMonth: "2025-12", asOf: "2026-11-22" }, target: { root: "/n", builtYears: [2025] }, execute: exec };
+  const cfg = configFromEnv({ ENGINE_NIBRS_ROOT: "/n", ENGINE_SHR_ROOT: "/s", ENGINE_HATE_ROOT: "/h" });
+  let clock = 0, shrWorks = false; const tries = { shr: 0 };
+  const seen: { tab?: string; hate: boolean; shr: boolean; exec: unknown }[] = [];
+  const hooks: CoreHooks = {
+    now: () => clock,
+    base: () => ({ deps: baseDeps, release: "n-1" }),
+    sources: {
+      shr: () => { tries.shr++; if (!shrWorks) throw new Error("manifest missing"); return { deps: { shr: { latestMonth: "2024-12" } as unknown as ShadowDeps["shr"] }, releases: { shr: "s-1" } }; },
+      hate: () => ({ deps: { hate: { latestDate: "2024-12-31" } as unknown as ShadowDeps["hate"] }, releases: { hate_crime: "h-1" } }),
+    },
+    answerOutcome: (_r, d) => { seen.push({ tab: d.tab, hate: !!d.hate, shr: !!d.shr, exec: d.execute }); return { kind: "decline", reason: "x", about: "x" } as unknown as ShadowOutcome; },
+  };
+  const core = createCore(cfg, hooks);
+  assert.deepEqual(core.info().tabs, ["nibrs", "shr", "hate_crime"], "served: nibrs, and the sources with a root and a builder (crimeIndex has no root here)");
+  const n = core.answer(req("q", { tab: "nibrs" }));
+  assert.ok(n.ok && n.release === "n-1", "nibrs answers on the base release");
+  const h = core.answer(req("q", { tab: "hate_crime" }));
+  assert.ok(h.ok && h.release === "h-1", "hate crime reports its own release");
+  const s = core.answer(req("q", { tab: "shr" }));
+  assert.ok(!s.ok && s.kind === "unavailable" && /manifest missing/.test(s.message), "a source that fails to load makes only its own tab unavailable, with its reason");
+  assert.equal(core.answer(req("q", { tab: "historical" })).ok, false, "a tab whose source has no root is unavailable");
+  assert.ok(seen.every((x) => x.exec === exec), "every tab shares the one executor");
+  assert.ok(seen.find((x) => x.tab === "nibrs")?.hate, "a question on one tab can still read another loaded source");
+  tries.shr = 0; core.answer(req("q", { tab: "shr" })); assert.equal(tries.shr, 0, "a failed source is not retried at once");
+  clock = 31_000; shrWorks = true;
+  const again = core.answer(req("q", { tab: "shr" }));
+  assert.ok(again.ok && again.release === "s-1" && Number(tries.shr) === 1, "after the pause it is tried again and, once fixed, answers");
+  assert.deepEqual((core.info().sources as Record<string, string>), { shr: "loaded", hate: "loaded" });
+  core.close();
+}
   console.log("engine service: pool, protocol and HTTP face: ok");
 }
 main().catch((e) => { console.error(e); process.exit(1); });
+
+
+
+
+
+
