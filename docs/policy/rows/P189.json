@@ -1,0 +1,12 @@
+{
+  "id": "P189",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Compare anti-Islamic and anti-Jewish hate crimes over time\", \"hate crimes by bias nationally in 2024\", \"hate crimes by location in Texas in 2024\", \"hate crimes at schools by year\"",
+  "what the app does today": "Each was declined (\"I can't answer this combination\"): two biases were read as incidents with both, \"by bias\" had no plan form, a location breakdown and a school location were not answered from the hate crime data.",
+  "proposed behavior": "Hate crimes, from the hate crime data only. H1 several biases named (up to five): side by side, one column per bias in the order the question names them, each its own count of incidents with that bias, never added; one line says an incident with more than one of these biases is counted in each column. Total, by year or by month (not a rolling window). H2 by bias: one row per bias (the FBI's names), the incidents with that bias, largest first; an incident with several biases is in each row, and one line says so with the period's total (\"An incident with more than one bias is counted under each, so the rows add to more than N hate crimes.\"); no share column. Total or by year. A breakdown by bias is for hate crimes only: another crime by bias is declined. H3 by location: the same, by the location's name; \"Location not confirmed\" and no location are rows of their own, last. H4 at schools: incidents with any offense at School/College (before 2010), School-Elementary/Secondary or School-College/University; incidents whose location is not confirmed (and that have no school location) are not counted, and a line gives how many. Any other location named is declined.",
+  "exact default or choices offered": "No question; the lines named above, the reporting caveat and the source line.",
+  "why": "Jeff 2026-11-21 (through the coordinator): H2-H4 approved exactly as written; H1 needs no new rule (each bias is its own count).",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-hate.ts (\"H1\", \"H2, H3\", \"H4\"); the runner gate of PR 304."
+}

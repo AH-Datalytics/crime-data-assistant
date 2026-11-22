@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Top 20 cities by murder rate\" and \"cities with the most officers per resident\"",
   "what the app does today": "No population minimum unless the user gives one; the active Historical ranking follows this, though an old staffing instruction still mentions 50,000.",
-  "proposed behavior": "No filter the user did not ask for: no population or count minimum. The number of rows is stated. Completeness is a different rule: a ranking takes only agencies that filed every month (P60) or every year (P105).",
+  "proposed behavior": "No filter the user did not ask for: no population or count minimum (exception: \"all cities\" and \"large, major or big cities\" with no rank word are the city agencies of 250,000 or more, stated in the title, P128). The number of rows is stated. Completeness is a different rule: a ranking takes only agencies that filed every month (P60) or every year (P105).",
   "exact default or choices offered": "Default: 20 rows.",
   "why": "Unrequested filters change who appears. Codex suggested revisiting the minimum; the rule stands unless Jeff changes it.",
-  "status": "Decided 2026-09-06 (frozen rule 5); the completeness rules P60 and P105 apply",
+  "status": "Decided 2026-09-06 (frozen rule 5); the completeness rules P60 and P105 apply; superseded in part by P128: \"all cities\" keeps its 250,000 floor (cleanup 2026-11-22), audit B24",
   "test cases": "GC-003, GC-039, GC-054, GC-057, GC-058, GC-059, GC-060, GC-061, GC-062, GC-063, GC-064, GC-097"
 }

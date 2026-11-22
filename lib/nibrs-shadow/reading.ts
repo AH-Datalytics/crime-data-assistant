@@ -545,6 +545,13 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
   text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // Filler (Jeff 2026-11-22): "highlight" opening a question and "major" before a crime word add nothing ("show me" and "give me" are
+  // already request words elsewhere, and the age rule reads "show me" itself)
+  // ("Highlight major crime trends in the city of Philadelphia since 2022"). Not "major cities" (the large-city rule above).
+  text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?highlight\s+(?:the\s+)?(?=[a-z])/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
   // here, not in PHRASES, whose replacement re-reads only the matched words (its look-ahead would fail).
   text = text.replace(/^\s*us\s+(?=(?:murder|homicide|crime|violent|property|robber|burglar|theft|assault|rape|arson|clearance)\w*)/i,
@@ -572,6 +579,18 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const TIMEFRAME = /\b(?:19|20)\d{2}\b|\b(?:since|from|between|through|during|until|ytd|today|now|present|last|past|previous|this|so\s+far|to\s+date|recent\w*|over\s+time)\b/i;
   const GRAIN = /\b(?:by|per|each|every)\s+(?:year|month|quarter|week|day)s?\b|\b(?:annual\w*|monthly|quarterly|yearly|weekly|daily)\b/i;
   loose(/\bthe\s+rest\s+of\s+the\s+(?:nation|country|U\.?S\.?A?|United\s+States)\b/gi, "the nation", "the nation");
+  // Ranking words (Jeff 2026-11-22, reader batch from the 284 gate): "worst" is the highest (the lowest for a clearance rate), "the greatest
+  // number of" is "the most", "jurisdictions" are cities, "five cities" is "5 cities", "cites" a typo; "annual" and "currently experiencing"
+  // add nothing beside a rate or a ranking.
+  loose(/\bworst\b(?=[^?.]*\bclearance\b)/gi, "lowest", "lowest");
+  loose(/\bworst\b/gi, "highest", "highest");
+  loose(/\bthe\s+greatest\s+number\s+of\b/gi, "the most", "the most");
+  loose(/\b(?:are\s+|is\s+)?(?:currently\s+)?experiencing\s+(?=the\s+(?:most|highest|lowest))/gi, "with ", "with");
+  loose(/\bjurisdictions(?=\s+(?:had|have|has|with)\b[^?.]*\b(?:highest|lowest|most|fewest|worst|best)\b)/gi, "cities", "cities");
+  loose(/\bcites\b/gi, "cities", "cities");
+  for (const [w, d] of [["three", "3"], ["four", "4"], ["five", "5"], ["six", "6"], ["seven", "7"], ["eight", "8"], ["nine", "9"], ["ten", "10"], ["fifteen", "15"], ["twenty", "20"]])
+    loose(new RegExp(`(?<!\\btop\\s+)\\b(?:the\\s+)?${w}(?=\\s+(?:cities|states|agencies|counties)\\b[^?.]*\\b(?:highest|lowest|most|fewest|worst|best)\\b)`, "gi"), `top ${d}`, `top ${d}`);
+  dropWord(/\b(highest|lowest|top|most)\s+annual\s+(?=(?:murder|homicide|robbery|assault|rape|burglary|theft|crime)\b)/gi, "$1 ");
   loose(/\boverall\s+(?=(?:violent|property)\b)/gi, "", "left out, since the crime is named", "phrase");
   loose(/\boverall\b(?=\s+(?:and|&)\s+violent\b)/gi, "violent crime and property crime", "violent crime plus property crime");
   // Not a clearance question (P57's current year) and not a trend ("current murder trends" is a series, never one year).
