@@ -7,6 +7,6 @@
   "proposed behavior": "Keep. Two named agencies give two answers.",
   "exact default or choices offered": "Default: the sheriff's agency, named.",
   "why": "",
-  "status": "Decided 2026-09-06 (frozen rule 10)",
+  "status": "Decided 2026-09-06 (frozen rule 10); superseded in part by P28: a county police department that polices the county is named instead of the sheriff (cleanup 2026-11-22), audit C17",
   "test cases": "GC-075, GC-080, GC-081, GC-082, GC-083, GC-084"
 }

@@ -1,0 +1,12 @@
+{
+  "id": "P207",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Can you return the murder-to-robbery, robbery-to-aggravated assault, and murder-to-assault ratios for St. Louis, MO; Chicago, IL; Los Angeles, CA; Memphis, TN; and New Orleans, LA for the years 2010 to 2025?\"",
+  "what the app does today": "No rule: a ratio of two crimes was declined.",
+  "proposed behavior": "A ratio of two crimes (\"A-to-B ratio\", \"A per B\") is computed per place per period as the count of crime A divided by the count of crime B, two decimals, with both counts beside the ratio. Several ratios are several columns of one table (Place | Year | A | B | A-to-B ...). A period where B is zero or either count is blank has no ratio, and a line says so. Both counts come from one source with the same unit (P14, D18); no period named is every year by year (P181).",
+  "exact default or choices offered": "Ratio = A / B per place per period, both counts shown.",
+  "why": "Jeff 2026-11-22 (card through the coordinator): \"Compute it\".",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+  "test cases": "Comes with the build."
+}
