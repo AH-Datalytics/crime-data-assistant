@@ -80887,19 +80887,24 @@
    "question": "What is the homicide clearance rate in Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "state clearance rate: Jeff 2026-11-21"
+    "notes": "P181 (no period = every year, merged with PR 284) and P57 (completed years' clearance rates are the Crime Index's; P172 NIBRS reporting agencies allowed). By rule from the question text"
    }
   },
   {

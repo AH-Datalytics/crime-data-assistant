@@ -23771,10 +23771,14 @@
 "QL-shr-c6b8a6f2a1": {
 "status": "reviewed",
 "by": "jeff-2026-11-21",
-"why": "state clearance rate: Jeff 2026-11-21",
+"why": "P181 (no period = every year, merged with PR 284) and P57 (completed years' clearance rates are the Crime Index's; P172 NIBRS reporting agencies allowed). By rule from the question text",
 "expected": {
-"outcome": "clarify",
-"about": "period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
 }
 },
 "QL-shr-c6d44e39ca": {
