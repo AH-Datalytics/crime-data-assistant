@@ -289,7 +289,8 @@ const PHRASES: [RegExp, string][] = [
 /** P31's composites: the crimes each counts, and its weapon. */
 const COMPOSITES: [RegExp, string, Composite][] = [
   [/\bgun\s+crimes?\b/gi, "murders, robberies and aggravated assaults", "firearm"],
-  [/\bstabbings?\b/gi, "murders and aggravated assaults", "knife"],
+  // (Typos too: "stabbongs", "stabings"; the coordinator 2026-11-22, QL-nibrs-12ac4f9472 "knife stabbongs in 2024 by injury type".)
+  [/(?:\b(?:knife|knives)\s+)?\bstab+[a-z]{0,2}ngs?\b/gi, "murders and aggravated assaults", "knife"],
 ];
 const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const MON = `(${MONTH_NAMES.join("|")})`;
