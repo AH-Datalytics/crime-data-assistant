@@ -14448,24 +14448,21 @@
    "question": "show me the number of crimes in Washington, DC compared to Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "rtci"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "violent, property or both",
+     "which Baltimore",
+     "period"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "violent, property or both"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
+    "status": "draft",
+    "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "P182 (no crime named is violent plus property), P181 (no period is every year by year), P196 (Baltimore beside Washington, DC is the Baltimore police; the DC name needs no state offer): the counts per city per year, with the agency named in a note. By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "reviewed_by": null,
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
