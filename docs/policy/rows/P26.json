@@ -1,0 +1,12 @@
+{
+  "id": "P26",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Value of stolen property in New York in 2021\" (\"New York\" alone)",
+  "what the app does today": "Not settled: some paths read it as the city, others as the state.",
+  "proposed behavior": "See P28.",
+  "exact default or choices offered": "See P28.",
+  "why": "The two answers differ several times over, and both readings are common.",
+  "status": "Superseded by P28 (2026-11-16)",
+  "test cases": "labeled cases LS-159, LS-208"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "D29",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "Commentary in answers",
+  "what the app does today": "The instructions ban causal commentary.",
+  "proposed behavior": "No editorializing. Tables carry groupings and numbers only (no note or status columns); explanation sentences and chart notes stay.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-10-28",
+  "test cases": "answer-format tests"
+}

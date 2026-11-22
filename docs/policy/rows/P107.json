@@ -1,0 +1,12 @@
+{
+  "id": "P107",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"juvenile crime in Texas in 2024\" (a count of offenses or incidents with a juvenile)",
+  "what the app does today": "A juvenile was read as a victim under 18 and the question declined.",
+  "proposed behavior": "With no victim word in the question (\"juvenile crime\", \"juvenile offenders\"), juvenile means an offender under 18. With a victim word (\"juvenile robbery victims\") P120 applies: victims under 18. Everywhere a count is of an offender under 18 the words are the short form \"with an offender under 18\" (never \"in the incident\").",
+  "exact default or choices offered": "\"Robberies with an offender under 18\".",
+  "why": "Jeff 2026-11-15: \"Juvenile crime refers to offender age, not victim\"; short form \"Those work\".",
+  "status": "Decided (Jeff 2026-11-15); scope narrowed by P120 (2026-11-16)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}

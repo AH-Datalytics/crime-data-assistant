@@ -1,0 +1,12 @@
+{
+  "id": "P72",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Add a column for population\", \"how many agencies reported\"",
+  "what the app does today": "Not answered: an answer holds groupings and the asked-for numbers only.",
+  "proposed behavior": "The answer adds a column with the population used for the rate and, for state and national totals, the number of agencies reporting. The rate itself is unchanged. This extends the result rule (groupings and numbers only) by these two supporting number columns.",
+  "exact default or choices offered": "Show the population used and, for state and national totals, the agencies reporting.",
+  "why": "Users ask what a rate divides by and how many agencies a sum covers.",
+  "status": "Decided 2026-10-31 (Jeff: \"Show it\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-follow-up.ts."
+}

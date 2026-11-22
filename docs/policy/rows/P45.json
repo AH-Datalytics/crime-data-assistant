@@ -1,0 +1,12 @@
+{
+  "id": "P45",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Robbers\", \"burglars\", \"shoplifters\", \"carjackers\", \"killers\", \"murderers\", \"shooters\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "A crime's agent noun means that crime's offenders: robbers, burglars, shoplifters, carjackers, killers and murderers. \"Shooters\" is declined.",
+  "exact default or choices offered": "",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 24 \"yes on all but shooters...that gets declined, murderer should be included too\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow-reading.ts."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P183",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "An agency flagged as zero reports or unknown for a month, with 4 robbery rows in it; \"robberies in <agency> by month\"",
+  "what the app does today": "The rows contradict the flag, so the result is refused (a decline), whichever way the flag is wrong.",
+  "proposed behavior": "A month with offense rows counts them, whatever its status flag says (a zero-report or unknown flag with rows is a counted month; this is about 0.3% of agency-months). A month flagged zero or unknown with NO rows stays a gap (P121: one agency's zero-report month is blank, never 0; a state or national sum keeps the zero report and adds nothing). The same already holds for arrests (a month's status describes its crime reports, not its arrests).",
+  "exact default or choices offered": "No question and no refusal.",
+  "why": "Jeff 2026-11-21 (through the coordinator), adopting Savant's rule: the rows win over the flag (coordinator ruling Nov 16 in Savant). Replaces the refusal of an evidence conflict for crimes.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-compile.ts (\"P183\")."
+}

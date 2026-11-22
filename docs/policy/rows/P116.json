@@ -1,0 +1,12 @@
+{
+  "id": "P116",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Compare Chicago and Houston firearm murders by month\"",
+  "what the app does today": "Answered from NIBRS (a table of months), because Homicide Reports could be asked for one place only.",
+  "proposed behavior": "Several named agencies' murder or homicide details (the word asked, as P10 says) by month (or by year) come from Homicide Reports, like one agency's: one table Agency | Month | count with one source line; a month or year an agency filed no reports is blank, never 0, with its own line. No years named: every month from 1985.",
+  "exact default or choices offered": "\"Compare Chicago and Houston firearm murders by month\" is a Homicide Reports table.",
+  "why": "Jeff 2026-11-15 via coordinator: murder details are Homicide Reports', same table shape, blanks where a city did not file.",
+  "status": "Decided 2026-11-15 (Jeff)",
+  "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
+}

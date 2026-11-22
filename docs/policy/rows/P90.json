@@ -1,0 +1,12 @@
+{
+  "id": "P90",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Carjackings in Tennessee by year from 2021 to 2025, only agencies that reported every month\": the Consistent Reporting Agencies view's sentence",
+  "what the app does today": "\"This counts only the N Consistent Reporting Agencies that reported every month.\"",
+  "proposed behavior": "\"This counts only the N Consistent Reporting Agencies, covering roughly P people, that reported every month from START through END.\" P is the sum of each Consistent Reporting Agency's current population: its most recent FBI population in the build, whatever the answer's span. Rounded to two significant figures, millions in words (\"4.1 million\", \"12 million\", \"850,000\"); \"at least P\" when an agency has no population.",
+  "exact default or choices offered": "Current population, rounded; \"at least\" when any is missing.",
+  "why": "A reader wants to know how much of the place the consistent view stands for.",
+  "status": "Decided 2026-11-02 (Jeff: \"covering roughly TK people\"; \"population should be sum of current population of consistent agencies\")",
+  "test cases": "Tests that cite this row: scripts/test-answer-conformance.ts, scripts/test-nibrs-current.ts, scripts/test-nibrs-shadow.ts."
+}

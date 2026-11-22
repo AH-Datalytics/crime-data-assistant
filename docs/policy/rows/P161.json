@@ -1,0 +1,12 @@
+{
+  "id": "P161",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murder victim race in Houston\", \"murder victims by race in Houston\" with no years",
+  "what the app does today": "Asked which period, or declined.",
+  "proposed behavior": "A murder victim's or offender's detail broken down (race, sex, age, ethnicity) with no period is every year by year from 1985 (the start of Homicide Reports), with the sentence \"No years were given, so every year in the data is shown: 1985 through <latest year>.\"",
+  "exact default or choices offered": "Every year Homicide Reports hold, by year, with the breakdown.",
+  "why": "Jeff 2026-11-19 (through the coordinator): no period for a detail breakdown is every year, by year.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P161\")."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P136",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many agencies reported NIBRS data in 2023?\", \"What states are not represented?\", \"what years does NIBRS cover?\", \"Where do these numbers come from?\", \"Sources?\", \"how is domestic violence defined?\"",
+  "what the app does today": "Asked back (\"which place\"), or answered as a crime figure.",
+  "proposed behavior": "Questions about the data itself are answered from the release. \"How many agencies reported ... in 2023?\" gives the agencies that reported at least one month, with the agencies that reported every month beside it, of the agencies in the FBI's agency list (a state when one is named; every year when no year is named; for the year not yet over, every month so far). \"What states are not represented?\" gives, for every year from 2017 to the latest full year, the states with no agency that reported a month, and the other places (Guam, Puerto Rico, the U.S. Virgin Islands). \"What years does NIBRS cover?\" gives the first and last month of NIBRS and the first and last year of Crime Index. \"Where do these numbers come from?\" and \"Sources?\" name Crime Index, the FBI's NIBRS, Supplementary Homicide Reports and Hate Crime Statistics, each with what it holds. A definition question (\"how is domestic violence defined?\") gives the link to the FBI Crime Data Explorer, https://cde.ucr.cjis.gov/, and no written definition. A question that also asks for a figure or names a place is not read this way.",
+  "exact default or choices offered": "Title in Jeff's style (\"2023 Agencies Reporting NIBRS Data, United States\", \"States With No NIBRS Data by Year, 2017 to 2025\", \"Where the Numbers Come From\"), notes, then \"Source: FBI NIBRS.\" (the pointers have no figure to source).",
+  "why": "Jeff 2026-11-18 (through the coordinator): approved the data-coverage answers as shown, counting an agency that reported at least one month with the all-12-months count beside it, and the FBI Crime Data Explorer link for definitions.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-coverage.ts."
+}

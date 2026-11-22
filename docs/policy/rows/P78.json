@@ -1,0 +1,12 @@
+{
+  "id": "P78",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Memphis police officers per 100,000 residents in 1995\" (staffing)",
+  "what the app does today": "Historical staffing is not yet in the new engine.",
+  "proposed behavior": "Historical agency staffing comes into the new engine in its second increment, before launch, with its pre-1960 years (P76).",
+  "exact default or choices offered": "Second increment, before launch, pre-1960 included.",
+  "why": "Historical means crime, clearances and staffing (owner, 2026-10-28).",
+  "status": "Decided 2026-11-01 (Jeff: \"4 is good\")",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

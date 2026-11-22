@@ -1,0 +1,12 @@
+{
+  "id": "D13",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "An empty answer",
+  "what the app does today": "Names one of four cases on most paths.",
+  "proposed behavior": "Keep: say which case it is - a true zero; something no dataset collects; a place or period outside what is held; or an app failure. A verified zero is shown as 0, never blank, and a failure is never presented as missing data.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "",
+  "status": "Decided 2026-09-06 (frozen rule 13)",
+  "test cases": "GC-045, GC-091, GC-097, GC-098, GC-099, GC-100, GC-101, GC-102, GC-112, GC-113, GC-114, GC-121"
+}

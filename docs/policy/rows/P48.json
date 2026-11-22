@@ -1,0 +1,12 @@
+{
+  "id": "P48",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"How many people ...\" (bare \"people\")",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "The verb decides who is counted: \"were robbed\" -> victims, \"robbed stores\" -> offenders, \"were arrested\" -> arrests. When the verb does not settle it, ask.",
+  "exact default or choices offered": "",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 29 yes)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
+}

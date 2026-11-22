@@ -1,0 +1,12 @@
+{
+  "id": "P190",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"how many murders ocurred in Colorado in 2022\", \"how mnay murders in Detroit in 2026\", \"homicides in Durham for year 2026\", \"NYC retail theft trends\", \"larceny from auto in Houston\", \"violent crime and property trends in Tacoma\"",
+  "what the app does today": "Declined (\"I didn't understand \\\"ocurred in\\\"\", \"how mnay\", \"for year\", \"retail\", \"from auto\", \"property\").",
+  "proposed behavior": "A small word or a slip is read as the question it is: \"occurred in\" (any common misspelling) is \"in\"; \"how mnay\" is \"how many\"; \"sincce\" is \"since\"; \"for year 2026\" is \"in 2026\"; \"retail theft\" is shoplifting; \"larceny from auto\" is theft from a motor vehicle; \"violent crime and property\" is violent crime and property crime.",
+  "exact default or choices offered": "The answer the plain wording gets.",
+  "why": "Jeff 2026-11-21 (through the coordinator): the reader owns question recognition; real asks the reader did not understand.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P190\")."
+}
