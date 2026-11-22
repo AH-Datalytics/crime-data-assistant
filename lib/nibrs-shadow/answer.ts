@@ -3254,7 +3254,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (spec.period?.form === "none") {
     const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
     const thisYear = Number(release.lastMonth.slice(0, 4));
-    const trend = !!spec.grain && spec.grain !== "total";
+    // A clearance share "by year" with no years named (Jeff 2026-11-22: a row for each year) is a series too, asked for the range of years.
+    const yearlyShare = d.spec.type === "share" && stateMode && d.spec.subset.some((f) => f.startsWith("clearance:"))
+      && ledger0.parts.some((p) => p.clause === 0 && p.concept === "grain" && p.value === "year");
+    const trend = (!!spec.grain && spec.grain !== "total") || yearlyShare;
     // Jeff 2026-11-11, "All years by default": "by year", "per month", "over time" with no range is every year the source
     // has, said, never asked. By year (or quarter): NIBRS's first year through the latest complete year; by month or a
     // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
