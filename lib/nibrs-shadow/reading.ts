@@ -47,7 +47,8 @@ import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
 import { isCommonEnglishWord } from "../english-common-words";
 
 /** `meaning`: a loose word read as the meaning Jeff decided (P188); the answer says it ("Current is read as the latest complete year, 2025."). */
-export type Reading = { kind: "spelling" | "phrase" | "period" | "meaning"; from: string; to: string };
+/** `are`: the reading is of a plural ("Stabbings are read as ..."), not "is". */
+export type Reading = { kind: "spelling" | "phrase" | "period" | "meaning"; from: string; to: string; are?: true };
 export type Composite = "firearm" | "knife";
 export type Span = { from: string; to: string };
 /** What makes a question about all the cities more than a plain count or rate of one crime for one year (see the reader's all-cities rule). */
@@ -601,7 +602,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // Jeff 2026-11-22 (P31 kept): in an injury question "stabbings" (and the logged typo "stabbongs") are murder and aggravated assault victims with a knife or
   // cutting instrument, counted as one measure so they can be broken down by injury type; the answer says how it was read.
   if (/\binjur/i.test(text)) text = text.replace(/\b(?:knife\s+)?stabb(?:ings?|ongs?)\b/gi, (m) => {
-    readings.push({ kind: "meaning", from: m, to: "murder and aggravated assault victims with a knife or cutting instrument" });
+    // Said as "Stabbings are read as ...", never with the words as typed (a typo is not echoed).
+    readings.push({ kind: "meaning", from: "stabbings", to: "murder and aggravated assault victims with a knife or cutting instrument", are: true });
     return "stabbing victims with a knife";
   });
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
@@ -912,5 +914,5 @@ export const COURT_TEXT = /^(?:\s|\b(?:led|lead|leads|resulted|result|results|we
 export const readingSentence = (r: Reading) => {
   if (r.kind !== "meaning") return `Read "${r.from}" as ${r.to}.`;
   const from = r.from.replace(/^(?:and\s+(?:to\s+)?)?(?:the\s+)?/i, "");
-  return `${from[0].toUpperCase()}${from.slice(1)} is read as ${r.to}.`;
+  return `${from[0].toUpperCase()}${from.slice(1)} ${r.are ? "are" : "is"} read as ${r.to}.`;
 };

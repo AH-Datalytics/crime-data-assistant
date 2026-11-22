@@ -2107,7 +2107,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
         assert.deepEqual(st.plan.measures.map((m) => [m.id, m.unit]), [["victims.stabbing", "victim"]], q);
         assert.ok(st.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon" && JSON.stringify(x.where).includes('"values":["20"]')), q);
         assert.ok(st.plan.groupings.some((x) => x.dimension === "victim_injury.injury"), q);
-        assert.ok(st.delivered.text.some((t) => /is read as murder and aggravated assault victims with a knife or cutting instrument\./.test(t)), JSON.stringify(st.delivered.text));
+        assert.ok(st.delivered.text.includes("Stabbings are read as murder and aggravated assault victims with a knife or cutting instrument."), JSON.stringify(st.delivered.text));
+        assert.ok(!/stabbongs/i.test(JSON.stringify(st.delivered.text)), "the typo is not echoed");
       }
       assert.deepEqual(MEASURE_CODES.stabbing, ["09A", "13A"]);
       // Asked in offenses, the unit is still the victim (injury is recorded for each victim).
