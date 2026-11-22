@@ -782,7 +782,12 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
  */
 export const SIZE_GROUPS: [number, number | null, string][] = [[250000, null, "250,000 or more"], [100000, 250000, "100,000 to 249,999"], [50000, 100000, "50,000 to 99,999"],
   [25000, 50000, "25,000 to 49,999"], [10000, 25000, "10,000 to 24,999"], [0, 10000, "under 10,000"]];
-export type PositionQuestion = { measure: string; ori: string; label: string; state: string; year: number; statistic: "count" | "rate"; scope: "state" | "size" };
+/** The size band a city is ranked in (P132): 250,000+ for a city of 250,000 or more, else 100,000+; null with no population. */
+export function positionBand(build: HistoricalBuild, execute: (sql: string) => unknown[][], ori: string, year: number): "250,000+" | "100,000+" | null {
+  const pop = num(execute(`SELECT population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE ori = ${q(ori)} AND year = ${year}`)[0]?.[0]);
+  return pop === null ? null : pop >= 250000 ? "250,000+" : "100,000+";
+}
+export type PositionQuestion ={ measure: string; ori: string; label: string; state: string; year: number; statistic: "count" | "rate"; scope: "state" | "size" };
 export function answerHistoricalPosition(pq: PositionQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
   const m = HISTORICAL_MEASURE[pq.measure];
   if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
@@ -795,9 +800,9 @@ export function answerHistoricalPosition(pq: PositionQuestion, build: Historical
   let within: string, said: string;
   if (pq.scope === "size") {
     if (pop === null) return { kind: "historical-decline", explanation: `Crime Index has no population for ${pq.label} in ${pq.year}, so its size group isn't known.` };
-    const g = SIZE_GROUPS.find(([lo, hi]) => pop >= lo && (hi === null || pop < hi))!;
-    within = `population >= ${g[0]}${g[1] !== null ? ` AND population < ${g[1]}` : ""}`;
-    said = `U.S. cities of ${g[2]} (the FBI's population group ${pq.label} is in)`;
+    // A fixed band, never peers the app chooses (P132, Jeff 2026-11-22): 250,000+ for a city of 250,000 or more, else 100,000+ (the city always in).
+    if (pop >= 250000) { within = "population >= 250000"; said = "U.S. cities of 250,000 or more"; }
+    else { within = `(population >= 100000 OR ori = ${q(pq.ori)})`; said = "U.S. cities of 100,000 or more (and the city asked about)"; }
   } else {
     within = `state = ${q(pq.state)}${rate ? ` AND (population >= 100000 OR ori = ${q(pq.ori)})` : ""}`;
     said = `${stateName(pq.state)} cities${rate ? " of 100,000 or more (and the city asked about)" : ""}`;
@@ -819,7 +824,7 @@ export function answerHistoricalPosition(pq: PositionQuestion, build: Historical
   const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
   const what = rate ? `${m.name} rate` : m.words;
   // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
-  const text = [`Where ${pq.label.split(",")[0]} Ranks on ${pq.year} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} Among ${pq.scope === "size" ? "U.S. Cities" : `${stateName(pq.state)} Cities`}`,
+  const text = [`Where ${pq.label.split(",")[0]} Ranks on ${pq.year} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} Among ${pq.scope === "size" ? `U.S. Cities of ${said.includes("250,000") ? "250,000+" : "100,000+"}` : `${stateName(pq.state)} Cities`}`,
     `${pq.label} ranks ${nth(place(at))} of ${ranked.length} ${said} by ${what} in ${pq.year}; 1st is the highest.`,
     "It is shown with the two cities above and the two below; ties share a place and are ordered by name."];
   if (rate) text.push("Rates are per 100,000 of each agency's population as published by Crime Index.");

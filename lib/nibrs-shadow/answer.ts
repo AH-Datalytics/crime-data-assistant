@@ -55,7 +55,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, positionBand, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
@@ -2375,11 +2375,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
           const r = answerHistoricalPosition({ measure: String(measures[0].value), ori: a.ori, label: a.label, state: cityState.toUpperCase(), year, statistic, scope }, hb, deps.execute);
           return r.kind === "historical" ? r : decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
         };
-        if (g && !inState && !nationally) return decline("unsupported_capability", `${a.label} is ranked among its own state's cities or among U.S. cities of its size.`);
+        if (g && !inState && !nationally) return decline("unsupported_capability", `${a.label} is ranked among its own state's cities or among U.S. cities of 250,000+ or 100,000+.`);
         if (inState) return run("state");
         if (nationally) return run("size");
         // Always asked (Jeff): a choice that can't run is left out and said, never chosen silently (01.5).
-        const all = [{ label: `Among ${stateName(cityState.toUpperCase())} cities`, continuation: run("state") }, { label: "Among U.S. cities of similar size", continuation: run("size") }];
+        // The size button is a fixed band, 250,000+ or 100,000+ by the city's own population (P132, Jeff 2026-11-22).
+        const band = positionBand(hb, deps.execute, a.ori, year) ?? "100,000+";
+        const all = [{ label: `Among ${stateName(cityState.toUpperCase())} cities`, continuation: run("state") }, { label: `Among U.S. cities of ${band}`, continuation: run("size") }];
         const options = all.filter((o) => runsNow(o.continuation));
         if (!options.length) return all[0].continuation;
         const gone = all.find((o) => !runsNow(o.continuation));

@@ -552,6 +552,21 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // "Cases closed", "cases solved", "cases cleared" (Jeff 2026-11-22, audit B22, P35/P47): clearances, the offenses cleared, said in a note; a bare "cases" is
+  // not read here (it still declines).
+  text = text.replace(/\b(?:the\s+)?(?:number\s+of\s+)?cases\s+(?:that\s+)?(?:(?:were|was|are|is|have\s+been|has\s+been|been|get|got|being)\s+)?(?:closed|solved|cleared)\b/gi,
+    (m) => { readings.push({ kind: "meaning", from: `cases ${/(closed|solved|cleared)$/i.exec(m)![1].toLowerCase()}`, to: "offenses cleared" }); return "that were cleared"; });
+  {
+    const before = text;
+    text = text.replace(/\b(?:the\s+)?(closed|solved|cleared)\s+((?:[a-z]+\s+){0,3}?)cases\b/gi, (_m, v: string, crime: string) => { readings.push({ kind: "meaning", from: `${v.toLowerCase()} cases`, to: "offenses cleared" }); return crime.trim(); });
+    if (text !== before) text = text.replace(/\s*([?.!]*)\s*$/, ` that were cleared$1`);
+  }
+  // "Solved" on its own is "cleared" (P35): "How many murders were solved in Houston", "murders solved in 2024".
+  text = text.replace(/(?:\b(?:were|was|are|is|been|get|got)\s+)?\bsolved\b(?=\s*(?:$|[?.!,]|(?:in|for|during|by|across|since|from|between|nationwide|last|this|per|each)\b|\d))/gi,
+    () => { readings.push({ kind: "meaning", from: "solved", to: "cleared" }); return "that were cleared"; });
+  // Filler (Jeff 2026-11-22, QL-ct-d20e00174a): "are we seeing" after what is asked about ("What crime trends are we seeing in Baltimore") adds nothing.
+  text = text.replace(/(?<=\b(?:trends?|crimes?|changes?|patterns?|numbers|figures))\s+(?:are|do)\s+we\s+(?:seeing|see)\b(?=\s+(?:in|for|across)\b)/gi,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
   // here, not in PHRASES, whose replacement re-reads only the matched words (its look-ahead would fail).
   text = text.replace(/^\s*us\s+(?=(?:murder|homicide|crime|violent|property|robber|burglar|theft|assault|rape|arson|clearance)\w*)/i,
@@ -594,6 +609,16 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   }
   {
     const TREND = String.raw`(?:going\s+up\s+or\s+down|going\s+up|going\s+down|gone\s+up|gone\s+down|up\s+or\s+down|dropping|rising|falling|increasing|getting\s+worse|getting\s+better|up|down)`;
+    // "Is it getting worse?" after a question about a crime (Jeff 2026-11-22, audit B34): the same as "up", no verdict; the question before it
+    // keeps its own period, or has the past five years by year.
+    const follow = new RegExp(String.raw`^(.*\S[?.!])\s+(?:is|are|has|have)\s+(?:it|this|that|they)\s+(?:been\s+)?(${TREND})\s*[?.!]*\s*$`, "i").exec(text);
+    if (follow && CRIME_WORD.test(follow[1]) && !/\b(?:similar|peers?|comparable)\b/i.test(follow[1])) {
+      const own = TIMEFRAME.test(follow[1].replace(NOW_WORDS, ""));
+      readings.push({ kind: "meaning", from: follow[2], to: own ? "its trend by year over the period asked" : "its trend by year over the past five years" });
+      text = follow[1].replace(/[?.!]+$/, "").replace(/\s+/g, " ").trim() + "?";
+      if (!GRAIN.test(text)) endWith("by year");
+      if (!TIMEFRAME.test(text)) endWith("over the past 5 years");
+    }
     const t1 = new RegExp(String.raw`^(\s*)(?:is|are|has|have|was|were)\s+(.+?)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const t2 = t1 ? null : new RegExp(String.raw`^(.*?\S)\s+(?:are|is|have|has)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const [lead, x, w, rest]: string[] = t1 ? [t1[1], t1[2], t1[3], t1[4] ?? ""] : t2 ? [t2[1], "", t2[2], t2[3] ?? ""] : ["", "", "", ""];

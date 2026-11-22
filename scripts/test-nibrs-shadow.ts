@@ -1877,6 +1877,12 @@ assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_r
   assert.equal(tx.delivered.text[0], "Texas cleared 34.6% of the murders reported in 2025, summed over the 4 agencies that reported.");
   assert.ok(tx.delivered.text.includes("Includes all agencies.") && tx.delivered.text.at(-1) === "Source: NIBRS.", JSON.stringify(tx.delivered.text));
   assert.equal(as(ask("Aggravated assault clearance rate in Ohio in 2023"), "answer").delivered.text.length > 0, true);
+  // Jeff 2026-11-22 (audit A15): every statewide clearance-rate answer carries his sentence once.
+  const SW = "The FBI does not compute statewide clearance rates. This is computed from NIBRS reports instead.";
+  const swCount = (o: ShadowOutcome) => (o as { delivered: { text: string[] } }).delivered.text.filter((t) => t === SW).length;
+  assert.equal(swCount(tx), 1);
+  assert.equal(swCount(as(ask("What is the murder clearance rate in Texas by year from 2023 to 2025?"), "answer")), 1);
+  assert.equal(swCount(as(ask("Which states have the highest murder clearance rate in 2025?"), "answer")), 1);
   // Several years: one row a year, each the single-year figure; years before NIBRS's first are said, not answered.
   for (const q of ["What is the murder clearance rate in Texas by year from 2023 to 2025?", "Show the murder clearance rate in Texas since 2023"]) {
     const by = as(ask(q), "answer");
@@ -3201,5 +3207,29 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/cleared by exception by type by year/.test(readQuestion(q, 2026, "2026-09").text), q);
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
+}
+// Jeff 2026-11-22 (audit B22, B34, filler): "cases closed/solved/cleared" are clearances said in a note; "are we seeing" is filler; "is it getting worse?"
+// after a question about a crime is the five-year series with no verdict. (The read text is compared: an answer's numbers come from the stub.)
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09");
+  const body = (q: string) => (as(ask(q), "answer").delivered.text).filter((t) => !/read as/.test(t));
+  assert.deepEqual(body("How many murder cases were closed in Houston in 2024"), body("How many murders in Houston in 2024 that were cleared"));
+  assert.deepEqual(body("How many closed murder cases in Houston in 2024"), body("How many murders in Houston in 2024 that were cleared"));
+  assert.ok(rd("How many cases were solved in Houston in 2024").readings.some((x) => x.kind === "meaning" && x.from === "cases solved" && x.to === "offenses cleared"));
+  const cleared = as(ask("How many murder cases were closed in Houston in 2024"), "answer");
+  assert.ok(cleared.delivered.text.includes("Cases closed is read as offenses cleared."), JSON.stringify(cleared.delivered.text));
+  assert.equal(as(ask("How many murders in Houston in 2024 that were cleared"), "answer").delivered.text.some((t) => /read as/.test(t)), false, "no note when 'cases' was not said");
+  // "Solved" on its own is cleared (P35).
+  for (const q of ["How many murders were solved in Houston in 2024", "murders solved in Houston in 2024"])
+    assert.deepEqual(body(q).filter((t) => !/^Solved is read/.test(t)), body("How many murders in Houston in 2024 that were cleared"), q);
+  assert.ok(as(ask("How many murders were solved in Houston in 2024"), "answer").delivered.text.includes("Solved is read as cleared."));
+  // A bare "cases" is still not read as a clearance.
+  assert.ok(!rd("How many murder cases in Houston in 2024").readings.some((x) => x.kind === "meaning"));
+  assert.equal(rd("What crime trends are we seeing in Baltimore, Maryland?").text, rd("What crime trends in Baltimore, Maryland?").text);
+  const worse = rd("What is the hate crime trend in Texas? Is it getting worse?");
+  assert.equal(worse.text, "What is the hate crime trend in Texas by year over the past 5 years?");
+  assert.ok(worse.readings.some((x) => x.kind === "meaning" && x.from === "getting worse"));
+  assert.equal(rd("What is the robbery trend in Texas since 2020? Is it getting better?").text, "What is the robbery trend in Texas since 2020 by year?");
+  assert.equal(rd("Is it getting worse?").text, "Is it getting worse?", "nothing before it to be about: left as it is");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
