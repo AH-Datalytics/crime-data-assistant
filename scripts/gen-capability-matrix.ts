@@ -94,6 +94,13 @@ const NO_VICTIM = new Set(["bad_checks", "runaway", "all_other_offenses", "famil
  * question, whose codes are not these rows' codes (Savant's cross-check, 2026-11-22), so those rows are excluded, not asked under the wrong code list.
  */
 const AGE_ONLY: Record<string, string[]> = { person_crimes: ["victims_age group", "offenders_age group"], against_property: ["victims_age group"] };
+/** The other side of the same rule: violent / property crime asked by those age groups is answered with the NIBRS category's codes, so the row carries them (Savant, 2026-11-22). */
+const AGE_AS: Record<string, string> = { violent_crime: "person_crimes", property_crime: "against_property" };
+const rowCodes = (measure: string, breakdown: string): string[] | null => {
+  const as = AGE_AS[measure];
+  const m = as && AGE_ONLY[as].includes(breakdown) ? as : measure;
+  return MEASURE_CODES[m] ?? EXTRA_CODES[m] ?? null;
+};
 function excluded(measure: string, b: B, grain: string): string | null {
   // A grain that is already a time series beside a category breakdown is NOT excluded: it is asked, and a decline is recorded as the answer (the point of the matrix).
   void grain;
@@ -118,7 +125,7 @@ for (const measure of Object.keys(MEASURE_NOUNS).sort()) {
     // "several" is asked as one combined question; the phrase carries both names.
     const question = `${b.phrase(noun)} ${g.at(s.place)}`;
     const bd = BREAKDOWN_DATA(b);
-    rows.push({ id: `M${String(++n).padStart(5, "0")}`, measure, codes: MEASURE_CODES[measure] ?? EXTRA_CODES[measure] ?? null, measure_conditions: [], breakdown: b.breakdown, family: b.family, unit: bd.unit, group_by: bd.group_by, filters: bd.filters,
+    rows.push({ id: `M${String(++n).padStart(5, "0")}`, measure, codes: rowCodes(measure, b.breakdown), measure_conditions: [], breakdown: b.breakdown, family: b.family, unit: bd.unit, group_by: bd.group_by, filters: bd.filters,
       scope: s.scope, places: s.places, grain: g.grain, period: g.period, time_grouping: g.time_grouping, cohort: "all_reporting", question, ...(ex ? { excluded: ex } : {}),
       ...(b.breakdown === "none" && g.grain === "year" && (s.scope === "state" || s.scope === "nation") ? { timing: true } : {}) });
   }
