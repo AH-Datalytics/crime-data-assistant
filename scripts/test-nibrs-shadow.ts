@@ -3035,6 +3035,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
   assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
 }
+// A city named with its state is that state's agency, checked against the place index; never the same name in another state
+// (coordinator 2026-11-22: "burglaries in Westlake, Florida" answered Westlake, Ohio plus the state of Florida).
+{
+  const dallasTx = as(ask("shoplifting in Dallas, Texas in 2024"), "answer") as unknown as { delivered: { table: { rows: unknown[][] }; text: string[] } };
+  assert.ok(dallasTx.delivered.text.join(" ").includes("Dallas"), dallasTx.delivered.text.join(" | "));
+  // Dallas is in the index only in Texas: in Florida it is declined, never answered as Dallas, Texas.
+  const dallasFl = ask("shoplifting in Dallas, Florida in 2024");
+  assert.ok(dallasFl.kind === "decline" && dallasFl.reason === "unresolved_place" && /Dallas, Florida/.test(dallasFl.explanation ?? ""), JSON.stringify(dallasFl).slice(0, 300));
+  // A name the index does not have at all, with its state: the same decline.
+  const none = ask("shoplifting in Zzyzx, Florida in 2024");
+  assert.ok(none.kind === "decline" && none.reason === "unresolved_place" && /Zzyzx, Florida/.test(none.explanation ?? ""), JSON.stringify(none).slice(0, 300));
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
