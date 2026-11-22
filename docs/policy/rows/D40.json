@@ -7,6 +7,6 @@
   "proposed behavior": "Ask the place before the crime; the crime is asked once a place is chosen.",
   "exact default or choices offered": "Place buttons first (The United States / A state / A city or agency), then the crime kind.",
   "why": "Jeff 2026-11-14: \"yes to all three\" (Block 2b).",
-  "status": "Decided (Jeff 2026-11-14)",
+  "status": "Superseded by P180 and P182 (2026-11-21: no place is the United States, no kind of crime is violent and property crime); Decided (Jeff 2026-11-14)",
   "test cases": "Tests that ask its example question: scripts/test-nibrs-shadow.ts."
 }
