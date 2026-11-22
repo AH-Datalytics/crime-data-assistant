@@ -7,6 +7,6 @@
   "proposed behavior": "Ask the one missing thing with the buttons the engine already has, instead of the generic decline.",
   "exact default or choices offered": "Crime: Violent crime / Property crime / Both. Place: The United States / A state / A city or agency. Period: the latest complete year / this year so far / another year. Same-name place: one button per place.",
   "why": "Jeff 2026-11-14: \"yes to all three\" (Block 2a).",
-  "status": "Decided (Jeff 2026-11-14)",
+  "status": "Superseded by P180, P181 and P182 (2026-11-21: the missing part takes the default instead of an ask); Decided (Jeff 2026-11-14)",
   "test cases": "No test found: no test cites this row or asks its example question."
 }

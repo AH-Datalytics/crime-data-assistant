@@ -1,0 +1,12 @@
+{
+  "id": "P216",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of ...\"",
+  "what the app does today": "Answered as a table (label) although P99 separates staffing from a crime.",
+  "proposed behavior": "A request for a scatter plot is declined in one sentence: \"This isn't available: a scatter plot, and a crime rate beside staffing in one table.\" The decline offers the two questions separately (the crime rate for the cities, and officers per 1,000 for the cities), as P99 says, and no chart is drawn (P157).",
+  "exact default or choices offered": "The decline sentence with the two questions offered.",
+  "why": "Jeff 2026-11-22 (card through the coordinator): \"decline, offering both questions separately (P99/P157)\".",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Capability (a reader decline)",
+  "test cases": "Labels QL-hist-8696ec2df3 and QL-hist-c4f89c362b become declines with the build."
+}
