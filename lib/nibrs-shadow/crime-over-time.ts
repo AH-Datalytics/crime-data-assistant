@@ -41,7 +41,7 @@ export const compositeTableOnly = (t: ResultTable): string[] => (!isComposite(t)
 const SOURCE = "Source: Crime Index.";
 type Column = ResultTable["columns"][number];
 export type PartAnswer = { kind: string; delivered: { table: ResultTable; text: string[] }; meaning: { measures: unknown[] } & Record<string, unknown>; question?: unknown } & Record<string, unknown>;
-type Series = { kind: string; periodCol: Column; placeCol: Column | null; places: string[]; cells: Map<string, number | null> };
+export type Series = { kind: string; periodCol: Column; placeCol: Column | null; places: string[]; cells: Map<string, number | null> };
 const key = (place: string, period: string) => `${place}\u0000${period}`;
 
 /**
@@ -49,7 +49,7 @@ const key = (place: string, period: string) => `${place}\u0000${period}`;
  * (Crime Index several agencies, `x.<i>`); or Place, period and one value (Current Trends several agencies). Null for any
  * other table (a ranking, a total, a breakdown).
  */
-function seriesOf(a: PartAnswer): Series | null {
+export function seriesOf(a: PartAnswer): Series | null {
   const cols = a.delivered.table.columns, rows = a.delivered.table.rows;
   const isTime = (c: Column | undefined) => !!c && c.binding.kind === "grouping" && /^time\.(?:year|month)$/.test(c.binding.dimension);
   const stat = (c: Column) => c.binding.kind === "statistic";
