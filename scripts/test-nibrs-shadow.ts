@@ -2682,6 +2682,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(fm.kind, "shr", JSON.stringify(fm).slice(0, 300));
   const body = sqls.find((s) => /shr_victim/.test(s)) ?? "";
   assert.ok(/IN \('F'\) THEN '0' WHEN .* IN \('M'\) THEN '1'/.test(body) && /p\.sex IN \('F', 'M'\)/.test(body) && !/p\.sex IN \('F'\) AND/.test(body), body);
+  // The same with a weapon beside it (QL-shr-b31e79fb3a, c674f79a08): the firearm is the filter, the sexes the breakdown.
+  const sqls2: string[] = [];
+  const fdeps = { ...cdeps, execute: (sql: string) => { sqls2.push(sql); return cstub(sql); } } as unknown as ShadowDeps;
+  const ff = shadowAnswer("female vs male firearm murder victims nationally per year from 2020 to 2024", fdeps);
+  assert.equal(ff.kind, "shr", JSON.stringify(ff).slice(0, 300));
+  const fbody = sqls2.find((s) => /shr_victim/.test(s)) ?? "";
+  assert.ok(/IN \('F'\) THEN '0'/.test(fbody) && /r\.weapon IN/.test(fbody) && !/p\.sex IN \('F'\) AND/.test(fbody), fbody);
   // Months after the last one with any report are blank, never 0 (the final year is still being filed).
   const mstub = (sql: string): unknown[][] => (/max\(r\.offense_month\)/.test(sql) ? [[2]] : /GROUP BY/.test(sql) ? [[2026, 1, 5], [2026, 2, 6]] : cstub(sql));
   const mon = shadowAnswer("female murder victims nationally per month in 2026", { ...cdeps, execute: mstub } as unknown as ShadowDeps);

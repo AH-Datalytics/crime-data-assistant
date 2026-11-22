@@ -212,8 +212,10 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   // one breakdown, never both on a record that has one weapon (Jeff 2026-11-15 order, item 2).
   let weaponGroups: { label: string; codes: string[] }[] | null = null;
   if (new Set(recordDims).size !== recordDims.length) {
-    const pairDim = recordDims[0];
-    const onlyPair = recordDims.length === 2 && recordDims[0] === recordDims[1] && conditions.length >= 2 && conditions.filter((c) => c && NIBRS_DIM[c.f.dimension] === pairDim).length === 2
+    // Exactly one detail appears twice; the others once ("firearm" beside "female vs male": the weapon is a filter, the sexes the breakdown).
+    const repeated = [...new Set(recordDims)].filter((d) => recordDims.filter((x) => x === d).length > 1);
+    const pairDim = repeated[0];
+    const onlyPair = repeated.length === 1 && recordDims.filter((x) => x === pairDim).length === 2 && conditions.filter((c) => c && NIBRS_DIM[c.f.dimension] === pairDim).length === 2
       && conditions.every((c) => !c || NIBRS_DIM[c.f.dimension] !== pairDim || (c.f.op === "in" && c.f.values && (pairDim !== "weapon" || c.group !== undefined)));
     // A person's detail (the sexes, two races) never means both at once, so no "versus" is needed; a record's weapon, relationship or circumstance does (job SA1).
     if (!((opts.compare || !RECORD_DIMS.has(pairDim as ShrDim)) && onlyPair && !breakdown)) return { why: "two values of one record detail compared" };
