@@ -10,7 +10,7 @@ import fs from "node:fs";
 import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
-import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
+import { agencyLabel, agencyName, agencySources, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
@@ -59,6 +59,10 @@ assert.equal(plainMeanings("denver coloradocrime data for the last three years b
 assert.equal(titleCase("drug/narcotic violation offenses"), "Drug/Narcotic Violation Offenses");
 
 const places = loadPlaceIndex();
+// P01's exception (coordinator 2026-11-22): the builds an agency is in, from the index; an agency missing from the Crime Index goes to NIBRS.
+assert.deepEqual(agencySources(places, "NY05111TZ"), ["nibrs"], "Port Jefferson, New York is NIBRS's only");
+assert.ok(agencySources(places, "AL0011200")?.includes("crime_index"), "Hoover, Alabama is in the Crime Index");
+assert.equal(agencySources(places, "ZZ0000000"), null, "an ORI the index does not know");
 const sqls: string[] = [];
 /** Rows for the compiled query: every month (or year) of the period, 7 each, March 2024 unknown. */
 /** One agency's month reported as zero crimes (AZERO, "2024-07"): the stub marks it NOT_REPORTED, as the compiler does for one agency. */
