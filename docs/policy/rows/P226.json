@@ -1,0 +1,12 @@
+{
+  "id": "P226",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What is the correlation between the monthly percentage change in murder and in robbery?\", \"Is there a direct correlation between amount of officers and crime rate?\", \"compare the murder rate using all three datasets\"",
+  "what the app does today": "Answered, asked or declined variously.",
+  "proposed behavior": "A correlation is declined in one sentence: \"This isn't available: a correlation. The two series can be shown separately.\" and the two series are offered as two questions (staffing and a crime are separate questions, P99). A comparison of one figure across several sources (\"using all three datasets\") is declined in one sentence, because one table never mixes sources (P14), and the answer offers each source's own series as a separate question. \"What factors correlate with\" stays the explanation decline (P13).",
+  "exact default or choices offered": "The decline sentence with the series offered separately.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Capability (decline rule)",
+  "test cases": "Labels QL-hist-2356f1f54f, QL-hist-61f3c6b45e, QL-ct-9792879782 (answers become declines) and QL-ct-cdccd5ec8b (clarify becomes the decline)."
+}
