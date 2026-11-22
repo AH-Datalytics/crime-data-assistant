@@ -2760,15 +2760,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     try { po = shadowAnswer(q, cdeps); } catch (e) { assert.fail(`${q}: ${(e as Error).stack?.split("\n").slice(0, 7).join(" | ")}`); }
     assert.equal(po.kind, "current", `${q}: ${JSON.stringify(po).slice(0, 200)}`);
     if (po.kind === "current") {
-      assert.deepEqual(po.delivered.table.columns.map((c) => c.header), ["Month", "Violent crime", "Property crime", "Part I crime"], q);
-      assert.deepEqual(po.delivered.table.rows[0], ["2025-01", 11, 11, 22], q);
-      assert.equal(po.delivered.text[0], "Dallas, Texas Crime Per Month, Jan 2025-Aug 2026", q);
+      // Crime in a place over time (2026-11-21): the seven Part I offenses follow the Part I sum.
+      assert.deepEqual(po.delivered.table.columns.map((c) => c.header), ["Month", "Violent crime", "Property crime", "Part I crime", "Murder", "Rape", "Robbery",
+        "Aggravated assault", "Burglary", "Larceny-theft", "Motor vehicle theft"], q);
+      assert.deepEqual(po.delivered.table.rows[0].slice(0, 4), ["2025-01", 11, 11, 22], q);
+      assert.equal(po.delivered.text[0], "Dallas, Texas Violent and Property Crime Per Month, Jan 2025-Aug 2026", q);
       assert.equal(po.delivered.text[po.delivered.text.length - 1], "Source: Crime Index.");
     }
   }
   const poGap = shadowAnswer("Houston crime per month", cdeps);
   assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
-    && poGap.delivered.text.includes("No figure is available for August 2026 for Violent crime: shown blank, not zero."), JSON.stringify(poGap).slice(0, 400));
+    // Every column is blank that month: the line is said once, naming no column (Engine 2.0 2026-11-21).
+    && poGap.delivered.text.includes("No figure is available for August 2026: shown blank, not zero."), JSON.stringify(poGap.kind === "current" ? [poGap.delivered.text, poGap.delivered.table.rows.at(-1)] : poGap).slice(0, 900));
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
   const nib = shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
