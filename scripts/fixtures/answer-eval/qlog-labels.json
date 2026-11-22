@@ -80888,9 +80888,8 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "nibrs",
     "source_any": [
-     "historical",
      "nibrs"
     ],
     "answer": "the figures asked for",
@@ -80904,7 +80903,7 @@
     "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "P181 (no period = every year, merged with PR 284) and P57 (completed years' clearance rates are the Crime Index's; P172 NIBRS reporting agencies allowed). By rule from the question text"
+    "notes": "P181 (no period = every year) and P172 (a state's clearance rate for a completed year is NIBRS, summed over the agencies that reported; the current year is NIBRS by P57). By rule from the question text; second labeler (NIBRS Model, 2026-11-22) decided nibrs only"
    }
   },
   {
