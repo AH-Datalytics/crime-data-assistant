@@ -61,6 +61,8 @@ import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearan
 import { answerClearanceShare } from "./clearance-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { readIndexed, composeIndexed } from "./indexed-series";
+import { readRatios, composeRatios } from "./crime-ratios";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -1014,6 +1016,46 @@ function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): Shadow
   if (two) return two;
   const os = deps.rewritten ? null : otherStates(question, deps);
   if (os) return os;
+  // P206: a series indexed to 100 in a year is the plain series, each place divided by its own base figure.
+  const ix = deps.rewritten ? null : readIndexed(question);
+  if (ix) {
+    const rolling = /\brolling\b/i.test(question);
+    // A question asked back (which Baltimore) keeps its choices, each one indexed; a choice that is not a series stays as it is.
+    const indexed = (o: ShadowOutcome): ShadowOutcome | null => {
+      if (o.kind === "current" || o.kind === "historical" || o.kind === "srs") return composeIndexed(o as never, ix.base, rolling) as ShadowOutcome | null;
+      if (o.kind === "clarify" && Array.isArray(o.options)) {
+        let any = false;
+        const options = o.options.map((x) => { const c = x.continuation ? indexed(x.continuation) : null; if (c) any = true; return c ? { ...x, continuation: c } : x; });
+        return any ? { ...o, options } : null;
+      }
+      return null;
+    };
+    const done = indexed(shadowAnswer(ix.plain, deps));
+    if (done) return done;
+  }
+  // P207: a ratio of two crimes is each crime's counts for the same places and periods, side by side with A divided by B.
+  const rt = deps.rewritten ? null : readRatios(question);
+  if (rt) {
+    const outs = rt.crimes.map((c) => shadowAnswer(rt.withCrime(c), deps));
+    const ratio = (os: ShadowOutcome[]): ShadowOutcome | null => {
+      if (os.every((o) => o.kind === "current" || o.kind === "historical" || o.kind === "srs")) return composeRatios(rt, os as never) as ShadowOutcome | null;
+      // A question asked back (which St. Louis) with the same choices for every crime: each choice's answers, one per crime.
+      if (os.every((o) => o.kind === "clarify" && Array.isArray(o.options)) && os.every((o) => (o as never as { options: { label: string }[] }).options.map((x) => x.label).join("|") === (os[0] as never as { options: { label: string }[] }).options.map((x) => x.label).join("|"))) {
+        const first = os[0] as Extract<ShadowOutcome, { kind: "clarify" }>;
+        let any = false;
+        const options = first.options.map((x, i) => {
+          const parts = os.map((o) => (o as typeof first).options[i].continuation);
+          const c = parts.every((p) => p) ? ratio(parts as ShadowOutcome[]) : null;
+          if (c) any = true;
+          return c ? { ...x, continuation: c } : x;
+        });
+        return any ? { ...first, options } : null;
+      }
+      return null;
+    };
+    const done = ratio(outs);
+    if (done) return done;
+  }
   const o = answerAsked(question, deps);
   return deps.rewritten ? o : clarifyInstead(question, o, deps) ?? o;
 }

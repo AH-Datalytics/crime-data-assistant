@@ -2565,6 +2565,15 @@
       "note": "Crime in a place over time: the nine per-measure answers (violent and property crime, the seven Part I offenses) become one table of one source, by year or month, for one place or several (side by side or long); Part I is their sum for counts and is omitted for rates; a blank cell stays blank; notes are said once or merged; anything else is null and keeps its path; the chart is violent and property crime (violent only for several places). Offline."
     },
     {
+      "id": "test-index-ratio",
+      "tier": "F",
+      "script": "scripts/test-index-ratio.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "P206 indexed series and P207 ratio of two crimes: the index words and the ratio pairs are read; a series is indexed to 100 in the year named or the earliest date every place has (rolling months to that December), each place by its own base, one decimal, the raw figure beside it, a place with a blank or zero base shown without an index; a ratio is A divided by B per place per period, two decimals, both counts beside it, blank when B is zero or a count is blank; different sources are never joined; anything else is null and keeps its path. Offline."
+    },
+    {
       "id": "test-groupable-table",
       "tier": "F",
       "script": "scripts/test-groupable-table.ts",
