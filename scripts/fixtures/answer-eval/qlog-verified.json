@@ -8169,11 +8169,11 @@
    "numbers": 10
   },
   "QL-shr-0b29726e06": {
-   "digest": "05d8aa410382dd8f",
+   "digest": "61066fe12c262643",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 41
+   "numbers": 42
   },
   "QL-shr-26e06ea89c": {
    "digest": "00f08e2cbb36afa8",
@@ -8183,11 +8183,11 @@
    "numbers": 41
   },
   "QL-shr-5ad28a6b3e": {
-   "digest": "1b866c20af17e517",
+   "digest": "a407a4afdbe93006",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 41
+   "numbers": 37
   },
   "QL-shr-691f0f3d37": {
    "digest": "21911eb30aa98f6b",
@@ -8195,13 +8195,6 @@
    "batch": "loop2-20261122",
    "date": "2026-11-22",
    "numbers": 40
-  },
-  "QL-shr-879dcced85": {
-   "digest": "ed54e24cccc40224",
-   "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
-   "date": "2026-11-22",
-   "numbers": 36
   },
   "QL-shr-c9a28c9a28": {
    "digest": "a9dd459b241bf049",
@@ -8211,18 +8204,18 @@
    "numbers": 22
   },
   "QL-shr-cda3d5ad28": {
-   "digest": "2396dccd4735b833",
+   "digest": "2ea28f69cf729666",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
    "numbers": 37
   },
   "QL-shr-cda3dea89c": {
-   "digest": "00f08e2cbb36afa8",
+   "digest": "081f5f74cd5564c1",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 41
+   "numbers": 17
   },
   "QL-shr-f1c8ca6b3e": {
    "digest": "1b866c20af17e517",
@@ -8470,11 +8463,11 @@
    "numbers": 94
   },
   "QL-ct-9c9f209702": {
-   "digest": "188e8ccdddfb105b",
+   "digest": "649cd0231b3813bf",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 95
+   "numbers": 5
   },
   "QL-ct-9dffba280e": {
    "digest": "4a5c3b5092f5747d",
@@ -8575,11 +8568,11 @@
    "numbers": 10
   },
   "QL-ct-cd9a53a332": {
-   "digest": "d36621784dbe2637",
+   "digest": "2ec7480ab844a989",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 62
+   "numbers": 1
   },
   "QL-ct-d51bef23a5": {
    "digest": "a1f36b3d61ffcf46",
@@ -9233,11 +9226,11 @@
    "numbers": 189
   },
   "QL-shr-59ebe7a861": {
-   "digest": "efbda9f4740ccdc9",
+   "digest": "bda8e0586d88804a",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 95
+   "numbers": 1
   },
   "QL-shr-82acffff37": {
    "digest": "9f5259ace662f045",
@@ -9345,11 +9338,11 @@
    "numbers": 66
   },
   "QL-ct-72ccc84873": {
-   "digest": "e97e062646a4d0ac",
+   "digest": "071adaf59df76d72",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 66
+   "numbers": 3
   },
   "QL-ct-8175f237ff": {
    "digest": "7898af334f7ec6b8",
@@ -9408,11 +9401,11 @@
    "numbers": 20
   },
   "QL-ct-d5b34c57bc": {
-   "digest": "2db11f2085f9c071",
+   "digest": "f641a51d43eb627c",
    "by": "runner-codex-blind",
-   "batch": "loop2-20261122",
+   "batch": "redigest-20261122",
    "date": "2026-11-22",
-   "numbers": 66
+   "numbers": 20
   },
   "QL-ct-e0aff2071d": {
    "digest": "701812be0c9dd810",
@@ -9714,6 +9707,27 @@
    "batch": "loop2-fu14-nibrs-r4-20261122",
    "date": "2026-11-22",
    "numbers": 6
+  },
+  "QL-nibrs-33ba0def5a": {
+   "digest": "f82bcf9c09c6ad09",
+   "by": "runner-codex-blind",
+   "batch": "p327-clearance-share-20261122",
+   "date": "2026-11-22",
+   "numbers": 1
+  },
+  "QL-nibrs-f8ff61de78": {
+   "digest": "3877bda0587e0564",
+   "by": "runner-codex-blind",
+   "batch": "p327-clearance-share-20261122",
+   "date": "2026-11-22",
+   "numbers": 1
+  },
+  "QL-nibrs-abb040494f": {
+   "digest": "a2233ac8e4ff26f2",
+   "by": "runner-codex-blind",
+   "batch": "p327-clearance-share-20261122",
+   "date": "2026-11-22",
+   "numbers": 153
   }
  }
 }
