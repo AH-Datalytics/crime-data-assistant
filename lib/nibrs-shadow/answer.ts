@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -59,9 +59,11 @@ import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, a
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
-import { DOWNLOAD_ASK, DOWNLOAD_SENTENCE, downloadAnswer, readOri, SCATTER, SCATTER_SENTENCE, scatterQuestions, withoutCsvWords } from "./ori";
+import { CORRELATION, CORRELATION_EXPLAIN, CORRELATION_SENTENCE, SEVERAL_SOURCES, SEVERAL_SOURCES_SENTENCE, correlationQuestions, DOWNLOAD_ASK, DOWNLOAD_SENTENCE, downloadAnswer, readOri, SCATTER, SCATTER_SENTENCE, scatterQuestions, withoutCsvWords } from "./ori";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { buildScorecard, type ScorecardPlace } from "./scorecard";
+import { detectAgencyScorecardQuestion } from "../scorecard-format";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
@@ -1013,9 +1015,64 @@ function shrTwoWay(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const r = answerShr(sq, deps.shr, deps.execute, deps.historical);
   return r.kind === "shr" ? r : null;
 }
+/**
+ * P215 (Jeff 2026-11-22): "Tulsa scorecard", "Ohio crime scorecard", "national crime scorecard" is the crime scorecard of lib/nibrs-shadow/scorecard.ts: nine rows,
+ * Type | Offenses | Change from <prior year> | Rate per 100k | Clearance Rate (an agency only), from the Crime Index build. Only the place, "crime" and the word
+ * itself: anything else keeps its path. A county scorecard is declined in one sentence until the county crosswalk lands; a city name that names several agencies
+ * asks which, each choice the card of that agency.
+ */
+function scorecardOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
+  if (!deps.historical || !detectAgencyScorecardQuestion(question)) return null;
+  const read = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth);
+  const own = read.ledger.parts.filter((p) => p.clause === 0);
+  const places = own.filter((p) => p.concept === "place");
+  const word = (p: Part) => /^score[ \t-]*cards?$/i.test(p.text.trim());
+  const other = own.filter((p) => p.concept !== "place" && p.state !== "context" && !(p.concept === "measure" && p.value === "unspecified") && !(p.state === "not-interpreted" && word(p)));
+  if (places.length > 1 || other.length || flags(read.ledger).comparison) return null;
+  const hb = deps.historical;
+  const value = places.length ? String(places[0].value ?? "") : "national";
+  const noPlace = !places.length;
+  if (noPlace && deps.noDefaults) return null;   // P180: with the defaults off the ask stays an ask
+  const run = (place: ScorecardPlace, label: string, scope: "agency" | "state" | "national", agency?: Agency): ShadowOutcome => {
+    const r = buildScorecard(hb, deps.execute, place);
+    if (r.kind === "none") return decline("outside_release_coverage", r.explanation);
+    const periodYear = { from: `${r.year}-01`, to: `${r.year}-12` };
+    const who = agency ? { ori: agency.ori, label, name: agency.name, state: agency.state } : null;
+    return { kind: "historical", period: periodYear,
+      question: { measure: "violent_crime", agencies: who ? [who] : [], from: r.year, to: r.year, byYear: false, statistic: "count", comparison: null, notes: r.text.slice(1) },
+      meaning: { source: "historical", places: who ? [{ kind: "agency", ori: who.ori }] : [{ kind: scope }], filters: [], period: periodYear, measures: [{ name: "crime scorecard", unit: "offense" }], groupings: ["offense"], statistic: "count" },
+      delivered: { table: r.table, text: [r.text[0], ...(noPlace ? ["No place was named, so the United States is shown."] : []), ...r.text.slice(1), "Source: Crime Index."] },
+      read: { table: scope === "agency" ? "agency_crime" : scope === "state" ? "state_crime" : "nation_crime", column: "scorecard", release: hb.release } } as unknown as ShadowOutcome;
+  };
+  const cardLabel = (a: Agency) => `${a.name}, ${a.state}`;
+  if (value === "national") return run({ kind: "national" }, "United States", "national");
+  const st = /^state:(.+)$/.exec(value);
+  if (st) {
+    const code = Object.entries(STATE_NAMES).find(([, n]) => n.toLowerCase() === st[1].toLowerCase())?.[0];
+    return code ? run({ kind: "state", code, name: stateName(code) }, stateName(code), "state") : null;
+  }
+  if (/^county:/.test(value)) return decline("unsupported_capability", "This isn't available: a county scorecard. Ask for the county's sheriff or police department.");
+  if (!/^(?:city|ambiguous):/.test(value)) return null;
+  const r = resolvePlace(deps.places, value, places[0].text);
+  if (r.kind === "agency") return r.agency.kind === "county" && /\bcounty\b/i.test(places[0].text) && !/\b(?:sheriff|police)\b/i.test(places[0].text)
+    ? decline("unsupported_capability", "This isn't available: a county scorecard. Ask for the county's sheriff or police department.")
+    : run({ kind: "agency", ori: r.agency.ori, label: cardLabel(r.agency) }, cardLabel(r.agency), "agency", r.agency);
+  if (r.kind === "ask") {
+    const agencies = r.candidates.flatMap((c) => (c.kind === "agency" ? [c.agency] : []));
+    if (!agencies.length) return null;
+    const options: ShadowOption[] = r.candidates.map((c): ShadowOption => c.kind === "agency"
+      ? { label: candidateLabel(c, r.candidates, deps.places), continuation: run({ kind: "agency", ori: c.agency.ori, label: cardLabel(c.agency) }, cardLabel(c.agency), "agency", c.agency) }
+      : { label: candidateLabel(c, r.candidates, deps.places), continuation: run({ kind: "state", code: c.code, name: c.name }, c.name, "state") });
+    return { kind: "clarify", about: `which ${r.name}`, question, options };
+  }
+  return null;
+}
 function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): ShadowOutcome {
   const two = deps.rewritten ? null : shrTwoWay(question, deps);
   if (two) return two;
+  // P215: the crime scorecard.
+  const card = deps.rewritten ? null : scorecardOf(question, deps);
+  if (card) return card;
   const os = deps.rewritten ? null : otherStates(question, deps);
   if (os) return os;
   const o = answerAsked(question, deps);
@@ -1062,6 +1119,12 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const opts = two.map((t): ShadowOption => ({ label: `Ask instead: "${t}"`, question: t }));
     return { ...(decline("unsupported_capability", SCATTER_SENTENCE, opts.length ? { alternative: opts[0] } : {}) as Extract<ShadowOutcome, { kind: "decline" }>), ...(opts.length > 1 ? { more: opts.slice(1) } : {}) };
   }
+  // A correlation, or one figure from several data sources (P226): one sentence, the series offered separately.
+  if (CORRELATION.test(question) && !CORRELATION_EXPLAIN.test(question)) {
+    const opts = correlationQuestions(question).map((t): ShadowOption => ({ label: `Ask instead: "${t}"`, question: t }));
+    return { ...(decline("unsupported_capability", CORRELATION_SENTENCE, opts.length ? { alternative: opts[0] } : {}) as Extract<ShadowOutcome, { kind: "decline" }>), ...(opts.length > 1 ? { more: opts.slice(1) } : {}) };
+  }
+  if (SEVERAL_SOURCES.test(question) && /\b(?:compare|comparison|versus|vs\.?)\b/i.test(question)) return decline("unsupported_capability", SEVERAL_SOURCES_SENTENCE);
   // An agency ID (P218): looked up both ways, or the place of the question with a note, or declined naming it.
   if (!deps.checkingOffer) {
     const ori = readOri(question, deps);

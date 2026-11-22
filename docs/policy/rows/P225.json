@@ -1,0 +1,12 @@
+{
+  "id": "P225",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What states have seen an increase in murder rates over the past 7 years?\"",
+  "what the app does today": "Asked or declined: a change across all states was not built.",
+  "proposed behavior": "\"States that have seen an increase\" over N years is the states whose rate ROSE: only those states, as a table State | rate then | rate now | change, ranked by the change, highest first, from Crime Index's state figures, the latest complete year against the year N years earlier, the span in the title (\"States Where the Murder Rate Rose, 2018 to 2025\"). A state whose rate fell or stayed is not listed; a state with a blank year is left out and counted in a note. A decrease is the same with the states that fell. No span named is the last five complete years (P188).",
+  "exact default or choices offered": "The table of the states that rose, ranked by the change, the span in the title.",
+  "why": "Jeff 2026-11-22 (card through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+  "test cases": "Label QL-shr-f4d840900b (answer historical)."
+}
