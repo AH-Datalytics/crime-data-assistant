@@ -3214,4 +3214,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
 }
+// Reader wording gaps from the 284 gate's list (the most logged): each phrasing reads with no word left unread.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09");
+  const unread = (q: string) => rd(q).ledger.parts.filter((p) => p.clause === 0 && p.state === "not-interpreted").map((p) => p.text.trim());
+  assert.equal(rd("Show carjacking trend by month/year").text, "Show carjacking trend by month and year");
+  assert.equal(rd("murders by year/month in Houston in 2024").text, "murders by month and year in Houston in 2024");
+  assert.equal(rd("murder trend from 2020 to 2024 among agencies that reported all 12 months every year").text, "murder trend from 2020 to 2024");
+  assert.equal(rd("murder trend from 2020 to 2024 among agencies that reported all 12 months every year").consistent, true);
+  assert.deepEqual(unread("Motor vehicle thefts per month in the 5 cities with the most motor vehicle thefts in 2022"), []);
+  assert.equal(rd("The 30 cities with the most murders in 2025").text, "the top 30 cities with the most murders in 2025");
+  assert.equal(rd("breakdown of weapons used in assaults 2024").text, "assaults 2024 by weapon");
+  assert.equal(rd("how many violent offenses involved a firearm?").text, "how many violent crimes involved a firearm?");
+  assert.equal(rd("Show me murder victims killed by shotgun by year from 2020-2024").text, "Show me murder victims with shotgun by year from 2020-2024");
+  assert.deepEqual(unread("murder victims killed by women in Houston in 2024"), ["killed by"], "a person is not a weapon: killed by women keeps its own reading");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

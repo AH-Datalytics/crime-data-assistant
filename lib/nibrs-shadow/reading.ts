@@ -169,6 +169,10 @@ const PHRASES: [RegExp, string][] = [
   [/(?<!\b(?:police|officer[-\s]involved|officer|law\s+enforcement)\s+)\b(?:fatal\s+shootings?|shooting\s+deaths?|people\s+(?:shot\s+and\s+)?killed\s+(?:by|with)\s+(?:guns?|firearms?))\b(?!\s+(?:by|of|involving)\s+(?:the\s+)?(?:police|officers?|law\s+enforcement))/gi, "firearm murders"],
   // "Make a list of the 20 most populous cities and sort them by 2026 homicide rate" (job S2): a set ranked by it.
   [/\bmake\s+(?:me\s+)?a\s+list\s+of\s+/gi, ""],
+  // "by month/year" is "by month and year" (QL-nibrs-4f73ca5181).
+  [/\bmonth\s*\/\s*year\b|\byear\s*\/\s*month\b/gi, "month and year"],
+  // "in the 5 cities with the most thefts" is "in the top 5 cities with the most thefts" (QL-ct-440c1d3f44).
+  [/\b(in\s+)?the\s+(\d+)\s+cities\s+with\s+the\s+(most|fewest)\b/gi, "$1the top $2 cities with the $3"],
   // "Homicide totals in top 15 cities", "tell me about murder rates in the largest cities" (job S5).
   [/\b(murders?|homicides?|robberies|robbery|burglar(?:y|ies)|rapes?|assaults?|thefts?|crimes?)\s+totals\b/gi, "$1 count"],
   // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
@@ -425,7 +429,7 @@ function readComparison(text: string, currentYear: number, lastMonth?: string): 
 /** "according to NIBRS": the source asked for in words (P01). */
 export const NIBRS_WORDS = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
 export const SHR_WORDS = /,?\s*\b(?:(?:according\s+to|from|in|per|using|with)\s+)?(?:the\s+)?(?:FBI\s+)?(?:Supplementary\s+)?(?:Homicide\s+Reports?|SHR)\b/i;
-export const CONSISTENT_WORDS =/,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
+export const CONSISTENT_WORDS =/,?\s*\b(?:(?:(?:counting\s+)?only\s+(?:the\s+)?|(?:among|for|with)\s+(?:the\s+)?)agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+(?:of\s+|in\s+)?(?:the\s+|every\s+|each\s+)(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
 
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
   const readings: Reading[] = [];
@@ -569,6 +573,17 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
   // since the look-ahead would fail in PHRASES).
   dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
+  // "Violent offenses" and "property offenses" are violent crime and property crime (no decided row says otherwise; QL-nibrs-435c1e237e).
+  text = text.replace(/\b(violent|property)\s+offen[cs]es\b/gi, (m, k: string) => { readings.push({ kind: "phrase", from: m, to: `${k} crimes` }); return `${k} crimes`; });
+  // "Killed by" a weapon is the weapon (P65's pairing reading is for a person: "killed by women"): "murder victims killed by shotgun" (QL-nibrs-c224ed91f4).
+  text = text.replace(/\bkilled\s+by\s+(?:a\s+|an\s+)?(?=(?:shotguns?|handguns?|rifles?|knife|knives|firearms?|guns?|pistols?|blunt\s+objects?)\b)/gi,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "with" }); return "with "; });
+  // "A breakdown of the weapons used in assaults" is assaults by weapon (P160's breakdown noun phrase; QL-nibrs-6ef0da1a7d).
+  {
+    const before = text;
+    text = text.replace(/\b(?:a\s+)?(?:breakdown|distribution)\s+of\s+(?:the\s+)?weapons?\s+(?:used|involved)\s+in\s+/gi, (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "by weapon" }); return ""; });
+    if (text !== before) text = text.replace(/\s*([?.!]*)\s*$/, ` by weapon$1`);
+  }
   // Loose words (Jeff 2026-11-21), each said in a note with what it was taken to mean: "current" is the latest complete year; "up", "down",
   // "going up or down", "dropping" with no timeframe is the crime's trend by year over the past five years (with a timeframe, that one);
   // "overall" is violent plus property crime; "the rest of the nation" is the nation. ("Most prevalent" is the seven offenses ranked: an
