@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"How many theft victims in Ohio in 2024?\" and \"How many thefts in Ohio in 2024?\"",
   "what the app does today": "NIBRS answers \"thefts\" by offense, and declines \"theft victims\" when no table counts that crime by victim. Current Trends declines any \"victims\" question.",
-  "proposed behavior": "Property crimes are always counted by offense. When the user asks for victims of a property crime, answer with offenses and state plainly that property crimes are counted by offense, not by victim. Crimes against persons are counted by victim.",
+  "proposed behavior": "Property crimes are always counted by offense. When the user asks for victims of a property crime, answer with offenses and state plainly that property crimes are counted by offense, not by victim. Crimes against persons are counted by victim. Exception (Jeff 2026-11-22): when a victim age is named (\"juvenile robbery victims\", \"robbery victims under 18\"), the victims of that age are counted for a property crime too (P120); a bare \"robberies\" or \"robbery victims\" with no age stays offenses, with the sentence above.",
   "exact default or choices offered": "\"Theft victims\" -> theft offenses, with the sentence \"Property crimes are counted by offense, not by victim.\"",
   "why": "One counting unit per kind of crime, as the FBI counts them, stated plainly when the question asked for another.",
-  "status": "Decided 2026-10-28 (Jeff: give offenses and state plainly that property crimes are not counted by victim)",
+  "status": "Decided 2026-10-28 (Jeff: give offenses and state plainly that property crimes are not counted by victim); an exception when a victim age is named (Jeff 2026-11-22, audit B9: \"Victims when age is named\")",
   "test cases": "Tests that cite this row: scripts/test-nibrs-plan-language.ts, scripts/test-nibrs-shadow.ts."
 }

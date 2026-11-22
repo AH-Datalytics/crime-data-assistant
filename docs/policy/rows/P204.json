@@ -1,0 +1,12 @@
+{
+  "id": "P204",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Highlight major crime trends in the city of Philadelphia since 2022\", \"give me major violent crime in Houston in 2024\"",
+  "what the app does today": "The words \"highlight\" and \"major\" were read as part of the question, so it could not tell what was asked.",
+  "proposed behavior": "\"Highlight\" opening a question, and \"major\" before a crime word, are filler (\"show me\" and \"give me\" already were): dropped, and the rest is read as usual (the first example answers Philadelphia's crime by year, 2022 through 2025). \"Major cities\" is not affected: it keeps its own rule (a population of 250,000 or more).",
+  "exact default or choices offered": "The answer to the question without the filler.",
+  "why": "Jeff 2026-11-22 (through the coordinator).",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P204\")."
+}

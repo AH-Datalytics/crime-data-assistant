@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Serious crime in Denver\", \"major crime\"",
   "what the app does today": "Not defined.",
-  "proposed behavior": "Ask violent crime, property crime or both, as for the bare word \"crime\" (D09).",
-  "exact default or choices offered": "Choices: violent crime; property crime; both.",
+  "proposed behavior": "\"Serious crime\", \"major crime\" and \"Part I crime\" with no kind named answer as violent crime and property crime, like \"crime\" (P182), with the usual note. The ask of D09 no longer applies (superseded in this clause by P182; Jeff 2026-11-22: \"Violent + property\").",
+  "exact default or choices offered": "Violent crime and property crime, with P182's note and buttons.",
   "why": "",
-  "status": "Decided 2026-10-29 (Jeff: 11 \"yes to both\")",
+  "status": "Decided 2026-10-29 (Jeff: 11 \"yes to both\"); the ask superseded by P182 (Jeff 2026-11-22: \"Violent + property\")",
   "test cases": "No test found: no test cites this row or asks its example question."
 }
