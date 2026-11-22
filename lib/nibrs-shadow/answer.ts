@@ -49,7 +49,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, PROPERTY_CRIMES_LINE, SOCIETY_CRIMES_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -372,6 +372,8 @@ const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route"
  * decline is the same; only when the heavy statements run.
  */
 const HEAVY_STATEMENT = 100_000;
+/** A question that ranks has one year (the latest complete year is its default, Jeff 2026-11-21); any other question without a period is every year (P181). */
+const ONE_YEAR_RANKING = /\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i;
 const DEFERRED = new WeakSet<object>();
 /** A button whose answer is built when first read (the walkers that only decide whether a button runs must not read it). */
 export const isDeferred = (x: ShadowOption): boolean => DEFERRED.has(x);
@@ -889,6 +891,10 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
   let years = false;
+  let placeDefaulted = false;
+  // Whether a question asks a breakdown: a ledger breakdown, or a person's attribute the reader moved out of the words ("arrests by age": people.by).
+  const yr = Number(deps.release.lastMonth.slice(0, 4));
+  const asksBreakdown = (q: string) => { const r = readQuestion(q, yr, deps.release.lastMonth); return r.ledger.parts.some((p) => p.clause === 0 && p.concept === "breakdown") || !!r.people?.by; };
   for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
     const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
@@ -900,21 +906,29 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       option = find(/^The United States$/);
       // "By state" names the nation's states as the rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
       byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(question);
+      if (option) placeDefaulted = true;
       note = byStateRows ? "" : "No place was named, so the United States is shown.";
       if (!byStateRows) more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
       option = find(/^Every year available$/);
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
-      if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
+      if (!option && !ONE_YEAR_RANKING.test(c.question)) {
         defaultDepth++;
         try {
-          // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
-          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
-          if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
+          // Built against the heavy-statement probe; a deferred (national) series is then built for real: P170's every year is an answer, not
+          // an ask (coordinator 2026-11-22; every year nationally took 13-21 s with no cube).
+          // The ask's text is the ledger's, and the reader took a person's attribute ("by age") out of it: when the question as typed asks a breakdown the ask's text
+          // has lost, the every-year question is built from the typed one (with the place the default chose), so the answer keeps the breakdown by every year.
+          const typedBase = question.replace(/[?.!\s]+$/, "");
+          const base = asksBreakdown(question) && !asksBreakdown(c.question) ? `${typedBase}${placeDefaulted ? " in the United States" : ""}` : c.question.replace(/[?.!\s]+$/, "");
+          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${base} by year`, d), deps);
+          if (o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
-      // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
-      if (!option) {
+      // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year. Never for another question (P181: no period is
+      // every year): when its every-year answer cannot be built, the ask stays (F2 of the independent review of PR 331: a breakdown answered 2025 only, with two
+      // notes saying both things).
+      if (!option && ONE_YEAR_RANKING.test(c.question)) {
         const latest = find(/^The latest complete year \((\d{4})\)$/);
         if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
       }
@@ -926,13 +940,22 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       note = "No kind of crime was named, so violent crime and property crime are shown.";
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
-    if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
+    // A deferred option (a national NIBRS statement, long because every agency is listed) is built here: P170 and P180-P182 answer, never ask.
+    if (!option || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "no answer" }); return o0; }
     if (!byStateRows) notes.push(note);
     buttons.push(...more);
     cur = option.continuation;
   }
   if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
   const typed = deps.guardText ? `${question}\n${deps.guardText}` : question;
+  // F1 (independent review of PR 331, also on dev: "arrests by age in Houston" became "Arrests Per Year"): the question asked a breakdown, and a default whose
+  // answer has none is a different question answered. The every-year rebuild works from the ask's text, which can lose it; the plan says what was kept.
+  const askedRead = cur.kind === "answer" ? readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth) : null;
+  // A person's attribute ("arrests by age") is read out of the words into `people`, so the ledger has no breakdown part for it: both count as asked.
+  if (askedRead && (askedRead.ledger.parts.some((p) => p.clause === 0 && p.concept === "breakdown") || askedRead.people?.by)) {
+    const kept = (cur as unknown as { plan?: { groupings?: { dimension: string }[] } }).plan?.groupings?.some((g) => !/^(?:time|geo)\./.test(g.dimension));
+    if (!kept) { DEFAULT_MISSES.push({ site: "chain", why: "the asked breakdown is not in the answer" }); return o0; }
+  }
   // A Crime Index (or hate crime) figure has no breakdown by a person's age, race, sex or by weapon: a default that lands there for a question that asks
   // one would answer without it, which is a wrong answer, so such a question stays an ask.
   if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(typed)) {
@@ -951,10 +974,12 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const rows = x.delivered.table?.rows ?? [];
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
-  const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
+  // A note the answer already says (an every-year answer built for the period says its own) is not said twice.
+  const say = [...new Set(notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`)))].filter((s) => !x.delivered.text.includes(s));
   const text = [x.delivered.text[0], ...say, ...x.delivered.text.slice(1)];
   void years;
-  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
+  const have = new Set((x.buttons ?? []).map((b) => b.label));
+  return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons.filter((b, i) => !have.has(b.label) && buttons.findIndex((o) => o.label === b.label) === i)] } as ShadowOutcome;
 }
 /**
  * P188 (Jeff 2026-11-21): a loose word read as the meaning he decided ("current" is the latest complete year, "up" is the trend over five
@@ -3512,7 +3537,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       ? ["A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."] : []),
     // Violent crime by age (Jeff 2026-11-15): what is counted, one line.
     ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
-    ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
+    // Property victims by their age keep the age line; the category asked by name says what it counts (coordinator 2026-11-22).
+    ...(plan.measures.some((m) => /\.against_property$/.test(m.id))
+      ? [plan.groupings.some((g) => g.dimension === "victim.age") || plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age") ? PROPERTY_AGE_LINE : PROPERTY_CRIMES_LINE] : []),
+    ...(plan.measures.some((m) => /\.against_society$/.test(m.id)) ? [SOCIETY_CRIMES_LINE] : []),
     // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
     ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
     // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
@@ -3536,7 +3564,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // declined for any period (Jeff 2026-11-15: "Drop yet. We can either figure out how to do that or not."); a state or an agency answers.
   if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.against_property$/.test(m.id))
     && checked.groupings.some((g) => !g.dimension.startsWith("time.")))
-    return decline("unsupported_capability", `This isn't available: property crime in the United States broken down by victim age takes too long to count here. Ask for one state, for example "property crimes by victim age in Texas in 2024", or for one agency.`);
+    return decline("unsupported_capability", `This isn't available: property crime in the United States broken down by ${checked.groupings.some((g) => g.dimension.startsWith("offender.")) ? "offender" : "victim"} age takes too long to count here. Ask for one state, for example "property crimes by ${checked.groupings.some((g) => g.dimension.startsWith("offender.")) ? "offender" : "victim"} age in Texas in 2024", or for one agency.`);
   // The same for violent crime by a person's age, nationally over several years (BD3: 2017-2025 by victim age ran DuckDB out of
   // memory): the arrest sentence's pattern, one year offered in words, never run in advance.
   if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.person_crimes$/.test(m.id))

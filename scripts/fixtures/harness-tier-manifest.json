@@ -2565,6 +2565,15 @@
       "note": "Crime in a place over time: the nine per-measure answers (violent and property crime, the seven Part I offenses) become one table of one source, by year or month, for one place or several (side by side or long); Part I is their sum for counts and is omitted for rates; a blank cell stays blank; notes are said once or merged; anything else is null and keeps its path; the chart is violent and property crime (violent only for several places). Offline."
     },
     {
+      "id": "test-crime-against",
+      "tier": "F",
+      "script": "scripts/test-crime-against.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The NIBRS crime-against family (P202): crimes against persons, property and society are the CDE codebook's crime_against codes for Group A (justifiable homicide out of persons); a category asked by name is called by it, and violent / property crime reached by age (or P167) keep their words. Offline."
+    },
+    {
       "id": "test-groupable-table",
       "tier": "F",
       "script": "scripts/test-groupable-table.ts",
@@ -2581,6 +2590,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "The executor's temp directory: removed when the executor closes, is killed at its time limit or the program ends (a killed national query left 8-12 GB behind); the sweep removes only old folders no live process owns, never anything but this code's own files. Uses the harness Python's duckdb; the executor part is skipped with none."
+    },
+    {
+      "id": "test-default-breakdown",
+      "tier": "F",
+      "script": "scripts/test-default-breakdown.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "A default never answers without the asked breakdown and keeps it by every year: arrests by age with no period (the reader moves the age out of the words) answer Year by Arrestee age, built from the question as typed; the nation stays an ask. Executed on a tiny canonical folder; uses the harness Python's duckdb and is skipped without it."
     },
     {
       "id": "test-scorecard-workers",
