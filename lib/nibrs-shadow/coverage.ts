@@ -17,7 +17,7 @@ export const COVERAGE_SOURCE = "Source: FBI NIBRS.";
 /** The one constant Jeff chose for definitions (2026-11-18). */
 export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 
-export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions";
+export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "description";
 export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean };
 export type CoverageAnswer = {
   kind: "coverage"; shape: CoverageShape; period: { from: string; to: string };

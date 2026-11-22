@@ -66,6 +66,7 @@ import { detectAgencyScorecardQuestion } from "../scorecard-format";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
+import { describeSource, readSourceDescription, type SourceTab } from "./source-description";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
@@ -84,6 +85,8 @@ export type ShadowDeps = {
   shr?: ShrBuild;
   /** The hate crime export (hate.ts): with it, hate crime questions are answered from it; without it they are declined. Never NIBRS. */
   hate?: HateBuild;
+  /** The tab the question is asked on (P234): "what data do you have" is answered with that source's description. Unset: only a named source is described. */
+  tab?: SourceTab;
   /** The question as the user asked it, set while it is answered (the county-wide decline offers it without the county-wide words). */
   asked?: string;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
@@ -965,6 +968,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
 function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
   const del = (o as { delivered?: { text?: unknown } }).delivered;
   if (!del || !Array.isArray(del.text)) return o;
+  // P234: a source description is the fixed text, word for word, with nothing added.
+  if ((o as { kind?: string; shape?: string }).kind === "coverage" && (o as { shape?: string }).shape === "description") return o;
   const said = [...new Set((readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence))];
   if (!said.length) return o;
   const text = del.text as string[];
@@ -1084,6 +1089,16 @@ function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
   const hasMeasure = own.some((p) => p.concept === "measure");
   const hasPlace = own.some((p) => p.concept === "place" && !/^state:|^national/.test(String(p.value)));
+  // P234: what a source is, one fixed text for it.
+  const sd = readSourceDescription(question, hasMeasure, hasPlace);
+  if (sd && (sd.source || sd.other || deps.tab)) {
+    const line = describeSource(sd, deps.tab, { historicalYear: deps.historical?.lastYear, nibrsMonth: deps.release.lastMonth, shrMonth: deps.shr?.latestMonth, hateYear: deps.hate ? Number(deps.hate.latestDate.slice(0, 4)) : null });
+    const span = { from: deps.release.firstMonth, to: deps.release.lastMonth };
+    return { kind: "coverage", shape: "description", period: span,
+      meaning: { source: "nibrs", places: [], filters: [], measures: [{ name: "source description", unit: "text" }], period: span, groupings: [], statistic: "count" },
+      delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "coverage.description" }, header: "Description" }], rows: [[line]] }, text: [line] },
+      read: { table: "release", release: deps.release.id } };
+  }
   const cq = readCoverage(question, hasMeasure, hasPlace);
   if (!cq) return null;
   return answerCoverage(cq, { root: deps.target.root, release: deps.release, execute: deps.execute,
