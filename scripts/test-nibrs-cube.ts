@@ -11,7 +11,7 @@ import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
 import { cubeServesMeasure } from "../lib/nibrs-plan/compile";
 import { ageFilterBins, ageMapping, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, WEAPON_FILE_SHA256_V1, WEAPON_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
-import { categorySumsFromGrid } from "../lib/nibrs-shadow/state-sum";
+import { categorySumsFromGrid, unordered } from "../lib/nibrs-shadow/state-sum";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
 
@@ -56,6 +56,10 @@ console.log("nibrs cube: the cube serves exactly its cell families; every other 
   assert.deepEqual(categorySumsFromGrid(rows, ["A1"], headers), [[2023, "Unknown", 1, 1, 0, 0], [2024, "65+", 9, 0, 8, 0], [2024, "Under 18", 5, 5, 4, 4], [2024, null, 2, 2, 1, 1]],
     "an arrest counts only in a year in which its agency has a header in the place");
   assert.deepEqual(categorySumsFromGrid([], [], null), []);
+  // The grid read inside a GROUP BY drops its closing sort (the nation by location for five years ran out of 5.5 GiB sorting it).
+  assert.equal(unordered("SELECT ori, g0, n FROM cells ORDER BY ori, ym, g0"), "SELECT ori, g0, n FROM cells", "the closing ORDER BY is dropped");
+  assert.equal(unordered("SELECT a FROM (SELECT a FROM t ORDER BY a) GROUP BY a"), "SELECT a FROM (SELECT a FROM t ORDER BY a) GROUP BY a", "an ORDER BY inside parentheses is kept");
+  assert.equal(unordered("SELECT a FROM t WHERE b = 'x ORDER BY y'"), "SELECT a FROM t WHERE b = 'x ORDER BY y'", "an ORDER BY in a quoted string is kept");
 }
 
 // --- Eligibility.

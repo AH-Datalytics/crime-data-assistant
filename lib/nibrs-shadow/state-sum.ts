@@ -81,12 +81,16 @@ export function categorySumsFromGrid(rows: unknown[][], everySet: string[], head
 }
 /** Agency-years (agencies x years) up to which a category sum is read from one grid evaluation instead of two (answerStateSum). */
 const ONCE_LIMIT = 40_000;
+
+/** The statement without its closing top-level ORDER BY (one with no parenthesis or quote after it); else unchanged. */
+export function unordered(sql: string): string {
+  return sql.replace(/\s+ORDER BY [^()']*$/i, "");
+}
 /** Each agency's most recent FBI population in the build (P90). */
 export function currentPopulationSql(root: string, oris: string[]): string {
-  // P184: the latest population above zero (a zero is "none held": the Crime Index's takes its place below).
   return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
     FROM read_parquet('${root.replace(/'/g, "''")}/agency/data.parquet'), unnest(by_year) AS t(u)
-    WHERE ${oriIn("ori", oris)} AND u.population > 0 GROUP BY ori`;
+    WHERE ${oriIn("ori", oris)} AND u.population IS NOT NULL GROUP BY ori`;
 }
 
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
@@ -126,17 +130,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const inYear = new Map<number, Set<string>>(years.map((y) => [y, new Set<string>()]));
   for (const r of header) { inYear.get(Number(r[1]))?.add(String(r[0])); pop.set(`${r[0]}|${r[1]}`, r[2] === null ? null : Number(r[2])); }
   const oris = [...new Set(header.map((r) => String(r[0])))];
+  // P184 (Jeff 2026-11-21, second decision): each agency's own NIBRS population only. A zero adds 0 people and its crimes stay; the FBI gives zero
+  // to agencies whose people another agency already counts (a Crime Index fill counted them twice: Pennsylvania's 2024 sum reached 127% of the state).
   if (!oris.length) return decline(`No agency in ${where} has a header in the data for ${periodWords(period.from, period.to)}.`);
-  // P184 (Jeff 2026-11-21): an agency's own NIBRS population where it is above zero; where NIBRS holds zero or none, the Crime Index's population
-  // of that agency and year (the 2024 file holds a zero for 150 agencies that have one: county and state agencies, 6.4 million people).
-  if (deps.historical) {
-    const zero = [...new Set([...pop.entries()].filter(([, v]) => !v).map(([k]) => k.split("|")[0]))];
-    if (zero.length) {
-      const fill = deps.execute(`SELECT ori, year, population FROM read_parquet('${deps.historical.root.replace(/'/g, "''")}/agency_crime.parquet')
-        WHERE ${oriIn("ori", zero)} AND year IN (${years.map(Number).join(", ")}) AND population > 0`);
-      for (const r of fill) { const k = `${r[0]}|${r[1]}`; if (pop.has(k) && !pop.get(k)) pop.set(k, Number(r[2])); }
-    }
-  }
   const ciPop: Record<number, number> = {};
   for (const y of years) { const p = srsPopulation(place.kind === "national" ? { kind: "national" } : { kind: "state", code: (place as { code: string }).code }, y); if (!p) return decline(`The Crime Index has no ${y} population for ${where}, so coverage cannot be stated.`); ciPop[y] = p; }
 
@@ -159,8 +155,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // By category (coordinator 2026-11-04), a month is one row per category: its status and its own total (den) are the
   // agency-month's, read once per month, so the year's total is the sum of the months' totals, never of the categories
   // (which can overlap). Two passes over the grid: this one for coverage, one below for both views' category sums.
+  // The grid is only ever read here inside a GROUP BY, so its own closing ORDER BY is dropped: sorting it cost the nation by
+  // location for five years more than 5.5 GiB (agencies x months x locations, about 58 million rows) and changes no sum.
+  const grid = unordered(c.query.sql);
   const monthly = catDims.length
-    ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${c.query.sql}) GROUP BY ori, period`
+    ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${grid}) GROUP BY ori, period`
     : c.query.sql;
   const covSelect = (from: string) => `SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
       count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
@@ -176,7 +175,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   let catRows: unknown[][] | null = null;
   let covRows: unknown[][];
   if (once) {
-    const both = deps.execute(`WITH g AS MATERIALIZED (${c.query.sql}),
+    const both = deps.execute(`WITH g AS MATERIALIZED (${grid}),
       m AS (SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM g GROUP BY ori, period),
       cov AS (${covSelect("m")}),
       cat AS (SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n${incStat ? ", sum(ni) AS ni" : ""} FROM g
@@ -226,11 +225,6 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, every: ev };
   });
   const current = new Map(everySet.length ? deps.execute(currentPopulationSql(deps.target.root, everySet)).map((r) => [String(r[0]), Number(r[1])]) : []);
-  if (deps.historical) {
-    const none = everySet.filter((o) => !current.get(o));
-    if (none.length) for (const r of deps.execute(`SELECT ori, arg_max(population, year) FROM read_parquet('${deps.historical.root.replace(/'/g, "''")}/agency_crime.parquet')
-      WHERE ${oriIn("ori", none)} AND population > 0 GROUP BY ori`)) current.set(String(r[0]), Number(r[1]));
-  }
   const everyCurrentPopulation = { sum: everySet.reduce((a, o) => a + (current.get(o) ?? 0), 0), missing: everySet.filter((o) => !current.has(o)).length };
   const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop, everyCurrentPopulation };
 
@@ -327,7 +321,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0) AS n_every,
         ${incStat ? "sum(ni)" : "CAST(0 AS BIGINT)"} AS i_all,
         ${incStat ? `coalesce(sum(ni) FILTER (WHERE ori IN (SELECT ${oriRows(everySet.length ? everySet : [""])})), 0)` : "CAST(0 AS BIGINT)"} AS i_every
-      FROM (${gridSql})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
+      FROM (${grid})${arrests ? ` gr SEMI JOIN (${headerSql}) h ON h.ori = gr.ori AND h.data_year = CAST(substr(gr.period, 1, 4) AS INTEGER)
      ` : ""} WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
     // The query's rows are (year, category, all, every, incidents all, incidents every); the grid's, the same (categorySumsFromGrid).
     const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2], every ? r[5] : r[4]]);
@@ -341,6 +335,13 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         const hit = sums.find((r) => Number(r[0]) === y && r[1] === k);
         const n = Number(hit?.[2] ?? 0), den = total(y);
         rows.push([...(yearG ? [String(y)] : []), k, n, "VALUE", ...(incOut ? [Number(hit?.[3] ?? 0), "VALUE"] : []), ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);
+      }
+      // P192: a clearance-type table lists every type even when none occurred: a placeholder row for a year with agencies counted and no type
+      // gives the table its zero rows (the delivery drops the placeholder itself).
+      if (g === "offense.clearance_type") for (const y of keptYears) {
+        const b = byYear.find((x) => x.year === y)!;
+        if ((every ? b.every.agencies : b.agencies) > 0 && !rows.some((r) => !yearG || r[0] === String(y)))
+          rows.push([...(yearG ? [String(y)] : []), NO_CATEGORY, 0, "VALUE", ...(incOut ? [0, "VALUE"] : []), ...(share ? [null, "UNAVAILABLE"] : [])]);
       }
       const columns = [...(yearG ? ["period"] : []), g, count.as, `${count.as}_status`, ...(incOut ? [incOut.as, `${incOut.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
       const d = deliverRows(p, period, period.to, columns, rows, statements, deps.release.id, readings);

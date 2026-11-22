@@ -39,7 +39,7 @@ const execute = (sql: string): unknown[][] => {
 };
 const deps: ShadowDeps = {
   places: loadPlaceIndex(), release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
-  target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute, hate: build,
+  target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute, hate: build, noDefaults: true,
 };
 const ask = (q: string, d: ShadowDeps = deps): ShadowOutcome => shadowAnswer(q, d);
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 400)); return o as Extract<ShadowOutcome, { kind: K }>; };

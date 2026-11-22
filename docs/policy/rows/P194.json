@@ -1,0 +1,12 @@
+{
+  "id": "P194",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA\", \"give me number of murders and murder clearances by type for 2025 for these cities: ...\"",
+  "what the app does today": "Declined: clearance by type is built for one agency or one state (P66, P171), not for several places side by side.",
+  "proposed behavior": "Clearance by type for several named places is one table with one row per place. The columns are the crime's count (P66's unit), cleared by arrest, cleared by exceptional means, and not cleared. Places are never summed into one total. The places come from the question as the reader reads them (P193: \"in these cities:\" before a list).",
+  "exact default or choices offered": "One row per place; no sum, no question asked.",
+  "why": "Jeff 2026-11-21 (through the coordinator), choosing option A over a summed total (B) or a decline (C): one row per city, a column for each clearance type, never summed. Capability builds it after its reader fix for \"in these cities: A, B, C\" (P193); labels by rule from the question text.",
+  "status": "Decided 2026-11-21 (Jeff, through the coordinator)",
+  "test cases": "The build PR's tests; the runner gate lists every question that changes."
+}
