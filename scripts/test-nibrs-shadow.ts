@@ -3018,6 +3018,26 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // COMPARED TO THE (REST OF THE) NATION is the nation's rates beside the place's.
   assert.equal(rd("How does Houston compare to the rest of the nation in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
 }
+// P195 (Jeff 2026-11-21): the share of a crime's clearances (or offenses) of one clearance type, for a state or the nation, from the by-type sums.
+{
+  type Out = { kind: string; delivered: { table: { rows: unknown[][] }; text: string[] } };
+  // Texas murders in the stub: 312 units, 156 by arrest, 26 under each of the five exceptional types (130), 26 not cleared.
+  const ofOffenses = as(ask("what share of murders in Texas were cleared by exception in 2025"), "answer") as unknown as Out;
+  assert.deepEqual(ofOffenses.delivered.table.rows, [[41.7]], JSON.stringify(ofOffenses.delivered.table.rows));
+  assert.ok(ofOffenses.delivered.text[0].startsWith("In Texas in 2025, 41.7% of the murders reported were cleared by exceptional means, summed over the 4 agencies that reported."), ofOffenses.delivered.text[0]);
+  // "that were cleared by exception" is the same question (the reader left it unread before).
+  assert.deepEqual((as(ask("what was the share of all murders that were cleared by exception in Texas in 2025?"), "answer") as unknown as Out).delivered.table.rows, [[41.7]]);
+  const ofClearances = as(ask("what share of all murder clearances in Texas were prosecution declined in 2025"), "answer") as unknown as Out;
+  assert.deepEqual(ofClearances.delivered.table.rows, [[9.1]], JSON.stringify(ofClearances.delivered.table.rows));
+  assert.ok(/9\.1% of the murder clearances were prosecution declined/.test(ofClearances.delivered.text[0]), ofClearances.delivered.text[0]);
+  // The nation, and by state (a row for each state, in alphabetical order).
+  const nation = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025"), "answer") as unknown as Out;
+  assert.ok(/^In the United States in 2025, [\d.]+% of the murder clearances were prosecution declined/.test(nation.delivered.text[0]), nation.delivered.text[0]);
+  const byState = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025 by state"), "answer") as unknown as Out;
+  assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
+  const names = byState.delivered.table.rows.map((r) => String(r[0]));
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+}
 // P171 (Jeff 2026-11-21): a state's clearance by type is the reporting agencies' sum, with the incidents beside each count (P66, as for one agency).
 {
   const tx = as(ask("Texas murder clearance by type in 2025"), "answer");
