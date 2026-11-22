@@ -15,6 +15,7 @@ import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { shrShareQuestion, withoutFelonyWords } from "../lib/nibrs-shadow/shr-shares";
 import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
 import { presentationOf, sentencesOf, unsaid } from "../lib/nibrs-shadow/presentation";
 import { ANSWER_STATEMENTS } from "../lib/nibrs-plan/result";
@@ -2653,6 +2654,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("United States ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
   }
   assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
+  // Cities bounded by the question itself (QL-shr-146d601521, 22f9d1a3f7, 2bf81f1312): a minimum number of murders, or the N cities with the most murders.
+  {
+    const mn = shadowAnswer("Which 10 cities (min 30 murders) had the highest share via firearm in 2024?", rdeps) as unknown as { kind: string; delivered: { table: { rows: unknown[][] }; text: string[] } };
+    assert.equal(mn.kind, "shr", JSON.stringify(mn).slice(0, 300));
+    assert.deepEqual(mn.delivered.table.rows, [["DALLAS, TX", 90], ["HOUSTON, TX", 80]]);
+    assert.ok(mn.delivered.text.includes("Only cities with at least 30 murder victims in the period are ranked."), JSON.stringify(mn.delivered.text));
+    const mn2 = shadowAnswer("which cities had the highest share of 2024 murders come via firearm (min 150 murders)", rdeps) as unknown as typeof mn;
+    assert.deepEqual(mn2.delivered.table.rows, [["HOUSTON, TX", 80]], "Dallas has 100 murder victims: under the minimum");
+    const top = shadowAnswer("Give me the share of murders committed via firearm in 2024 in the 30 cities with the most murders that year", rdeps) as unknown as typeof mn;
+    assert.equal(top.kind, "shr", JSON.stringify(top).slice(0, 300));
+    assert.deepEqual(top.delivered.table.rows, [["HOUSTON, TX", 300, 80], ["DALLAS, TX", 100, 90]], "the most murders first, each with its share");
+    // Neither bound named: the cities of 250,000 or more (Jeff 2026-11-22), the floor in the title and a note (QL-shr-5bbb3b1cc3).
+    const bare = shadowAnswer("Cities with highest share of murders via firearm in 2024", rdeps) as unknown as typeof mn;
+    assert.equal(bare.kind, "shr", JSON.stringify(bare).slice(0, 300));
+    assert.deepEqual(bare.delivered.table.rows, [["DALLAS, TX", 90], ["HOUSTON, TX", 80]]);
+    assert.ok(/Population 250,000 or More/.test(bare.delivered.text[0]) && bare.delivered.text.includes("No city size was named, so the cities of 250,000 or more are ranked."), JSON.stringify(bare.delivered.text));
+  }
   // Without a release it stays Homicide Reports' (the tab has them), as before.
   const old = shadowAnswer("Big cities with highest share of murders via firearm in 2024", deps);
   assert.ok(old.kind === "route" && old.source === "shr", JSON.stringify(old).slice(0, 200));
@@ -2693,6 +2711,102 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     : /GROUP BY/.test(sql) ? (/k1/.test(sql) ? [[2024, "0", 7], [2024, "1", 9]] : /k0/.test(sql) && /CASE WHEN r\.weapon/.test(sql) ? [["0", 7], ["1", 9]] : [[2024, 11]]) : []);
   const cdeps = { ...deps, execute: cstub, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
     historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  // P210 to P214 (Engine 2.0's definitions): the national shares of felony and argument murders, strangers and acquaintances, the same race, firearms.
+  {
+    const sqls3: string[] = [];
+    const sdeps3 = { ...cdeps, execute: (sql: string) => { sqls3.push(sql);
+      return /shr_victim/.test(sql) && /GROUP BY/.test(sql) ? (/AS k1/.test(sql) ? [[2024, "0", 30], [2024, "1", 10], [2024, "2", 40], [2025, "0", 33], [2025, "1", 12], [2025, "2", 35]] : [["0", 60], ["1", 20], ["2", 80]]) : cstub(sql); } } as unknown as ShadowDeps;
+    type Sh = { kind: string; delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] }; explanation?: string };
+    const go = (q: string) => shadowAnswer(q, sdeps3) as unknown as Sh;
+    // Arguments, one year: the argument group, undetermined and the rest, with counts and shares (P210; Jeff 2026-11-22: felonies are not counted).
+    const fa = go("What share of murders nationally are from arguments in 2024?");
+    assert.equal(fa.kind, "shr", JSON.stringify(fa).slice(0, 300));
+    assert.deepEqual(fa.delivered.table.rows.map((r) => [r[0], r[1], r[2]]), [["Arguments", 60, 37.5], ["Undetermined", 20, 12.5], ["Other circumstances", 80, 50]]);
+    assert.ok(sqls3.some((s) => /CASE WHEN r\.circumstance IN \('44', '45'\)/.test(s) && /ELSE '2'/.test(s)), "circumstance groups with the rest");
+    // Felony and misdemeanor requests are declined whole, with the reason (a charging classification the data does not record).
+    for (const q of ["felony murder vs argument murder nationally in 2024", "felony murder vs argument murder trend", "what share of murders are felony murders", "murders vs misdemeanor assaults share nationally"]) {
+      const fd = go(q);
+      assert.equal(fd.kind, "decline", q);
+      assert.match(fd.explanation ?? "", /felony and misdemeanor are charging classifications, and the data doesn't record them/, q);
+    }
+    assert.equal(withoutFelonyWords("What is the count of felony assaults and simply assaults in New York City between 2018 and 2025"), "What is the count of aggravated assaults and simple assaults in New York City between 2018 and 2025");
+    assert.equal(withoutFelonyWords("Show me the trends in misdemeanor arrests in the ten largest cities"), "Show me the trends in arrests in the ten largest cities");
+    // Any question that counts, filters or compares by felony or misdemeanor (Jeff 2026-11-22, widened by the coordinator), with the question without the word offered.
+    for (const q of ["Show me the trends in misdemeanor arrests in the ten largest cities", "murders during another felony in Houston in 2024", "what are the count of felony assaults in new york city in 2025"]) {
+      const fd = shadowAnswer(q, sdeps3) as unknown as { kind: string; explanation?: string; alternative?: { label: string } | null };
+      assert.equal(fd.kind, "decline", q);
+      assert.match(fd.explanation ?? "", /charging classifications/, q);
+      assert.ok(fd.alternative && /^Ask instead: "/.test(fd.alternative.label) && !/felony|misdemeanor/i.test(fd.alternative.label), `${q}: ${fd.alternative?.label}`);
+    }
+    // Stranger vs acquaintance, with the relationship groups (P211).
+    const sa = go("stranger murders vs acquaintance murders nationally in 2024");
+    assert.equal(sa.kind, "shr", JSON.stringify(sa).slice(0, 300));
+    assert.deepEqual(sa.delivered.table.rows.slice(0, 2).map((r) => r[0]), ["Stranger", "Acquaintance"]);
+    assert.ok(sqls3.some((s) => /r\.relationship IN \('ST'\)/.test(s) && /r\.relationship IN \('AQ'\)/.test(s)));
+    // Non-firearm and the firearm share: Firearm and Non-firearm, said (P213).
+    for (const q of ["non-firearm murders nationally in 2024", "share of murders committed with a firearm nationally in 2024"]) {
+      const fw = go(q);
+      assert.equal(fw.kind, "shr", `${q}: ${JSON.stringify(fw).slice(0, 200)}`);
+      assert.deepEqual(fw.delivered.table.rows.slice(0, 2).map((r) => r[0]), ["Firearm", "Non-firearm"], q);
+      assert.ok(fw.delivered.text.some((t) => /counted as non-firearm/.test(t)), q);
+    }
+    // The rate of non-firearm murders (QL-shr-a43c35ae27): every weapon but a firearm, other or unknown included, per 100,000, a row per year.
+    {
+      const rsql: string[] = [];
+      const rd = { ...sdeps3, execute: (sql: string) => { rsql.push(sql); return cstub(sql); } } as unknown as ShadowDeps;
+      const rr = shadowAnswer("What is the murder rate of non-firearms per year since 2010?", rd) as unknown as Sh;
+      assert.equal(rr.kind, "shr", JSON.stringify(rr).slice(0, 300));
+      assert.ok(/per 100,000/.test(rr.delivered.table.columns[1].header) && rr.delivered.table.rows.length > 10, JSON.stringify(rr.delivered.table.columns));
+      assert.ok(rsql.some((s) => /\(r\.weapon IS NULL OR r\.weapon NOT IN \('11', '12', '13', '14', '15'\)\)/.test(s)), "the murders without a firearm, no weapon recorded included");
+      assert.ok(rr.delivered.text.some((t) => /counted as non-firearm/.test(t)), JSON.stringify(rr.delivered.text));
+    }
+    // Two groupings (QL-shr-85eed7eeb2): male and female victims across firearm and non-firearm, counts; and (QL-shr-1f87226e1d) the share of female victims with an
+    // unknown relationship within each weapon group, by year.
+    {
+      const two = { ...sdeps3, execute: (sql: string) => (/shr_victim/.test(sql) && /GROUP BY/.test(sql) ? (/'UN'/.test(sql) ? [[2024, "0", 3], [2024, "1", 1]] : /AS k2/.test(sql) ? [[2024, "F", "0", 7], [2024, "F", "1", 2], [2024, "M", "0", 20], [2024, "M", "1", 5]] : [[2024, "0", 30], [2024, "1", 10]]) : cstub(sql)) } as unknown as ShadowDeps;
+      const mf = shadowAnswer("Male vs female murder victims per year in 2024 delineated by firearm vs non-firearm", two) as unknown as Sh;
+      assert.equal(mf.kind, "shr", JSON.stringify(mf).slice(0, 300));
+      assert.deepEqual(mf.delivered.table.columns.map((c) => c.header), ["Year", "Victim's sex", "Firearm", "Non-firearm"]);
+      assert.deepEqual(mf.delivered.table.rows.map((r) => r.slice(0, 2)), [["2024", "Male"], ["2024", "Female"]], JSON.stringify(mf.delivered.table.rows));
+      assert.deepEqual(mf.delivered.table.rows.map((r) => r.slice(2)), [[20, 5], [7, 2]], "male then female, each across firearm and non-firearm");
+      const un = shadowAnswer("what share of female homicide victims have an unknown relationship each year in 2024? Break it down by firearm vs non-firearm", two) as unknown as Sh;
+      assert.equal(un.kind, "shr", JSON.stringify(un).slice(0, 300));
+      assert.deepEqual(un.delivered.table.rows, [["2024", "Firearm", 30, 3, 10], ["2024", "Non-firearm", 10, 1, 10]]);
+      assert.equal(un.delivered.table.columns.at(-1)!.header, "Share (%)");
+      assert.ok(un.delivered.text.some((t) => /out of all of that group's victims/.test(t)), JSON.stringify(un.delivered.text));
+    }
+    // Same race: only the classed murders in the share, the rest a line of its own with no share (P212).
+    const sr = go("What share of homicides are intraracial nationally in 2024?");
+    assert.equal(sr.kind, "shr", JSON.stringify(sr).slice(0, 300));
+    assert.deepEqual(sr.delivered.table.rows.map((r) => r[0]), ["Same race (intraracial)", "Different races (interracial)", "Race not known for the victim or the offender"]);
+    assert.deepEqual(sr.delivered.table.rows.map((r) => r[2]), [75, 25, null]);
+    assert.ok(sqls3.some((s) => /shr_offender/.test(s)), "the offender's race through the record's offender");
+    assert.ok(sqls3.every((s) => !/\{shr_offender\}/.test(s)), "no placeholder is left in any statement (the runner's real-data error)");
+    // Murders by an offender's race and sex (P212).
+    const bm = go("What percentage of murders nationally are committed by black males in 2024?");
+    assert.equal(bm.kind, "shr", JSON.stringify(bm).slice(0, 300));
+    assert.equal(bm.delivered.table.rows[0][0], "Black male offender");
+    // No period named: every year by year, said (P214); several years: a row for each year, each its own share.
+    const ey = go("share of murders committed via firearm per year since 2000");
+    assert.equal(ey.kind, "shr", JSON.stringify(ey).slice(0, 300));
+    assert.ok(ey.delivered.table.rows.every((r) => /^\d{4}$/.test(String(r[0]))), JSON.stringify(ey.delivered.table.rows));
+    assert.deepEqual(ey.delivered.table.columns.map((c) => c.header).slice(0, 3), ["Year", "Weapon", "Murder victims"]);
+    // The logged wordings (the 284 gate's reader failures) are these shares.
+    const logged: [string, string][] = [["stranger homicides vs acquaintance homicides", "Stranger"], ["How many murders stem from arguments versus other circumstances?", "Arguments"], ["non-firearm murders per year since 1976", "Firearm"],
+      ["what is the non-firearm homicide total by year", "Firearm"], ["Share of murders committed via firearm per year since 2000", "Firearm"],
+      ["csv of share of murders committed with a firearm and the total number of murders", "Firearm"], ["Share of murders committed with a firearm, 2020 - 2026", "Firearm"],
+      ["What share of homicides are intraracial since 2000?", "Same race (intraracial)"], ["Percentage of inter racial homicide 1975-2023", "Same race (intraracial)"],
+      ["what percent of homicide is intraracial since 2000", "Same race (intraracial)"], ["What percentage of murders are committed by black males?", "Black male offender"],
+      ["what percentage of white homicides are commited by blacks", "Black offender"]];
+    for (const [q, first] of logged) {
+      const fam = shrShareQuestion(q, cdeps.shr as never);
+      assert.ok(fam, q);
+      assert.equal(fam!.breakdown!.groups![0].label, first, q);
+    }
+    // Not these shares: a weapon pair compared, a clearance, one agency.
+    assert.notEqual(go("Compare gun murders vs knife murders nationally in 2024").delivered?.table.rows[0]?.[0], "Firearm");
+    assert.equal(shrShareQuestion("murder clearance share of murders cleared by arrest vs exceptional nationally", cdeps.shr as never), null);
+  }
   const gk = shadowAnswer("Compare gun murders vs knife murders nationally in 2024", cdeps);
   assert.equal(gk.kind, "shr", JSON.stringify(gk).slice(0, 300));
   if (gk.kind === "shr") assert.deepEqual(gk.delivered.table.rows.map((r) => r[0]), ["Knife or cutting instrument", "Firearm"]);

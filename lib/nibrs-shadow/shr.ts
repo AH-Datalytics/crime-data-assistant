@@ -90,14 +90,19 @@ const RECORD_DIMS = new Set<ShrDim>(["weapon", "relationship", "circumstance"]);
 
 export type ShrPlace = { kind: "agency"; ori: string; label: string; state: string } | { kind: "state"; code: string } | { kind: "national" };
 /** `group`: conditions of one NIBRS "exists" group, which one person must meet together (Codex SHR-A review 01.3). */
-export type ShrFilter = { dim: ShrDim; codes?: string[]; ages?: [number, number]; group?: number };
+export type ShrFilter = { dim: ShrDim; codes?: string[]; ages?: [number, number]; group?: number; not?: boolean };
 export type ShrQuestion = {
   measure: "murder" | "homicide" | "homicide_all" | "justifiable"; unit: "victims" | "offenders"; place: ShrPlace;
   /** Months inclusive ("1985-01".."2024-12"), already cut to 1985 and the release's latest month. */
   from: string; to: string; grain: "total" | "year" | "month";
-  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
+  /**
+   * `groups` may carry `when`: a SQL condition on the person `p` and the record `r` that puts a victim in the group (a same-race murder, an offender who is a
+   * Black male), and the breakdown `rest` (every other victim, so the groups and the rest are all the murders); `header` and `words` name a grouping that is
+   * not one SHR column (P210 to P214: the shares of felony and argument murders, strangers, same race, firearms).
+   */
+  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[]; when?: string }[]; rest?: string; header?: string; words?: string; shareOfGroups?: boolean } | null; share: boolean;
   /** P164 (Jeff 2026-11-19): a second breakdown of the same person ("race and sex of the victims"): the first down the side, this one across. Counts only; no share. */
-  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] };
+  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[]; when?: string }[]; rest?: string };
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
   /** Several agencies (shrSeveral in answer.ts): `place` is the first, these the others. */
@@ -105,9 +110,11 @@ export type ShrQuestion = {
   /** A rate per 100,000 people of the agencies that reported (Jeff 2026-11-15), for one year or by year. */
   rate?: boolean;
   /** A ranking of the nation's cities by this question's count or share (answerShrRanking): the direction, the cut and the population floor. */
-  ranking?: { direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+  ranking?: { direction: "top" | "bottom"; limit: number | null; minPopulation: number | null; minVictims?: number; setByVictims?: number };
   /** Sentences the answer adds (what the source does not record of what was asked), after the counting rules. */
   notes?: string[];
+  /** The share of each group's victims who also have this detail (answerShrShare): the groups are `breakdown`, the detail a relationship. */
+  within?: { filter: ShrFilter; words: string };
   /** A rolling window: each month shows the total of that month and the months before it (shared helper rolling.ts). */
   rolling?: { months: number };
 };
@@ -286,13 +293,15 @@ function placeWhere(p: ShrPlace): string {
 /** A condition on a person (alias a) or the record (r). */
 function condition(f: ShrFilter, a: string): string {
   const col = RECORD_DIMS.has(f.dim) ? `r.${DIM_COLUMN[f.dim]}` : `${a}.${DIM_COLUMN[f.dim]}`;
+  // `not`: every record without these codes, one with no code recorded included (non-firearm, P213).
+  if (f.not) return `(${col} IS NULL OR ${col} NOT IN (${f.codes!.map(q).join(", ")}))`;
   return f.ages ? `${col} BETWEEN ${f.ages[0]} AND ${f.ages[1]}` : `${col} IN (${f.codes!.map(q).join(", ")})`;
 }
 /** The category of a person's or record's detail, in SQL: SHR's code, or the age bin; a victim past 11 is Unknown. */
 function categorySql(sq: ShrQuestion, a: string, which: 1 | 2 = 1): string {
   const b = (which === 1 ? sq.breakdown : sq.breakdown2)!;
   const col = RECORD_DIMS.has(b.dim) ? `r.${DIM_COLUMN[b.dim]}` : `CASE WHEN ${a}.in_record THEN ${a}.${DIM_COLUMN[b.dim]} END`;
-  if (b.groups) return `CASE ${b.groups.map((g, i) => `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`).join(" ")} END`;
+  if (b.groups) return `CASE ${b.groups.map((g, i) => `WHEN ${g.when ?? `${col} IN (${g.codes.map(q).join(", ")})`} THEN '${i}'`).join(" ")}${b.rest ? ` ELSE '${b.groups.length}'` : ""} END`;
   if (!b.bins) return col;
   const ageCol = `CASE WHEN ${a}.in_record THEN ${a}.age END`;
   return `CASE ${b.bins.map(([lo, hi], i) => `WHEN ${ageCol} BETWEEN ${lo} AND ${hi} THEN '${i}'`).join(" ")} END`;
@@ -305,7 +314,7 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
   const theirs = sq.filters.filter((f) => !own.includes(f));
   const where = [`r.counted`, measureWhere(sq), placeWhere(sq.place), `r.data_year * 100 + r.offense_month BETWEEN ${ym(sq.from)} AND ${ym(sq.to)}`,
     ...own.map((f) => condition(f, "p")),
-    ...(sq.breakdown?.groups ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
+    ...(sq.breakdown?.groups && !sq.breakdown.rest ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
     // A detail of the other person: any one of the record's (an offender's sex for victims: "killed by women"); the
     // conditions of one group are that same person's (01.3).
     ...[...new Set(theirs.map((f, i) => f.group ?? `solo${i}`))].map((g) => {
@@ -313,8 +322,10 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
       return `EXISTS (SELECT 1 FROM ${table(build, other)} o WHERE o.data_year = r.data_year AND o.source_line_no = r.source_line_no AND ${fs.map((f) => condition(f, "o")).join(" AND ")})`;
     })];
   const keys = [...(sq.grain !== "total" ? ["r.data_year"] : []), ...(sq.grain === "month" ? ["r.offense_month"] : []), ...(sq.breakdown ? [categorySql(sq, "p")] : []), ...(sq.breakdown2 ? [categorySql(sq, "p", 2)] : [])];
-  return `SELECT ${[...keys.map((k, i) => `${k} AS k${i}`), "count(*) AS n"].join(", ")} FROM ${table(build, person)} p JOIN ${table(build, "shr_record")} r USING (data_year, source_line_no) `
+  // `{shr_offender}` in a group's condition (P212) is the offender table; the whole statement is read for it (the keys are in the SELECT list).
+  const sql = `SELECT ${[...keys.map((k, i) => `${k} AS k${i}`), "count(*) AS n"].join(", ")} FROM ${table(build, person)} p JOIN ${table(build, "shr_record")} r USING (data_year, source_line_no) `
     + `WHERE ${where.join(" AND ")}${keys.length ? ` GROUP BY ${keys.map((_, i) => `k${i}`).join(", ")}` : ""}`;
+  return sql.replace(/\{shr_offender\}/g, table(build, "shr_offender"));
 }
 
 /** The years a place's agencies filed (any counted record that year), with how many filed, from shr_agency_year. */
@@ -351,7 +362,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   // A total over several years is blank if any year in it is (no total over a gap).
   const blankPeriod = (p: typeof periods[number]) => (sq.grain === "total" ? Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some((y) => !counted(y)) : !counted(p.year));
   const catsOf = (b: NonNullable<ShrQuestion["breakdown"]>, pos: number): { code: string; label: string }[] => {
-    if (b.groups) return b.groups.map((g, i) => ({ code: String(i), label: g.label }));
+    if (b.groups) return [...b.groups.map((g, i) => ({ code: String(i), label: g.label })), ...(b.rest ? [{ code: String(b.groups.length), label: b.rest }] : [])];
     if (b.bins) return [...b.bins.map(([lo, hi], i) => ({ code: String(i), label: hi >= 120 ? `${lo} and older` : `${lo} to ${hi}` })), { code: "", label: "Unknown" }];
     const seen = new Set(got.map((r) => (r[pos] === null ? "" : String(r[pos]))));
     const labels = DIM_LABELS[b.dim] ?? {};
@@ -396,14 +407,18 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     for (const c2 of cats2) columns.push({ binding: { kind: "statistic", as: `count_${c2.code || "unknown"}` }, header: c2.label });
     for (const p of periods) for (const c of cats) rows.push([...(p.label ? [p.label] : []), c.label, ...cats2.map((c2) => valueOf2(p, c.code, c2.code))]);
   } else if (sq.breakdown) {
-    columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
+    columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: sq.breakdown.header ?? DIM_HEADER[sq.breakdown.dim] });
     columns.push({ binding: { kind: "statistic", as: "count" }, header: ucFirst(unitWords) });
     if (sq.share) columns.push({ binding: { kind: "statistic", as: "share" }, header: "Share (%)" });
     for (const p of periods) {
-      const total = valueOf(p, null);
+      // A share of the classed murders only (shareOfGroups, P212: same race or not, where both races are known): the rest is its own line, with no share.
+      const ofGroups = !!sq.breakdown.shareOfGroups && !!sq.breakdown.rest;
+      const classed = ofGroups ? cats.slice(0, -1) : cats;
+      const total = ofGroups ? (blankPeriod(p) ? null : classed.reduce((s, c) => s + (valueOf(p, c.code) ?? 0), 0)) : valueOf(p, null);
       for (const c of cats) {
         const v = valueOf(p, c.code);
-        rows.push([...(p.label ? [p.label] : []), c.label, v, ...(sq.share ? [v === null || !total ? null : Math.round((v * 1000) / total) / 10] : [])]);
+        const isRest = ofGroups && c === cats[cats.length - 1];
+        rows.push([...(p.label ? [p.label] : []), c.label, v, ...(sq.share ? [v === null || !total || isRest ? null : Math.round((v * 1000) / total) / 10] : [])]);
       }
     }
   } else {
@@ -415,7 +430,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   // One figure (no breakdown, no year or month): a sentence. Anything with a table or chart: a title that reads the question back.
   const lone = !sq.breakdown && sq.grain !== "year" && sq.grain !== "month" && rows.length === 1 && typeof rows[0][rows[0].length - 1] === "number" ? (rows[0][rows[0].length - 1] as number) : null;
   const subject = sq.place.kind === "agency" ? agencySubject(sq.place.label, sq.place.ori).text : where;
-  const groupBy = [sq.grain === "year" ? "year" : sq.grain === "month" ? "month" : null, sq.breakdown ? DIM_WORDS[sq.breakdown.dim] : null, sq.breakdown2 ? DIM_WORDS[sq.breakdown2.dim] : null].filter(Boolean).join(" and ");
+  const groupBy = [sq.grain === "year" ? "year" : sq.grain === "month" ? "month" : null, sq.breakdown ? sq.breakdown.words ?? DIM_WORDS[sq.breakdown.dim] : null, sq.breakdown2 ? DIM_WORDS[sq.breakdown2.dim] : null].filter(Boolean).join(" and ");
   const text = [lone !== null ? (sq.rate ? `${subject} had ${lone} ${what} per 100,000 people in ${span}.` : `${subject} had ${fmt(lone)} ${what} in ${span}.`)
       : seriesTitle(span, `${what}${sq.rate ? " per 100,000 people" : ""}`, groupBy || "Period", where),
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
@@ -544,6 +559,7 @@ export function filterWords(f: ShrFilter): string {
   const labels = DIM_LABELS[f.dim] ?? {};
   const names = f.codes!.map((c) => (labels[c] ?? c).toLowerCase());
   const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0];
+  if (f.dim === "weapon" && f.not) return "without a firearm";
   if (f.dim === "weapon") return f.codes!.every((c) => ["11", "12", "13", "14", "15"].includes(c)) && f.codes!.length === 5 ? "with a firearm" : `with a weapon recorded as ${list}`;
   if (f.dim === "relationship") {
     // P169: the domestic sets in plain words.
@@ -566,7 +582,13 @@ export function filterWords(f: ShrFilter): string {
  * population asked (the same set as every other city ranking, citySql); only agencies that filed Homicide Reports in
  * every year of the period are ranked, so no city is compared on a partial period (S3: a filing gap is blank, never 0).
  */
-export type ShrRanking = { measure: "murder" | "homicide" | "homicide_all"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+export type ShrRanking = { measure: "murder" | "homicide" | "homicide_all"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number | null; minPopulation: number | null;
+  /** Only cities with at least this many of the period's murder victims are ranked ("min 30 murders"). */
+  minVictims?: number;
+  /** The population floor was not asked for: say that cities of this size are ranked. */
+  floorSaid?: boolean;
+  /** The set is the N cities with the most murder victims, shown with their share (a count first, then the share of each). */
+  setByVictims?: number };
 
 export function shrRankingSql(rk: ShrRanking, build: ShrBuild, hist: HistoricalBuild): string {
   const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: [], breakdown: null, share: false };
@@ -601,8 +623,30 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   const years = periodWords(rk.from, rk.to);
   if (!entries.length) return { kind: "shr-decline", explanation: `Crime Index has no city agencies${floor} to rank for ${years}.` };
   if (!entries.some((e) => e.filedAll)) return { kind: "shr-decline", explanation: `No city agency${floor} filed Homicide Reports in every year of ${years}.` };
-  const { ranked, tie } = rankAgencies(entries, rk.direction, rk.limit);
-  if (!ranked.length) return { kind: "shr-decline", explanation: `None of the cities${floor} that filed Homicide Reports in ${years} has a murder victim to rank.` };
+  // "Min 30 murders": only the cities with at least that many murder victims in the period are ranked.
+  const kept = rk.minVictims ? entries.filter((e) => e.total >= rk.minVictims!) : entries;
+  if (rk.setByVictims) {
+    // "The 30 cities with the most murders": the set is chosen by murder victims, then shown with the share of each.
+    const set = rankAgencies(kept.map((e) => ({ ...e, value: e.filedAll ? e.total : null, known: e.filedAll })), "top", rk.setByVictims);
+    if (!set.ranked.length) return { kind: "shr-decline", explanation: `None of the cities${floor} that filed Homicide Reports in ${years} has a murder victim to rank.` };
+    const unit = shrUnitWords(sq);
+    const detail2 = rk.filters.map(filterWords).join(" ").replace(/\bwith a /, "killed with a ");
+    const text2 = [`United States Share of ${titleCase(`${unit}${detail2 ? ` ${detail2}` : ""}`)} in the ${set.ranked.length} Cities With the Most ${titleCase(unit)}, ${titleTimeframe(years)}`,
+      `The ${set.ranked.length} city agencies with the most ${unit} in ${fromY === toY ? fromY : `${fromY} to ${toY}`} among those that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`} are shown, the most first; ties are ordered by agency name.`,
+      "Share = the city's victims with this detail out of all its murder victims in the period.",
+      rk.measure === "murder" ? "Murders are murder and nonnegligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out." : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.",
+      ...(rk.filters.some((f) => RECORD_DIMS.has(f.dim)) ? ["The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables."] : []), SHR_SOURCE];
+    const table2: ResultTable = { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "count" }, header: ucFirst(unit) },
+      { binding: { kind: "statistic", as: "share" }, header: ucFirst(`share ${detail2} (%)`.replace(/\s+/g, " ")) }],
+      rows: set.ranked.map((a) => [a.name, a.total, a.total > 0 ? Math.round((a.matched * 1000) / a.total) / 10 : null]) };
+    const period2 = { from: rk.from, to: rk.to };
+    return { kind: "shr", question: { ...sq, ranking: { ...sq.ranking!, setByVictims: rk.setByVictims } }, period: period2,
+      meaning: { source: "shr", places: [{ kind: "national" }], filters: [...sq.filters.map(filterWords), "city agencies"], measures: [{ name: rk.measure, unit: "victim" }], period: period2, groupings: ["agency"], statistic: "rank",
+        rank: { by: unit, direction: "top", limit: rk.setByVictims } },
+      delivered: { table: table2, text: text2 }, read: { table: "shr_victim + shr_record + shr_agency_year", release: build.release } };
+  }
+  const { ranked, tie } = rankAgencies(kept, rk.direction, rk.limit);
+  if (!ranked.length) return { kind: "shr-decline", explanation: rk.minVictims ? `None of the cities${floor} that filed Homicide Reports in ${years} has ${rk.minVictims} or more murder victims.` : `None of the cities${floor} that filed Homicide Reports in ${years} has a murder victim to rank.` };
   const unitWords = shrUnitWords(sq);
   // A weapon reads "killed with a firearm"; an age "aged 13 to 19" (Jeff 2026-11-15).
   const detail = rk.filters.map(filterWords).join(" ").replace(/^victims (?=aged)/, "").replace(/ victims (?=aged)/, " ").replace(/\bwith a /, "killed with a ");
@@ -619,6 +663,8 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
     : rk.measure === "homicide_all" ? "All homicides are murder, nonnegligent manslaughter, negligent manslaughter and justifiable homicides (a felon killed by police or by a private citizen)."
     : "Homicides are murder, nonnegligent manslaughter and negligent manslaughter; justifiable homicides (a felon killed by police or by a private citizen) are left out.");
   if (rk.filters.some((f) => RECORD_DIMS.has(f.dim))) text.push("The weapon, relationship and circumstance are the first offender's, counted for each of the incident's victims, as in the FBI's tables.");
+  if (rk.floorSaid && rk.minPopulation) text.push(`No city size was named, so the cities of ${fmt(rk.minPopulation)} or more are ranked.`);
+  if (rk.minVictims) text.push(`Only cities with at least ${rk.minVictims} murder victims in the period are ranked.`);
   if (rk.share) text.push("Share = the city's victims with this detail out of all its murder victims in the period.");
   text.push(SHR_SOURCE);
   const header = ucFirst(rk.share ? `share of ${unitWords}${detail ? ` ${detail}` : ""} (%)` : what);
@@ -628,7 +674,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   return {
     kind: "shr", question: sq, period,
     meaning: { source: "shr", places: [{ kind: "national" }], filters: [...sq.filters.map(filterWords), ...(rk.minPopulation ? [`population ${fmt(rk.minPopulation)} or more`] : []), "city agencies"],
-      measures: [{ name: rk.measure, unit: "victim" }], period, groupings: ["agency"], statistic: "rank", rank: { by: what, direction: rk.direction, limit: rk.limit } },
+      measures: [{ name: rk.measure, unit: "victim" }], period, groupings: ["agency"], statistic: "rank", rank: { by: what, direction: rk.direction, limit: rk.limit ?? ranked.length } },
     delivered: { table, text },
     read: { table: "shr_victim + shr_record + shr_agency_year", release: build.release },
   };

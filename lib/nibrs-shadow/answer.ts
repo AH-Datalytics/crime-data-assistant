@@ -67,6 +67,7 @@ import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
+import { answerShrShare, shrCityShareQuestion, shrShareDecline, shrShareQuestion, withoutFelonyWords } from "./shr-shares";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -1057,6 +1058,23 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   if (cov) return cov;
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
+  // P210 to P214: the shares of felony and argument murders, strangers and acquaintances, the same race, firearms (Homicide Reports, the nation or a state).
+  const felonySaid = shrShareDecline(question);
+  if (felonySaid) {
+    // Jeff 2026-11-22: a felony or a misdemeanor is a charging device and is not counted, in any question; the question without the word is offered.
+    const plain = withoutFelonyWords(question);
+    return decline("unsupported_capability", felonySaid, plain ? { alternative: deferHeavy(`Ask instead: "${plain}"`, (d) => shadowAnswer(plain, d), deps) } : {});
+  }
+  const shrCity = deps.shr && deps.historical ? shrCityShareQuestion(question, deps.shr) : null;
+  if (shrCity && deps.shr && deps.historical) {
+    const a = answerShrRanking(shrCity, deps.shr, deps.historical, deps.execute);
+    return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
+  }
+  const shrShare = deps.shr ? shrShareQuestion(question, deps.shr) : null;
+  if (shrShare && deps.shr) {
+    const a = answerShrShare(shrShare, deps.shr, deps.execute, deps.historical);
+    return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
+  }
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
