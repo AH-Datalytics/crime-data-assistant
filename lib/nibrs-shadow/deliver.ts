@@ -428,6 +428,9 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   // A held-back circumstance (CIRCUMSTANCE_HELD: code 06 until the domestic violence note, Jeff 2026-11-04) is left out
   // of the table, the chart and the export; the note gives its count, so the rows don't look short with nothing said.
   const held: { period: string; n: number }[] = [];
+  // Injury code G (gunshot wound) is recent: none before 2021, 14 victims in 2023, 51 in 2024, 719 in 2026 (the Runner's count, 2026-11-22).
+  const iinj = at("victim_injury.injury");
+  const gunshotShown = cats.includes("victim_injury.injury") && iinj >= 0 && rows.some((r) => String(r[iinj]) === "G");
   const ih = at("victim_circumstance.circumstance");
   if (cats.includes("victim_circumstance.circumstance") && ih >= 0) {
     for (const r of rows) if (CIRCUMSTANCE_HELD.has(String(r[ih])) && r[at(count)] !== null && r[at(count)] !== undefined && Number(r[at(count)]) > 0)
@@ -536,6 +539,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     text.push("A victim can have several injury types, so the rows can add up to more than the number of victims.");
     // 2025.0 NIBRS User Manual, data element 33: collected only for individual victims of 100, 09A-C, 11A-D, 120, 13A, 13B, 210, 64A and 64B.
     text.push("Injury type is recorded only for individual victims of kidnapping, murder and manslaughter, sex offenses, robbery, assault, extortion and human trafficking.");
+    if (gunshotShown) text.push("Gunshot wound is a recent injury code that few agencies reported before 2023, so its count is low and rising.");
   }
   if (held.length) {
     const when1= (p: string) => (/^\d{4}-\d{2}$/.test(p) ? monthName(p) : /^\d{4}-Q\d$/.test(p) ? `Q${p.slice(6)} ${p.slice(0, 4)}` : p);

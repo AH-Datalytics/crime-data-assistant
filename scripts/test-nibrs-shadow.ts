@@ -2073,8 +2073,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       const stats = inj.plan.statistics.map((x) => x.as);
       const cols = ["victim_injury.injury", ...stats.flatMap((x) => [x, `${x}_status`])];
       const row = (c: string, n: number) => [c, ...stats.flatMap((x, i) => [i === 0 ? n : n / 251, "VALUE"])];
-      const d = deliver(inj.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("N", 120), row("M", 80), row("B", 9)], [], "r", [], null);
-      assert.deepEqual(d.table.rows.map((r) => r[0]), ["None", "Apparent minor injury", "Apparent broken bones"]);
+      const d = deliver(inj.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("N", 120), row("M", 80), row("B", 9), row("G", 2)], [], "r", [], null);
+      assert.deepEqual(d.table.rows.map((r) => r[0]), ["None", "Apparent minor injury", "Apparent broken bones", "Gunshot wound"]);
+      assert.ok(d.text.includes("Gunshot wound is a recent injury code that few agencies reported before 2023, so its count is low and rising."), JSON.stringify(d.text));
       assert.ok(d.text.includes("A victim can have several injury types, so the rows can add up to more than the number of victims."), JSON.stringify(d.text));
       assert.ok(d.text.includes("Injury type is recorded only for individual victims of kidnapping, murder and manslaughter, sex offenses, robbery, assault, extortion and human trafficking."), JSON.stringify(d.text));
       assert.ok(inj.delivered.answerStatements.includes("categories_overlap"));
@@ -2084,10 +2085,16 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       // for robbery victims too), with no kind of crime named taken as violent crime, and said so.
       for (const q of ["Firearm crimes in Memphis in 2024 by injury type", "Handgun victims in Memphis in 2024 by injury type"]) {
         const fa = as(shadowAnswer(q, { ...deps, noDefaults: false }), "answer");
-        assert.deepEqual(fa.plan.measures.map((m) => [m.id, m.unit]), [["victims.violent_crime", "victim"]], q);
+        assert.deepEqual(fa.plan.measures.map((m) => [m.id, m.unit]), [["victims.injury_recorded", "victim"]], q);
         assert.ok(fa.plan.groupings.some((x) => x.dimension === "victim_injury.injury"), q);
         assert.ok(fa.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon"), q);
-        assert.ok(fa.delivered.text.some((t) => /No kind of crime was named, so violent crime is shown: injury type is recorded for the victims of crimes against persons\./.test(t)), JSON.stringify(fa.delivered.text));
+        assert.ok(fa.delivered.text.includes("No kind of crime was named, so every crime that records injury is counted."), JSON.stringify(fa.delivered.text));
+      }
+      // Jeff 2026-11-22: "stabbings" (and the logged typo "stabbongs") are victims of offenses with a knife or cutting instrument (weapon 20), said.
+      for (const q of ["Knife stabbings in Memphis in 2024 by injury type", "Knife stabbongs in Memphis in 2024 by injury type"]) {
+        const st = as(shadowAnswer(q, { ...deps, noDefaults: false }), "answer");
+        assert.ok(st.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon" && JSON.stringify(x.where).includes('"values":["20"]')), q);
+        assert.ok(st.delivered.text.some((t) => /is read as victims of offenses with a knife or cutting instrument\./.test(t)), JSON.stringify(st.delivered.text));
       }
       // Asked in offenses, the unit is still the victim (injury is recorded for each victim).
       assert.ok(as(ask("Aggravated assault offenses in Memphis by injury type in 2024"), "answer").plan.measures.every((m) => m.unit === "victim"));

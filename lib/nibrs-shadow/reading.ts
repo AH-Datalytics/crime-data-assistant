@@ -598,6 +598,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
       if (!TIMEFRAME.test(text)) endWith("over the past 5 years");
     }
   }
+  // Jeff 2026-11-22: in an injury question "stabbings" (and the logged typo "stabbongs") are victims of offenses with a knife or cutting instrument (weapon 20),
+  // and the answer says how it was read. Elsewhere "stabbings" keeps its meaning (P31: murder and aggravated assault victims with a knife).
+  if (/\binjur/i.test(text)) text = text.replace(/\b(?:knife\s+)?stabb(?:ings?|ongs?)\b/gi, (m) => {
+    readings.push({ kind: "meaning", from: m, to: "victims of offenses with a knife or cutting instrument" });
+    return "victims with a knife";
+  });
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });

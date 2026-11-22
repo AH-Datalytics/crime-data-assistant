@@ -923,9 +923,9 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       note = "No kind of crime was named, so violent crime and property crime are shown.";
       // Injury type (element 33, Jeff 2026-11-22) is recorded for victims of crimes against persons: with no kind named and violent crime the one choice
       // that answers, that is the answer ("firearm crimes in 2024 by injury type").
-      if (!option && /\binjur/i.test(question) && c.options.length === 1 && /^Violent crime$/.test(c.options[0].label)) {
+      if (!option && /\binjur/i.test(question) && c.options.length === 1 && /^Crimes with injury recorded$/.test(c.options[0].label)) {
         option = c.options[0];
-        note = "No kind of crime was named, so violent crime is shown: injury type is recorded for the victims of crimes against persons.";
+        note = "No kind of crime was named, so every crime that records injury is counted.";
       }
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both" && x !== option));
     }
@@ -2022,8 +2022,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (!named && !placeFirst && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
-    const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
-      { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
+    // Injury type (element 33, Jeff 2026-11-22) is recorded only for some crimes against persons and robbery: with no kind named, those are the crimes.
+    const injuryAsked = /\binjur/i.test(ledger0.question);
+    const kinds = injuryAsked ? [{ label: "Crimes with injury recorded", measures: [["injury_recorded", "crime with injury recorded"]] }]
+      : [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
+        { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
     const options = kinds.map((k) => deferHeavy(k.label, (d) => fromLedger(filledAll(ledger, "measure", k.measures), d, pins), deps));
     const runnable = options.filter(optionRuns);
     if (!runnable.length) {
