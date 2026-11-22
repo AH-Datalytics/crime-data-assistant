@@ -220,6 +220,8 @@ const PHRASES: [RegExp, string][] = [
   [/\b(violent\s+crimes?)(\s*(?:,|and|&)\s*)property(?!\s+(?:crimes?|offenses?|damage|value|thefts?))\b/gi, "$1$2property crime"],
   // P193 (census 2026-11-21, real asks): "by year and clearance type" is the clearance type by year (the shape that is built), with "per" for "by".
   [/\b(?:per|by)\s+(year|month)\s+(?:and|&)\s+(?:by\s+)?clearance\s+type\b/gi, "by type by $1"],
+  // "Murders cleared by clearance type" is the murder clearances by type.
+  [/\bcleared\s+by\s+(?:the\s+)?(?:clearance\s+)?type\b/gi, "clearances by type"],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],

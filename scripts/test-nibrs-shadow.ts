@@ -3075,6 +3075,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("murders in 2025 in these cities"), "murders in 2025 in these cities");
   assert.equal(rd("Chicago murder clearances per year and clearance type since 2022"), "Chicago murder clearances by type by year since 2022");
   assert.equal(rd("Murder clearances by year and clearance type in Detroit from 2022 to 2025"), "Murder clearances by type by year in Detroit from 2022 to 2025");
+  assert.equal(rd("murders cleared by clearance type in 2025 in Chicago"), "murders clearances by type in 2025 in Chicago");
+  assert.equal(ask("murders cleared by clearance type in 2025 in Detroit").kind, ask("murder clearances by type in 2025 in Detroit").kind);
   // The same wording as "by type by year", which answers.
   assert.equal(ask("Detroit murder clearances by year and clearance type in 2023 and 2024").kind, ask("Detroit murder clearances by type by year in 2023 and 2024").kind);
 }
