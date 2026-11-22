@@ -1077,10 +1077,13 @@ function largeCitiesInState(question: string, deps: ShadowDeps): ShadowOutcome |
   if (!what.some((p) => p.concept === "measure")) return null;
   const when = read.ledger.parts.filter((p) => p.clause === 0 && p.concept === "period").map((p) => p.text.trim()).join(" ");
   const floor = 100000;
-  const setQuestion = `${what.map((p) => p.text.trim()).join(" ")} in all ${stateName(stateCode)} cities ${when}`.replace(/\s+/g, " ").trim();
+  // No year named: the latest complete year (P181's ranking default), said.
+  const lastYear = deps.historical?.lastYear ?? Number(deps.release.lastMonth.slice(0, 4)) - 1;
+  const setQuestion = `${what.map((p) => p.text.trim()).join(" ")} in all ${stateName(stateCode)} cities ${when || `in ${lastYear}`}`.replace(/\s+/g, " ").trim();
   const o = shadowAnswer(setQuestion, { ...deps, cityFloor: floor });
   if (!["historical", "current"].includes(o.kind)) return o;
   const x = o as unknown as { delivered: { table: { rows: unknown[][] }; text: string[]; highlight?: number } };
+  if (!when) x.delivered.text.splice(1, 0, `No year was given, so the latest complete year, ${lastYear}, is shown.`);
   const rows = x.delivered.table.rows;
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
   const at = rows.findIndex((row) => norm(String(row[0])).startsWith(norm(cityName)));

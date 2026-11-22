@@ -722,6 +722,13 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
       assert.equal(v.delivered.highlight, 2, q);
       assert.ok(v.delivered.text.includes("El Paso is highlighted: it is 3rd of the 4 Texas cities of 100,000 or more people, ranked from the highest figure to the lowest."), v.delivered.text.join(" | "));
     }
+    // No year named: the latest complete year, said (the runner's QL-ct-8e10882cb2 had fallen through to the state series).
+    const ny = as(shadowAnswer("el paso, texas murders compared to other texas large cities", dd), "historical") as unknown as { delivered: { table: { rows: unknown[][] }; text: string[]; highlight?: number } };
+    assert.deepEqual(ny.delivered.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"]);
+    assert.equal(ny.delivered.highlight, 2);
+    // The label's own wording (a different crime word).
+    assert.equal((as(shadowAnswer("el paso, texas thefts compared to other texas large cities", dd), "historical") as unknown as { delivered: { highlight?: number } }).delivered.highlight, 2);
+    assert.ok(ny.delivered.text.includes("No year was given, so the latest complete year, 2025, is shown."), ny.delivered.text.join(" | "));
     // No state named: the old reading (P128, P132).
     assert.ok(!(shadowAnswer("los angeles homicide rate in 2025 vs. other large cities", dd) as { delivered?: { highlight?: number } }).delivered?.highlight);
   }
