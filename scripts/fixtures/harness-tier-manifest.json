@@ -2583,6 +2583,15 @@
       "note": "The executor's temp directory: removed when the executor closes, is killed at its time limit or the program ends (a killed national query left 8-12 GB behind); the sweep removes only old folders no live process owns, never anything but this code's own files. Uses the harness Python's duckdb; the executor part is skipped with none."
     },
     {
+      "id": "test-group-a-months",
+      "tier": "F",
+      "script": "scripts/test-group-a-months.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "A month reported only through Group B arrest rows is not a crime report (P51, P121), executed on a tiny canonical folder of five agencies: a fully reporting agency counts 12; a Group B-only month is unknown (blank, no yearly total, as any missing month); an agency's zero report, with Group B rows or without, is a reported zero (blank, left out, an eleven-month total); the national sum counts only the victims of Group A months; the first month that reported crimes skips Group B-only months while arrests keep the status as built; the coverage rule is the same expression. Uses the harness Python's duckdb and is skipped without it."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",
