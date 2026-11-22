@@ -2717,6 +2717,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(mon.delivered.table.rows.map((r) => r[1]), [5, 6, null, null, null, null, null, null, null], JSON.stringify(mon.delivered.table.rows));
     assert.ok(mon.delivered.text.some((t) => /^A blank month is one after the last month in which any agency filed/.test(t)), mon.delivered.text.join(" | "));
   } else assert.fail(JSON.stringify(mon).slice(0, 300));
+  // An agency too, in the year still being filed (Jeff via the Engine, PR 364): Houston's months after its last filed month are blank, said; a complete past year is not.
+  const hou = shadowAnswer("murders in Houston per month in 2026 according to Homicide Reports", { ...cdeps, execute: mstub } as unknown as ShadowDeps);
+  if (hou.kind === "shr") {
+    assert.deepEqual(hou.delivered.table.rows.slice(0, 4).map((r) => r[1]), [5, 6, null, null], JSON.stringify(hou.delivered.table.rows));
+    assert.ok(hou.delivered.text.some((t) => /^A blank month is one after the last month in which Houston, Texas filed Homicide Reports\.$/.test(t)), hou.delivered.text.join(" | "));
+  } else assert.fail(JSON.stringify(hou).slice(0, 300));
+  const past = shadowAnswer("murders in Houston per month in 2024 according to Homicide Reports", { ...cdeps, execute: mstub } as unknown as ShadowDeps);
+  assert.ok(past.kind !== "shr" || !past.delivered.text.some((t) => /A blank month is one after the last month/.test(t)), "a complete past year keeps its real zeros");
   const ip = shadowAnswer("How have intimate partner homicides trended nationwide?", cdeps);
   assert.equal(ip.kind, "shr", JSON.stringify(ip).slice(0, 300));
   if (ip.kind === "shr") assert.ok(ip.delivered.text.includes("This data source does not record ex-boyfriend and ex-girlfriend relationships."));

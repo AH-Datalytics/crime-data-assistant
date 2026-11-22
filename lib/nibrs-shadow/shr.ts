@@ -361,7 +361,8 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   // Months after the last one with any Homicide Report in a state or the nation (the final year is still being filed) are blank, never 0:
   // a 0 would claim no murders (coordinator 2026-11-22, QL-shr-b31e79fb3a: 2026-07 to 2026-09).
   let lastFiledMonth: number | null = null;
-  if (sq.grain === "month" && sq.place.kind !== "agency") {
+  // An agency too, but only in the year the build is still being filed: in a complete past year a small agency's zero months are real zeros (Jeff via the Engine, PR 364).
+  if (sq.grain === "month" && (sq.place.kind !== "agency" || toY === Number(build.latestMonth.slice(0, 4)))) {
     const m = execute(`SELECT max(r.offense_month) FROM ${table(build, "shr_record")} r WHERE r.counted AND r.data_year = ${toY} AND ${placeWhere(sq.place)}`)[0]?.[0];
     if (m !== undefined && m !== null && Number.isFinite(Number(m))) lastFiledMonth = Number(m);
   }
@@ -455,6 +456,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   if (sq.place.kind === "agency") {
     const gaps = periods.filter((p) => blankPeriod(p)).map((p) => p.year);
     if (gaps.length) text.push(`A blank ${sq.grain === "month" ? "month" : "year"} is one in which ${sq.place.label} filed no Homicide Reports.`);
+    if (lastFiledMonth !== null && periods.some((p) => afterLastFiled(p))) text.push(`A blank month is one after the last month in which ${sq.place.label} filed Homicide Reports.`);
     if (hist) { const note = partialNote(sq, build, execute, hist, filed); if (note) text.push(note); }
   } else {
     // S2: the filing agencies, how many, and the share of Crime Index's population they cover; nothing estimated.
