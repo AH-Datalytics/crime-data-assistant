@@ -3049,6 +3049,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P202 (coordinator 2026-11-22, Engine's plan fields): crimes against persons, property and society are the crime-against measures, never a comparison.
+{
+  const parts = (q: string) => readQuestion(q, 2026, "2026-09").ledger.parts.filter((p) => p.concept === "measure" || p.concept === "versus" || p.concept === "unrecognized").map((p) => `${p.concept}:${p.value ?? p.text}`);
+  for (const [q, m] of [["Maricopa County crimes against persons 2020-2025", "person_crimes"], ["crimes against the person in Ohio in 2024", "person_crimes"], ["offenses against persons in Ohio", "person_crimes"],
+    ["person crimes in Houston in 2024", "person_crimes"], ["crimes against property in Tarrant County 2020-2025", "against_property"], ["crimes against society in Texas", "against_society"],
+    ["offenses against society in Texas in 2024", "against_society"], ["society crimes in Texas in 2024", "against_society"]])
+    assert.deepEqual(parts(q), [`measure:${m}`], q);
+  // The Part I measures are unchanged, and "against" still compares places.
+  assert.deepEqual(parts("violent crime in Houston in 2024"), ["measure:violent_crime"]);
+  assert.deepEqual(parts("property crime in Houston in 2024"), ["measure:property_crime"]);
+  assert.ok(parts("Chicago murders against Houston").includes("versus:versus"));
+  assert.equal(ask("Maricopa County crimes against persons 2020-2025").kind === "decline" && (ask("Maricopa County crimes against persons 2020-2025") as { reason?: string }).reason === "reader", false);
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.

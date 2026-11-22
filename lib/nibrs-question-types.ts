@@ -43,6 +43,10 @@ export const MEASURE_CODES: Record<string, string[]> = {
   // NIBRS data element 33 (2025.0 User Manual, Coordinator 2026-11-22): injury is collected only for individual victims of these offenses; "firearm crimes by
   // injury type" with no kind named counts victims of any of them (no reader words: the ask for a kind of crime takes it).
   injury_recorded: ["100", "09A", "09B", "09C", "11A", "11B", "11C", "11D", "120", "13A", "13B", "210", "64A", "64B"],
+  // NIBRS crimes against society (coordinator 2026-11-22, the crime-against family): the Group A codes whose CDE codebook crime_against
+  // value is Society (scripts/fixtures/cde/NIBRS_OFFENSE_TYPE.csv), the federal-only codes included; Group B codes are arrests only.
+  against_society: ["101", "103", "26H", "30A", "30B", "30C", "30D", "35A", "35B", "360", "370", "39A", "39B", "39C", "39D", "40A", "40B", "40C",
+    "49A", "49B", "49C", "520", "521", "522", "526", "58A", "58B", "61A", "61B", "620", "720"],
 };
 /** Crimes against persons count victims (the FBI NIBRS convention; CLAUDE.md "Person crimes must use victim summary tables"). */
 export const PERSON_CODES = new Set(["09A", "09B", "09C", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"]);
@@ -59,6 +63,7 @@ export const MEASURE_LABEL: Record<string, string> = {
   disorderly_conduct: "disorderly conduct", drunkenness: "drunkenness", liquor_law: "liquor law violation", curfew_loitering: "curfew or loitering",
   trespass: "trespass of real property", family_offense_nonviolent: "nonviolent family offense", peeping_tom: "peeping tom", bad_checks: "bad checks",
   runaway: "runaway", all_other_offenses: "all other offenses", weapon_law: "weapon law violation", injury_recorded: "crime with injury recorded",
+  against_society: "crime against society",
 };
 
 /** Filter value labels, for the delivered `filter` column ("sex: female; age: under 18"). */
