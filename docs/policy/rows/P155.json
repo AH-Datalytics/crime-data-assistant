@@ -1,0 +1,12 @@
+{
+  "id": "P155",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders by month since 2018 nationally\", \"murders by month in Texas since 2024\", \"murders by month since 2025 nationally\", \"murders nationally in August 2026\"",
+  "what the app does today": "Declined or blank before January 2025 (\"Current Trends totals in the data cover January 2025 through ...\"), because a state's or the nation's monthly total was read only from the published sample's first month.",
+  "proposed behavior": "A state's or the nation's monthly figure by month: a span that starts in January 2025 or later is the published Consistent Reporting Agencies (the sample flag), so the figure matches crimeindex.org. A span that starts before 2025 is the agencies with a figure in every month of the span asked (an agency-month's figure is the final panel's, else the monthly panel's), one set for the whole span. Both say the agencies counted, the people they cover and the span (\"This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2018 through August 2026.\"). No agency complete over the span: declined in a sentence. A rate for a state or the nation before 2025 is declined (\"A rate for a state or the nation is given from January 2025, the first month of the published Consistent Reporting Agencies, not before it.\"). The same boundary rule as the rolling totals (P154).",
+  "exact default or choices offered": "The title, the agencies and span sentence, then the Source line.",
+  "why": "Jeff 2026-11-19 (through the coordinator): published flag inside its own span; the span rule before it; say the agencies and the span.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-current.ts, scripts/test-nibrs-shadow.ts (\"P155\")."
+}

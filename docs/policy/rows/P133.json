@@ -1,0 +1,12 @@
+{
+  "id": "P133",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"calculate the percent change in violent crime rates for Minneapolis, MN 2024-2025\", \"percent change in the violent crime rate in Chicago, IL from 2024-2025\", \"calculate percent change in violent crime rates from 2024-2025 for the state of Colorado\"",
+  "what the app does today": "Declined (\"I couldn't use \\\"percent\\\"\"), or answered as a rate series with the percent change left out.",
+  "proposed behavior": "A change in a rate between two years is answered like a change in a count: \"Chicago, Illinois: violent crimes per 100,000, 2024 against 2025.\", then \"539.8 in 2024 and 420.4 in 2025: a change of -119.4 (-22.1%).\" The change is in points per 100,000 and the percent change is on the published rates. A dash between the years (\"2024-2025\") reads as \"from 2024 to 2025\", and \"for the state of Colorado\" reads as Colorado. One place, two years, one crime or the violent total.",
+  "exact default or choices offered": "As for a change in a count.",
+  "why": "Jeff 2026-11-18 (through the coordinator): quick reader fix for period comparison (\"percent change in violent crime rates 2024-2025\").",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-historical.ts (\"A change in a rate\"), scripts/test-nibrs-shadow-reading.ts (a dash between the years)."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P46",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"People arrested\", \"arrestees\", \"charged\", \"booked\"",
+  "what the app does today": "Not defined.",
+  "proposed behavior": "\"People arrested\" and \"arrestees\" mean arrests: each arrest counts once, and the answer says NIBRS cannot tell when one person was arrested twice. \"Charged\" and \"booked\" are declined: the data has no charging or booking records.",
+  "exact default or choices offered": "",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: 25 \"yes on people arrested and arrestees, no on the others since we don't collect charge and booking data\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-compile.ts, scripts/test-nibrs-shadow-reading.ts, scripts/test-nibrs-shadow.ts."
+}

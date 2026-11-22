@@ -1,0 +1,12 @@
+{
+  "id": "P160",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murder victim race in Houston since 2010\", \"homicide offender race in Texas\", \"What race are offenders in NYC murders in 2024?\", \"What's the racial breakdown of gun murder victims in Chicago for 2024?\", \"Break down homicide circumstances in Texas in 2023\"",
+  "what the app does today": "Declined (\"I didn't understand \\\"race in\\\"\", \"\\\"circumstances in\\\"\").",
+  "proposed behavior": "A person's detail written as a noun phrase is that breakdown: \"murder victim race\" is murder victims by race; \"homicide offender race\" is homicide offenders by race; \"the racial breakdown of murder victims\" is murder victims by race; \"homicide circumstances\" is homicides by circumstance; \"What race are offenders in NYC murders\" is murder offenders by race in NYC.",
+  "exact default or choices offered": "The same table as the \"by\" wording.",
+  "why": "Jeff 2026-11-19 (through the coordinator): read the noun phrase as the breakdown.",
+  "status": "Decided 2026-11-19 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P160\")."
+}

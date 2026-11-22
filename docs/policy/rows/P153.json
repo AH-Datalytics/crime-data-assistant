@@ -1,0 +1,12 @@
+{
+  "id": "P153",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"DC violent crime rolling over 12 months with a line at August 2025\", \"Houston murders per month with an annotation at May 2020\", \"... Add some kind of marker to show August 2025 on the chart.\"",
+  "what the app does today": "Declined as \"I didn't understand \\\"with a line at\\\"\" (a reader-vocabulary decline with a button).",
+  "proposed behavior": "A line, an annotation or a marker at a date on a chart is declined in one sentence, now the one of P157: \"Changing a chart this way isn't available here. The table can be sorted by clicking a column heading.\" The data part of the question is not answered.",
+  "exact default or choices offered": "The one sentence.",
+  "why": "Jeff 2026-11-18 (through the coordinator): decline is right; the plain sentence.",
+  "status": "Decided 2026-11-18 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P153\")."
+}

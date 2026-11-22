@@ -1,0 +1,12 @@
+{
+  "id": "P75",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murder rate in Memphis in 1975\" (a Historical rate, from Crime Index's yearly data)",
+  "what the app does today": "P58: a rate only when every month of the period is known; the yearly Crime Index data has no months.",
+  "proposed behavior": "A Historical rate and its population are as Crime Index publishes them. The published rate comes first. Where Crime Index's file has no rate but publishes the count and the population (about 7% of agency-years), the rate is the count per 100,000 of that population, to one decimal, as crimeindex.org's page shows it (TX0200000 1960: 10 / 41,843 = 23.9), and the answer says so. The rate is blank only when the count or the population is missing. This replaces P58's every-month rule for Historical.",
+  "exact default or choices offered": "Published rate; otherwise the page's count per 100,000 of the published population; blank only when either is missing.",
+  "why": "The yearly file can't show which months an agency reported, so P58's rule can't be met; the published figures are the source, and the page computes the rate the file leaves blank.",
+  "status": "Decided 2026-11-01 (Jeff: \"Yes on 1\"); amended 2026-11-01 (Jeff: \"yes\", show the page's rate where the file's is blank)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts, scripts/test-nibrs-shadow.ts."
+}

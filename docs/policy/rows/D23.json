@@ -1,0 +1,12 @@
+{
+  "id": "D23",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Value of stolen property in New York in 2021\"",
+  "what the app does today": "Every value kept, except summary rows averaging $1M or more, which are zeroed.",
+  "proposed behavior": "Leave out the placeholder values $999,999,999; $999,999,998; $99,999,999; $9,999,999; $7,777,777; $1,111,111; $19,999,998; $10,000,000; $100,000,000. Counts unchanged; nothing about it in the answer.",
+  "exact default or choices offered": "Not applicable.",
+  "why": "These placeholders inflate totals many times over.",
+  "status": "Decided 2026-10-28",
+  "test cases": "definition check: property value"
+}

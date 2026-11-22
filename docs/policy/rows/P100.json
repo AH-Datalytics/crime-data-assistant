@@ -1,0 +1,12 @@
+{
+  "id": "P100",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Compare crime rates vs police staffing levels across the 20 largest cities in the US\"",
+  "what the app does today": "Declined: sets of cities are not answered with staffing.",
+  "proposed behavior": "Declined in plain words, the same one-dataset-at-a-time message as above.",
+  "exact default or choices offered": "None: staffing and crime are asked separately.",
+  "why": "Same rule as the row above.",
+  "status": "Decided 2026-11-11 (Jeff: \"P100 - same decline\"; replaces the answer engine 2 proposed)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-plain-wording.ts."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "P104",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Population of Chicago in 2026\", \"crime in the United States this year so far\" (coverage), a monthly rate for a 2026 month",
+  "what the app does today": "A 2026 population does not exist in the data, so population on its own for 2026 was declined and a state or national sum reaching 2026 declined with \"has no 2026 population ..., so coverage cannot be stated\".",
+  "proposed behavior": "The year right after the latest completed year takes that completed year's population (2026 uses 2025's), silently: no note, no relabel. It applies to the population of an agency, a state or the nation, a state's agencies with their populations, the coverage line of a state or national sum, and the months of the current year in Current Trends rates. 2027 and later stay outside the data; the year's own figure always wins; a past month without a population keeps no rate (P96); the latest completed year is read from the data, never written down.",
+  "exact default or choices offered": "\"Population of Chicago in 2026\" shows 2025's figure as the 2026 value.",
+  "why": "Jeff: \"population for 2026 should just assume 2025's population for agencies, states and the nation\" and \"the fbi sets current year population as the most recent completed year until the current year is formally reported\". The state and national crime file still ends in 2025, so 2026 crime figures from it stay outside its coverage.",
+  "status": "Decided 2026-11-14 (Jeff)",
+  "test cases": "No test found: no test cites this row or asks its example question."
+}

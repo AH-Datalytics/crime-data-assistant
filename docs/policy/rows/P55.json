@@ -1,0 +1,12 @@
+{
+  "id": "P55",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Change in carjackings in Memphis from 2018 to 2024\" when the earlier count is 0",
+  "what the app does today": "No rule.",
+  "proposed behavior": "Give both counts and the change, and say the percent change cannot be computed from a zero base.",
+  "exact default or choices offered": "Percent change: not given when the earlier count is 0, with that sentence.",
+  "why": "",
+  "status": "Decided 2026-10-29 (Jeff: \"Agreed\")",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-transforms.ts, scripts/test-nibrs-current.ts, scripts/test-nibrs-historical.ts."
+}

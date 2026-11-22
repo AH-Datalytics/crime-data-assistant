@@ -1,0 +1,12 @@
+{
+  "id": "P59",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Shoplifting rate in Memphis this year\" (a rate for part of a year)",
+  "what the app does today": "Declined (rates are given for complete years).",
+  "proposed behavior": "The count for the months covered (January through September 2026, P52) per 100,000 people, labeled with those months and never annualized. The population is the agency's latest FBI population, carried forward as the FBI does (2025's into 2026).",
+  "exact default or choices offered": "Part-year rate: the months' count per 100,000, months named, not annualized.",
+  "why": "",
+  "status": "Decided 2026-10-30 (Jeff: \"Agreed on both\", on: a part-year rate is the January-September 2026 count per 100,000, labeled with those months, never annualized, using the agency's latest FBI population carried forward)",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts, scripts/test-nibrs-current.ts, scripts/test-nibrs-transforms.ts."
+}

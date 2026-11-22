@@ -239,6 +239,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const CRA = "Consistent Reporting Agencies";
   // Jeff (2026-11-01): one note, his words, then the source; a rate adds its basis. Nothing else.
   const note = (every: boolean) => (every ? "Includes only agencies that reported complete data." : "Includes all agencies.");
+  // P185 (Jeff 2026-11-21, Savant's sentence): under a NIBRS sum over several agencies (a state or the nation), never under one agency's answer.
+  const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
   const view = (every: boolean): { lines: string[]; rows: Row[]; agencies: Cell[]; coverage: Cell[]; population: Cell[] } => {
     const lines: string[] = [];
     if (years.length === 1) {
@@ -254,7 +256,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         : every
         ? `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
         : `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, summed over the agencies that reported.`);
-      lines.push(note(every));
+      lines.push(note(every), FBI_MASTER_FILES);
       if (isRate && v !== null) lines.push(`The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
       return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }],
@@ -266,7 +268,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     lines.push(every
       ? `Counts only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
       : "Summed over the agencies that reported each year.");
-    lines.push(note(every));
+    lines.push(note(every), FBI_MASTER_FILES);
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),

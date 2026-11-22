@@ -1,0 +1,12 @@
+{
+  "id": "P63",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "The source line at the end of every answer (D30)",
+  "what the app does today": "Answers name their source in longer descriptions.",
+  "proposed behavior": "The source line names the data source plainly: \"FBI NIBRS\" for NIBRS answers, \"Crime Index\" for current (Current Trends) answers, \"Crime Index\" for historical answers (including state and national Part I figures from the archived historical file; P77), \"FBI Supplementary Homicide Reports\" for Homicide Reports, \"FBI Hate Crime Statistics\" for hate crimes. No longer descriptions.",
+  "exact default or choices offered": "Source line: \"Source: FBI NIBRS.\" and the like.",
+  "why": "The reader needs the source's name, not a description of it.",
+  "status": "Decided 2026-10-30 (Jeff: \"Source line is the source - FBI NIBRS, Crime Index for current, fbi srs for historical, etc.\"); the historical line was amended by P77 (Crime Index) and this row's text updated 2026-11-16 to say so",
+  "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts."
+}
