@@ -1090,7 +1090,8 @@ function largeCitiesInState(question: string, deps: ShadowDeps): ShadowOutcome |
   if (at < 0) return decline("unsupported_capability", `${cityName} is not among the ${stateName(stateCode)} cities of ${floor.toLocaleString("en-US")} or more people in this data.`);
   const nth = (n: number) => `${n}${[11, 12, 13].includes(n % 100) ? "th" : ["th", "st", "nd", "rd"][n % 10 > 3 ? 0 : n % 10]}`;
   x.delivered.highlight = at;
-  x.delivered.text.splice(1, 0, `${cityName} is highlighted: it is ${nth(at + 1)} of the ${rows.length} ${stateName(stateCode)} cities of ${floor.toLocaleString("en-US")} or more people, ranked from the highest figure to the lowest.`);
+  // The city as the table names it ("El Paso"), not as the question typed it.
+  x.delivered.text.splice(1, 0, `${String(rows[at][0]).replace(/,\s*[A-Z]{2}$/, "")} is highlighted: it is ${nth(at + 1)} of the ${rows.length} ${stateName(stateCode)} cities of ${floor.toLocaleString("en-US")} or more people, ranked from the highest figure to the lowest.`);
   return o;
 }
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
