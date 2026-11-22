@@ -2716,6 +2716,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
         agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, list.map((a) => a.ori), ledger0.question) ? { agencyNote: sheriffNote(deps, list.map((a) => a.ori), ledger0.question) } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
+      // Jeff 2026-11-22 ("Answer from NIBRS"): one agency's count for one year the Crime Index has blank (Pontiac, Michigan robberies 2024) is
+      // answered from NIBRS, said as the agency's NIBRS report. A series never mixes sources (P14), so only a single year; months are P113's.
+      const oneYear = list.length === 1 && yrs[0] === yrs[1] && !reachesNow && !(sp.grain === "year" || openSpan(sp)) && !cmp && sp.statistic === "count";
+      if (oneYear && /^Crime Index has no /.test(r.explanation) && !deps.checkingOffer) {
+        const viaNibrs = shadowAnswer(`${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`, deps);
+        if (viaNibrs.kind === "answer" && viaNibrs.delivered.table.rows.some((row) => row.some((c) => typeof c === "number"))) {
+          const why = `${r.explanation.replace(/: not available in this data\.?$/, "")}, so this is the ${agencyName(deps.places, list[0].ori)}'s own NIBRS report.`;
+          const text = viaNibrs.delivered.text;
+          return { ...viaNibrs, delivered: { ...viaNibrs.delivered, text: [text[0], why, ...text.slice(1)] } };
+        }
+      }
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
   }
