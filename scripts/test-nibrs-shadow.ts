@@ -3224,7 +3224,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   }
   // No state: "Toldeo carjackings" asks, with Toledo first.
   const bare = as(ask2("Toldeo carjackings in 2024"), "clarify");
-  assert.equal(bare.options[0].label, "Toledo");
+  assert.equal(bare.options[0].label, "Toledo, Ohio");
   // An ordinary word one letter from a large city stays an ordinary word ("bolder" is not Boulder).
   assert.ok(!as(ask2("bolder carjackings in 2024"), "clarify").options.some((o) => /Boulder/.test(o.label)));
 }
