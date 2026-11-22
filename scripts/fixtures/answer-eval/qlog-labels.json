@@ -60683,14 +60683,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "a state's clearance share is given for one year; several years are declined, asking for one year (P203)"
+    "reason": "State clearance rates are unavailable."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R06>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "Several years (2022-2025): P203 declines them, asking for one year. P18 no longer applies (P172) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "reviewed_by": null,
+    "notes": "P18 prohibits state clearance rates including exceptional-clearance shares."
    }
   },
   {
@@ -66058,14 +66058,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "a state's clearance share is given for one year; several years are declined, asking for one year (P203)"
+    "reason": "State clearance rates are unavailable."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "Several years (2022-2025): P203 declines them, asking for one year. P18 no longer applies (P172) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "reviewed_by": null,
+    "notes": "P18 prohibits state clearance shares."
    }
   },
   {
@@ -67981,14 +67981,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "a state's clearance share is given for one year; several years are declined, asking for one year (P203)"
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
     "status": "reviewed",
     "rule": "R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "No period: P181 every year, and P203 declines several years (ask one year). P18 no longer applies (P172) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "reviewed_by": "codex-second-1",
+    "notes": "P18"
    }
   },
   {
