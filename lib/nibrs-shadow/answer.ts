@@ -2477,8 +2477,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return offers.length > 1 ? { ...o, more: offers.slice(1) } as ShadowOutcome : o;
   }
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
-  if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
-    { alternative: askInstead(ledger.question, d.parts, Number(deps.release.lastMonth.slice(0, 4))), detail: d.explanation });
+  if (d.kind === "decline") {
+    const alternative = askInstead(ledger.question, d.parts, Number(deps.release.lastMonth.slice(0, 4)));
+    // A place that needs asking comes first (Jeff 2026-11-22, "homicides in baltmore 2000 to present, drop 2021": which Baltimore),
+    // before words the reader couldn't use are declined.
+    const spans = d.parts.filter((p) => p.span && p.span[1] > p.span[0]).map((p) => p.span).sort((a, b) => b[0] - a[0]);
+    if (spans.length) {
+      let cut = ledger.question;
+      for (const [a, b] of spans) cut = `${cut.slice(0, a)} ${cut.slice(b)}`;
+      cut = tidy(cut);
+      if (cut && cut.toLowerCase() !== ledger.question.trim().toLowerCase()) {
+        const first = shadowAnswer(cut, deps);
+        if (first.kind === "clarify" && /^which [A-Z]/.test(String(first.about))) return first;
+      }
+    }
+    return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation), { alternative, detail: d.explanation });
+  }
   if (d.kind === "clarify") return decline("reader", d.explanation);
   // P53 (increment 5): a Part I offense for a state or the nation is the historical file's in a completed year
   // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the

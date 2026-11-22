@@ -3186,6 +3186,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(offAge.plan.measures[0].id, "offenders.robbery");
   assert.match(offAge.delivered.text[0], /Offenders/, offAge.delivered.text[0]);
   assert.equal((as(ask("robbery victims by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "victims.robbery");
+  // Jeff 2026-11-22: a misspelled place asks which one even when another clause is unread ("drop 2021").
+  const balt = ask("shoplifting in Clinton 2020 to present, drop 2021");
+  assert.equal(balt.kind, "clarify", JSON.stringify(balt).slice(0, 400));
+  assert.match(String((balt as { about?: string }).about), /^which Clinton/i);
   const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
   assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
   assert.ok(gunViolent.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "victim"));
