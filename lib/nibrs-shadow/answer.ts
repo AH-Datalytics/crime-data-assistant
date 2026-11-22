@@ -1030,6 +1030,8 @@ function scorecardOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
   if (places.length > 1 || other.length || flags(read.ledger).comparison) return null;
   const hb = deps.historical;
   const value = places.length ? String(places[0].value ?? "") : "national";
+  const noPlace = !places.length;
+  if (noPlace && deps.noDefaults) return null;   // P180: with the defaults off the ask stays an ask
   const run = (place: ScorecardPlace, label: string, scope: "agency" | "state" | "national", agency?: Agency): ShadowOutcome => {
     const r = buildScorecard(hb, deps.execute, place);
     if (r.kind === "none") return decline("outside_release_coverage", r.explanation);
@@ -1038,7 +1040,7 @@ function scorecardOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
     return { kind: "historical", period: periodYear,
       question: { measure: "violent_crime", agencies: who ? [who] : [], from: r.year, to: r.year, byYear: false, statistic: "count", comparison: null, notes: r.text.slice(1) },
       meaning: { source: "historical", places: who ? [{ kind: "agency", ori: who.ori }] : [{ kind: scope }], filters: [], period: periodYear, measures: [{ name: "crime scorecard", unit: "offense" }], groupings: ["offense"], statistic: "count" },
-      delivered: { table: r.table, text: [...r.text, "Source: Crime Index."] },
+      delivered: { table: r.table, text: [r.text[0], ...(noPlace ? ["No place was named, so the United States is shown."] : []), ...r.text.slice(1), "Source: Crime Index."] },
       read: { table: scope === "agency" ? "agency_crime" : scope === "state" ? "state_crime" : "nation_crime", column: "scorecard", release: hb.release } } as unknown as ShadowOutcome;
   };
   const cardLabel = (a: Agency) => `${a.name}, ${a.state}`;
