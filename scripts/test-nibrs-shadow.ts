@@ -2064,6 +2064,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
     assert.match(as(ask("Robberies during an argument in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
     assert.equal(as(ask("Murders during an argument in Tennessee in 2024"), "route").source, "shr");
+    // P219 (Jeff 2026-11-22): incidents with more than one victim, counted from NIBRS incidents.
+    {
+      const mvq = as(ask("How many aggravated assault incidents involve multiple victims in Texas in 2024?"), "answer");
+      assert.ok(mvq.plan.filters.some((x) => x.kind === "attribute" && x.dimension === "incident.victim_count"), JSON.stringify(mvq.plan.filters));
+      assert.ok(/with more than one victim/.test(mvq.delivered.text[0]), JSON.stringify(mvq.delivered.text));
+      const mv3 = as(ask("Aggravated assault incidents with three or more victims in Texas in 2024"), "answer");
+      assert.ok(/with 3 or more victims/.test(mv3.delivered.text[0]), JSON.stringify(mv3.delivered.text));
+      assert.equal(ask("Robbery victims in incidents with multiple victims in Texas in 2024").kind, "decline");
+    }
     // Codex circumstance review 01.1: an offered question keeps the circumstance, or none is offered.
     const fb = ask("Aggravated assaults during an argument in Memphis by sex and race in 2024");
     if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /argument/i);

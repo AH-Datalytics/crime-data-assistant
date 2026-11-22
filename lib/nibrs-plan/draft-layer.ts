@@ -154,6 +154,8 @@ const DIMENSIONS: SemanticDimension[] = [
   dim("victim_offender.offender_sex", "victim_offender", { values: SEX }), dim("victim_offender.offender_race", "victim_offender", { values: RACE_CODES }),
   dim("victim_offender.offender_ethnicity", "victim_offender", { values: ETHNICITY_CODES }), dim("victim_offender.offender_age", "victim_offender", { numeric: AGE }),
   dim("victim_offense.offense", "victim_offense"), dim("incident.hour", "incident", { numeric: { min: 0, max: 23, special: {} } }),
+  // P219: how many victims an incident has of the measure's offense (victims linked to an offense of the measure's codes); a condition only, never grouped.
+  dim("incident.victim_count", "incident", { numeric: { min: 1, max: 999, special: {} } }),
   dim("victim_circumstance.circumstance", "victim_circumstance", { values: CIRCUMSTANCE }),
 ];
 

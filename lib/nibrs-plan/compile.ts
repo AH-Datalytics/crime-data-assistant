@@ -479,6 +479,14 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const ownConds: ((x: string) => string)[] = [];
   for (const f of plan.filters) {
     if (f.kind === "attribute" && CLEARANCE_COL[f.dimension] && f.op === "in" && f.values?.length) { clearanceConds.push({ dimension: f.dimension, values: f.values.map(String) }); continue; }
+    // P219: incidents with several victims ("how many aggravated assault incidents involve multiple victims"): the incident's distinct victims
+    // linked to an offense of the measure's codes, between the bounds. Incident counts only.
+    if (f.kind === "attribute" && f.dimension === "incident.victim_count") {
+      if (entity !== "incident" || f.op !== "between" || f.values?.length !== 2 || !codes.length) return no("v0 applies a victim count to incident counts of a crime with victims, as a range");
+      const [lo, hi] = f.values.map(Number);
+      unitConds.push((read) => `(SELECT count(DISTINCT vo4.victim_seq) FROM ${read("victim_offense")} vo4 WHERE ${sameIncident("vo4", alias)} AND vo4.connected_offense IN (${list(codes)})) BETWEEN ${lo} AND ${hi}`);
+      continue;
+    }
     // Increment 7: a condition on the counted person's own attribute ("female victims", "juvenile arrests").
     if (f.kind === "attribute" && f.dimension.split(".")[0] === entity) {
       if (!personCond(alias, f)) return no(`v0 cannot apply ${f.op} on ${f.dimension}`);
