@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, nearestPlaceInState, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -1190,6 +1190,21 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
     const word = p.text.trim().replace(/[?.!,]+$/, "");
     const near = nearestPlaceName(deps.places, word);
     if (near && question.includes(word)) return shadowAnswer(question.replace(word, near), deps);
+  }
+  // A misspelled city beside its state ("Toldeo, Ohio"; coordinator 2026-11-22): the one city of that state one edit away is the place; none or several ask as before.
+  {
+    const statesNamed = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place" && /^state:/.test(p.value ?? ""));
+    const code = statesNamed.length === 1 ? Object.entries(STATE_NAMES).find(([, n]) => `state:${n}` === statesNamed[0].value)?.[0] : undefined;
+    if (code && !ledger.parts.some((p) => p.clause === 0 && p.concept === "place" && /^(?:city|ambiguous|county):/.test(p.value ?? ""))) {
+      for (const p of ledger.parts) {
+        if (p.clause !== 0 || p.concept !== "unrecognized" || p.state !== "not-interpreted") continue;
+        for (const word of p.text.trim().replace(/[?.!,]+$/, "").split(/\s+/).filter((w) => w.length >= 4)) {
+          const near = nearestPlaceInState(deps.places, word, code);
+          const at = new RegExp(String.raw`(?<![A-Za-z])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`);
+          if (near && at.test(question)) return shadowAnswer(question.replace(at, near), deps);
+        }
+      }
+    }
   }
   // An unread word the geo resolver didn't try ("Philadlephia murders 2024": a place first, no "in" before it;
   // coordinator 2026-11-05): the whole unread phrase, then each word in it, as a misspelled large place. Never in

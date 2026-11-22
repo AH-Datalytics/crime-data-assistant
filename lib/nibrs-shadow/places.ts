@@ -105,14 +105,31 @@ export function nearestPlaceName(idx: PlaceIndex, name: string, strict = false):
   // or more letters, not a common English word, one edit from a city of 100,000+. The query log's unread words had
   // "line" (Lane), "columns" (Columbus), "median" (Meridian) and "dollar" (Dallas) within the looser limit; "bolder"
   // (Boulder) is six (Codex spelling review 01).
-  if (strict && (k.length < 7 || isCommonEnglishWord(k))) return null;
+  // Six letters count when two neighbouring letters are swapped ("Toldeo" for Toledo); "bolder" for Boulder (a letter added) still does not.
+  if (strict && (k.length < 6 || isCommonEnglishWord(k))) return null;
+  const swapped = (n: string) => n.length === k.length && n !== k && [...k].some((_, i) => i < k.length - 1 && k[i] === n[i + 1] && k[i + 1] === n[i] && k.slice(0, i) === n.slice(0, i) && k.slice(i + 2) === n.slice(i + 2));
   const limit = strict ? 1 : k.length < 6 ? 1 : 2;
   const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit
-    && (!strict || (xs.some((x) => x.kind === "city" && x.population >= ASK_POPULATION)
+    && (!strict || ((k.length >= 7 || swapped(n)) && xs.some((x) => x.kind === "city" && x.population >= ASK_POPULATION)
       // A plural is a word, not a place: "garlands" is not Garland (Codex spelling review 02).
       && !(k.endsWith("s") && !n.endsWith("s")))));
   // The place's name (the city's, when there is one): "Baltimore", which then asks the city or the county (P28).
   return near.length === 1 ? (near[0][1].find((x) => x.kind === "city") ?? near[0][1][0]).name : null;
+}
+
+/**
+ * A misspelled city in a named state ("Toldeo, Ohio"): the one city agency of that state whose name is one edit (a letter changed, added, dropped or two
+ * neighbours swapped) from the word, when exactly one is. Four letters or more, not a common English word, not a name the index already has; otherwise null.
+ */
+export function nearestPlaceInState(idx: PlaceIndex, name: string, stateCode: string): string | null {
+  const k = base(name);
+  if (k.length < 4 || idx.byName.has(k) || isCommonEnglishWord(k)) return null;
+  const hits = new Set<string>();
+  for (const [n, xs] of idx.byName.entries()) {
+    if (Math.abs(n.length - k.length) > 1 || n[0] !== k[0] || distance(n, k) !== 1) continue;
+    for (const a of xs) if (a.kind === "city" && a.state === stateCode) hits.add(a.name);
+  }
+  return hits.size === 1 ? [...hits][0] : null;
 }
 
 /**
