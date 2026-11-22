@@ -7,6 +7,7 @@
  *   ENGINE_PORT           default 8420; the service listens on 127.0.0.1 only
  *   ENGINE_WORKERS        default 2
  *   ENGINE_TAB_CAP        default workers minus one (at least 1): most workers busy for one tab at once, so a tab's slow questions cannot hold them all
+ *   ENGINE_TAB_QUEUE_MAX  default half of ENGINE_QUEUE_MAX (at least 1): most waiting requests of one tab, so one tab cannot fill the queue
  *   ENGINE_QUEUE_MAX      default 8 waiting requests beyond the busy workers; more is answered "busy"
  *   ENGINE_TIMEOUT_MS     default 120000: a worker that overruns is killed and replaced
  *   ENGINE_DUCKDB_MEMORY  default 2GB, ENGINE_DUCKDB_THREADS default 1 (per worker)
@@ -49,7 +50,7 @@ function forkWorker(): PoolWorker {
 
 const token = env.ENGINE_TOKEN ?? "";
 const workers = Math.floor(num(env.ENGINE_WORKERS, 2));
-const pool = new EnginePool({ size: workers, tabCap: Math.min(workers, Math.max(1, Math.floor(num(env.ENGINE_TAB_CAP, workers - 1)))), queueMax: Math.floor(num(env.ENGINE_QUEUE_MAX, 8)), timeoutMs: num(env.ENGINE_TIMEOUT_MS, 120000), spawn: forkWorker });
+const pool = new EnginePool({ size: workers, tabCap: Math.min(workers, Math.max(1, Math.floor(num(env.ENGINE_TAB_CAP, workers - 1)))), queueMax: Math.floor(num(env.ENGINE_QUEUE_MAX, 8)), tabQueueMax: Math.max(1, Math.floor(num(env.ENGINE_TAB_QUEUE_MAX, Math.max(1, Math.floor(num(env.ENGINE_QUEUE_MAX, 8) / 2))))), timeoutMs: num(env.ENGINE_TIMEOUT_MS, 120000), spawn: forkWorker });
 const server = createEngineServer({ pool, token, info: () => info, startedAt: new Date().getTime() });
 const port = Math.floor(num(env.ENGINE_PORT, 8420));
 server.listen(port, "127.0.0.1", () => console.log(`engine service listening on 127.0.0.1:${port} with ${pool.stats().size} workers`));

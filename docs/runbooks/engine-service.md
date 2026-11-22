@@ -20,6 +20,7 @@ The engine service answers questions from the canonical NIBRS release, in its ow
 | `ENGINE_PORT` | listen port on 127.0.0.1 | 8420 |
 | `ENGINE_WORKERS` | worker processes | 2 (the runner measurement decides) |
 | `ENGINE_TAB_CAP` | most workers busy for one tab at once, so one tab's slow questions cannot hold every worker; a request over its tab's cap waits in the queue while other tabs run | workers minus one (at least 1) |
+| `ENGINE_TAB_QUEUE_MAX` | most waiting requests of one tab, so one tab cannot fill the queue for the others; more is answered "busy" | half of the queue max (at least 1) |
 | `ENGINE_QUEUE_MAX` | waiting requests beyond the busy workers; more is answered "busy" | 8 |
 | `ENGINE_TIMEOUT_MS` | a worker that overruns is killed and replaced | 120000 |
 | `ENGINE_DUCKDB_MEMORY`, `ENGINE_DUCKDB_THREADS` | per worker: one DuckDB process serves every tab, so memory is workers x this, not tabs x workers x this | 2GB, 1 |

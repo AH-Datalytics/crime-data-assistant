@@ -82,6 +82,19 @@ function fakes() {
   assert.throws(() => new EnginePool({ size: 2, tabCap: 0, queueMax: 0, timeoutMs: 10, spawn: f3.spawn }));
   p3.close(); p2.close(); pool.close();
 }
+// --- one tab flooding the queue cannot fill it for the others
+{
+  const f = fakes();
+  const pool = new EnginePool({ size: 1, queueMax: 4, tabQueueMax: 2, timeoutMs: 5000, spawn: f.spawn });
+  void pool.submit(req("r1", { tab: "shr" }));
+  void pool.submit(req("r2", { tab: "shr" })); void pool.submit(req("r3", { tab: "shr" }));
+  const over = await pool.submit(req("r4", { tab: "shr" }));
+  assert.ok(!over.ok && over.kind === "busy", "a third waiting question of one tab is refused");
+  void pool.submit(req("n1", { tab: "nibrs" }));
+  assert.equal(pool.stats().queued, 3, "another tab can still queue behind the flood");
+  assert.throws(() => new EnginePool({ size: 1, queueMax: 1, tabQueueMax: -1, timeoutMs: 10, spawn: f.spawn }));
+  pool.close();
+}
 // --- two workers, a bounded queue, and the busy answer
 {
   const f = fakes();

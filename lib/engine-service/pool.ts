@@ -6,7 +6,8 @@
  *   - a bounded queue: when every worker is busy and `queueMax` requests are waiting, a new request is answered "busy" at once (a plain "try again", never a fallback to another engine);
  *   - a per-request time limit: a worker that has not answered in `timeoutMs` is killed and replaced, and the request is answered "timeout";
  *   - a worker that dies is replaced and its request is answered with an error;
- *   - a per-tab cap: no more than `tabCap` workers are busy for one tab at a time, so one tab's slow questions cannot hold every worker. A request over its tab's cap waits in the same queue (and counts toward `queueMax`) while other tabs' requests run on the free workers.
+ *   - a per-tab cap: no more than `tabCap` workers are busy for one tab at a time, so one tab's slow questions cannot hold every worker. A request over its tab's cap waits in the same queue (and counts toward `queueMax`) while other tabs' requests run on the free workers;
+ *   - a per-tab queue limit: no more than `tabQueueMax` requests of one tab wait at once, so one tab flooding the queue cannot fill it for the others (a request over it is answered "busy").
  * `submit` never rejects.
  */
 import type { EngineRequest, EngineResult } from "./protocol";
@@ -16,7 +17,7 @@ export interface PoolWorker {
   run(req: EngineRequest): Promise<EngineResult>;
   kill(): void;
 }
-export type PoolOptions = { size: number; queueMax: number; timeoutMs: number; spawn: () => PoolWorker; /** Most workers busy for one tab at once; unset means no cap beyond `size`. */ tabCap?: number };
+export type PoolOptions = { size: number; queueMax: number; timeoutMs: number; spawn: () => PoolWorker; /** Most workers busy for one tab at once; unset means no cap beyond `size`. */ tabCap?: number; /** Most requests of one tab waiting at once; unset means only `queueMax` limits. */ tabQueueMax?: number };
 export type PoolStats = { size: number; busy: number; queued: number; served: number; timeouts: number; crashes: number; rejectedBusy: number };
 
 type Slot = { worker: PoolWorker; busy: boolean; tab?: string };
@@ -30,6 +31,7 @@ export class EnginePool {
 
   constructor(private opts: PoolOptions) {
     if (!(opts.size >= 1 && opts.queueMax >= 0 && opts.timeoutMs > 0)) throw new Error("pool: size must be at least 1, queueMax at least 0 and timeoutMs positive");
+    if (opts.tabQueueMax !== undefined && !(Number.isInteger(opts.tabQueueMax) && opts.tabQueueMax >= 0)) throw new Error("pool: tabQueueMax must be a whole number of at least 0");
     if (opts.tabCap !== undefined && !(Number.isInteger(opts.tabCap) && opts.tabCap >= 1)) throw new Error("pool: tabCap must be a whole number of at least 1");
     for (let i = 0; i < opts.size; i++) this.slots.push({ worker: opts.spawn(), busy: false });
   }
@@ -43,7 +45,7 @@ export class EnginePool {
     return new Promise((resolve) => {
       // Runnable now only if a worker is free and the request's tab is under its cap; otherwise it queues, or is refused when the queue is full.
       const free = this.slots.some((s) => !s.busy) && this.tabBusy(req.tab) < this.cap();
-      if (!free && this.queue.length >= this.opts.queueMax) {
+      if (!free && (this.queue.length >= this.opts.queueMax || this.queue.filter((w) => w.req.tab === req.tab).length >= (this.opts.tabQueueMax ?? Infinity))) {
         this.counters.rejectedBusy++;
         resolve({ ok: false, kind: "busy", message: "The engine is busy answering other questions. Try again in a moment." });
         return;
