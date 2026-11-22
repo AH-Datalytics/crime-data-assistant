@@ -2711,7 +2711,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.equal(sr.kind, "shr", JSON.stringify(sr).slice(0, 300));
     assert.deepEqual(sr.delivered.table.rows.map((r) => r[0]), ["Same race (intraracial)", "Different races (interracial)", "Race not known for the victim or the offender"]);
     assert.deepEqual(sr.delivered.table.rows.map((r) => r[2]), [75, 25, null]);
-    assert.ok(sqls3.some((s) => /EXISTS \(SELECT 1 FROM read_parquet\([^)]*shr_offender[^)]*\)[^)]* o WHERE/.test(s) || /shr_offender/.test(s)), "the offender's race through the record's offender");
+    assert.ok(sqls3.some((s) => /shr_offender/.test(s)), "the offender's race through the record's offender");
+    assert.ok(sqls3.every((s) => !/\{shr_offender\}/.test(s)), "no placeholder is left in any statement (the runner's real-data error)");
     // Murders by an offender's race and sex (P212).
     const bm = go("What percentage of murders nationally are committed by black males in 2024?");
     assert.equal(bm.kind, "shr", JSON.stringify(bm).slice(0, 300));

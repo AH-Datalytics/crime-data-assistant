@@ -318,8 +318,10 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
       return `EXISTS (SELECT 1 FROM ${table(build, other)} o WHERE o.data_year = r.data_year AND o.source_line_no = r.source_line_no AND ${fs.map((f) => condition(f, "o")).join(" AND ")})`;
     })];
   const keys = [...(sq.grain !== "total" ? ["r.data_year"] : []), ...(sq.grain === "month" ? ["r.offense_month"] : []), ...(sq.breakdown ? [categorySql(sq, "p")] : []), ...(sq.breakdown2 ? [categorySql(sq, "p", 2)] : [])];
-  return `SELECT ${[...keys.map((k, i) => `${k} AS k${i}`), "count(*) AS n"].join(", ")} FROM ${table(build, person)} p JOIN ${table(build, "shr_record")} r USING (data_year, source_line_no) `
-    + `WHERE ${where.join(" AND ")}${keys.length ? ` GROUP BY ${keys.map((_, i) => `k${i}`).join(", ")}` : ""}`.replace(/\{shr_offender\}/g, table(build, "shr_offender"));
+  // `{shr_offender}` in a group's condition (P212) is the offender table; the whole statement is read for it (the keys are in the SELECT list).
+  const sql = `SELECT ${[...keys.map((k, i) => `${k} AS k${i}`), "count(*) AS n"].join(", ")} FROM ${table(build, person)} p JOIN ${table(build, "shr_record")} r USING (data_year, source_line_no) `
+    + `WHERE ${where.join(" AND ")}${keys.length ? ` GROUP BY ${keys.map((_, i) => `k${i}`).join(", ")}` : ""}`;
+  return sql.replace(/\{shr_offender\}/g, table(build, "shr_offender"));
 }
 
 /** The years a place's agencies filed (any counted record that year), with how many filed, from shr_agency_year. */
