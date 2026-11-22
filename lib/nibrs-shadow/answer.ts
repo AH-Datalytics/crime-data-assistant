@@ -921,7 +921,13 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
-      more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+      // Injury type (element 33, Jeff 2026-11-22) is recorded for victims of crimes against persons: with no kind named and violent crime the one choice
+      // that answers, that is the answer ("firearm crimes in 2024 by injury type").
+      if (!option && /\binjur/i.test(question) && c.options.length === 1 && /^Violent crime$/.test(c.options[0].label)) {
+        option = c.options[0];
+        note = "No kind of crime was named, so violent crime is shown: injury type is recorded for the victims of crimes against persons.";
+      }
+      more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both" && x !== option));
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     notes.push(note);

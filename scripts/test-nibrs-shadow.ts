@@ -2078,6 +2078,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       assert.ok(d.text.includes("A victim can have several injury types, so the rows can add up to more than the number of victims."), JSON.stringify(d.text));
       assert.ok(inj.delivered.answerStatements.includes("categories_overlap"));
       assert.deepEqual(Object.keys(INJURY).sort(), ["B", "I", "L", "M", "N", "O", "T", "U"]);
+      // "Firearm crimes" and "handgun victims" by injury type: the victims of violent crime with that weapon on their connected offense (injury is recorded
+      // for robbery victims too), with no kind of crime named taken as violent crime, and said so.
+      for (const q of ["Firearm crimes in Memphis in 2024 by injury type", "Handgun victims in Memphis in 2024 by injury type"]) {
+        const fa = as(shadowAnswer(q, { ...deps, noDefaults: false }), "answer");
+        assert.deepEqual(fa.plan.measures.map((m) => [m.id, m.unit]), [["victims.violent_crime", "victim"]], q);
+        assert.ok(fa.plan.groupings.some((x) => x.dimension === "victim_injury.injury"), q);
+        assert.ok(fa.plan.filters.some((x) => x.kind === "exists" && x.entity === "offense_weapon"), q);
+        assert.ok(fa.delivered.text.some((t) => /No kind of crime was named, so violent crime is shown: injury type is recorded for the victims of crimes against persons\./.test(t)), JSON.stringify(fa.delivered.text));
+      }
       // Asked in offenses, the unit is still the victim (injury is recorded for each victim).
       assert.ok(as(ask("Aggravated assault offenses in Memphis by injury type in 2024"), "answer").plan.measures.every((m) => m.unit === "victim"));
     }
