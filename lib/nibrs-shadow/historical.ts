@@ -453,6 +453,8 @@ export type HistoricalRankingQuestion = {
   entity?: "city" | "state" | "agency" | "county";
   /** A Census region (bad-declines plan item 8): its states, and its name for the answer; `state` is then "US". */
   region?: { name: string; states: string[] };
+  /** More measures shown beside `measure` in one table, ranked by `measure` first (rankings group B, Jeff 2026-11-23). Cities, agencies and counties only. */
+  more?: string[];
 };
 export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
   const m = HISTORICAL_MEASURE[rq.measure];
@@ -519,6 +521,27 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   text.push(SRS_SOURCE);
   const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;
   const period = { from: `${rq.year}-01`, to: `${rq.year}-12` };
+  // Rankings group B: a column for each further measure, for the same places, ranked by the first measure named.
+  const extra = (rq.more ?? []).map((k) => ({ key: k, m: HISTORICAL_MEASURE[k] })).filter((e): e is { key: string; m: NonNullable<typeof e.m> } => Boolean(e.m));
+  let tableColumns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: states ? "geo.state" : "geo.agency" }, header: states ? "State" : "Agency" }, { binding: { kind: "statistic", as: "x" }, header }];
+  let tableRows: (string | number | null)[][] = ranked.map((a) => [a.name, a.value]);
+  if (extra.length && !states) {
+    const more = execute(`SELECT ori, ${extra.map((e) => `${e.m.col}_total, ${e.m.col}_capita`).join(", ")}, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
+      + `WHERE year = ${rq.year} AND ori IN (${ranked.map((a) => q(a.ori)).join(", ")})`);
+    const byOri = new Map(more.map((r) => [String(r[0]), r]));
+    tableColumns = [...tableColumns, ...extra.map((e, i) => ({ binding: { kind: "statistic" as const, as: `x.${i + 1}` }, header: `${ucFirst(e.m.words)}${rate ? " per 100,000" : ""}` }))];
+    tableRows = ranked.map((a) => {
+      const r = byOri.get(a.ori);
+      return [a.name, a.value, ...extra.map((_, i) => {
+        if (!r) return null;
+        const total = num(r[1 + 2 * i]), capita = num(r[2 + 2 * i]), population = num(r[1 + 2 * extra.length]);
+        return rate ? historicalRate(capita, total, population).rate : total;
+      })];
+    });
+    const names = [m, ...extra.map((e) => e.m)].map((x) => x.name);
+    text[0] = `${states ? "United States" : titleCase(where)} ${andList(names.map((n) => titleCase(`${n} ${rate ? "rate" : "count"}`)))} by ${unitTitle}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
+    text[1] = `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? `${m.name} rates` : m.words} are shown, with ${andList(extra.map((e) => (rate ? `${e.m.name} rate` : e.m.words)))} beside it.`;
+  }
   const agencies = ranked.map((a) => ({ ori: a.ori, label: a.name, name: a.name, state: a.state }));
   return {
     kind: "historical", period,
@@ -526,11 +549,10 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
       ranking: { state: rq.state, direction: rq.direction, limit: rq.limit, minPopulation: rq.minPopulation } },
     meaning: { source: "historical", places: [national ? { kind: "national", name: "United States" } : { kind: "state", name: where, state: rq.state }],
       filters: [states ? "states (not the District of Columbia)" : unit, ...(floor ? [`population ${fmt(rq.minPopulation!)} or more`] : [])],
-      measures: [{ name: m.name, unit: m.unit }], period, groupings: [states ? "state" : "agency"], statistic: "rank",
+      measures: [m, ...(states ? [] : extra.map((e) => e.m))].map((x) => ({ name: x.name, unit: x.unit })), period, groupings: [states ? "state" : "agency"], statistic: "rank",
       rank: { by: rate ? `${m.name} rate` : m.words, direction: rq.direction, limit: rq.limit },
       ...(rate ? { denominator: `the ${states ? "state" : "agency"}'s population as published by Crime Index, per 100,000` } : {}) },
-    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: states ? "geo.state" : "geo.agency" }, header: states ? "State" : "Agency" }, { binding: { kind: "statistic", as: "x" }, header }],
-      rows: ranked.map((a) => [a.name, a.value]) }, text },
+    delivered: { table: { columns: tableColumns, rows: tableRows }, text },
     read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
 }

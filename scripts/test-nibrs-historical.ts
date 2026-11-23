@@ -565,6 +565,22 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.equal(us.delivered.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
     assert.match(rsql[0], /agency_crime\.parquet'\) WHERE \(type = 'city' OR ori IN \('FL0160000'\)\) AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200'\) AND year = 2024 AND population >= 250000/);
   }
+  // Rankings group B: several measures in one table, sorted by the first.
+  {
+    const mexec = (sql: string) => /SELECT ori, robbery_total/.test(sql)
+      ? [["ILCPD0000", 9000, 330, 2_700_000], ["NY0303000", 12000, 144, 8_300_000], ["TXHPD0000", 8000, 350, 2_300_000]]
+      : US;
+    const multi = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "rate", direction: "top", limit: 3, minPopulation: 100000, more: ["robbery"] }, build, mexec);
+    assert.ok(multi.kind === "historical", JSON.stringify(multi));
+    if (multi.kind === "historical") {
+      assert.equal(multi.delivered.table.columns.length, 3, "one extra column per extra measure");
+      assert.equal(multi.delivered.table.rows[0].length, 3);
+      assert.equal(multi.delivered.table.rows[0][0], "Columbus, GA", "sorted by the first measure's rate");
+      assert.match(multi.delivered.text[0], /Murder Rate and Robbery Rate/);
+      const chi = multi.delivered.table.rows.find((r) => r[0] === "Chicago, IL");
+      assert.equal(chi?.[2], 330);
+    }
+  }
   // Every agency, city and county: no type in the query.
   rsql.length = 0;
   answerHistoricalRanking({ measure: "murder", state: "CA", year: 2020, statistic: "count", direction: "top", limit: 10, minPopulation: null, entity: "agency" }, build, rexec);

@@ -73,6 +73,13 @@ check(r3?.type === "rank" && r3.entity === "city" && r3.statistic === "rate" && 
 const r4 = spec("violent crime counts by city in 2025");
 check(r4?.type === "rank" && r4.entity === "city" && r4.statistic === "count" && r4.rank === null, "\"counts by city\" is a city ranking with the default size");
 
+// Rankings group B: several measures side by side; no crime named defaults to violent plus property.
+const r5 = spec("Top 10 cities in 2025 by murder rate and robbery rate");
+check(r5?.type === "rank" && r5.measure === "murder" && r5.more?.join() === "robbery", "two measures make one table, sorted by the first");
+const r6 = spec("Which cities have the highest crime rate in 2025?");
+check(r6?.type === "rank" && r6.measure === "violent_crime" && r6.more?.join() === "property_crime", "no crime named is violent plus property crime");
+check(spec("Which states have the highest murder rate and robbery rate in 2025?")?.type !== "rank" || spec("Which states have the highest murder rate and robbery rate in 2025?")?.more === undefined, "a multi-measure state ranking is never built");
+
 // ---- N7 change ----
 const c1 = spec("change in robberies in Fort Worth, Texas from 2023 to 2025");
 check(c1?.type === "change" && c1.earlier === 2023 && c1.later === 2025, "N7: the earlier year is the base");

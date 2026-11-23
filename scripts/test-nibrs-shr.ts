@@ -196,6 +196,10 @@ assert.match(shrRankingSql({ ...rk, from: "2026-01", to: "2026-09" }, build, his
 // A count: the 0 of Philadelphia is a real 0 and ranks at the bottom; the lowest first.
 const counts = answerShrRanking({ ...rk, share: false, direction: "bottom", limit: 2 }, build, hist, () => rankRows);
 assert.ok(counts.kind === "shr" && JSON.stringify(counts.delivered.table.rows) === '[["PHILADELPHIA, PA",0],["OMAHA, NE",9]]', JSON.stringify(counts));
+// Rankings group E: "min 30 murders" keeps only cities with at least that many murder victims; no population floor then.
+const floored = answerShrRanking({ ...rk, minPopulation: null, minTotal: 30 }, build, hist, () => rankRows);
+assert.ok(floored.kind === "shr" && JSON.stringify(floored.delivered.table.rows) === '[["DALLAS, TX",90],["HOUSTON, TX",80],["NEW YORK, NY",40]]', JSON.stringify(floored));
+if (floored.kind === "shr") assert.equal(floored.delivered.text[0], "United States Share of Murder Victims Killed With a Firearm by City, at Least 30 Murder Victims, 2024");
 // A victim's own age, by its range; offenders' details are not a city ranking's.
 const teen = answerShrRanking({ ...rk, filters: [{ dim: "victim.age", ages: [13, 19] }] }, build, hist, (s) => (sqlSeen.push(s), rankRows));
 assert.ok(teen.kind === "shr" && teen.delivered.text[0].includes("Share of Murder Victims Aged 13 to 19"), JSON.stringify(teen));

@@ -111,7 +111,7 @@ export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | n
   /** P194 (Jeff 2026-11-21): clearance by type for several named agencies, one row each, never summed (place is the first of them). */
   places?: NPlace[] };
 export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true; rank?: { dir: "top" | "bottom"; n: number | null } };
-export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency" | "county"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
+export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency" | "county"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null; /** Further measures of one table, after `measure` (rankings group B). */ more?: string[] };
 export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; statistic: "count" | "rate"; place: NPlace; earlier: number; later: number };
 export type NibrsSpec = SeriesSpec | BreakdownSpec | ShareSpec | RankSpec | ChangeSpec;
 /** The most named agencies one clearance-by-type table covers (P194). */
@@ -259,7 +259,10 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     const entity0 = entityParts.map((p) => p.value)[0] ?? ((rankParts.length && listParts.length === 0) || cityListParts.length ? "city" : null);   // "Top 10 auto theft rates in 2025": cities (Jeff 2026-11-23, rankings group A)
     const entity = entity0 === "counties" ? "county" : entity0;
     if (!entity || !["state", "city", "agency", "county"].includes(entity)) return { kind: "none" };
-    if (measures.length !== 1) return { kind: "none" };
+    // Rankings group B (Jeff 2026-11-23): "highest crime rate" with no crime named is violent and property crime (P180-P182; a clearance keeps its ask),
+    // and several crimes named are one table, a column each, sorted by the first named; the answer builder reads only Historical's measures this way.
+    if (measures.length === 0 && !clearanceRate && of("measure").some((p) => p.value === "unspecified")) { take(of("measure").filter((p) => p.value === "unspecified")); measures = ["violent_crime", "property_crime"]; }
+    if (measures.length < 1 || (measures.length > 1 && (clearanceRate || entity === "state"))) return { kind: "none" };
     if (changeParts.length) return declineParts(changeParts, (p) => cannot(p, "I rank places by a level, not by a change, in this version."));
     const rankVal = rankParts.map((p) => p.value ?? "").find((v) => /^(?:top|bottom):/.test(v)) ?? null;
     const n = rankVal ? rankVal.split(":")[1] : "";
@@ -289,7 +292,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (places.length > 1 || (scope.kind === "agency")) return declineParts(placeParts, (p) => cannot(p, "a ranking covers the nation or one state."));
     const stat = clearanceRate ? "clearance_rate" : statistic === "rate" ? "rate" : statistic === "count" ? "count" : null;
     if (!stat) return { kind: "none" };
-    return finish({ type: "rank", entity: entity as "state" | "city" | "agency" | "county", measure: measures[0], statistic: stat, scope, period: periods[0] ?? { form: "none" }, rank, min: thresholds[0] ?? null });
+    return finish({ type: "rank", entity: entity as "state" | "city" | "agency" | "county", measure: measures[0], statistic: stat, scope, period: periods[0] ?? { form: "none" }, rank, min: thresholds[0] ?? null, ...(measures.length > 1 ? { more: measures.slice(1) } : {}) });
   }
 
   // ---- N7: change between two years ----
