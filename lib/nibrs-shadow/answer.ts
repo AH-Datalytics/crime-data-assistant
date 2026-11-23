@@ -892,7 +892,8 @@ let defaultDepth = 0;
 /** P229: the words of a trend or per-capita question. */
 const P229_TREND = /\b(?:rates?|per capita|per 100,?000|trends?|over time)\b/i;
 /** P229: a period is named (a year, a month, a relative or open-ended span): the since-2019 default must not replace it. */
-const P229_PERIOD_NAMED = /\b(?:19|20)\d\d\b|\b(?:since|from|between|through|until|during|before|after|last|past|previous|prior|this|ytd|year[\s-]to[\s-]date|recent\w*|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*)\b/i;
+const P229_MONTH = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const P229_PERIOD_NAMED = new RegExp(String.raw`\b(?:19|20)\d\d\b|\b(?:since|between|through|until|ytd|year[\s-]to[\s-]date|recent\w*|${P229_MONTH})\b|\b(?:from|this|last|past|previous|prior|before|after|during)\s+(?:the\s+)?(?:\d+\s+)?(?:(?:year|month|week|decade|quarter|day|summer|winter|spring|fall|covid|pandemic)s?\b|${P229_MONTH}\b)`, "i");
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
  * with the default instead, when the option that carries it answers now (not a heavy statement deferred, not a decline), and the chain of asks
@@ -3498,7 +3499,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const typeShares = !!deps.shareAsked && catG.length === 1 && catG[0].dimension === "offense.clearance_type" && plan.statistics.length === 1 && plan.statistics[0].kind === "count";
   if (typeShares) plan.statistics.push({ kind: "share", as: "share_of_period", measure: plan.measures[0].as, within: timeG.map((g) => g.dimension) });
   const [first, second, ...more] = plan.statistics;
-  const counts =plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
+  const counts = plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
