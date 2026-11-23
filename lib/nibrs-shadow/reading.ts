@@ -212,6 +212,8 @@ const PHRASES: [RegExp, string][] = [
   // short words with a dropped letter. Not "aggravates", a verb ("What aggravates assault ...": Codex spelling review 01).
   [/\bmuder(s?)\b/gi, (m: string, s: string) => `${m[0] === "M" ? "Murder" : "murder"}${s}`] as unknown as [RegExp, string],
   [/\brobery\b/gi, (m: string) => (m[0] === "R" ? "Robbery" : "robbery")] as unknown as [RegExp, string],
+  // R53 (declines owner 2026-11-23): "how many people were murdered last year" is "murders last year" (the people murdered are the murder count).
+  [/\bhow\s+many\s+(?:people|persons|individuals)\s+(?:were|are|have\s+been|got)\s+murdered\b/gi, "murders"],
   // "aggrevated" only: "aggrevates" is the verb, misspelled (Codex spelling review 04).
   [/\baggrevated\b/gi, (m: string) => (m[0] === "A" ? "Aggravated" : "aggravated")] as unknown as [RegExp, string],
   [/\bv(?:lolent|ilont|iolant|ilolent)\b/gi, (m: string) => (m[0] === "V" ? "Violent" : "violent")] as unknown as [RegExp, string],
