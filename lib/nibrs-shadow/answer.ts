@@ -102,7 +102,7 @@ export type ShadowDeps = {
   assaultAsked?: boolean;
   /** How many buttons in a row were rebuilt from the user's words: past three, a button's own buttons are left as built. */
   rebuilt?: number;
-  /** A statement longer than this many characters is a heavy national statement (default 100,000: an inline list of ~20,000 agencies); see deferHeavy. */
+  /** A statement longer than this many characters is a heavy national statement (default 250,000, HEAVY_STATEMENT: a national inline list of ~20,000 agencies is over 1,000,000); see deferHeavy. */
   deferChars?: number;
 };
 
@@ -376,7 +376,13 @@ const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route"
  * the button keeps a lazy `continuation` that builds the real answer on first read and remembers it. Nothing else changes: every answer, ask and
  * decline is the same; only when the heavy statements run.
  */
-const HEAVY_STATEMENT = 100_000;
+/**
+ * A statement is heavy past this many characters. The size is almost all agency literals (about 52 characters each, 6,000 of fixed text): the
+ * biggest single state listed is Pennsylvania with 2,001 agencies (about 110,000 characters), and all of Texas (1,847 listed) sat within 0-3% of
+ * the old 100,000 limit, so a state could tip over it on one more agency. A national statement lists about 20,000 agencies (over 1,000,000
+ * characters). 250,000 clears every single state by more than double and still defers every national statement by four times.
+ */
+export const HEAVY_STATEMENT = 250_000;
 const DEFERRED = new WeakSet<object>();
 /** A button whose answer is built when first read (the walkers that only decide whether a button runs must not read it). */
 export const isDeferred = (x: ShadowOption): boolean => DEFERRED.has(x);
