@@ -31,7 +31,9 @@ const read = (q: string) => readQuestion(q, 2026).text;
 const checks: [string, () => void][] = [
   ["greeting is dropped", () => assert.equal(read("Hello there, murders in Denver in 2024").trim(), "murders in Denver in 2024")],
   ["a word starting with hi is kept", () => assert.ok(/^high school/i.test(read("high school robberies in Denver in 2024").trim()))],
-  ["a request wrapper is dropped", () => assert.ok(/^show murders in Denver/.test(read("Could you please give me murders in Denver in 2024")), read("Could you please give me murders in Denver in 2024"))],
+  ["a request wrapper is dropped", () => assert.ok(/^show me murders in Denver/.test(read("Could you please give me murders in Denver in 2024")), read("Could you please give me murders in Denver in 2024"))],
+  ["a place starting with a greeting name is kept (Codex 464d5d03)", () => assert.ok(/^Jefferson City murders in 2024/.test(read("Hi Jefferson City murders in 2024").trim()), read("Hi Jefferson City murders in 2024"))],
+  ["a wrapped change question still reads as a change (Codex 464d5d03)", () => assert.equal(read("Can you show me how murder in Denver has changed since 2020"), read("show me how murder in Denver has changed since 2020"))],
 ];
 for (const [name, fn] of checks) { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}: ${(e as Error).message}`); failed++; } }
 if (failed) { console.log(`${failed} failed`); process.exit(1); }

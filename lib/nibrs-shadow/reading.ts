@@ -147,8 +147,8 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
   // H1 chatty openers (bad-declines plan): a greeting, a name, and a request wrapper add no meaning; the rest is the question.
-  [/^\s*(?:hi|hello|hey)\b(?:\s+(?:jeff|there|claude))?\s*[,;:!.-]*\s*/i, ""],
-  [/^\s*(?:(?:can|could|would)\s+you\s+(?:please\s+)?(?:get|pull|give|show)\s+me|(?:i(?:'|’)?m|i\s+am)\s+(?:looking\s+for|interested\s+in)|(?:basically\s+)?i\s+(?:want|would\s+like|(?:'|’)d\s+like)\s+(?:to\s+see)?|looking\s+for|any\s+way\s+to\s+tell\s+me\s+about|(?:tell\s+me|show\s+me)\s+more\s+about|summari[sz]e|make\s+a\s+(?:graph|chart|table)\s+of)\s+(?:the\s+)?/i, "show "],
+  [/^\s*(?:hi|hello|hey)\b(?:\s+(?:jeff|there|claude)\b)?\s*[,;:!.-]*\s*/i, ""],
+  [/^\s*(?:(?:can|could|would)\s+you\s+(?:please\s+)?(?:get|pull|give|show)\s+me|(?:i(?:'|’)?m|i\s+am)\s+(?:looking\s+for|interested\s+in)|(?:basically\s+)?i\s+(?:want|would\s+like|(?:'|’)d\s+like)\s+(?:to\s+see)?|looking\s+for|any\s+way\s+to\s+tell\s+me\s+about|(?:tell\s+me|show\s+me)\s+more\s+about|summari[sz]e|make\s+a\s+(?:graph|chart|table)\s+of)\s+(?:the\s+)?/i, "show me "],
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.
