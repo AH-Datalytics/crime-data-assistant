@@ -95,6 +95,8 @@ export type ShadowDeps = {
   guardText?: string;
   /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
   rewritten?: boolean;
+  /** Set when the question was cut of vague words the reader left unread: a bare place is not answered by year, it is asked. */
+  noBare?: boolean;
   /** Set while a bare-assault question goes on as asked: the bare-assault rule steps aside. */
   assaultAsked?: boolean;
   /** How many buttons in a row were rebuilt from the user's words: past three, a button's own buttons are left as built. */
@@ -333,6 +335,17 @@ const notYet = (detail: string) => decline("unsupported_capability", NOT_YET, { 
 function withParts(ledger: RequestLedger, parts: Part[]): RequestLedger {
   return Object.assign(Object.create(Object.getPrototypeOf(ledger)), ledger, { parts });
 }
+/**
+ * A place with only a lead-in around it ("Tell me about Houston", "overview of Chicago", "crime in Portland"): a request. A fragment
+ * that leans on an earlier turn ("do for nyc", "i want to see this for denver", "dallas's rate") or names a source ("NIBRS information of
+ * Miami") is asked, never answered (PR 382 targeted gate, 2026-11-22).
+ */
+function bareLeadIn(question: string, placeText: string, periodTexts: string[]): boolean {
+  const rest = periodTexts.reduce((q, t) => q.replace(t.toLowerCase(), " "), question.toLowerCase()).replace(placeText.toLowerCase(), " ").replace(/[?.!,]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!rest) return !/^(?:nopd|nyc|dc)$/i.test(placeText.trim());
+  return /^(?:please )?(?:(?:show|tell|give|get) me )?(?:(?:all |some )?(?:about|overview of|an overview of|information (?:on|about)|info (?:on|about)|data (?:for|on|about)|stats (?:for|on)|crime|crimes|crime data|crime stats) ?)?(?:in|for|of|on)? ?$/.test(`${rest} `);
+}
+
 /**
  * A choice filled in by a button: a part appended to the question's clause 0 (P22: nothing else changes). Each filled
  * part gets its own span past the question's end, so two filled parts never share a binding identity.
@@ -729,7 +742,8 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
     && ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure")))
     return { kind: "clarify", about: "which years", question, options: [{ label: "Name the years", entry: "which years" }] };
   const fr = fillerRewrite(question, ledger);
-  const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true }) : null;
+  const pureOnly = unread.every((p) => pureFillerOnly(p.text));
+  const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true, noBare: !pureOnly }) : null;
   // Only pure filler left unread: the rest was read in full, so its answer is the question's (Jeff 2026-11-11).
   if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(again.kind)) return again;
   if (!fr || again?.kind !== "clarify") return null;
@@ -2117,9 +2131,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
-    if (onlyCrimeOverTime && ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && grains.length === 1 && (grains[0] === "month" || grains[0] === "year")
+    // A place alone (or an overview of it) names no grain and no crime: by year, as P181 and P148 say (group 3 of the 11-22 scorecard).
+    const noKind = ms.length === 0 || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"));
+    // Not when words were set aside as vague ("more about", "overview"): that question is asked, never answered (clarifyInstead).
+    const bare = !deps.noBare && noKind && grains.length === 0 && clause0("period").every((p) => /\b(?:19|20)\d\d\b/.test(p.text) && !/\b(?:last|past)\b/i.test(p.text)) && clause0("place").length >= 1
+      && clause0("place").every((p) => p.rule !== "shadow:button" && /^(?:city|county|state):/.test(String(p.value ?? "")))
+      && clause0("place").length === 1 && bareLeadIn(ledger0.question, clause0("place")[0].text, clause0("period").map((p) => p.text));
+    const grainOk = grains.length === 1 && (grains[0] === "month" || grains[0] === "year");
+    if (onlyCrimeOverTime && ((noKind && ms.length === 1 && grainOk) || bare)
       && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
-      const parts = COMPOSITE_PARTS.map((p) => fromLedger(filledAll(ledger, "measure", [[p.measure, p.words]]), deps, pins));
+      const base = bare ? filled(ledger, "grain", "year", "by year") : ledger;
+      const parts = COMPOSITE_PARTS.map((p) => fromLedger(filledAll(base, "measure", [[p.measure, p.words]]), deps, pins));
       const rate = clause0("statistic").some((p) => /^(?:rate|per100k|percapita)$/.test(String(p.value ?? "")));
       const merged = parts.every((o) => o.kind === "current" || o.kind === "historical" || o.kind === "srs") ? composeCrimeOverTime(parts as never, rate) : null;
       if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
