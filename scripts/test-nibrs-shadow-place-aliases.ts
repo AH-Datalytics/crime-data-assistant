@@ -50,6 +50,10 @@ const checks: [string, () => void][] = [
     const o = shadowAnswer("show violent crime by month for johnson county sheriff in ks", deps) as unknown as { explanation?: string; kind: string };
     assert.ok(!/couldn't find|didn't understand/i.test(String(o.explanation ?? "")));
   }],
+  ["a state name beside a state is not read as one city (Kansas, Missouri)", () => {
+    const o = shadowAnswer("Robberies in Kansas, Missouri in 2024 according to NIBRS", deps) as unknown as { explanation?: string };
+    assert.ok(/state or the nation together with other places/.test(String(o.explanation ?? "")), String(o.explanation));
+  }],
 ];
 for (const [name, fn] of checks) { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}: ${(e as Error).message}`); failed++; } }
 if (failed) { console.log(`${failed} failed`); process.exit(1); }

@@ -190,6 +190,8 @@ function withNamedForms(entry: { name: string; state: string; aliases: string[] 
   if (/^St\.?\s/i.test(entry.name)) shorts.push(entry.name.replace(/^St\.?\s+/i, "Saint "));
   for (const short of shorts) {
     if (short === entry.name && !/^Saint /.test(short)) continue;
+    // A short form that is itself a state name ("Kansas" from Kansas City) would read "Kansas, Missouri" as one city.
+    if (STATES.some((st) => st.name.toLowerCase() === short.toLowerCase())) continue;
     if ((SHORT_NAME_COUNT.get(`${entry.state}:${short.replace(/^Saint /, "St. ").toLowerCase()}`) ?? 0) > 1 && short !== entry.name.replace(TOWN_SUFFIX, "")) continue;
     if ((SHORT_NAME_COUNT.get(`${entry.state}:${short.toLowerCase()}`) ?? 0) > 1) continue;
     for (const f of [`${short}, ${entry.state}`, `${short} ${entry.state}`, `${short}, ${full}`, `${short} ${full}`]) out.add(f);
