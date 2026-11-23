@@ -7,7 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, statementChars, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { applyDefaults, askInsteadChecks, heavyNationalSentence, HEAVY_STATEMENT, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, statementChars, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { shadowSql } from "../lib/nibrs-plan/cube";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
@@ -1245,6 +1245,13 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   const wrapped = `WITH g AS MATERIALIZED (${doubled}) SELECT 1`;
   assert.equal(statementChars(wrapped), `WITH g AS MATERIALIZED (${part(70_000)}) SELECT 1`.length, "a shadow block inside a wrapping statement is left out of the measure");
   assert.ok(statementChars(`WITH g AS MATERIALIZED (${shadowSql(part(120_000), part(119_000))}) SELECT 1`) > 100_000, "and a wrapped raw part over the limit is still heavy");
+}
+// The limit sits above the biggest single state (Pennsylvania, 2,001 listed agencies) and below a national list (~20,000 agencies).
+{
+  const listSql = (agencies: number) => 6_000 + 52 * agencies;
+  assert.ok(listSql(2_001) < HEAVY_STATEMENT / 2, "Pennsylvania's whole agency list is far under the limit");
+  assert.ok(listSql(1_847) < HEAVY_STATEMENT / 2, "and Texas's");
+  assert.ok(listSql(20_000) > HEAVY_STATEMENT * 4, "a national list is far over it");
 }
 // Heavy national choices are built when chosen (speed plan option C, 2026-11-17): the national statements of a place-less ask are not run before
 // the ask is shown; the choice that is clicked answers exactly as the eager one did; a plan a guard declines is still never offered.
