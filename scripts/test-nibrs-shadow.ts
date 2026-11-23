@@ -3443,6 +3443,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   as(ask("Carjackings in Texas, Texas and Ohio in 2024"), "decline"); // a place named twice is refused by the plan's validation, as before
   const nat = as(ask("Carjackings in Texas and the United States in 2024"), "answer");
   assert.deepEqual(nat.delivered.table.rows.map((r) => r[0]), ["Texas", "United States"]);
+  // Each place's figure is the one its own single-state answer gives, and each place keeps its own coverage record.
+  const oneTx = as(ask("Carjackings in Texas in 2024"), "answer"), oneOh = as(ask("Carjackings in Ohio in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.rows, [["Texas", oneTx.delivered.table.rows[0][0]], ["Ohio", oneOh.delivered.table.rows[0][0]]]);
+  assert.equal(two.stateSums?.length, 2);
+  assert.ok(two.delivered.text.some((t) => /summed over the agencies that reported/.test(t)));
+  assert.deepEqual(two.delivered.evidence.map((e) => [e.row, e.statistic]), [[0, "carjacking_count"], [1, "carjacking_count"]]);
+  // A Part I crime for several states keeps the older Historical path (it is taken before this one); this path is for the crimes that path does not read.
+  assert.equal(shadowAnswer("Robberies in Texas and Ohio in 2024", deps).kind, "srs");
   // An agency beside a state is still declined; so are a clearance share or Homicide Reports details for several places.
   as(ask("Carjackings in Houston and Texas in 2024"), "decline");
   as(ask("Share of murders cleared in Texas and Ohio in 2024"), "decline");

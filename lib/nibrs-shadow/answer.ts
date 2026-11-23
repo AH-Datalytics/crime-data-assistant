@@ -306,7 +306,9 @@ export type ShadowOutcome =
   /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
   | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered; buttons?: ShadowOption[];
     /** A state or national sum (P61): agencies counted, coverage and the every-month view, per year (state-sum.ts). */
-    stateSum?: StateSumMeta }
+    stateSum?: StateSumMeta;
+    /** Several crimes in one table (P271): each crime's own record, in column order (its agencies and coverage differ). `stateSum` is set only when they are all the same. */
+    stateSums?: StateSumMeta[] }
   /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
   | SrsAnswer
   /** A Part I figure for one or several agencies, read from the Crime Index build (Historical, P75-P79; historical.ts). */

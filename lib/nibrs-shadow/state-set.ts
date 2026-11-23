@@ -54,5 +54,11 @@ export function answerStateSet(plan: NibrsPlan, period: { from: string; to: stri
   const contractProblems = checkEnvelope({ plan: merged, table, evidence, answerStatements }, labels);
   if (contractProblems.length) return decline("This isn't available: several places in one table.", `answer contract: ${contractProblems.join("; ")}`);
   const delivered: Delivered = { table, evidence, chart: null, text, headline: text[0], answerStatements, contractProblems };
-  return { kind: "answer", plan: merged, period, sql: [...new Set(outs.map((o) => o.sql))].join(";\n"), delivered };
+  const metas = outs.map((o) => o.stateSum);
+  // One record per place: each place's agencies, coverage and years are its own, so they are kept apart, in row order.
+  if (metas.some((m) => !m)) return decline("This isn't available: several places in one table.", "a place's sum has no coverage record");
+  const sameMeta = metas.every((m) => JSON.stringify(m) === JSON.stringify(metas[0]));
+  return { kind: "answer", plan: merged, period, sql: [...new Set(outs.map((o) => o.sql))].join(";\n"), delivered,
+    // No buttons, so no Consistent Reporting Agencies offer; the lead still says the figures are summed across the agencies that reported.
+    stateSums: metas as NonNullable<typeof metas[number]>[], ...(sameMeta ? { stateSum: metas[0] } : {}) };
 }
