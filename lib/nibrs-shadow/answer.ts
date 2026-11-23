@@ -38,7 +38,7 @@ import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, p
 import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { parseStaffSet, answerStaffSet } from "./staffing-set";
-import { answerStaffing,STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
+import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
 const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";

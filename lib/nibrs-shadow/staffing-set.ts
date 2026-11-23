@@ -152,7 +152,7 @@ function shareForm(sp: Extract<StaffSetQuestion, { form: "share" }>, build: Hist
   const title = `Share of City Police Departments With ${fmt(sp.minCount)} or More Sworn Officers in ${sp.year} That Gained Officers in ${sp.later}`;
   const text = [title, `${gained.length} of ${both.length} city police departments with ${fmt(sp.minCount)} or more sworn officers in ${sp.year} had more sworn officers in ${sp.later}: ${percent} percent.`,
     ...(missing ? [`${missing} further ${missing === 1 ? "department has" : "departments have"} no sworn officer count for ${sp.later} in Crime Index and ${missing === 1 ? "is" : "are"} left out of both figures.`] : []),
-    "Gained means more sworn officers than the year before in Crime Index's counts.", "Cities are Crime Index's city agencies, whatever the agency.", SRS_SOURCE];
+    `Gained means more sworn officers in ${sp.later} than in ${sp.year} in Crime Index's counts.`, "Cities are Crime Index's city agencies, whatever the agency.", SRS_SOURCE];
   const columns: Cols = [statCol(0, `Departments with ${fmt(sp.minCount)} or more sworn officers in ${sp.year}`), statCol(1, `Gained officers in ${sp.later}`), statCol(2, "Share (percent)")];
   return wrap("officers", sp.year, [sp.year, sp.later], columns, [[both.length, gained.length, percent]], text, "share", build,
     both.map((r) => ({ ori: String(r[0]), label: `${String(r[1])}, ${String(r[2])}`, name: `${String(r[1])}, ${String(r[2])}`, state: String(r[2]) })), "sworn officer");

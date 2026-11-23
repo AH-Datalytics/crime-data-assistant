@@ -103,4 +103,23 @@ const mk = (rows: (s: string) => unknown[][], sql: Sql) => (s: string) => { sql.
     assert.ok(sql.some((s) => /agency_staffing/.test(s)), q);
   }
 }
+// Review 421 M1/M2: the share text names the years; a named place keeps its current outcome; a non-staffing ranking is not staffing.
+{
+  const r = answerStaffSet(parseStaffSet("What share of city police departments that had 500 or more officers in 2024 gained officers in 2025?")!, build, () => [["A", "Alpha", "NY", 600, 650]]);
+  assert.ok(r.kind === "historical" && r.delivered.text.some((t) => /Gained means more sworn officers in 2025 than in 2024 in Crime Index's counts\./.test(t)), JSON.stringify(r));
+  assert.ok(r.kind === "historical" && !r.delivered.text.some((t) => /than the year before/.test(t)));
+  const o = answerStaffSet(parseStaffSet("What 5 city police departments had the most officers in 2031?")!, build, () => []);
+  assert.ok(o.kind === "historical-decline" && o.explanation === "Staffing figures in the data cover 1930 through 2025, so 2031 is outside them.", JSON.stringify(o));
+  const places = loadPlaceIndex();
+  const deps = (sql: Sql) => ({ noDefaults: true, places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] },
+    execute: mk(() => [], sql), historical: build } as never);
+  const sqlTx: Sql = [];
+  const tx = shadowAnswer("Which cities in Texas have the most officers per capita", deps(sqlTx));
+  assert.equal(tx.kind, "decline", JSON.stringify(tx).slice(0, 300));
+  assert.ok(!sqlTx.some((s) => /agency_staffing/.test(s)), "a named place does not take the set path");
+  const sqlM: Sql = [];
+  const mu = shadowAnswer("Which cities have the most murders", deps(sqlM));
+  assert.notEqual(mu.kind, "historical");
+  assert.ok(!sqlM.some((s) => /agency_staffing/.test(s)), "murders are not staffing");
+}
 console.log("staffing-set: all checks passed");
