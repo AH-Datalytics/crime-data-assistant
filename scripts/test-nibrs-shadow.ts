@@ -3291,6 +3291,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.deepEqual(msb.delivered.table.rows.map((r) => r[1]), [...msb.delivered.table.rows.map((r) => r[1])].sort(), "the years in order, a block each");
   // Part of a year by state is still declined.
   assert.equal(ask("what share of all murder clearances in the United States were prosecution declined from March 2023 to 2025 by state").kind === "answer", false);
+  // P180/P181 (Group 5): an under-18 ask with no place and no crime is the United States, all offenses; a national breakdown with no year is the latest year.
+  for (const q of ["show me juvenile arrests", "DUI arrests nationally", "robberies by time of day nationally"]) {
+    const o = liveAsk(q);
+    assert.notEqual(o.kind, "clarify", q);
+  }
 }
 // P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
 // not cleared), never summed.
