@@ -3389,6 +3389,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // The same wording as "by type by year", which answers.
   assert.equal(ask("Detroit murder clearances by year and clearance type in 2023 and 2024").kind, ask("Detroit murder clearances by type by year in 2023 and 2024").kind);
 }
+// Cities ranked with no rank word ("cities by murder rate"): the same ranking as "top cities", never "I couldn't use cities".
+{
+  for (const q of ["cities by murder rate", "cities by homicide rate in 2025", "homicide rates in cities 2019", "city homicide rates in 2024"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && o.reason === "reader"), q);
+  }
+}
 // P191 (Jeff 2026-11-21, reader class): clearance wording and "the entire US" are read, never "I didn't understand".
 {
   const readerDecline = (q: string) => { const o = ask(q); return o.kind === "decline" && o.reason === "reader"; };

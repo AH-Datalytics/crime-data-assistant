@@ -2410,7 +2410,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // Words the reader cannot read ("postal crimes", "cities with gars") keep the old ask for the place, never a ranking that drops them.
     if (citiesAsked &&!ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted") && clause0("measure").some((p) => isHistoricalMeasure(String(p.value)) || (p.value === "unspecified" && !flags(ledger0).clearance)))
       // The cities are stated as the entity, so a crime chosen later by a button (a vague "top 10 crimes") still ranks cities.
-      return fromLedger(clause0("entity").length ? filled(ledger, "place", "national", "the United States") : filled(filled(ledger, "entity", "city", "cities"), "place", "national", "the United States"), deps, pins);
+      return fromLedger(clause0("entity").length ? filled(clause0("rank").length ? ledger : filled(ledger, "rank", "rank:", "ranked"), "place", "national", "the United States") : filled(filled(ledger, "entity", "city", "cities"), "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
     // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
     // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
