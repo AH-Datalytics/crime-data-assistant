@@ -882,6 +882,7 @@ const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 let defaultDepth = 0;
 /** P229: the words of a trend or per-capita question. */
+const UNDER18_WORDS = /\b(?:juveniles?|teen\w*|minors?|youths?|under\s*(?:the\s+age\s+of\s+)?18)\b/i;
 const P229_TREND = /\b(?:rates?|per capita|per 100,?000|trends?|over time)\b/i;
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
@@ -919,9 +920,19 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     let option: ShadowOption | undefined;
     let note = "";
     let byStateRows = false;
+    let heavyOk = false;
     const more: ShadowOption[] = [];
     if (c.about === "which place") {
       option = find(/^The United States$/);
+      // An under-18 ask (juvenile, teen, under 18): the place option built from the ledger asks for a kind of crime that the same question typed with "nationally"
+      // answers (arrests of under-18s, all offenses). The default is that typed question (P180; the way a typed choice gets the defaults, below).
+      if (option && !isDeferred(option) && option.continuation?.kind === "clarify" && UNDER18_WORDS.test(question) && !RANKING_WORDS.test(question)) {
+        defaultDepth++;
+        try {
+          const typedNational = shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} nationally`, deps);
+          if (typedNational.kind !== "clarify" && ANSWER_KINDS.includes(typedNational.kind)) option = { ...option, continuation: typedNational };
+        } finally { defaultDepth--; }
+      }
       // "By state" names the nation's states as the rows (Engine 2.0, 2026-11-22): no note and no place buttons beside a table of every state.
       byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(question);
       note = byStateRows ? "" : "No place was named, so the United States is shown.";
@@ -947,7 +958,12 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
       if (!option) {
         const latest = find(/^The latest complete year \((\d{4})\)$/);
-        if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
+        if (latest) {
+          option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`;
+          // P181 for a national breakdown (Jeff 2026-11-21/22, defaults): every year of a national NIBRS breakdown takes minutes, so the latest complete year
+          // (a few seconds) is the default, said, with the button for another year; the default is the one that runs the statement.
+          heavyOk = NATIONAL_WORDS.test(question);
+        }
       }
       years = true;
       more.push({ label: "Another year", entry: "which year" });
@@ -968,7 +984,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         break;
       }
     }
-    if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
+    if (!option || (isDeferred(option) && !heavyOk) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     if (!byStateRows) notes.push(note);
     buttons.push(...more);
     cur = option.continuation;
