@@ -182,11 +182,15 @@ export function answerClearanceShare(plan: NibrsPlan, spec: ShareSpec, period: {
   // By state (Jeff 2026-11-22): the states with an agency that reported, ranked by the share, highest first (a state with no share, nothing to divide, last);
   // over several years a block for each year, each ranked on its own, never pooled.
   type Row = { state: string; y: number; b: Bucket; f: ReturnType<typeof figures> };
-  const all: Row[] = [...buckets.entries()].filter(([k, b]) => b.agencies && k.split("|")[0]).map(([k, b]) => ({ state: k.split("|")[0], y: Number(k.split("|")[1]), b, f: figures(b) }));
-  all.sort((a, z) => a.y - z.y || (z.f.value ?? -1) - (a.f.value ?? -1) || stateName(a.state).localeCompare(stateName(z.state)));
+  let all: Row[] = [...buckets.entries()].filter(([k, b]) => b.agencies && k.split("|")[0]).map(([k, b]) => ({ state: k.split("|")[0], y: Number(k.split("|")[1]), b, f: figures(b) }));
+  const lowestFirst = (spec as { rank?: { dir: string } }).rank?.dir === "bottom";
+  all.sort((a, z) => a.y - z.y || (a.f.value === null ? 1 : 0) - (z.f.value === null ? 1 : 0) || (lowestFirst ? 1 : -1) * ((a.f.value ?? 0) - (z.f.value ?? 0)) || stateName(a.state).localeCompare(stateName(z.state)));
+  // "Top 5 states": only the first n of each year's ranking are shown (the reader's rank.n).
+  const topN = (spec as { rank?: { n?: number | null } }).rank?.n ?? null;
+  if (topN !== null && topN > 0) { const seen = new Map<number, number>(); all = all.filter((r) => { const k = (seen.get(r.y) ?? 0) + 1; seen.set(r.y, k); return k <= topN; }); }
   if (!all.length) return decline(`No agency reported ${crimes} in ${when}.`);
   const multi = years.length > 1;
-  const rankedBy = "ranked from the highest share to the lowest";
+  const rankedBy = `${lowestFirst ? "ranked from the lowest share to the highest" : "ranked from the highest share to the lowest"}${topN !== null && topN > 0 ? `, the first ${topN}${multi ? " of each year" : ""} shown` : ""}`;
   const lines = [`Share of ${share} (%) by State, ${multi ? `${years[0]}-${years[years.length - 1]}` : year}`,
     `Each share is ${spec.denominator === "clearances" ? `the ${crime} clearances that were ${words.ofClearances}, out of all ${crime} clearances` : `the ${crimes} ${words.ofOffenses}, out of all ${crimes} reported`}, summed over the agencies that reported in ${multi ? "that year" : when}; the states are ${rankedBy}${multi ? " within each year, and the years are not added together" : ""}.`,
     "Includes all agencies."];

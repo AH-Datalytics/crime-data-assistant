@@ -3130,6 +3130,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(/^In the United States in 2025, [\d.]+% of the murder clearances were prosecution declined/.test(nation.delivered.text[0]), nation.delivered.text[0]);
   const byState = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025 by state"), "answer") as unknown as Out;
   assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
+  // QL-nibrs-d40fc08288 (P203 + P173): "which states have the highest/lowest share ..." is every state ranked by the share, in the direction asked.
+  const hi = as(ask("Which states have the highest share of rapes cleared by exception in 2025?"), "answer") as unknown as Out;
+  const lo = as(ask("Which states have the lowest share of rapes cleared by exception in 2025?"), "answer") as unknown as Out;
+  const rankShares = (o: Out) => o.delivered.table.rows.map((r) => r[1]).filter((v): v is number => typeof v === "number");
+  assert.ok(rankShares(hi).length >= 1 && rankShares(hi).every((v, i, a) => i === 0 || a[i - 1] >= v), JSON.stringify(hi.delivered.table.rows));
+  assert.ok(rankShares(lo).length >= 1 && rankShares(lo).every((v, i, a) => i === 0 || a[i - 1] <= v), JSON.stringify(lo.delivered.table.rows));
+  assert.ok(hi.delivered.text[1].includes("from the highest share to the lowest") && lo.delivered.text[1].includes("from the lowest share to the highest"), `${hi.delivered.text[1]} | ${lo.delivered.text[1]}`);
+  // A ranking by state names the states, not a place: no P180 "No place was named" note on this path. "Top 5" keeps the first five of the ranking.
+  assert.ok(!hi.delivered.text.some((t) => /No place was named/.test(t)), hi.delivered.text.join(" | "));
+  const top5 = as(ask("Top 5 states by share of rapes cleared by exception in 2025"), "answer") as unknown as Out;
+  assert.equal(top5.delivered.table.rows.length, 5, JSON.stringify(top5.delivered.table.rows));
+  assert.deepEqual(rankShares(top5), rankShares(hi).slice(0, 5));
   // P180: no place named is the United States, with the note and the place buttons; "by state" needs neither.
   const liveAsk = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
   const noPlace = as(liveAsk("what share of murders were cleared by exception in 2025?"), "answer") as unknown as Out & { buttons?: { label: string }[] };
