@@ -43,6 +43,7 @@
  */
 import type { RequestLedger } from "../request-accounting";
 import { accountNibrsRequest } from "../nibrs-request-accounting";
+import { checkReaderClock } from "../reader-deadline";
 import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
 import { isCommonEnglishWord } from "../english-common-words";
 
@@ -428,6 +429,7 @@ export const SHR_WORDS = /,?\s*\b(?:(?:according\s+to|from|in|per|using|with)\s+
 export const CONSISTENT_WORDS =/,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
 
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
+  checkReaderClock(); // the scorecard's time limit on the reader (a no-op with no limit set)
   const readings: Reading[] = [];
   let text = question;
   const cmp = readComparison(text, currentYear, lastMonth);
