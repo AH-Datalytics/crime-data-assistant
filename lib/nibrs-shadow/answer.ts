@@ -835,6 +835,31 @@ export function allBlankMonthly(o: ShadowOutcome): ShadowOutcome | null {
 }
 
 /**
+ * P147 by year (coordinator 2026-11-22, the go-live bar): a NIBRS count by year for agencies with every year blank is declined like the
+ * monthly series, but only when the agencies reported NO month in the span (QL-nibrs-5e21cfbc08: the Maricopa County Sheriff's Office
+ * has no NIBRS data). A year is also blank when only some of its months were reported; then the table and its gap sentence stay.
+ */
+export function allBlankYearly(o: ShadowOutcome, deps: Pick<ShadowDeps, "execute" | "target">): ShadowOutcome | null {
+  if (o.kind !== "answer") return null;
+  const table = o.delivered.table;
+  const stats = table.columns.map((c, i) => (c.binding.kind === "statistic" ? i : -1)).filter((i) => i >= 0);
+  const yi = table.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension === "time.year");
+  if (yi < 0 || table.columns.some((c) => c.binding.kind === "grouping" && c.binding.dimension !== "time.year")) return null;
+  if (!stats.length || table.rows.length < 2 || !table.rows.every((r) => stats.every((i) => r[i] === null))) return null;
+  if (!o.plan.statistics.length || o.plan.statistics.some((s) => s.kind !== "count") || !o.plan.measures.length) return null;
+  const places = o.plan.geography.places;
+  if (!places.length || places.some((p) => p.kind !== "agency")) return null;
+  const oris = places.map((p) => (p.kind === "agency" ? p.ori : ""));
+  const years = table.rows.map((r) => Number(r[yi])).filter((y) => Number.isInteger(y));
+  if (!years.length || !oris.every((x) => /^[A-Z0-9]{9}$/.test(x))) return null;
+  const reported = Number(deps.execute(`SELECT count(*) FROM read_parquet('${deps.target.root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true)
+    WHERE ori IN (${oris.map((x) => `'${x}'`).join(", ")}) AND data_year BETWEEN ${Math.min(...years)} AND ${Math.max(...years)} AND status IN ('REPORTED_CRIMES', 'REPORTED_ZERO')`)[0]?.[0] ?? 1);
+  if (reported > 0) return null;
+  const listed = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
+  return decline("outside_release_coverage", `No data is available for ${listed(o.plan.measures.map((m) => measureWords(o.plan, m)).filter((w, i, all) => all.indexOf(w) === i))} in ${listed(places.map((p) => (p.kind === "agency" ? p.label : "")))}.`);
+}
+
+/**
  * P151 (Jeff 2026-11-19): under the all-blank decline of one agency's Part I crime, the yearly Crime Index answer is offered when it has a
  * figure ("Ask instead: murders in Oakland in 2021"; by year when the months spanned more than one year).
  */
@@ -975,6 +1000,8 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
+  const blankYears = allBlankYearly(o, deps);
+  if (blankYears) return withYearlyOffer(blankYears, o, deps);
   // A question asked back is the user's own: the age words the reader took out ("teen offenders", "a kid offender") go back in.
   if (o.kind === "clarify" && typeof o.question === "string") {
     const restored = restoreAgeWords(o.question, readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).people);
