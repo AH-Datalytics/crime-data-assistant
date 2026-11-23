@@ -71,6 +71,8 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   region: "noe" | "mdw" | "sth" | "wst" | null;
   /** A circumstance named ("murders during an argument"): element 31's codes, a filter on the victims (null when none). */
   circumstance: string[] | null;
+  /** Incidents with at least this many victims ("involve multiple victims" is 2), null when not asked (P219). */
+  multiVictim: number | null;
   /** "According to NIBRS": the source asked for in words is used and labelled (P01). */
   nibrsAsked: boolean;
   /** "Homicide Reports" in the words: murders from the Homicide Reports series (P152). */
@@ -524,6 +526,16 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   ] as [RegExp, string[], string][]) {
     text = text.replace(re, (m) => { circumstance = [...(circumstance ?? []), ...codes]; readings.push({ kind: "phrase", from: m.trim(), to: `(circumstance: ${name})` }); return ""; });
   }
+  // Multiple victims (Jeff 2026-11-22, P219): incidents with two or more victims, read as a condition on the incident and taken
+  // out of the words, so "victims" does not turn the incident count into a victim count. "N or more victims" and "N+ victims"
+  // set the least number.
+  let multiVictim: number | null = null;
+  text = text.replace(/\b(?:(?:involv\w*|with|having|had|has|have|that\s+(?:involve|had|have)|where\s+there\s+(?:were|are|was))\s+)?(?:(?:multiple|several|more\s+than\s+one|two\s+or\s+more|2\s+or\s+more|2\+|(?:(\d+)|three|four|five)\s*(?:\+|or\s+more))\s+)victims?\b\s*/i, (m, n?: string) => {
+    const word = /\bthree\b/i.test(m) ? 3 : /\bfour\b/i.test(m) ? 4 : /\bfive\b/i.test(m) ? 5 : null;
+    multiVictim = n ? Math.max(2, Number(n)) : word ?? 2;
+    readings.push({ kind: "phrase", from: m.trim(), to: `(incidents with ${multiVictim} or more victims)` });
+    return " ";
+  });
   let region: Flags["region"] = null;
   const REGION_CODE: Record<string, NonNullable<Flags["region"]>> = { northeast: "noe", midwest: "mdw", south: "sth", west: "wst" };
   text = text.replace(/\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west|south|west)(?:ern)?\s+(?:region|u\.?s\.?|united\s+states|states)\b|\b(?:in\s+)?the\s+(north[\s-]?east|mid[\s-]?west|south|west)\b(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)|\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west)(?:ern)?\b(?!\s+(?:city|county|township|village|town|heights|park|borough)\b|\s*,)/i,
@@ -780,7 +792,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, allCities, largestSet, topAsLargest, countywide, region, circumstance, nibrsAsked, shrAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, allCities, largestSet, topAsLargest, countywide, region, circumstance, multiVictim, nibrsAsked, shrAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || shrAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }

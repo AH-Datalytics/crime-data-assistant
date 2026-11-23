@@ -77,6 +77,9 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     const names = f.where[0].values.map((v) => CIRCUMSTANCE[String(v)]?.toLowerCase());
     return names.every(Boolean) ? `where the circumstance was ${names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0]}` : null;
   }
+  // P219: incidents with this many victims of the crime or more ("with more than one victim", "with 3 or more victims").
+  if (f.kind === "attribute" && f.dimension === "incident.victim_count" && f.op === "between" && f.values?.length === 2 && Number(f.values[1]) >= 999 && Number(f.values[0]) >= 2)
+    return Number(f.values[0]) === 2 ? "with more than one victim" : `with ${Number(f.values[0])} or more victims`;
   // Increment 6: a clearance selection (P64, P66): "cleared", "not cleared", "cleared by arrest", "cleared by exceptional means".
   if (f.kind === "attribute" && f.op === "in" && f.values?.length === 1) {
     const v = String(f.values[0]);
