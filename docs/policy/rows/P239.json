@@ -1,0 +1,12 @@
+{
+ "id": "P239",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Drug possession arrests in Houston in 2024\" (a question about possession arrests).",
+ "what the app does today": "The question answers with the drug/narcotic violation arrest count and no note saying that possession is not counted apart from sale.",
+ "proposed behavior": "A question about drug possession arrests answers with all drug/narcotic violation arrests and adds the note: \"NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted.\" The note is not added when the question is about marijuana possession, which is counted by the marijuana drug type. One-year questions carry only the latest-year note, never \"No years were given\" beside it.",
+ "exact default or choices offered": "Count: all drug/narcotic violation arrests for the place and period asked. Note, exactly as written above.",
+ "why": "Jeff 2026-11-23 (through the coordinator): wording approved exactly as written.",
+ "status": "Decided 2026-11-23 (Jeff, through the coordinator); build: Engine 2.0 (PR 412)",
+ "test cases": "\"Drug possession arrests\" in one place and year: count plus the note. \"Marijuana possession arrests\": no note. A one-year question: only the latest-year note."
+}
