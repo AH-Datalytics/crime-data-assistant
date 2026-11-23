@@ -1,0 +1,12 @@
+{
+ "id": "P237",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Where does this data come from? Is this UCR data?\", \"what is the source? are all agencies included (even the ones without consistent reporting)?\"",
+ "what the app does today": "Answers the follow-on question in free wording, or gives only the source description, so the direct answer to the yes-or-no part is missing or changes from one answer to the next.",
+ "proposed behavior": "A question that asks about the source and also asks a direct question about it (is this UCR, are all agencies included) gets a two-part answer. Part one is the fixed source text for the tab (P234), word for word. Part two is one flat sentence that answers the direct question. For Crime Index - Historical: asked whether it is UCR the second part is: \"Yes. This data is part of the FBI's Uniform Crime Reporting (UCR) program.\" Asked whether all agencies are included it is: \"No. An agency that did not report in a year has no figure for that year, and the state and national estimates stand in for the agencies that did not report.\" Under Jeff's rule the data sources other than Crime Index - Current (Historical, NIBRS, Homicide Reports, Hate crimes) are part of the FBI's Uniform Crime Reporting program, so the is-this-UCR answer is Yes for them and not Yes for Crime Index - Current. The Historical source text is: \"Crime Index - Historical holds yearly counts of crimes, law enforcement staffing, and clearances. Police agencies report the figures to the FBI. It has no detail on victims, offenders or weapons, and it has no monthly counts. Crime and staffing data for many agencies is available from 1930 to [most recent year] while state and national estimates are available from 1960 on.\"",
+ "exact default or choices offered": "The P234 source text for the tab, then the one-sentence direct answer, with nothing else added.",
+ "why": "Jeff 2026-11-22 (card through the coordinator): the answer should give the source description and then answer the question asked. On UCR he said all data sources other than Current are part of the FBI's Uniform Crime Report program; on agencies he approved the sentence as drafted.",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+ "test cases": "Labels QL-hist-3a410a21fa and QL-hist-7e62d7c081 (expected values to be set from the build)."
+}
