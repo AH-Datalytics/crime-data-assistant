@@ -61215,7 +61215,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the share of murders cleared by arrest and by each exceptional type, as percentages, for the United States in the latest complete year (2025), with the year said",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -61226,7 +61226,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Label change 2026-11-22 (QL-nibrs-9aed2136c4, Jeff): answered as shares (percentages) of the clearance types, a missing year is the latest complete year, said."
    }
   },
   {

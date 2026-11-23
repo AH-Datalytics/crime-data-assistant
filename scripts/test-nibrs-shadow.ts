@@ -3148,8 +3148,41 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(/^In the United States in 2025, [\d.]+% of the murders reported were cleared by exceptional means/.test(noPlace.delivered.text[0]), noPlace.delivered.text[0]);
   assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
   assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
+  // P229 (Jeff 2026-11-22): a trend or per-capita question with no place and no period is the United States by year since 2019, said, with its buttons.
+  for (const q of ["murder rate", "robbery rate trend in NIBRS"]) {
+    const o = shadowAnswer(q, { ...deps, noDefaults: false, deferChars: 1 }) as unknown as Out & { buttons?: { label: string }[] };
+    assert.ok(/(?:by|per) Year/i.test(o.delivered.text[0]), `${q}: ${o.delivered.text.join(" | ")}`);
+    assert.ok(o.delivered.text.includes("No place was named, so the United States is shown."), `${q}: ${o.delivered.text.join(" | ")}`);
+    assert.ok(o.delivered.text.some((t) => /^No years were given, so 2019 through \d{4} is shown\.$/.test(t)), `${q}: ${o.delivered.text.join(" | ")}`);
+    for (const b of ["A state", "A city or agency", "Another year"]) assert.ok((o.buttons ?? []).some((x) => x.label === b), `${q}: button ${b} in ${(o.buttons ?? []).map((x) => x.label).join(",")}`);
+  }
+  // A named period is never replaced by the since-2019 default (coordinator review of 403, 2026-11-23).
+  for (const q of ["NIBRS robbery rate in 2023", "murder rate since 2021 in NIBRS", "NIBRS murder rate last year"]) {
+    const o = liveAsk(q) as unknown as Partial<Out>;
+    assert.ok(!(o.delivered?.text ?? []).some((t) => /No years were given, so 2019|by year from 2019/.test(t)), `${q}: ${(o.delivered?.text ?? []).join(" | ")}`);
+  }
+  // A national NIBRS rate by year: each year's rate divides that year's own populations; no rate where a counted agency has no population.
+  const rateYr = liveAsk("robbery rate trend in NIBRS in the United States by year from 2019 to 2024") as unknown as Out;
+  assert.ok(rateYr.delivered.table.rows.length >= 2 && rateYr.delivered.text.some((t) => /^Each year's rate uses the combined population/.test(t)), rateYr.delivered.text.join(" | "));
   // The national clearance share is exempt from the heavy-statement deferral (coordinator 2026-11-22), so a tiny limit still answers it.
   assert.equal(shadowAnswer("what share of murders were cleared by exception in 2025?", { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
+  // 9aed2136c4 (Jeff 2026-11-22): "what percentage ... arrest vs exceptional nationally" with no year is the latest complete year, said, as shares of the clearance types.
+  const cols = (o: Out) => (o.delivered.table as unknown as { columns: { header: string }[] }).columns;
+  const arrQ = "What percentage of murders are cleared by arrest vs exceptional nationally?";
+  const arrShare = as(liveAsk(arrQ), "answer") as unknown as Out & { buttons?: { label: string }[] };
+  assert.ok(/Clearance Type, 2025$/.test(arrShare.delivered.text[0]), arrShare.delivered.text[0]);
+  assert.ok(arrShare.delivered.text.includes("No year was given, so the latest complete year, 2025, is shown."), arrShare.delivered.text.join(" | "));
+  assert.ok(cols(arrShare).some((c) => /^Share of all murder victims \(%\)$/.test(c.header)), JSON.stringify(cols(arrShare)));
+  const arrPct = arrShare.delivered.table.rows.map((r) => Number(r[r.length - 1]));
+  assert.equal(arrShare.delivered.table.rows.length, 7);
+  assert.ok(Math.abs(arrPct.reduce((a, b) => a + b, 0) - 100) < 0.7, arrPct.join(","));
+  // Exempt from the heavy-statement deferral, like the other national clearance share.
+  assert.equal(shadowAnswer(arrQ, { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
+  // Narrow: a count of the same clearance types with no year, and an ordinary national count with no year, are not defaulted to a year by this.
+  const arrCount = liveAsk("how many murders were cleared by arrest vs exceptional nationally") as unknown as Partial<Out>;
+  assert.ok(!(arrCount.delivered ? cols(arrCount as Out) : []).some((c) => /^Share of/.test(c.header)) && !(arrCount.delivered?.text ?? []).some((t) => /No year was given/.test(t)), JSON.stringify(arrCount.delivered?.text));
+  const arrYear = as(liveAsk("What percentage of murders are cleared by arrest vs exceptional nationally in 2024?"), "answer") as unknown as Out;
+  assert.ok(!arrYear.delivered.text.some((t) => /No year was given/.test(t)) && /Clearance Type, 2024$/.test(arrYear.delivered.text[0]), arrYear.delivered.text.join(" | "));
   const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
   assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
   assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));
