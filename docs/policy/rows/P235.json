@@ -1,0 +1,12 @@
+{
+ "id": "P235",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"domestic violence victims in Houston by year\", \"how many domestic violence victims were there in Baltimore in 2023\", \"IPV in Dallas\"",
+ "what the app does today": "Counts domestic violence victims as P82 and P170 define them, with one note defining the term; the note gives no split between partner and family.",
+ "proposed behavior": "Domestic violence stays partner plus family or household member, as P82 and P170 define it. The note under the answer gives both counts for the period: the victims whose offender was an intimate partner and the victims whose offender was a family or household member, beside the total that is each victim counted once. A victim with an offender of each kind is in both counts, so the two counts can add to more than the total; the note says so in one short sentence. Asked for \"intimate partner violence\" or \"IPV\" the answer is the partner count only, and for \"family violence\" the family count only, each with its own definition (P170). The count in the table and the note read from the same victims. Murders stay with Homicide Reports (P169).",
+ "exact default or choices offered": "The total victims count (by year or month) in the table, with a note giving the partner count, the family or household count, the overlap sentence, and the one-sentence definition.",
+ "why": "Jeff 2026-11-22 (card through the coordinator): domestic violence = partner plus family, show both counts in the note.",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+ "test cases": "Labels that ask for domestic violence victims for one agency (expected values to be set from the build)."
+}

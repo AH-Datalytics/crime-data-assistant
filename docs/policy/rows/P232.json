@@ -1,0 +1,12 @@
+{
+ "id": "P232",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Show me arrests for violent crimes in the following age groups: under 18; 18 to 24; 25 to 39; and 40 and older\", \"arrests by age group\", \"how many violent crimes in 2025 had one or more offenders under age 18\"",
+ "what the app does today": "Asks which place, then declines (reader).",
+ "proposed behavior": "An age split of offenders, victims or arrestees is a table of the seven bands the NIBRS data holds: Under 18, 18-24, 25-34, 35-44, 45-54, 55-64, 65 and older, then Unknown last. Columns: band, count, share. Unknown is in the share's denominator, so the shares add to 100 percent. Nation by default, latest complete year (P180, P181), from NIBRS. Bands may be merged for counts of people (18-34 is 18-24 plus 25-34), never for counts of incidents, because one incident can have people in several bands. A request for a cut the bands cannot make (\"25 to 39\", \"40 and older\") is answered with the seven bands and one plain sentence saying the data holds ages only in those bands, naming the nearest bands (25-34 and 35-44; 45 and older). Finer bands and single-year age are not available until the December cube rebuild. The offense data holds no age.",
+ "exact default or choices offered": "The seven-band table with Unknown, counts and shares, the note on any cut that cannot be made, then the Source line.",
+ "why": "Jeff 2026-11-22 (card through the coordinator): seven bands now, finer bands in December. NIBRS Model: the offender, victim and arrestee cubes store age only as these bands plus Unknown and a junk-value group.",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Engine",
+ "test cases": "Label QL-ct-dca05cf955 (answer nibrs: the seven-band table with the note on 25 to 39 and 40 and older; expected values to be set from the build)."
+}

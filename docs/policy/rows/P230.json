@@ -1,0 +1,12 @@
+{
+ "id": "P230",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"what cities have seen the largest drops in homicide rate since 2019\", \"which cities had the largest violent crime rate reduction in 2025\", \"In what cities (with a population of at least 100,000) did violent crime increase in April\", \"show me the top 10 cities over 250000 people with the slowest decline in violent crime since 2020\"",
+ "what the app does today": "Asks which place, then declines (reader).",
+ "proposed behavior": "Cities that rose or fell: the city agencies of 100,000 or more (a population named in the question replaces 100,000), ranked by the percent change in the crime or rate between the two periods asked, the biggest change in the direction asked first, the top 10 unless a number is named. A table: City, then, now, change, with a bar chart (as P128). A period given as \"since 2019\" is 2019 against the latest complete year (P181); a single year or month is that period against the one before it. \"Largest drop\", \"largest reduction\" and \"steepest decline\" rank falls; \"increase\" and \"rose\" rank rises; \"slowest decline\" ranks the smallest falls. No place named is the nation's cities (P180). A city with no figure in either period is left out, never counted as 0.",
+ "exact default or choices offered": "Table of the top 10 cities by percent change, nation, 100,000 or more, with the Source line and the note naming the two periods.",
+ "why": "Jeff 2026-11-22 (card through the coordinator).",
+ "status": "Decided 2026-11-22 (Jeff, through the coordinator); build: Capability (reader) and Engine (ranking by change)",
+ "test cases": "Labels QL-ct-247796b1f4, QL-ct-43ea35c0f4, QL-ct-20af00a1f6, QL-ct-21fe490120 (answers; expected values to be set from the build)."
+}
