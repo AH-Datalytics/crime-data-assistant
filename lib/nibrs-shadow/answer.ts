@@ -1735,10 +1735,13 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   const crimes = [...new Set(c0.filter((p) => p.concept === "measure").map((p) => String(p.value)))];
   if (crimes.length !== 1 || !["murder", "homicide", "homicide_all"].includes(crimes[0])) return null;
   const rank = c0.find((p) => p.concept === "rank");
-  const rankVal = /^(top|bottom):(\d*)$/.exec(String(rank?.value ?? ""));
+  const rankVal = /^(top|bottom|rank):(\d*)$/.exec(String(rank?.value ?? ""));
+  // "top-5" reads as the bare rank "rank:"; only the word "top" is taken that way (a "bottom-5" keeps its old route, never read as the top).
+  if (rankVal?.[1] === "rank" && rank?.text.trim().toLowerCase() !== "top") return null;
   // The size is a number written beside the rank or the entity word ("top 5", "5 cities"), never a stray number (a month's day, a count in another place).
-  const nWord = c0.find((p) => p.concept === "unrecognized" && /^\d{1,3}$/.test(p.text.trim())
-    && (() => { const n = p.text.trim(); return new RegExp(String.raw`\b(?:top|bottom|highest|lowest|most|least)\s+${n}\b|\b${n}\s+(?:(?:big|large|largest|biggest)\s+)?(?:cities|city)\b`, "i").test(ledger0.question); })());
+  const sizeOf = (p: { text: string }) => /^(?:the\s+|-\s*)?(\d{1,3})(?:\s+by)?$/.exec(p.text.trim())?.[1];
+  const nWord = c0.find((p) => p.concept === "unrecognized" && sizeOf(p) !== undefined
+    && (() => { const n = sizeOf(p)!; return new RegExp(String.raw`\b(?:top|bottom|highest|lowest|most|least)[\s-]*${n}\b|\b${n}\s+(?:(?:most|least|highest|lowest|safest|deadliest|\w+est)\s+)?(?:\w+\s+)?(?:cities|city)\b|\b${n}\s+(?:most|least|highest|lowest|safest|deadliest|\w+est)\b`, "i").test(ledger0.question); })());
   if (!rankVal || !c0.some((p) => p.concept === "entity" && p.value === "city")) return null;
   // A unit other than victims, or a place, isn't read here.
   if (c0.some((p) => (p.concept === "unit" && p.value !== "victims") || p.concept === "place" || p.concept === "clearance" || p.concept === "clearance-reason" || p.concept === "breakdown" || (p.concept === "threshold" && !minTotal))) return null;
@@ -1776,7 +1779,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
     return decline("outside_release_coverage", `Homicide Reports in the data run through ${latest.slice(0, 4)}, so ${fromY} is outside them.`);
   const to = toY >= Number(latest.slice(0, 4)) ? latest : `${toY}-12`;
   const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide" | "homicide_all", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
-    limit: rankVal[2] ? Number(rankVal[2]) : nWord ? Number(nWord.text.trim()) : 20, minPopulation: flags(ledger0).largeCities ? 250000 : null, ...(minTotal ? { minTotal } : {}) }, deps.shr, deps.historical, deps.execute);
+    limit: rankVal[2] ? Number(rankVal[2]) : nWord ? Number(sizeOf(nWord)) : 20, minPopulation: flags(ledger0).largeCities ? 250000 : null, ...(minTotal ? { minTotal } : {}) }, deps.shr, deps.historical, deps.execute);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 

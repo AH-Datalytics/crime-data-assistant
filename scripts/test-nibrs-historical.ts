@@ -602,11 +602,10 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const pop5k = shadowAnswer("cities with min 5,000 residents by murder count in 2024", b0 as never);
     assert.ok(pop5k.kind === "historical" && !/minimum number of murders/.test(JSON.stringify(pop5k)), "a stated population stays a population floor");
     // Review 419 item 6: a several-crimes ranking that cannot be built is declined with its reason, never one crime with the others dropped.
-    for (const q of ["Which states have the highest murder rate and robbery rate in 2024?", "Top 10 cities by murder rate and robbery rate in 2021 to 2024"]) {
-      const m = shadowAnswer(q, b0 as never);
-      assert.ok(m.kind === "decline" || m.kind === "clarify" || (m.kind === "historical" && m.delivered.table.columns.length >= 3), q + ": " + JSON.stringify(m).slice(0, 300));
-      if (m.kind === "decline") assert.ok((/murder/i.test(m.explanation) && /robbery/i.test(m.explanation)) || /several crimes side by side/i.test(m.explanation), q + ": a decline names every crime it could not rank, or says why: " + m.explanation);
-    }
+    const st = shadowAnswer("Which states have the highest murder rate and robbery rate in 2024?", b0 as never);
+    assert.ok(st.kind === "decline" && /^States are ranked one crime at a time\./.test(st.explanation) && /murder/.test(st.detail ?? "") && /robbery/.test(st.detail ?? ""), "states: a decline that says why and names both crimes: " + JSON.stringify(st).slice(0, 400));
+    const mc = shadowAnswer("Top 10 cities by murder rate and robbery rate in 2021 to 2024", b0 as never);
+    assert.ok(mc.kind === "decline" && /^A ranking with several crimes side by side is built for Historical/.test(mc.explanation) && /for one year/.test(mc.explanation), "several years of several crimes: declined with its reason, never one crime: " + JSON.stringify(mc).slice(0, 400));
   }
   // Every agency, city and county: no type in the query.
   rsql.length = 0;

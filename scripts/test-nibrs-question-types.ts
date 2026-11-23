@@ -86,7 +86,9 @@ check(decide("top 10 murder weapons").kind === "decline", "\"top 10 murder weapo
 check(decide("most common offenses").kind === "none", "\"most common offenses\" stays unmatched");
 {
   const t = decide("top 10 crimes in 2025");
-  check(t.kind !== "spec" || (t.spec.type === "rank" && t.spec.entity === "city"), "\"top 10 crimes\" is only ever a city ranking, never another reading");
+  check(t.kind === "spec" && t.spec.type === "rank" && t.spec.entity === "city" && t.spec.statistic === "count" && t.spec.rank?.n === 10
+    && t.spec.measure === "violent_crime" && t.spec.more?.join() === "property_crime" && t.spec.period.form === "year" && t.spec.period.year === 2025,
+  `"top 10 crimes in 2025" is the top 10 cities by violent and property crime counts (${JSON.stringify(t)})`);
 }
 // Item 1: a crime named alone ranks by count.
 const r7 = spec("highest murder in 2025");
