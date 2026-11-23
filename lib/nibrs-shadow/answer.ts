@@ -913,7 +913,12 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         try {
           // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
           // A synthetic series must answer as a series, not default again to one year and keep the added year grouping.
-          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, { ...d, noDefaults: true }), deps);
+          // When that series itself only lacks a place or a kind of crime ("top 10 largest cities rates"), it is built with the defaults on, as before; one that asks for a period cannot be a series.
+          const byYear = `${c.question.replace(/[?.!\s]+$/, "")} by year`;
+          const o = deferHeavy("Every year available", (d) => {
+            const direct = shadowAnswer(byYear, { ...d, noDefaults: true });
+            return direct.kind === "clarify" && !/^which (?:period|range of years|years)$/.test(direct.about) ? shadowAnswer(byYear, d) : direct;
+          }, deps);
           if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
