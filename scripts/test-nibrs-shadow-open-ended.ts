@@ -37,4 +37,6 @@ for (const [id, q] of ABSENT) run(id, () => { const o = shadowAnswer(q, deps) as
 run("a question with a year and a crime is not open-ended", () => assert.notEqual((shadowAnswer("murders in Denver in 2024", deps) as unknown as { about?: string }).about, "the whole question"));
 run("major crime trends with a year is not caught", () => assert.notEqual((shadowAnswer("major crime trends in Denver in 2024", deps) as unknown as { about?: string }).about, "the whole question"));
 run("a place that contains a time line word is not caught", () => assert.notEqual((shadowAnswer("robberies in Denver in 2024", deps) as unknown as { about?: string }).about, "the whole question"));
+for (const q of ["What's going on in Denver with robberies in 2024?", "Show a time line of robberies in Denver from 2020 to 2024.", "Tell me more about the number of murders in Chicago in 2024.", "How many crime incidents involving robbery occurred in Denver since 2020?", "Show a time line of robberies in Denver in 2024 with a logarithmic scale."])
+  run(`a named crime is not open-ended: ${q}`, () => assert.notEqual((shadowAnswer(q, deps) as unknown as { about?: string }).about, "which part to show"));
 if (failed) { console.log(`${failed} failed`); process.exit(1); }

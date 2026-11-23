@@ -1006,14 +1006,19 @@ function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps):
  * "tell me more about", "what's going on in", "a time line of", "major/top crime trends" with no year, "how many crime incidents
  * ... since YEAR", "is X's murder rate ... considered high", "what Part 1 data do you have".
  */
-const OPEN_ENDED_ANY = /\btell\s+me\s+more\s+about\b|\bwhat(?:'|’)?s\s+(?:going\s+on|happening)\s+in\b|\btime\s*line\s+of\b|\bconsidered\s+high\b|\bpart\s+1\s+data\s+do\s+you\s+have\b/i;
+const OPEN_ENDED_ANY = /\btell\s+me\s+more\s+about\b|\bwhat(?:'|’)?s\s+(?:going\s+on|happening)\s+in\b|\btime\s*line\s+of\b/i;
+const OPEN_ENDED_ALWAYS = /\bconsidered\s+high\b|\bpart\s+1\s+data\s+do\s+you\s+have\b/i;
 const OPEN_ENDED_NO_YEAR = /\b(?:major|top)\s+(?:nationwide\s+)?crime\s+trends\b/i;
 const OPEN_ENDED_SINCE = /\bhow\s+many\s+crime\s+incidents\b[^?]*\bsince\s+(?:19|20)\d\d\b/i;
-export function isOpenEnded(question: string): boolean {
+export function isOpenEnded(question: string, year = 2026): boolean {
+  // Only when no crime or measure is named (Codex 434: "time line of robberies in Denver ..." is a plain question) and not a chart edit.
+  if (isChartEdit(question)) return false;
+  if (OPEN_ENDED_ALWAYS.test(question)) return true;
+  if (readQuestion(question, year).ledger.parts.some((p) => p.concept === "measure" && p.state === "recognized" && p.value !== "unspecified")) return false;
   return OPEN_ENDED_ANY.test(question) || OPEN_ENDED_SINCE.test(question) || (OPEN_ENDED_NO_YEAR.test(question) && !/\b(?:19|20)\d\d\b/.test(question));
 }
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  if (!depsIn.rewritten && !depsIn.checkingOffer && isOpenEnded(question))
+  if (!depsIn.rewritten && !depsIn.checkingOffer && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
     return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
