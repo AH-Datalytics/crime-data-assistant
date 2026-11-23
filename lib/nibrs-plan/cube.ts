@@ -370,6 +370,20 @@ export function cubeUnits(a: CubeAsk): { sql: string } | null {
 }
 
 /**
+ * The agency-months with any arrest, from the arrests cube's all-offense row (Model, group-v4-canon2: unit 'arrestee', crime_group 'all_crime', attribute 'none',
+ * one row per ori, arrest month and source A or B). A month has an arrest when the rows of either source hold one or more people; the sources are summed only for
+ * this yes-or-no test, never as a count of people. Null when the group-v4 cube is absent or lacks a year the raw scan would read. Columns: ori, ym.
+ */
+export function cubeAnyArrestMonths(cfg: CubeConfig, years: number[]): { sql: string } | null {
+  if (!cfg.groupV4 || !years.length || !years.every((y) => cfg.years.includes(y))) return null;
+  const files = years.map((y) => q(`${cfg.root}/canonical/cube/data_year=${y}/data.parquet`)).join(", ");
+  return { sql: `SELECT ori, month_key AS ym
+      FROM read_parquet([${files}], hive_partitioning = true)
+      WHERE unit = 'arrestee' AND source IN ('A', 'B') AND crime_group = 'all_crime' AND attribute = 'none'
+      GROUP BY ori, month_key HAVING SUM(n_distinct_units) > 0` };
+}
+
+/**
  * Offenses and incidents of one or more offense codes, from the offense-and-incident cube (cube 1). The cube holds one row per (ori, month, offense code, attribute, value) with
  * `n_distinct_units` (offenses: the engine's offense unit, ori + incident + code + occurrence key) and `n_distinct_incidents`. Offenses add across codes, ORIs, months and the
  * values of one attribute. Distinct incidents add across ORIs and months within ONE code, and across the values of incident_hour and clearance_type (an incident has one of each);
