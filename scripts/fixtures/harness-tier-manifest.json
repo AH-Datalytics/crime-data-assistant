@@ -2589,7 +2589,7 @@
       "databases": [],
       "seed_profile": "empty",
       "requires": [],
-      "note": "The scorecard's shard launcher (scripts/scorecard-shards.cjs, run-qlog-scorecard.ts --workers N) with real child processes: shards that finish; a shard that stalls once is stopped by the watchdog (its process tree), the question it was on is recorded as an error and it resumes after it; a shard that keeps stalling is given up after its restarts; a shard that fails is a bad shard, not a stall. Offline: fake shards, no data, no DuckDB."
+      "note": "The scorecard's shard launcher (scripts/scorecard-shards.cjs, run-qlog-scorecard.ts --workers N) with real child processes: shards that finish; a shard that stalls once is stopped by the watchdog (its process tree), the question it was on is recorded as an error and it resumes after it; a shard that keeps stalling is given up after its restarts; a shard that fails is a bad shard, not a stall; a reader that overruns (the label alone in the current file) is stopped sooner, its question is an error and it uses up no restart, while a question waiting for the database is left to the stall limit; the reader's own clock (lib/reader-deadline.ts). Offline: fake shards, no data, no DuckDB."
     },
     {
       "id": "test-nibrs-duckdb-executor",

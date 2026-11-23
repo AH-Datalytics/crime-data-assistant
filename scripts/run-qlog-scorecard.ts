@@ -60,6 +60,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { startReaderClock, noteDatabaseTime } from "../lib/reader-deadline";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor, SERVER as DUCKDB_SERVER } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
@@ -81,6 +82,9 @@ const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), roo
 // an error on the scorecard either way.
 const python = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!;
 const LIMIT_MS = Number(arg("--timeout-ms", "120000"));
+// The reader's own limit (reading the question, database time left out): a question whose reading takes longer is an error, never a hang.
+// The shard watchdog stops a reader that overruns this by --reader-kill-s (a backstop for a reading that never reaches a check).
+const READER_MS = Number(arg("--reader-limit-s", "45")) * 1000;
 // DuckDB's memory and threads (the runner laptop, 16 GB, was killed twice for low memory on uncached spot runs under
 // DuckDB's default, 80% of RAM): 4GB and 4 threads unless a flag or SCORECARD_DUCKDB_MEMORY / SCORECARD_DUCKDB_THREADS
 // says otherwise. They never change a query's rows, so the cache and run identities don't include them.
@@ -122,11 +126,19 @@ let nextMs: number | null = null;
 const TIMEOUT = /no answer within/;
 const live = (sql: string) => {
   if (nextMs !== null) { replace(nextMs); nextMs = null; }
+  // The database's time is not the reader's: the shard watchdog's reader limit and the reader's own clock both leave it out.
+  const began = Date.now();
+  markPhase("database");
   try { return exec(sql); } catch (e) {
     if (/no answer within|process exited/.test(String(e))) nextMs = LIMIT_MS;
     throw e;
-  }
+  } finally { noteDatabaseTime(Date.now() - began); markPhase("reader"); }
 };
+/** The label the shard is on, and whether it is reading the question or waiting for the database (the watchdog stops a reader that overruns). */
+let currentId = "";
+function markPhase(phase: "reader" | "database") {
+  if (SHARD && currentId) fs.writeFileSync(`${PROGRESS}.current`, phase === "database" ? `${currentId}\tdatabase` : currentId);
+}
 
 /**
  * What the cache's rows depend on: both data roots (every file's path from its root, size and time), the release, and
@@ -154,7 +166,7 @@ function buildFingerprint(): string {
  */
 function runFingerprint(): string {
   const labelsHash = createHash("sha256").update(fs.readFileSync(LABELS)).digest("hex");
-  const h = createHash("sha256").update(JSON.stringify({ spot: SPOT, labels: labelsHash, root, crimeIndex, release: release.id, limitMs: LIMIT_MS }));
+  const h = createHash("sha256").update(JSON.stringify({ spot: SPOT, labels: labelsHash, root, crimeIndex, release: release.id, limitMs: LIMIT_MS, readerMs: READER_MS }));
   const repo = path.join(__dirname, "..");
   const walk = (dir: string) => {
     if (!fs.existsSync(dir)) return;
@@ -273,7 +285,7 @@ const limit = Number(arg("--limit", "0")) || Infinity;
 let shardFailed = false;
 if (WORKERS > 1 && !SHARD) {
   // N shards at once, each this script on every Nth label with its own DuckDB process, progress file and cache file.
-  const own = new Set(["--workers", "--progress", "--report", "--compare", "--shard-stall-min"]);
+  const own = new Set(["--workers", "--progress", "--report", "--compare", "--shard-stall-min", "--reader-kill-s"]);
   const rest: string[] = [];
   for (let i = 2; i < process.argv.length; i++) {
     if (own.has(process.argv[i])) { if (process.argv[i] !== "--report") i++; continue; }
@@ -284,7 +296,7 @@ if (WORKERS > 1 && !SHARD) {
   if (!rest.includes("--duckdb-memory") && !process.env.SCORECARD_DUCKDB_MEMORY) split.push("--duckdb-memory", `${Math.max(1, Math.floor((os.totalmem() / 2 ** 30) * 0.6 / WORKERS))}GB`);
   if (!rest.includes("--duckdb-threads") && !process.env.SCORECARD_DUCKDB_THREADS) split.push("--duckdb-threads", String(Math.max(1, Math.floor(os.cpus().length / WORKERS))));
   const cmds = Array.from({ length: WORKERS }, (_, i) => [process.execPath, ...process.execArgv, process.argv[1], ...rest, ...split, "--progress", shardFile(i), "--shard", `${i}/${WORKERS}`, "--done-from", PROGRESS]);
-  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, restarts: 2 };
+  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, readerStallMs: Number(arg("--reader-kill-s", "60")) * 1000, restarts: 2 };
   const r = spawnSync(process.execPath, [path.join(__dirname, "scorecard-shards.cjs"), JSON.stringify(cfg)], { stdio: "inherit" });
   for (let i = 0; i < WORKERS; i++) readProgress(shardFile(i), done);
   if (r.status !== 0) { shardFailed = true; console.log("a shard stopped early; run again to finish (done questions are kept)"); }
@@ -307,6 +319,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
   if (ran >= limit || !mine(i)) return;
   if (done.has(l.id) || l.expected.outcome === "exclude") return;
   const t = Date.now();
+  currentId = l.id; startReaderClock(READER_MS);
   if (SHARD) fs.writeFileSync(`${PROGRESS}.current`, l.id);
   const once = () => (l.kind === "follow-up" && l.previous ? shadowFollowUp(l.previous, l.question, deps) : shadowAnswer(l.question, deps));
   let g: Got | null;
@@ -342,6 +355,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
     g = { kind: "error", source: null, reason: String(e).slice(0, 120), ms: Date.now() - t };
   }
   fs.appendFileSync(PROGRESS, JSON.stringify({ id: l.id, got: g }) + "\n");
+  currentId = ""; startReaderClock(null);
   if (SHARD) fs.writeFileSync(`${PROGRESS}.current`, "");
   done.set(l.id, g);
   if (++ran % 100 === 0) console.log(`${SHARD ? `shard ${SHARD[0]}: ` : ""}${ran} run (${done.size} of ${labels.length} labels done)${cacheOut ? `; queries from the cache ${hits}, from DuckDB ${misses}` : ""}`);
