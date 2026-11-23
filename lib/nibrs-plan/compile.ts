@@ -562,8 +562,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const inYears = (col: string) => (yearSet ? ` AND substr(${col}, 1, 4) IN (${list(yearSet.map(String))})` : "");
   const from = span.from.replace("-", ""), to = span.to.replace("-", "");
   const firstYear = Number(span.from.slice(0, 4));
-  // An arrest dated in year Y sits in data year Y - 1 (late-reported), Y, or a later file (P50, Jeff 2026-11-23), so a period from FIRST reads the data years FIRST - 1 through the latest built year; the arrest-date filter does the rest.
-  const years = isArrest ? (t.arrestYears ?? t.builtYears).filter((y) => y >= firstYear - 1) : t.builtYears.filter((y) => y >= firstYear);
+  // An arrest is counted by its arrest date wherever it is filed (P50, Jeff 2026-11-23): mostly data year Y - 1, Y or later, but the Runner found arrests dated 2020 in the 2017 and 2018 files (210 of 237,919 marijuana arrests). So every built data year is read whatever the span start, plus the year before the first built year when the span reaches back that far (late-reported arrests of the first built year); the arrest-date filter selects the span. A span starting after the first built year therefore needs no year outside the built years, which is what lets the cube serve it.
+  const years = isArrest ? (t.arrestYears ?? t.builtYears).filter((y) => y >= firstYear - 1 || t.builtYears.includes(y)) : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   // The agency-month status is the month's own (an arrest month counts whatever its status), so it stays on the built years.
   const read = (table: string) => `read_parquet([${(table === "agency_month_status" && isArrest ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
