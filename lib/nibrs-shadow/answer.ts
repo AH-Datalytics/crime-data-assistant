@@ -2388,6 +2388,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+    // Cities ranked by a named measure with no place (Jeff 2026-11-23, rankings group A): the nation's cities, the same ranking as "big
+    // cities" without the size flag; its own size words, number and year are read as usual and the rate floor is stated by the ranking.
+    const citiesAsked = clause0("entity").some((p) => p.value === "city") || clause0("list").some((p) => p.value === "list:city")
+      || (clause0("rank").length > 0 && !clause0("entity").length);
+    if (citiesAsked && clause0("measure").some((p) => isHistoricalMeasure(String(p.value))))
+      return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
     // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
     // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.

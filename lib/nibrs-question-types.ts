@@ -252,10 +252,11 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   const stateShareRanking = share.length > 0 && entityParts.some((p) => p.value === "state")
     && of("filter").some((p) => /^clearance:/.test(p.value ?? "")) && !thresholdParts.length && !breakdowns.length && placeParts.every((p) => placeOf(p)?.kind === "national");
   // ---- N6: rankings (rank words, a threshold, or a list of entities) ----
-  if (!stateShareRanking && (rankParts.length || thresholdParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:"))))) {
-    take(rankParts); take(thresholdParts); take(entityParts); take(clearance);
+  const cityListParts = listParts.filter((p) => p.value === "list:city");   // "violent crime counts by city in 2025": the same ranking of cities (Jeff 2026-11-23)
+  if (!stateShareRanking && (rankParts.length || thresholdParts.length || cityListParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:"))))) {
+    take(rankParts); take(thresholdParts); take(entityParts); take(clearance); take(cityListParts);
     // Counties ranked (Jeff 2026-11-10): the county's own agency, the sheriff or county police.
-    const entity0 = entityParts.map((p) => p.value)[0] ?? (rankParts.length ? null : null);
+    const entity0 = entityParts.map((p) => p.value)[0] ?? ((rankParts.length && listParts.length === 0) || cityListParts.length ? "city" : null);   // "Top 10 auto theft rates in 2025": cities (Jeff 2026-11-23, rankings group A)
     const entity = entity0 === "counties" ? "county" : entity0;
     if (!entity || !["state", "city", "agency", "county"].includes(entity)) return { kind: "none" };
     if (measures.length !== 1) return { kind: "none" };

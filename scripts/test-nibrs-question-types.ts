@@ -67,6 +67,12 @@ check(r1?.type === "rank" && r1.statistic === "clearance_rate" && r1.rank?.n ===
 const r2 = spec("which state has the highest murder rate in 2025?");
 check(r2?.type === "rank" && r2.entity === "state" && r2.rank?.n === 1, "\"which state has the highest\" is the top 1");
 
+// Rankings group A (Jeff 2026-11-23): no entity word, or "by city", still ranks cities in the nation.
+const r3 = spec("Top 10 auto theft rates in 2025");
+check(r3?.type === "rank" && r3.entity === "city" && r3.statistic === "rate" && r3.rank?.n === 10 && r3.scope.kind === "national", "\"top 10 ... rates\" with no entity ranks cities");
+const r4 = spec("violent crime counts by city in 2025");
+check(r4?.type === "rank" && r4.entity === "city" && r4.statistic === "count" && r4.rank === null, "\"counts by city\" is a city ranking with the default size");
+
 // ---- N7 change ----
 const c1 = spec("change in robberies in Fort Worth, Texas from 2023 to 2025");
 check(c1?.type === "change" && c1.earlier === 2023 && c1.later === 2025, "N7: the earlier year is the base");
