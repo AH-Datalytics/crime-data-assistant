@@ -91,6 +91,8 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
 /** "list nibrs offense codes in group b", "offense codes starting with 2", "what are the ucr codes": which list is asked, or null. */
 function readCodeList(t: string): CodeList | null {
   if (t.split(/\s+/).length > 16 || /\b(?:19|20)\d{2}\b|\bhow\s+many\b|\b(?:mean|means|meaning|definition|define|difference)\b|\bwhat\s+(?:does|is)\b/i.test(t)) return null;
+  // An instruction to change or add to something ("add the plain language to the offense code and give me a table") is not a request for the list.
+  if (/\b(?:add|adding|plain\s+language|translate|rewrite|convert|include|put|make|create|edit|update|change|explain|describe|summari[sz]e)\b/i.test(t)) return null;
   if (!/\b(?:[nl]ibrs|ucr|offense)\s+(?:offense\s+)?codes?\b|\bcodes?\s+(?:in|for|of)\s+(?:nibrs|ucr)\b/i.test(t)) return null;
   const prefix = t.match(/\b(?:starting|starts?|beginning|begins?)\s+with\s+(?:the\s+(?:number|digit)\s+)?([0-9])\b/i);
   if (prefix) return { by: "prefix", prefix: prefix[1] };

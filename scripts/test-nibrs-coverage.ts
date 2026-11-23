@@ -126,6 +126,8 @@ assert.ok(codeRows("list of property offense codes in nibrs").includes("23A") &&
 assert.ok(codeRows("list of person offense codes in nibrs").includes("09A") && !codeRows("list of person offense codes in nibrs").includes("09C") && !codeRows("list of person offense codes in nibrs").includes("23A"));
 assert.deepEqual(codeRows("list nibrs offense codes in group b"), ["90B", "90C", "90D", "90F", "90G", "90J", "90K", "90L", "90M", "90Z"].sort((a, b) => a.localeCompare(b)));
 assert.ok(ask("list nibrs offense codes in group b").delivered.text.some((l) => /90A Bad Checks, 90E Drunkenness, 90H Peeping Tom .* 2021 .* 90I Runaway in 2008/.test(l)));
+notCoverage("Add the plain language to the offense code and giv eme a table");
+notCoverage("add the plain language to the nibrs offense codes");
 assert.deepEqual(codeRows("liat librs codes starting with 7"), ["720"]);
 assert.deepEqual(codeRows("liat librs codes starting with 6"), ["61A", "61B", "620", "64A", "64B"]);
 assert.equal(codeRows("liat librs codes starting with 2").length, 24);
