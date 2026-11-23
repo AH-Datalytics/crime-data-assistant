@@ -2190,19 +2190,23 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "offenses where a juvenile was the offender, over the default period or the period asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 review of 32 labels: juvenile crime means offenses where a juvenile was the offender; no coverage limit, use the default or the asked period. New unverified answer."
    }
   },
   {
@@ -13732,19 +13736,16 @@
    "question": "Where can I get crime data for RCT",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "what RCT means"
-    ],
-    "about": "what RCT means"
+    "reason": "the question is not clear"
    },
    "label": {
-    "status": "draft",
-    "rule": "R09b>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks for data availability but the place or acronym is unclear."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: decline, the question is not clear."
    }
   },
   {
@@ -17226,19 +17227,16 @@
    "question": "what is the correlation between the monthly percentage change in murder and the monthly percentage change in robbery? How about murder and assault?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "which assault offense: aggravated assault or simple assault",
-    "about_any": [
-     "which assault offense: aggravated assault or simple assault"
-    ]
+    "reason": "cannot do correlations"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex (re-checked against the P155 sentence); no engine output. The rules do not resolve assault: aggravated assault routes monthly to rtci, simple assault to nibrs; correlation and percentage-change calculations are also outside the rules, although monthly murder and robbery route to rtci."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: no correlations."
    }
   },
   {
@@ -37970,19 +37968,23 @@
    "question": "show me juvenile crime trend 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "offenses where a juvenile was the offender, over the default period or the period asked (2005 to 2025)",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 review of 32 labels: juvenile crime means offenses where a juvenile was the offender; no coverage limit, use the default or the asked period. New unverified answer."
    }
   },
   {
@@ -42108,19 +42110,16 @@
    "question": "Number of cases of female ho. Ici",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "reason": "the question is not clear"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: decline, the question is not clear."
    }
   },
   {
@@ -44881,16 +44880,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "whether murder is meant"
+     "do you mean homicide by firearm?"
     ],
-    "about": "whether murder is meant"
+    "about": "do you mean homicide by firearm?"
    },
    "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "CT supplies Connecticut but gun deaths require P40 clarification."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: reworded ask."
    }
   },
   {
@@ -45293,19 +45292,16 @@
    "question": "What the average number of cases cleared vs reported for each state",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime"
-    ]
+    "reason": "the question is not clear"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "clearances with no crime named ask which crime (Jeff 2026-11-21, P182 exception); rule-based, Codex second labeler"
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: decline, the question is not clear."
    }
   },
   {
@@ -46832,19 +46828,23 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "offenses where a juvenile was the offender, over the default period or the period asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 review of 32 labels: juvenile crime means offenses where a juvenile was the offender; no coverage limit, use the default or the asked period. New unverified answer."
    }
   },
   {
@@ -58668,19 +58668,23 @@
    "question": "Juvenile crime data",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "offenses where a juvenile was the offender, over the default period or the period asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 review of 32 labels: juvenile crime means offenses where a juvenile was the offender; no coverage limit, use the default or the asked period. New unverified answer."
    }
   },
   {
@@ -64373,19 +64377,23 @@
    "question": "show me juvenile crime trend 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "offenses where a juvenile was the offender, over the default period or the period asked (2005 to 2025)",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 review of 32 labels: juvenile crime means offenses where a juvenile was the offender; no coverage limit, use the default or the asked period. New unverified answer."
    }
   },
   {
@@ -65675,19 +65683,16 @@
    "question": "Show me the trends in misdemeanor arrests in the ten largest cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which misdemeanor offenses"
-    ],
-    "about": "which misdemeanor offenses"
+    "reason": "felonies and misdemeanors are not tracked in FBI crime data"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-10",
-    "reviewed_by": "jeff-2026-11-10",
-    "notes": "\"The N largest cities\" and a bare \"top N cities\" are the nation's N largest by population, so the place is no longer asked (Jeff 2026-11-10, ranking decisions 1-2 and \"Top 100 cities ... could be the 100 biggest\"; job S)"
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23."
    }
   },
   {
@@ -72222,19 +72227,16 @@
    "question": "firearm murders for ORI ZZ00000 since 2018",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "which agency",
-    "about_any": [
-     "which agency"
-    ]
+    "reason": "no such agency"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Unidentified agency code; the required binary schema has no decline outcome."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: ORI ZZ00000 does not exist."
    }
   },
   {
@@ -73849,19 +73851,16 @@
    "question": "what share of firearms were committed via firearm since 1975?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "which crime",
-    "about_any": [
-     "which crime"
-    ]
+    "reason": "the question is not clear"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Firearms are not an offense; the requested crime is missing."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: decline, the question is not clear."
    }
   },
   {
@@ -74637,14 +74636,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rolling demographic breakdowns are unsupported."
+    "reason": "Rolling demographic breakdowns are unsupported; offer total by month."
    },
    "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P89 explicitly leaves rolling breakdowns declined."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: P89 stays; decline and offer total by month."
    }
   },
   {
@@ -74947,19 +74946,16 @@
    "question": "murders by year and firearm/non-firearm for men",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "reason": "the question is not clear"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: decline, the question is not clear."
    }
   },
   {
@@ -76544,14 +76540,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rolling demographic breakdowns are unsupported."
+    "reason": "Rolling demographic breakdowns are unsupported; offer total by month."
    },
    "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P89 explicitly leaves rolling breakdowns declined."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: P89 stays; decline and offer total by month."
    }
   },
   {
@@ -77728,14 +77724,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rolling demographic breakdowns are unsupported."
+    "reason": "Rolling demographic breakdowns are unsupported; offer total by month."
    },
    "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P89 leaves rolling breakdowns declined."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: P89 stays; decline and offer total by month."
    }
   },
   {
@@ -87399,19 +87395,23 @@
    "question": "2017 through 2025",
    "previous": "Give me murders through April for each year 2017 through 2015 for each of these cities: Philadelphia Washington New Orleans Memphis Detroit Indianapolis Baltimore Kansas City Louisville Charlotte",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Washington, Baltimore and Kansas City"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci"
     ],
-    "about": "which Washington, Baltimore and Kansas City"
+    "answer": "murders through April for each year 2017 through 2025 for the listed cities, using the city proper (Washington DC, Baltimore city, Kansas City MO)",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Correcting the years leaves place ambiguity unresolved."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: primary city = city proper. New unverified answer."
    }
   },
   {
@@ -106279,19 +106279,23 @@
    "question": "Show carjacking trend by month/year",
    "previous": "Houston murders per year broken down by race of victim",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "whether to retain the victim-race breakdown"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
     ],
-    "about": "whether to retain the victim-race breakdown"
+    "answer": "Houston carjackings by month and by year, without the previous question's victim-race breakdown",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F3>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "The follow-up changes offense and frequency but does not clearly remove the existing breakdown."
+    "status": "reviewed",
+    "rule": "JEFF-32-REVIEW",
+    "drafted_by": "engine2",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: drop the previous question's victim race. New unverified answer."
    }
   },
   {
