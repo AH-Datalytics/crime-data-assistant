@@ -2792,24 +2792,16 @@
    "question": "What are the top nationwide crime trends ?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -3803,20 +3795,16 @@
    "question": "What New Orleans Part 1 data do you have besides murder",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "rtci",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
-    "status": "draft",
-    "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks what data is available and is a coverage lookup."
+    "status": "reviewed",
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -4315,24 +4303,16 @@
    "question": "Tell me more about crime in Arlington, VA",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -6780,24 +6760,16 @@
    "question": "Tell me more about crime in District of Columbia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -17636,18 +17608,14 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "which Baltimore"
-    ],
-    "about": "violent, property or both"
+    "about": "the whole question"
    },
    "label": {
-    "status": "draft",
-    "rule": "R09b>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Maryland does not distinguish Baltimore city from county.; with the 2026-11-07 rules' parts"
+    "status": "reviewed",
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -21073,24 +21041,16 @@
    "question": "How many crime incidents have happened in Chicago since 2025?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -27135,20 +27095,16 @@
    "question": "why does california data only go back to 1958?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
-    "status": "draft",
-    "rule": "R03>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D12 permits explaining data coverage."
+    "status": "reviewed",
+    "rule": "P247-data-absent",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline."
    }
   },
   {
@@ -40324,18 +40280,14 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about_any": [
-     "period",
-     "comparison benchmark"
-    ],
-    "about": "period"
+    "about": "the whole question"
    },
    "label": {
-    "status": "draft",
-    "rule": "R06>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Neither period nor the basis for high is specified."
+    "status": "reviewed",
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -43015,20 +42967,16 @@
    "question": "does this data use the hierarchy rule",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
-    "status": "draft",
-    "rule": "R08>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D1 permits explaining the hierarchy rule."
+    "status": "reviewed",
+    "rule": "P247-data-absent",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline."
    }
   },
   {
@@ -45526,20 +45474,16 @@
    "question": "For NIBRS, are you using national estimates or unweighted data?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
-    "status": "draft",
-    "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D1 permits explaining NIBRS aggregation methods."
+    "status": "reviewed",
+    "rule": "P247-data-absent",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline."
    }
   },
   {
@@ -48112,20 +48056,16 @@
    "question": "How many agencies in PA are NIBRS compliant?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
-    "status": "draft",
-    "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "NIBRS agency coverage is a lookup."
+    "status": "reviewed",
+    "rule": "P247-data-absent",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline."
    }
   },
   {
@@ -59041,20 +58981,16 @@
    "question": "Does NIBRS data have information on use of force?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
-    "status": "draft",
-    "rule": "R08>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is a capability question about available data."
+    "status": "reviewed",
+    "rule": "P247-data-absent",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline."
    }
   },
   {
@@ -76669,24 +76605,16 @@
    "question": "show me a time line of portland Oregon",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -81579,24 +81507,16 @@
    "question": "tell me what's going on in allentown",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
@@ -90256,24 +90176,16 @@
    "question": "What are the top nationwide crime trends ?",
    "previous": "Murder rate in Miami-Dade County 2022–2026?",
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
    }
   },
   {
