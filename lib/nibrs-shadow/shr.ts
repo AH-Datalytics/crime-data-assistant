@@ -207,22 +207,35 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
   // Counted per condition, whatever its group (Codex SHR-A review 02.2).
   const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [NIBRS_DIM[c.f.dimension]] : []));
-  // "Gun murders versus knife murders" (the question says compare, versus or vs): the two values are two categories of the
-  // one breakdown, never both on a record that has one weapon (Jeff 2026-11-15 order, item 2).
+  // "Female versus male victims", "gun murders versus knife murders" (the question says compare, versus or vs): the values are
+  // categories of ONE breakdown (a column each), never both conditions on one record or person, who has a single sex, race or
+  // weapon (Jeff 2026-11-15 order, item 2; the Coordinator 2026-11-23: female vs male victims counted 0 for every cell). The
+  // dimension must be the counted person's own (or a record detail), so the group test reads the person being counted.
   let weaponGroups: { label: string; codes: string[] }[] | null = null;
-  if (new Set(recordDims).size !== recordDims.length) {
-    const onlyWeapons = recordDims.length === 2 && recordDims.every((d) => d === "weapon") && conditions.length === 2 && conditions.every((c) => c && c.f.op === "in" && c.f.values && c.group !== undefined);
-    if (!(opts.compare && onlyWeapons && !breakdown)) return { why: "two values of one record detail compared" };
-    const sets = conditions.map((c) => codesOf("weapon", c!.f.values!));
-    if (sets.some((x) => !x) || sets[0]!.some((c) => sets[1]!.includes(c))) return { why: "a code Homicide Reports record differently" };
-    const label = (codes: string[]) => (codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => SHR_WEAPON[c] ?? c).join(" or "));
+  let groupedDim: ShrDim | null = null;
+  const dimsOf = conditions.flatMap((c) => (c && c.f.op === "in" && c.f.values?.length && !/age$/.test(NIBRS_DIM[c.f.dimension] ?? "") ? [NIBRS_DIM[c.f.dimension]] : []));
+  const repeated = dimsOf.filter((d, i) => d && dimsOf.indexOf(d) !== i);
+  if (repeated.length) {
+    const dim = repeated[0] as ShrDim;
+    const same = conditions.filter((c) => c && NIBRS_DIM[c.f.dimension] === dim);
+    // A record's weapon, relationship or circumstance: only two weapons, the whole question (as before). A person's detail: the counted
+    // person's own (a victim's sex for victims, an offender's for offenders), however many values.
+    const ok = RECORD_DIMS.has(dim)
+      ? dim === "weapon" && same.length === 2 && conditions.length === 2 && same.every((c) => c!.group !== undefined)
+      : dim.startsWith(unit === "victims" ? "victim." : "offender.");
+    if (!(opts.compare && ok && !breakdown)) return { why: "two values of one record detail compared" };
+    const sets = same.map((c) => codesOf(dim, c!.f.values!));
+    if (sets.some((x) => !x) || sets.some((x, i) => sets.some((y, j) => i !== j && x!.some((c) => y!.includes(c))))) return { why: "a code Homicide Reports record differently" };
+    const labels = DIM_LABELS[dim] ?? {};
+    const label = (codes: string[]) => (dim === "weapon" && codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => labels[c] ?? c).join(" or "));
     weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
-    breakdown = { dim: "weapon", groups: weaponGroups };
+    groupedDim = dim;
+    breakdown = { dim, groups: weaponGroups };
   }
   const notes: string[] = [];
   for (const c of conditions) {
     if (!c) return { why: "a negated condition" };
-    if (weaponGroups && NIBRS_DIM[c.f.dimension] === "weapon") continue;
+    if (weaponGroups && groupedDim && NIBRS_DIM[c.f.dimension] === groupedDim) continue;
     const { f, group } = c;
     const dim = NIBRS_DIM[f.dimension];
     if (!dim) return { why: "a detail Homicide Reports don't record" };
@@ -395,6 +408,10 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
     for (const c2 of cats2) columns.push({ binding: { kind: "statistic", as: `count_${c2.code || "unknown"}` }, header: c2.label });
     for (const p of periods) for (const c of cats) rows.push([...(p.label ? [p.label] : []), c.label, ...cats2.map((c2) => valueOf2(p, c.code, c2.code))]);
+  } else if (sq.breakdown?.groups && timeCols.length && !sq.share) {
+    // A comparison ("female vs male murder victims per year"): the period down the side, a column for each side compared.
+    for (const c of cats) columns.push({ binding: { kind: "statistic", as: `count_${c.code}` }, header: c.label });
+    for (const p of periods) rows.push([...(p.label ? [p.label] : []), ...cats.map((c) => valueOf(p, c.code))]);
   } else if (sq.breakdown) {
     columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
     columns.push({ binding: { kind: "statistic", as: "count" }, header: ucFirst(unitWords) });

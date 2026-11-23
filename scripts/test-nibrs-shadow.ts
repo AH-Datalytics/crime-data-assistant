@@ -610,6 +610,31 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     }
     // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
     assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
+    // "X vs Y" on one attribute (sex, race, weapon) is two series of that attribute, one column each, never both values on one victim (every cell 0).
+    {
+      const vsql: string[] = [];
+      const vstub = (sql: string): unknown[][] => {
+        if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+        if (/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) { vsql.push(sql); return /AS k0/.test(sql) ? [[2000, "F", 3], [2000, "M", 9]] : [[12]]; }
+        return [];
+      };
+      const vdeps = { ...sdeps, execute: vstub } as ShadowDeps;
+      for (const [q, title] of [
+        ["female vs male murder victims per year from 2000 to 2020 nationally", "United States Murder Victims by Year and the Victims' Sex, 2000-2020"],
+        ["white vs black murder victims per year from 2000 to 2020 nationally", "United States Murder Victims by Year and the Victims' Race, 2000-2020"],
+        ["gun murders versus knife murders per year from 2000 to 2020 nationally", "United States Murder Victims by Year and Weapon, 2000-2020"],
+      ] as const) {
+        vsql.length = 0;
+        const o = as(shadowAnswer(q, vdeps), "shr");
+        assert.equal(o.delivered.text[0], title, q);
+        assert.ok(!/Where the Victim's \w+ Was \w+ Where/.test(o.delivered.text[0]), q);
+        assert.equal(o.delivered.table.columns.length, 3, `${q}: a Year column and one column for each side`);
+        assert.ok(o.delivered.table.columns[0].header === "Year" && o.delivered.table.rows.every((r) => r.length === 3), q);
+        assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'/i.test(s)), `${q}: ${vsql[0]}`);
+      }
+      assert.equal(as(shadowAnswer("male vs female firearm murder victims per month since 2018 nationally", vdeps), "shr").delivered.text[0],
+        "United States Murder Victims With a Firearm by Month and the Victims' Sex, Jan 2018-Sep 2026");
+    }
     // P165 (Jeff 2026-11-19): the share of murders that involved a firearm is the murders by weapon with each share, and one sentence for the firearms together.
     const gstub = (sql: string): unknown[][] => {
       if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
