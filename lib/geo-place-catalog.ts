@@ -130,7 +130,7 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
   county("Sacramento", "CA", ["Sacramento", "Sacramento County", "Sacramento County, California", "Sacramento County CA"]),
   city("San Diego", "CA", ["San Diego", "San Diego, California", "San Diego CA"]),
   county("San Diego", "CA", ["San Diego", "San Diego County", "San Diego County, California", "San Diego County CA"]),
-  city("El Paso", "TX", ["El Paso", "El Paso, Texas", "El Paso TX"]),
+  city("El Paso", "TX", ["El Paso", "El Paso, Texas", "El Paso TX", "EPPD", "El Paso Police Department"]),
   county("El Paso", "TX", ["El Paso", "El Paso County", "El Paso County, Texas", "El Paso County TX"]),
   county("Miami-Dade", "FL", ["Miami-Dade", "Miami-Dade County", "Miami-Dade County, FL", "Miami-Dade County FL", "Miami-Dade County, Florida", "Miami-Dade County Florida"]),
 ];
@@ -149,6 +149,9 @@ const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
   county("Baltimore", "MD", ["Baltimore", "Batlimore", "Baltimore County", "Batlimore County", "Baltimore County, Maryland", "Baltimore County MD"]),
   city("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis city", "Saint Louis city", "St Louis city", "STL city", "St. Louis, Missouri", "St Louis MO"]),
   county("St. Louis", "MO", ["St. Louis", "Saint Louis", "St Louis", "STL", "St. Louis County", "Saint Louis County", "St Louis County", "STL County", "St. Louis County, Missouri", "St Louis County MO"]),
+  // B1: the departments' own initials name the city agency (Louisville Metro; Lexington-Fayette Urban County).
+  city("Louisville", "KY", ["LMPD", "Louisville Metro Police Department"]),
+  city("Lexington", "KY", ["LFUCPD", "Lexington Police Department", "Lexington-Fayette Urban County Police Department"]),
   city("Portland", "OR", ["Portland", "Portland, Oregon", "Portland OR"]),
   city("Portland", "ME", ["Portland", "Portland, Maine", "Portland ME"]),
   // Consolidated city-county governments whose common name was absent from the
@@ -172,12 +175,35 @@ const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
   ]),
 ];
 
+/**
+ * B1 (declines plan): how people name a town. "Cherry Hill, NJ" for "Cherry Hill Township", "Saint Augustine" for
+ * "St. Augustine". The state-qualified short forms are added only when no other town in the same state shares the short
+ * name (so "Maplewood, NJ" resolves, but nothing is added where it would guess); the bare short name is left as it was.
+ */
+const TOWN_SUFFIX = /\s+(?:Township|Village|Town|Borough|City)$/i;
+const SHORT_NAME_COUNT = new Map<string, number>();
+for (const o of GENERATED_GEO_CITIES) { const k = `${o.state}:${o.name.replace(TOWN_SUFFIX, "").toLowerCase()}`; SHORT_NAME_COUNT.set(k, (SHORT_NAME_COUNT.get(k) ?? 0) + 1); }
+function withNamedForms(entry: { name: string; state: string; aliases: string[] }, _all?: unknown): string[] {
+  const out = new Set(entry.aliases);
+  const full = stateName(entry.state);
+  const shorts = [entry.name.replace(TOWN_SUFFIX, "")];
+  if (/^St\.?\s/i.test(entry.name)) shorts.push(entry.name.replace(/^St\.?\s+/i, "Saint "));
+  for (const short of shorts) {
+    if (short === entry.name && !/^Saint /.test(short)) continue;
+    if ((SHORT_NAME_COUNT.get(`${entry.state}:${short.replace(/^Saint /, "St. ").toLowerCase()}`) ?? 0) > 1 && short !== entry.name.replace(TOWN_SUFFIX, "")) continue;
+    if ((SHORT_NAME_COUNT.get(`${entry.state}:${short.toLowerCase()}`) ?? 0) > 1) continue;
+    for (const f of [`${short}, ${entry.state}`, `${short} ${entry.state}`, `${short}, ${full}`, `${short} ${full}`]) out.add(f);
+    if (/^Saint /.test(short)) out.add(short);
+  }
+  return [...out];
+}
+
 export const GEO_PLACE_CATALOG: GeoPlaceCatalogEntry[] = [
   ...STATES.map(({ code, name, aliases }) => state(name, code, aliases ?? [name])),
   ...MANUAL_ALIASES,
   ...REVIEWED_CITY_COUNTY,
   ...GENERATED_GEO_CITIES.filter((entry) => !isGeneratedJurisdictionDuplicate(entry.name, entry.state)).map((entry) =>
-    city(entry.name, entry.state, entry.aliases, "generated-city", {
+    city(entry.name, entry.state, withNamedForms(entry, GENERATED_GEO_CITIES), "generated-city", {
       dominancePopulation: entry.dominancePopulation,
       dominancePopulationYear: entry.dominancePopulationYear,
       dominancePopulationSource: entry.dominancePopulationSource,

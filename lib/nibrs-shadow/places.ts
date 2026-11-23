@@ -60,7 +60,10 @@ export const PLACE_NAMES: Record<string, string> = {
 export const AGENCY_NAMES: Record<string, string> = {
   CA0190000: "Los Angeles County Sheriff's Department",
 };
+const EXTRA_ALIASES: Record<string, string[]> = { KY0340200: ["LFUCPD", "Lexington Police Department", "Lexington-Fayette Urban County Police Department"] };
 export const PLACE_ALIASES: Record<string, string> = {
+  MT0470000: "Butte",   // B1: "Butte, MT" is Butte-Silver Bow County (the consolidated city-county; its own FBI name is the Sheriff's Office)
+  NJ0040800: "Camden",   // B1: "Camden, NJ" is the Camden County Police Department (the city's police), not the county Sheriff's Office
   NC0600100: "Charlotte",   // Historical: "Charlotte-Mecklenburg Police Department" (else "Charlotte, North Carolina" finds no agency)
 };
 
@@ -81,6 +84,8 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
+  // B1: the department's own initials and full name (the index names the agency "Lexington"); extra aliases only, the label stays the agency's.
+  for (const a of agencies) for (const al of EXTRA_ALIASES[a.ori] ?? []) add(al, a);
   // The crosswalk's aliases, unless the name is another agency's own in that state (after PLACE_NAMES): "louisville"
   // stays Louisville Metro's, not the old Jefferson County police's ("louisville county").
   const owned = new Set(agencies.map((a) => `${base(a.name)}|${a.state}`));
@@ -180,6 +185,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
   // Parish"): the county the index has, without them.
   // Request words only: "South King County" is not King County (Codex place review 01).
   if (m[1] === "county") while (!idx.byName.has(base(name)) && REQUEST_WORD.test(name)) name = name.replace(/^\S+\s+/, "");
+  // B1: "Cook County police department" names the county's agency (its FBI name is the Sheriff's Office); the department words are not part of the name.
+  if (m[1] === "county" && !idx.byName.has(base(name))) name = name.replace(/\s+(?:police(?:\s+department)?|sheriff(?:'?s)?(?:\s+(?:office|department))?)$/i, "");
   const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
   const words = key(text).replace(/ (city|county)$/, "");
   // Exactly the name and "Police (Department)" names no state ("Arlington Police Department"); anything more still does
@@ -192,13 +199,15 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
   const stateNamed = m[3] && words !== base(name) && distance(words, base(name)) > 2 && !policeOnly ? m[3] : null;
   // A parish is Louisiana's (Codex places review 02: "Orleans Parish" had found Orleans County, New York).
   const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
-  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
+  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county" || (m[1] === "city" && a.kind === "city" && base(a.name) === base(name))) && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
   // "LAPD" is the Los Angeles Police Department: the department's own initials name the city agency (2026-10-23 fix).
   // "The city of San Diego" names the city, not the county's sheriff: P16 (a city name means the city's principal police agency) settles
   // the city-or-county ask of P28, which asks only when the wording leaves the readings open.
   const cityOf = /^(?:the )?city of /.test(key(text)) && !countyNamed;
-  if (/ city$|\bpolice\b/.test(key(text)) || key(text) === "lapd" || cityOf) {
+  // B1: "Cook County police department" is a county named: its police are the county's agency, not a city's.
+  const countyPolice0 = countyNamed && / county( police( department)?)?$/.test(key(text));
+  if ((/ city$|\bpolice\b/.test(key(text)) && !countyPolice0) || key(text) === "lapd" || cityOf) {
     const cities = pool.filter((a) => a.kind === "city");
     // A large county police department of the name in another state is another "<name> police" ("Arlington Police
     // Department": Arlington, Texas or Arlington County, Virginia's): which (query-log scorecard, 2026-11-05). In the

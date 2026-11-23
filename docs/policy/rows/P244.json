@@ -1,0 +1,12 @@
+{
+ "id": "P244",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Murders in cherry hill NJ in 2023\", \"How is the Saint Augustine in Florida trending?\", \"Albany, New York State\", \"johnson county sheriff in ks\", \"Cook County police department in Illinois\", \"LFUCPD\", \"Athens, GA\".",
+ "what the app does today": "A town written with its suffix removed (\"Cherry Hill\" for Cherry Hill Township), a Saint written \"St.\" or \"Saint\", \"<State> State\" after a comma, a county sheriff or police department written with \"in <state code>\", and a department's own initials or full name each reach the one agency they name, in the place index and in the geo catalog; the rest of the question is answered as asked.",
+ "proposed behavior": "The place the words name is the agency the index has for it, never another state's town of the name; where the short name is not unique in its state the question asks which.",
+ "exact default or choices offered": "None; a name not unique in its state still asks.",
+ "why": "Bad-declines plan family B1 (declines owner, 2026-11-23): the labels expect these answered; the places are in the index.",
+ "status": "Built in the B1 place-aliases change.",
+ "test cases": "scripts/test-nibrs-shadow-place-aliases.ts (14 labeled questions); open: campus police agencies, Orleans Parish, Morristown PA, \"in a line graph\" (not place aliases)."
+}
