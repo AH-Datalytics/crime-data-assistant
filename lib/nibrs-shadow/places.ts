@@ -74,7 +74,8 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   const namesFile = JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")) as { names: Record<string, string>; return_a?: string[] };
   const names = new Map<string, string>([...Object.entries(namesFile.names), ...Object.entries(AGENCY_NAMES)]);
   const returnA = new Set(namesFile.return_a ?? []);
-  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
+  // An index row with no name (", Indiana", ", Illinois") cannot be named in an answer: never found, not even by its alias (Engine 2.0 review item 4).
+  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.filter((a: Agency) => (a.name ?? "").trim() !== "").map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
@@ -234,6 +235,16 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
     const town = pool.find((a) => a.kind === "city") ?? pool[0];
     if (town) return { kind: "ask", name, candidates: [{ kind: "agency", agency: town }, large[0]] };
   }
+  // The name's own cities: an agency named exactly that, a large one, or one the crosswalk names. A "Smith Township" found only by the
+  // alias "smith" is a town of a different name, never preferred to a city of the name by population alone (Engine 2.0 review item 3).
+  const ownCity = (a: Agency) => a.kind === "city" && (base(a.name).replace(/ /g, "") === base(name).replace(/ /g, "") || a.population >= ASK_POPULATION || !!PLACE_ALIASES[a.ori]);
+  const bestCity = () => pool.find(ownCity) ?? pool.find((a) => a.kind === "city");
+  // One large county beside only small places of the name (Osceola County, FL; Osceola, AR): never silently the small place alone (Engine 2.0
+  // review item 2). Within a list the city still wins (P196); those names are listed for Jeff.
+  if (large.length === 1 && !inList && !asState && !countyNamed && !stateNamed && large[0].kind === "agency" && large[0].agency.kind === "county") {
+    const town = bestCity();
+    if (town) return { kind: "ask", name, candidates: [large[0], { kind: "agency", agency: town }] };
+  }
   if (large.length >= 2) return { kind: "ask", name, candidates: large };
   // A small place one or two letters from a large one ("Pittsburg", "Berkley", "prince George county"): which, the large
   // one first (coordinator 2026-11-05, query-log search): never the small place in silence.
@@ -257,5 +268,12 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
   // unless the words name a county (or the only large candidate is the county asked by name). "Clinton" is the city of
   // Clinton, not Clinton County, New York; with every agency in the index (Jeff 2026-11-03) small cities share names
   // with large counties far more often.
+  if (!countyNamed) {
+    const own = pool.find(ownCity);
+    if (own) return asPlace(own);
+    // Only towns found by an alias, several of them ("Bedminster": Bedminster Township, NJ or PA): which, never the biggest in silence.
+    const towns = pool.filter((a) => a.kind === "city" && pool.findIndex((b) => b.kind === "city" && b.state === a.state) === pool.indexOf(a));
+    if (towns.length >= 2) return { kind: "ask", name, candidates: towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), more: towns.length > ASK_TOWNS };
+  }
   return asPlace(countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0]);
 }
