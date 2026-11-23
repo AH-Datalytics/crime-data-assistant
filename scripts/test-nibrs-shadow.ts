@@ -3328,3 +3328,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
+// Defaulted time-of-day answers must describe the latest-year result, not the attempted all-year series.
+for (const place of ["nationally", "in Texas"]) {
+  const o = as(shadowAnswer(`robberies by time of day ${place}`, { ...deps, noDefaults: false }), "answer");
+  assert.match(o.delivered.text[0], /by Time of Day, 2025$/);
+  assert.ok(!o.delivered.text.some((t) => /every year in the data|by Year/.test(t)));
+  assert.equal(o.delivered.text.filter((t) => /latest complete year, 2025/.test(t)).length, 1);
+}
