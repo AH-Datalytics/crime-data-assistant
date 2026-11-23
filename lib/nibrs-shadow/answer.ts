@@ -3709,9 +3709,23 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // in time (job AR6: 2021-2025 by age took 8 minutes, 2017-2025 more than 15). Declined, with one year offered in
   // words (never run in advance, which would cost as much) until the national arrest query is made faster (Jeff
   // 2026-11-12, "Yes, B then A"). One year, a state, a crime, or no breakdown still answer.
+  // A cube in "on" mode that holds this breakdown for every data year the arrest statement reads is the faster national query: the
+  // statement then reads the cube, not the raw arrestee rows, and the decline does not apply (QL-nibrs-6869b3f836, QL-nibrs-ccc99d1b88).
+  // Judged by compiling the plan: the cube is used only when the compiled statement reads it (not in shadow mode, where the raw
+  // statement is the answer, and not when a year of the span or of the late-filed year has no cube partition).
+  const arrestBreakdownFromCube = (): boolean => {
+    // The national sum compiles a monthly grid of the nation's agencies by the breakdown (state-sum.ts); the probe compiles that same
+    // grid for one stand-in agency, because whether the cube serves it does not depend on which agencies are named.
+    const m = checked.measures[0];
+    const sub: NibrsPlan = { ...checked, measures: [{ ...m, filters: undefined }], filters: [...checked.filters, ...(m.filters ?? [])], transforms: [],
+      groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }, ...checked.groupings.filter((g) => !g.dimension.startsWith("time."))],
+      statistics: [{ kind: "count", as: "n", measure: m.as }] };
+    const c = compilePlan(sub, { kind: "absolute", from: period.from, to: period.to }, { ...deps.target, agencies: ["ZZ0000000"] });
+    return c.kind === "query" && !splitShadow(c.query.sql) && c.query.sql.includes("/cube/");
+  };
   const nationalEveryArrestBreakdown = stateMode && checked.geography.places.some((p) => p.kind === "national")
     && checked.measures.some((m) => m.id === "arrests.all_crime") && checked.groupings.some((g) => !g.dimension.startsWith("time."));
-  if (nationalEveryArrestBreakdown && period.from.slice(0, 4) !== period.to.slice(0, 4))
+  if (nationalEveryArrestBreakdown && period.from.slice(0, 4) !== period.to.slice(0, 4) && !arrestBreakdownFromCube())
     return decline("unsupported_capability", `This isn't available: every arrest in the United States broken down by ${checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension.split(".")[1]).join(" and ")} over several years takes too long to count here. Ask for one year, for example "nationwide arrests by age in ${release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1}", or for one crime or one state.`);
   // Property crime by a victim's age nationally takes about a minute and the whole memory limit for one year (runner, 2026-11-15), so it is
   // declined for any period (Jeff 2026-11-15: "Drop yet. We can either figure out how to do that or not."); a state or an agency answers.

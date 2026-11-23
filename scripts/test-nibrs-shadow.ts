@@ -1479,6 +1479,22 @@ for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for
 }
 for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrests for violent crimes by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025", "arrests by sex by year in Texas from 2021 to 2025"])
   as(ask(q), "answer");
+// A cube that holds arrestee age for every data year the arrest statement reads is the faster national query: the same questions
+// answer from it (QL-nibrs-6869b3f836, QL-nibrs-ccc99d1b88). A cube missing a year, or in shadow mode, keeps the decline.
+{
+  const years = deps.target.builtYears;
+  const sqls: string[] = [];
+  const withCube = (cube: ShadowDeps["target"]["cube"]): ShadowDeps => ({ ...deps, target: { ...deps.target, cube }, execute: (sql: string) => { sqls.push(sql); return stub(sql); } });
+  const cubeOn = { root: "/cubes/group", years, mode: "on" as const, groupV4: true };
+  for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for consistent reporters", "show me nationwide arrests by age by year for 2015 to 2025 for consistent reporters"]) {
+    const on = shadowAnswer(q, withCube(cubeOn));
+    // The stub executor returns no agency headers, so the answer itself ends in its own "no agency" decline; what this test pins is that the heavy-statement cap no longer fires.
+    assert.ok(!(on.kind === "decline" && /takes too long/.test(on.explanation)), `cube on: ${q}`);
+    assert.equal(shadowAnswer(q, withCube(null)).kind, "decline", `cube off: ${q}`);
+    assert.match((as(shadowAnswer(q, withCube({ ...cubeOn, years: years.filter((y) => y !== 2022) })), "decline")).explanation, /takes too long to count here\. Ask for one year/, `cube missing 2022: ${q}`);
+    assert.match((as(shadowAnswer(q, withCube({ ...cubeOn, mode: "shadow" })), "decline")).explanation, /takes too long to count here\. Ask for one year/, `cube in shadow mode: ${q}`);
+  }
+}
 const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 // Jeff 2026-11-11, all years by default: by year / per month / a trend with no range is every year the source has, said.
 const perYear = as(ask("Carjackings per year in houston"), "answer");
