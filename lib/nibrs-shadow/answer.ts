@@ -942,7 +942,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       option = find(/^Every year available$/);
       // P229 (Jeff 2026-11-22): a trend or per-capita question with no place and no period is the United States by year since 2019, said; the NIBRS
       // answer counts the Consistent Reporting Agencies only (the other sources since 2019 as they are). Not a ranking (one year).
-      if (placeDefaulted && P229_TREND.test(c.question) && !RANKING_WORDS.test(c.question)) {
+      if (placeDefaulted && P229_TREND.test(c.question) && !RANKING_WORDS.test(c.question) && !CLEARANCE_WORDS.test(c.question)) {
         const s = p229Since(c.question, deps);
         if (s) { option = s.option; more.push(...s.more); note = s.note; }
       }
@@ -969,7 +969,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
     // P229: the nation's trend question (its national statement may be heavy, NIBRS, or may already carry its own every-year default): the place step builds the since-2019 series itself (the period ask is never reached).
-    if (c.about === "which place" && !byStateRows && option && P229_TREND.test(c.question) && !RANKING_WORDS.test(c.question) && !P229_PERIOD_NAMED.test(c.question)) {
+    if (c.about === "which place" && !byStateRows && option && P229_TREND.test(c.question) && !RANKING_WORDS.test(c.question) && !CLEARANCE_WORDS.test(c.question) && !P229_PERIOD_NAMED.test(c.question)) {
       const s = p229Since(question, deps);
       if (s) {
         notes.push(note, s.note);
