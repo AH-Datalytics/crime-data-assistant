@@ -1236,18 +1236,19 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
 // Texas fit the limit raw and with the cube on, but the doubled shadow statement tripped it and "which period" was asked in shadow mode only).
 {
   const part = (n: number) => "x".repeat(n);
-  assert.equal(statementChars(part(70_000)), 70_000, "a plain statement is measured as before");
-  const doubled = shadowSql(part(70_000), part(69_000));
-  assert.ok(doubled.length > 100_000, "the doubled statement is over the limit as a whole");
-  assert.equal(statementChars(doubled), 70_000, "a shadow statement is measured by its raw part when that is the longer");
+  assert.equal(statementChars(part(130_000)), 130_000, "a plain statement is measured as before");
+  const doubled = shadowSql(part(130_000), part(129_000));
+  assert.ok(doubled.length > HEAVY_STATEMENT, "the doubled statement is over the limit as a whole");
+  assert.equal(statementChars(doubled), 130_000, "a shadow statement is measured by its raw part when that is the longer");
   assert.equal(statementChars(shadowSql(part(1_000), part(90_000))), 90_000, "or by its cube part when that is the longer");
-  assert.ok(statementChars(shadowSql(part(120_000), part(119_000))) > 100_000, "a raw part over the limit is still heavy");
+  assert.ok(statementChars(shadowSql(part(260_000), part(259_000))) > HEAVY_STATEMENT, "a raw part over the limit is still heavy");
   const wrapped = `WITH g AS MATERIALIZED (${doubled}) SELECT 1`;
-  assert.equal(statementChars(wrapped), `WITH g AS MATERIALIZED (${part(70_000)}) SELECT 1`.length, "a shadow block inside a wrapping statement is left out of the measure");
-  assert.ok(statementChars(`WITH g AS MATERIALIZED (${shadowSql(part(120_000), part(119_000))}) SELECT 1`) > 100_000, "and a wrapped raw part over the limit is still heavy");
+  assert.ok(statementChars(shadowSql(part(240_000), part(239_000))) <= HEAVY_STATEMENT, "a 240,000-character raw part is under the 250,000 limit, not heavy");
+  assert.equal(statementChars(wrapped), `WITH g AS MATERIALIZED (${part(130_000)}) SELECT 1`.length, "a shadow block inside a wrapping statement is left out of the measure");
+  assert.ok(statementChars(`WITH g AS MATERIALIZED (${shadowSql(part(260_000), part(259_000))}) SELECT 1`) > HEAVY_STATEMENT, "and a wrapped raw part over the limit is still heavy");
   // Every wrapped block is left out, not just the first (Codex review of dca7f39d).
   const three = `WITH a AS (${doubled}), b AS (${doubled}), c AS (${doubled}) SELECT 1`;
-  assert.equal(statementChars(three), `WITH a AS (${part(70_000)}), b AS (${part(70_000)}), c AS (${part(70_000)}) SELECT 1`.length, "three wrapped shadow blocks are all left out of the measure");
+  assert.equal(statementChars(three), `WITH a AS (${part(130_000)}), b AS (${part(130_000)}), c AS (${part(130_000)}) SELECT 1`.length, "three wrapped shadow blocks are all left out of the measure");
 }
 // The limit sits above the biggest single state (Pennsylvania, 2,001 listed agencies) and below a national list (~20,000 agencies).
 {
