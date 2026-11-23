@@ -54362,20 +54362,16 @@
    "question": "show me crimes against persons in maricopa county, arizona 2020 - 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "every year is blank for this agency in NIBRS (the Maricopa County Sheriff's Office reports no NIBRS data), so the series is declined in one sentence (P147)"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Crimes against persons is a defined NIBRS offense category."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P25/P70: the place is the Maricopa County Sheriff's Office (AZ0070000); crimes against persons is NIBRS-only and that agency has no NIBRS figure in any month 2017-2026 (NIBRSAI Engine, canon2), so P147's one-sentence decline, no other agency. By rule; second labeler NIBRS Model changed to decline 2026-11-22"
    }
   },
   {
@@ -56553,23 +56549,16 @@
    "question": "show me countywide juvenile arrests for wayne couunty michigan and cuyahoga county ohio",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): countywide juvenile arrests for Wayne County and Cuyahoga County, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -61509,6 +61498,9 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -61516,11 +61508,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Crimes against persons is a defined NIBRS category."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70/P25 (frozen rule 10, P28): a plain county name is the county's own agency, here the Tarrant County Sheriff's Office (no county police department), with P70's note that the cities in the county aren't included; Jeff 2026-11-22 \"Maricopa County means the sheriff office\"; crimes against persons counted by victim (09A, 09B, 11A-D, 13A-C, 36A, 36B, 100, 64A, 64B; 09C left out), one row per year 2020-2025. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -62651,23 +62643,16 @@
    "question": "show me countywide violent crimes by offender age in bernalillo county, nm",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): countywide violent crimes by offender age in Bernalillo County, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -85798,20 +85783,16 @@
    "question": "show me the same for dallas county, texas",
    "previous": "show me countywide violent crime incidents for tarrant county, texas by year for 2021 to 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Inherited countywide incident totals require NIBRS."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"the same\" carries the previous question's \"countywide\" to Dallas County, a county-wide request (as its previous question, QL-ct-4a3b1f38eb), declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -86276,20 +86257,16 @@
    "question": "for tarrant county, tx as a whole",
    "previous": "calculate percent change in violent crimes rates from 2024-2025 for Fort Worth, TX",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Countywide totals require P70 reporting-agency aggregation."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"for tarrant county, tx as a whole\" asks the whole county, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -87003,20 +86980,16 @@
    "question": "use rates",
    "previous": "calculate the countywide percent change in violent crimes in Cook County, IL from 2024-2025",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Inherited countywide rates require reporting-agency aggregation."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"use rates\" keeps the previous question's countywide Cook County change, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {
@@ -95981,20 +95954,16 @@
    "question": "is there another data source that will aggregate murder data for  all St. Louis County, MO agencies",
    "previous": "compare murders in the City of St. Louis and St. Louis County",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F1+R06>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P70 countywide aggregation uses reporting agencies."
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): murder data aggregated for all St. Louis County agencies is a county-wide sum, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model"
    }
   },
   {

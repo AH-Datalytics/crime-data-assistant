@@ -369,13 +369,22 @@ export const deterministicRewriter: FollowUpRewriter = {
         : ask("The number of agencies reporting goes with a state or national total (P72).");
     }
 
-    // A county asked for as a whole ("countywide total", "countywide", "for the whole county"): the previous question with "countywide" added
-    // (P70), when its place is a county.
+    // A county asked for as a whole ("countywide total", "countywide", "for the whole county"): the previous question with "countywide" added,
+    // when its place is a county, which P70 declines with the county's own agency offered (Jeff 2026-11-22: P70 wins over P135's old sum).
     // A county named anywhere in the previous question (a comparison of two places has no single span of place words).
     const countyPrev = /\b(?:county|parish)\b/i.test(placeWords(prev, prevParts.places)?.text ?? "") || (prevParts.places.length > 0 && /\b(?:county|parish)\b/i.test(prev));
     if (/^(?:the\s+)?(?:county[-\s]?wide|(?:for\s+)?the\s+(?:whole|entire)\s+county)(?:\s+(?:total|figure|number|count))?(?:\s+only)?$/i.test(f)) {
       if (!countyPrev || /\bcounty[-\s]?wide\b/i.test(prev)) return ask("Which county is meant, or whether it is already the whole county.");
-      return ok(`${prev.replace(/[?.!\s]+$/, "")}, countywide`, "P70: the whole county, every agency summed");
+      return ok(`${prev.replace(/[?.!\s]+$/, "")}, countywide`, "P70: a county-wide request, declined with the county's own agency offered");
+    }
+    // "<a county> as a whole" ("for tarrant county, tx as a whole" after a Fort Worth question): the county in place of the previous place, asked
+    // for county-wide, which P70 declines with the county's own agency offered (coordinator 2026-11-22: every gap blocks go-live).
+    {
+      const whole = /^(.*?\b(?:county|parish)\b.*?)[,\s]+as\s+a\s+whole$/i.exec(f);
+      if (whole) {
+        const inner = deterministicRewriter.rewrite(prev, whole[1], thisYear);
+        if (inner.kind === "rewrite") return ok(`${inner.question.replace(/[?.!\s]+$/, "")}, countywide`, "P70: a county-wide request, declined with the county's own agency offered");
+      }
     }
 
     // A rate in place of a count (P58, P59).
@@ -386,6 +395,9 @@ export const deterministicRewriter: FollowUpRewriter = {
       || /^(?:(?:use|show|give|switch to)(?: me)?(?: the| a)?|(?:change|switch) the (?:metric|measure) to)\s+(?:crime\s+)?rates?(?:\s+per\s+(?:100,?000|100k))?(?:\s+(?:of counts|rather than counts))?$/i.test(fl)) {
       if (/\brate\b|per (?:capita|100)/i.test(prev)) return ask("The previous answer is already a rate.");
       const m = prevParts.measures[0];
+      // A county-wide question stays one whatever is changed in it ("use rates" after "the countywide percent change in violent crimes in Cook
+      // County"): it is asked again, and P70 declines it with the county's own agency offered.
+      if (/\bcounty[-\s]?wide\b/i.test(prev)) return ok(prev, "P70: still a county-wide request, declined with the county's own agency offered");
       if (!m || prevParts.measures.length !== 1 || prev.indexOf(m.text) < 0) return ask("Which crime's rate is meant.");
       const at = prev.indexOf(m.text) + m.text.length;
       return ok(`${prev.slice(0, at)} rate${prev.slice(at)}`, "a count becomes a rate");
