@@ -3432,4 +3432,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
   assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
 }
+// P270: several states, or a state and the nation, asked together: one table with a Place column, each place its own state sum, never added together.
+{
+  const two = as(ask("Carjackings in Texas and Ohio in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Place", "Carjacking offenses"], JSON.stringify(two.delivered.table.columns));
+  assert.deepEqual(two.delivered.table.rows, [["Texas", 307], ["Ohio", 120]], "each place its own sum, never added: " + JSON.stringify(two.delivered.table.rows));
+  assert.deepEqual(two.delivered.contractProblems, []);
+  assert.equal(two.delivered.evidence.length, 2, "one evidence record per figure");
+  assert.equal(two.buttons, undefined, "no Consistent Reporting Agencies button across several places");
+  as(ask("Carjackings in Texas, Texas and Ohio in 2024"), "decline"); // a place named twice is refused by the plan's validation, as before
+  const nat = as(ask("Carjackings in Texas and the United States in 2024"), "answer");
+  assert.deepEqual(nat.delivered.table.rows.map((r) => r[0]), ["Texas", "United States"]);
+  // An agency beside a state is still declined; so are a clearance share or Homicide Reports details for several places.
+  as(ask("Carjackings in Houston and Texas in 2024"), "decline");
+  as(ask("Share of murders cleared in Texas and Ohio in 2024"), "decline");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
