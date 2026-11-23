@@ -2408,10 +2408,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const citiesAsked = clause0("entity").some((p) => p.value === "city") || clause0("list").some((p) => p.value === "list:city")
       || (clause0("rank").length > 0 && !clause0("entity").length);
     // Words the reader cannot read ("postal crimes", "cities with gars") keep the old ask for the place, never a ranking that drops them.
-    // A year past the Historical library ("top 10 auto theft rates in 2026") is not the nation's city ranking: the place is asked, as before.
-    const pastHistorical = deps.historical ? (ledger0.question.match(/\b(?:19|20)\d{2}\b/g) ?? []).some((y) => Number(y) > deps.historical!.lastYear) : false;
-    if (citiesAsked && !pastHistorical && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted") && clause0("measure").some((p) => isHistoricalMeasure(String(p.value)) || (p.value === "unspecified" && !flags(ledger0).clearance)))
-      return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+    if (citiesAsked &&!ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted") && clause0("measure").some((p) => isHistoricalMeasure(String(p.value)) || (p.value === "unspecified" && !flags(ledger0).clearance)))
+      // The cities are stated as the entity, so a crime chosen later by a button (a vague "top 10 crimes") still ranks cities.
+      return fromLedger(clause0("entity").length ? filled(ledger, "place", "national", "the United States") : filled(filled(ledger, "entity", "city", "cities"), "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
     // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
     // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
