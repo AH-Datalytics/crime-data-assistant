@@ -581,6 +581,33 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
       assert.equal(chi?.[2], 330);
     }
   }
+  // Review 419 item 5: an agency with no row for the further crime is left blank and said.
+  {
+    const nexec = (sql: string) => /SELECT ori, robbery_total/.test(sql) ? [["ILCPD0000", 9000, 330, 2_700_000], ["NY0303000", 12000, 144, 8_300_000]] : US;
+    const gap = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "rate", direction: "top", limit: 3, minPopulation: 100000, more: ["robbery"] }, build, nexec);
+    assert.ok(gap.kind === "historical" && gap.delivered.table.rows.some((r) => r[2] === null), JSON.stringify(gap).slice(0, 300));
+    if (gap.kind === "historical") assert.ok(gap.delivered.text.some((t) => /(?:One agency has|\d+ agencies have) no figure for that crime in 2024; (?:its cell is|their cells are) left blank\./.test(t)), JSON.stringify(gap.delivered.text));
+    // Review 419 item 1: a crime named alone is the count, with the rate offered.
+    const places0 = loadPlaceIndex();
+    const b0 = { noDefaults: true, places: places0, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
+    const alone = shadowAnswer("Which cities have the highest murder in 2024?", b0 as never);
+    assert.ok(alone.kind === "historical" && alone.question.statistic === "count" && alone.delivered.text.some((t) => /Ask for the rate/.test(t)), JSON.stringify(alone).slice(0, 400));
+    const most = shadowAnswer("Which cities have the most murders in 2024?", b0 as never);
+    assert.ok(most.kind === "historical" && !most.delivered.text.some((t) => /Ask for the rate/.test(t)), "a count word needs no offer: " + JSON.stringify((most as any).delivered.text));
+    const rated = shadowAnswer("Which cities have the highest murder rate in 2024?", b0 as never);
+    assert.ok(rated.kind === "historical" && rated.question.statistic === "rate" && !rated.delivered.text.some((t) => /Ask for the rate/.test(t)));
+    // Review 419 item 3: "min 30 murders" on a rate ranking is never a population of 30, nor a count table.
+    const minRate = shadowAnswer("Top 10 cities by murder rate, min 30 murders in 2024", b0 as never);
+    assert.ok(minRate.kind === "decline" && /minimum number of murders/.test(minRate.explanation), JSON.stringify(minRate).slice(0, 300));
+    const pop5k = shadowAnswer("cities with min 5,000 residents by murder count in 2024", b0 as never);
+    assert.ok(pop5k.kind === "historical" && !/minimum number of murders/.test(JSON.stringify(pop5k)), "a stated population stays a population floor");
+    // Review 419 item 6: a several-crimes ranking that cannot be built is declined with its reason, never one crime with the others dropped.
+    for (const q of ["Which states have the highest murder rate and robbery rate in 2024?", "Top 10 cities by murder rate and robbery rate in 2021 to 2024"]) {
+      const m = shadowAnswer(q, b0 as never);
+      assert.ok(m.kind === "decline" || m.kind === "clarify" || (m.kind === "historical" && m.delivered.table.columns.length >= 3), q + ": " + JSON.stringify(m).slice(0, 300));
+      if (m.kind === "decline") assert.ok((/murder/i.test(m.explanation) && /robbery/i.test(m.explanation)) || /several crimes side by side/i.test(m.explanation), q + ": a decline names every crime it could not rank, or says why: " + m.explanation);
+    }
+  }
   // Every agency, city and county: no type in the query.
   rsql.length = 0;
   answerHistoricalRanking({ measure: "murder", state: "CA", year: 2020, statistic: "count", direction: "top", limit: 10, minPopulation: null, entity: "agency" }, build, rexec);

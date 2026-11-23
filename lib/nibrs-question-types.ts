@@ -262,7 +262,8 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     // Rankings group B (Jeff 2026-11-23): "highest crime rate" with no crime named is violent and property crime (P180-P182; a clearance keeps its ask),
     // and several crimes named are one table, a column each, sorted by the first named; the answer builder reads only Historical's measures this way.
     if (measures.length === 0 && !clearanceRate && of("measure").some((p) => p.value === "unspecified")) { take(of("measure").filter((p) => p.value === "unspecified")); measures = ["violent_crime", "property_crime"]; }
-    if (measures.length < 1 || (measures.length > 1 && (clearanceRate || entity === "state"))) return { kind: "none" };
+    if (measures.length > 1 && (clearanceRate || entity === "state")) return declineParts(of("measure"), (p) => cannot(p, clearanceRate ? "clearance rates are ranked on one crime at a time." : "states are ranked on one crime at a time; several crimes side by side are built for cities and agencies."));
+    if (measures.length < 1) return { kind: "none" };
     if (changeParts.length) return declineParts(changeParts, (p) => cannot(p, "I rank places by a level, not by a change, in this version."));
     const rankVal = rankParts.map((p) => p.value ?? "").find((v) => /^(?:top|bottom):/.test(v)) ?? null;
     const n = rankVal ? rankVal.split(":")[1] : "";

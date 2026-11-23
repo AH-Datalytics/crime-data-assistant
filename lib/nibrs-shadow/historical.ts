@@ -538,6 +538,9 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
         return rate ? historicalRate(capita, total, population).rate : total;
       })];
     });
+    // A cell left empty is said: an agency with no row for the further crime, or a figure the rate can't be built from.
+    const blanks = tableRows.filter((r) => r.slice(2).some((c) => c === null)).length;
+    if (blanks) text.splice(2, 0, `${blanks === 1 ? "One agency has" : `${blanks} agencies have`} no figure for ${extra.length === 1 ? "that crime" : "one or more of the further crimes"} in ${rq.year}; ${blanks === 1 ? "its" : "their"} cell${blanks === 1 ? " is" : "s are"} left blank.`);
     const names = [m, ...extra.map((e) => e.m)].map((x) => x.name);
     text[0] = `${states ? "United States" : titleCase(where)} ${andList(names.map((n) => titleCase(`${n} ${rate ? "rate" : "count"}`)))} by ${unitTitle}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
     text[1] = `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? `${m.name} rates` : m.words} are shown, with ${andList(extra.map((e) => (rate ? `${e.m.name} rate` : e.m.words)))} beside it.`;
@@ -638,7 +641,7 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
     ...(set.length > sq.n ? [`${set.filter((r) => num(r[3]) === num(set[sq.n - 1][3])).length} cities tie at the ${ordinal(sq.n)} largest population, so ${set.length} are shown.`] : []),
     `The cities are Crime Index's city agencies with the largest populations as published for ${sq.to}, largest first; "city" is the geography, whatever the agency.`];
   const blanks = rows.filter((r) => r[r.length - 1] === null).length;
-  if (blanks) text.push(`A blank means Crime Index has no ${m.name} ${rate ? "rate" : "figure"} for that city that year.`);
+  if (blanks) text.splice(2, 0, `A blank means Crime Index has no ${m.name} ${rate ? "rate" : "figure"} for that city that year.`);
   if (rate) {
     text.push("Rates are per 100,000 of each agency's population as published by Crime Index.");
     if (computed) text.push(`Where Crime Index publishes no ${m.name} rate, the rate is the count per 100,000 of the published population.`);

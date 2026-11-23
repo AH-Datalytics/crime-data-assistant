@@ -1711,7 +1711,9 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
 function shrMinMurders(ledger0: RequestLedger): number | null {
   const t = ledger0.parts.find((p) => p.clause === 0 && p.concept === "threshold" && /^>=\|\d+$/.test(String(p.value)));
   const n = t ? Number(String(t.value).split("|")[1]) : 0;
-  return n > 0 && n < 10000 && !/people|population|resident/i.test(t?.text ?? "") ? n : null;
+  if (!(n > 0 && n < 10000) || /people|population|resident/i.test(t?.text ?? "")) return null;
+  // A small number is a murder floor only when the question says murders or homicides after it ("min 30 murders", "50+ murders"); a bare "min 5,000" stays a population.
+  return new RegExp(String.raw`\b${n.toLocaleString("en-US").replace(",", ",?")}\+?\s*(?:or more\s+)?(?:murders?|homicides?|killings?)\b`, "i").test(ledger0.question) ? n : null;
 }
 /**
  * Big cities ranked by a murder detail from Homicide Reports (SHR-B, Jeff 2026-11-11 order): "big cities with the highest
@@ -1734,7 +1736,9 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   if (crimes.length !== 1 || !["murder", "homicide", "homicide_all"].includes(crimes[0])) return null;
   const rank = c0.find((p) => p.concept === "rank");
   const rankVal = /^(top|bottom):(\d*)$/.exec(String(rank?.value ?? ""));
-  const nWord = c0.find((p) => p.concept === "unrecognized" && /^\d{1,3}$/.test(p.text.trim()));
+  // The size is a number written beside the rank or the entity word ("top 5", "5 cities"), never a stray number (a month's day, a count in another place).
+  const nWord = c0.find((p) => p.concept === "unrecognized" && /^\d{1,3}$/.test(p.text.trim())
+    && (() => { const n = p.text.trim(); return new RegExp(String.raw`\b(?:top|bottom|highest|lowest|most|least)\s+${n}\b|\b${n}\s+(?:(?:big|large|largest|biggest)\s+)?(?:cities|city)\b`, "i").test(ledger0.question); })());
   if (!rankVal || !c0.some((p) => p.concept === "entity" && p.value === "city")) return null;
   // A unit other than victims, or a place, isn't read here.
   if (c0.some((p) => (p.concept === "unit" && p.value !== "victims") || p.concept === "place" || p.concept === "clearance" || p.concept === "clearance-reason" || p.concept === "breakdown" || (p.concept === "threshold" && !minTotal))) return null;
@@ -2998,12 +3002,18 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     && !flags(ledger0).arrestsThrough && !flags(ledger0).region && !flags(ledger0).combined && !flags(ledger0).column
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec;
+    // "min 30 murders" on a rate ranking is a murder floor, which is built only for a count of murders from Homicide Reports; never read as a population of 30.
+    if (sp.statistic === "rate" && shrMinMurders(ledger0)) return decline("unsupported_capability", "A minimum number of murders is applied to a ranking by murder count (from Homicide Reports), not to a ranking by rate. Ask for the count, or for the rate among cities of a stated population.");
     // Jeff 2026-11-10 ("Agreed when no pop request is given"): a rate ranking with no population named ranks agencies of
     // 100,000 or more, said; a population or size named overrides it (replaces D05 for rate rankings). States: none.
     const defaultFloor = sp.statistic === "rate" && sp.entity !== "state" && floorOf(sp) === null ? 100000 : null;
     const minPopulation = floorOf(sp) ?? defaultFloor;
+    const countByDefault = sp.statistic === "count" && !sp.more?.length && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "statistic")
+      && !new RegExp(String.raw`\b(?:most|counts?|number|total)\b`, "i").test(ledger0.question);
     const saidFloor = <T extends { delivered: { text: string[] } }>(r: T): T => {
       if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
+      // Jeff: a crime named alone ("highest murder") is the count; the rate is offered.
+      if (countByDefault) r.delivered.text.push(`This ranks the number of ${sp.measure.replace(/_/g, " ")} offenses. Ask for the rate to rank by ${sp.measure.replace(/_/g, " ")} per 100,000 people.`);
       return r;
     };
     // No period (D31/P05): asked before anything else, also for the nation, whose plan would otherwise be declined as "a state or the

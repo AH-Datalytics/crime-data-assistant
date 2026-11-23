@@ -80,6 +80,18 @@ const r6 = spec("Which cities have the highest crime rate in 2025?");
 check(r6?.type === "rank" && r6.measure === "violent_crime" && r6.more?.join() === "property_crime", "no crime named is violent plus property crime");
 check(spec("Which states have the highest murder rate and robbery rate in 2025?")?.type !== "rank" || spec("Which states have the highest murder rate and robbery rate in 2025?")?.more === undefined, "a multi-measure state ranking is never built");
 
+// Review 419 item 2: near-misses keep their outcome; the no-entity "city" default must not take them.
+check(decide("top 5 weapons used in murders in 2025").kind === "decline", "\"top 5 weapons used in murders\" stays declined");
+check(decide("top 10 murder weapons").kind === "decline", "\"top 10 murder weapons\" stays declined");
+check(decide("most common offenses").kind === "none", "\"most common offenses\" stays unmatched");
+{
+  const t = decide("top 10 crimes in 2025");
+  check(t.kind !== "spec" || (t.spec.type === "rank" && t.spec.entity === "city"), "\"top 10 crimes\" is only ever a city ranking, never another reading");
+}
+// Item 1: a crime named alone ranks by count.
+const r7 = spec("highest murder in 2025");
+check(r7?.type === "rank" && r7.statistic === "count" && r7.measure === "murder", "\"highest murder\" alone is the count");
+
 // ---- N7 change ----
 const c1 = spec("change in robberies in Fort Worth, Texas from 2023 to 2025");
 check(c1?.type === "change" && c1.earlier === 2023 && c1.later === 2025, "N7: the earlier year is the base");
