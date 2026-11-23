@@ -250,7 +250,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
 
   // "Which states have the highest share of rapes cleared by exception in 2025?" (P203, P173): the share by state, not a count ranking.
   const stateShareRanking = share.length > 0 && entityParts.some((p) => p.value === "state")
-    && of("filter").some((p) => /^clearance:/.test(p.value ?? "")) && !thresholdParts.length && placeParts.every((p) => placeOf(p)?.kind === "national");
+    && of("filter").some((p) => /^clearance:/.test(p.value ?? "")) && !thresholdParts.length && !breakdowns.length && placeParts.every((p) => placeOf(p)?.kind === "national");
   // ---- N6: rankings (rank words, a threshold, or a list of entities) ----
   if (!stateShareRanking && (rankParts.length || thresholdParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:"))))) {
     take(rankParts); take(thresholdParts); take(entityParts); take(clearance);
