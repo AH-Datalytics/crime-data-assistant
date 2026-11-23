@@ -3308,7 +3308,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const yrs = multi.delivered.table.rows.map((r) => String(r[1]));
   assert.ok(yrs.length > 3 && new Set(yrs).size > 1 && yrs.every((y, i) => i === 0 || y >= yrs[i - 1]), "a block for each year, in year order: " + JSON.stringify(yrs));
   assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), JSON.stringify(multi.delivered.text));
-  assert.ok(multi.delivered.text.includes("Since 2021 is read as the whole years 2021 to 2025: the 2026 data is not a whole year yet."), JSON.stringify(multi.delivered.text));
+  assert.ok(multi.delivered.text.includes("Since 2021 is read as the whole years 2021 to 2025: the 2026 data is not a whole year."), JSON.stringify(multi.delivered.text));
   const threeYears = as(ask("top 2 cities by share of murders cleared by exception from 2022 to 2024"), "answer");
   assert.deepEqual(threeYears.delivered.table.rows.map((r) => r[1]), ["2022", "2022", "2023", "2023", "2024", "2024"], "the first 2 of each year");
   // A place, a rate or another grouping is not this ranking.

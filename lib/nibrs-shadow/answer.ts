@@ -1138,7 +1138,7 @@ export function cityClearanceShare(question: string, deps: ShadowDeps): { rewrit
   if (places.length) return null;
   const how = /exception/i.test(clearance[1]) ? "by exception" : "by arrest";
   return { rewritten: `what share of ${crime[1]} were cleared ${how} ${when} in the United States by state`,
-    cityShare: { ...(allAgencies ? { all: true } : {}), ...(since ? { note: `Since ${since[1]} is read as the whole years ${since[1]} to ${lastComplete}: the ${lastYear} data is not a whole year yet.` } : {}), minOffenses: min ? Number(min[1]) : null, limit: limit ? Number(limit[1]) : null, direction: /\b(?:lowest|fewest|bottom)\b|(?<!\bat\s)\bleast\b/i.test(q) ? "bottom" : "top" } };
+    cityShare: { ...(allAgencies ? { all: true } : {}), ...(since ? { note: `Since ${since[1]} is read as the whole years ${since[1]} to ${lastComplete}: the ${lastYear} data is not a whole year.` } : {}), minOffenses: min ? Number(min[1]) : null, limit: limit ? Number(limit[1]) : null, direction: /\b(?:lowest|fewest|bottom)\b|(?<!\bat\s)\bleast\b/i.test(q) ? "bottom" : "top" } };
 }
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
