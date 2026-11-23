@@ -146,6 +146,8 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
+  // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
+  [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.
