@@ -96,6 +96,8 @@ export type ShadowDeps = {
   checkingOffer?: boolean;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
   noDefaults?: boolean;
+  /** Set while the Current Trends view of a monthly murder count is built (the button beside Homicide Reports' answer, B15): not sent to Homicide Reports again. */
+  ctView?: boolean;
   /** Set while a follow-up is answered from a rewrite or as its own question: the words the user typed and the previous question, which the
    *  default guards read too (a rewrite drops "compare with"; "Durham and population" leans on a NIBRS-only question before it). */
   guardText?: string;
@@ -1706,6 +1708,24 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
     if (police !== civilian) sq.filters.push({ dim: "circumstance", codes: [police ? "81" : "80"] });
   }
   const a = answerShr(sq, deps.shr, deps.execute, deps.historical);
+  // D42 (Engine 2.0 2026-11-22): the span asked runs past the last month Homicide Reports hold (a span through the most recent month, or a year still being filed):
+  // the answer shows the span it has, and says the latest month it holds, as it says where the series starts (askedFrom).
+  if (a.kind === "shr" && !everyYear) {
+    // The span asked: a year or a range runs to its December (period.to); "through the most recent month" runs to the release's latest month, which can be later than
+    // Homicide Reports' own (the period above was resolved against theirs).
+    let askedEnd = period.to;
+    try {
+      const r2 = resolvePeriod(plan.period, deps.release);
+      const e2 = r2.kind === "years" ? `${Math.max(...r2.years)}-12` : r2.kind === "absolute" ? r2.to : null;
+      if (e2 && e2 > askedEnd) askedEnd = e2;
+    } catch { /* the period as resolved above stands */ }
+    const latest = deps.shr.latestMonth;
+    if (askedEnd > latest) {
+      const after = shiftMonth(latest, 1);
+      const line = `Homicide Reports here run through ${monthName(latest)}, so ${after === askedEnd ? monthName(after) : `${monthName(after)} through ${monthName(askedEnd)}`} ${after === askedEnd ? "isn't" : "aren't"} included.`;
+      return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], line, ...a.delivered.text.slice(1)] } };
+    }
+  }
   if (a.kind === "shr" && detailEveryYear)
     return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
@@ -2612,6 +2632,18 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length >= 1
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec, cur = deps.current, pl = sp.places[0];
+    // B15 (Jeff 2026-11-22, "SHR regardless of the timeframe"; D37, D42, P113): a plain murder or homicide count by month, for one agency or several, whatever
+    // the span, is Homicide Reports' answer (from 1985), with the Current Trends view of the same question offered beside it as a button. The question is
+    // asked of Homicide Reports as the user would ask it by name; an answer it cannot give (no match, a decline) leaves the question on the path it had.
+    if (deps.shr && !deps.ctView && sp.grain === "month" && sp.statistic === "count" && ["murder", "homicide", "homicide_all"].includes(sp.measures[0])
+      && sp.places.every((p) => p.kind === "agency") && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).region && !flags(ledger0).column && !clause0("combine").length) {
+      const hr = shadowAnswer(`${ledger0.question.replace(/[?.!\s]+$/, "")} according to Homicide Reports`, deps);
+      if (hr.kind === "shr") {
+        const ct = shadowAnswer(ledger0.question, { ...deps, ctView: true });
+        const button: ShadowOption = { label: "Crime Index (Current Trends) view of the same question", continuation: ct, role: "other_source", targetSource: "rtci" };
+        return ct.kind === "current" ? { ...hr, buttons: [...((hr as unknown as { buttons?: ShadowOption[] }).buttons ?? []), button] } as unknown as ShadowOutcome : hr;
+      }
+    }
     // The form asked: the rolling 12 months through the latest month; this year as one total is its year to date; a
     // range of months is each month when asked by month, otherwise one total (design note, section 3).
     const ctYear = Number(cur.lastMonth.slice(0, 4));
