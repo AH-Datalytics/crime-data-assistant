@@ -114,4 +114,18 @@ notCoverage("which states have the most murders in 2024");
 assert.notEqual(shadowAnswer("how many murders in Colorado in 2022", deps).kind, "coverage");
 assert.notEqual(shadowAnswer("how many agencies reported murders in Texas in 2024", deps).kind, "coverage");
 
+// Scope questions (G2): fixed statements, no query behind them.
+const SHOOT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
+for (const q of ["do you track shootings?", "do you have shootings data", "do we have any dataset that can do shootings"])
+  assert.deepEqual(ask(q).delivered.text, ["Shootings Data", SHOOT, "Source: FBI NIBRS."], q);
+assert.deepEqual(ask("which country do you cover").delivered.text, ["Where the Data Covers", "The data covers the United States.", "Source: FBI NIBRS."]);
+for (const q of ["Do you have any data for NYC?", "is there data specific to new jersey?"])
+  assert.equal(ask(q).delivered.text[0], "Data for a Place", q);
+const nq = sqls.length; ask("do you have shootings data"); assert.equal(sqls.length, nq, "scope answers run no query");
+notCoverage("do you have shootings data in Texas in 2024", true, true);
+notCoverage("do you have murders data for Chicago", true, true);
+notCoverage("do you have data for Chicago in 2023", true, false);
+notCoverage("Do you have data on arrests?");
+notCoverage("Do you have data on Marijuana arrests?");
+
 console.log("nibrs coverage: agencies reporting, states with no data, years, sources and definitions come from the release's agency lists or are a plain pointer");

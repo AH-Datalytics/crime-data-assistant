@@ -65,7 +65,7 @@ import { buildScorecard, type ScorecardPlace } from "./scorecard";
 import { detectAgencyScorecardQuestion } from "../scorecard-format";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
-import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
+import { answerCoverage, readCoverage, SHOOTING_STATEMENT, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
 import { answerShr, answerShrRanking, SHR_FIRST_YEAR, shrQuestionOf, type ShrAnswer, type ShrBuild, type ShrFilter, type ShrQuestion } from "./shr";
@@ -439,7 +439,7 @@ function withDefault(o: ShadowOption, note: string, buttons: ShadowOption[], sit
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
 /** Jeff 2026-11-14: the shootings ask, as the user reads it. */
-const SHOOTING_ASK = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
+const SHOOTING_ASK = SHOOTING_STATEMENT;
 /**
  * The outcome kept to Homicide Reports (Jeff 2026-11-14: a button named SHR never answers from another source): an SHR answer as it
  * is; a question whose choices lead to one, with the choices that lead elsewhere taken out (a typed entry stays); otherwise none.

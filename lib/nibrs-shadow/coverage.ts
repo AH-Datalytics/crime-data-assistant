@@ -17,8 +17,10 @@ export const COVERAGE_SOURCE = "Source: FBI NIBRS.";
 /** The one constant Jeff chose for definitions (2026-11-18). */
 export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 
-export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions";
-export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean };
+export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "scope";
+/** `topic` is set on a "scope" question only: which fixed statement it gets. */
+export type ScopeTopic = "country" | "shootings" | "place";
+export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean; topic?: ScopeTopic };
 export type CoverageAnswer = {
   kind: "coverage"; shape: CoverageShape; period: { from: string; to: string };
   meaning: { source: "nibrs"; places: unknown[]; filters: string[]; measures: { name: string; unit: string }[]; period: { from: string; to: string }; groupings: string[]; statistic: "count" };
@@ -27,6 +29,15 @@ export type CoverageAnswer = {
 };
 export type CoverageRelease = { id: string; firstMonth: string; lastMonth: string };
 export type CoverageDeps = { root: string; release: CoverageRelease; execute(sql: string): unknown[][]; crimeIndexYears?: { first: number; last: number } | null };
+
+/** Jeff 2026-11-14: the shootings ask, as the user reads it (also the answer to "do you track shootings"). */
+export const SHOOTING_STATEMENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
+/** The statements of the "scope" shape: fixed words, no count and no agency list behind them. */
+const SCOPE_TEXT: Record<ScopeTopic, { title: string; lines: string[] }> = {
+  country: { title: "Where the Data Covers", lines: ["The data covers the United States."] },
+  shootings: { title: "Shootings Data", lines: [SHOOTING_STATEMENT] },
+  place: { title: "Data for a Place", lines: ["Name a crime, a place and a period to see its figures, for example \"murders in New York City in 2024\"."] },
+};
 
 /** Other places the FBI's list holds beside the states and the District of Columbia. */
 const OTHER_PLACES: Record<string, string> = { GM: "Guam", PR: "Puerto Rico", VI: "U.S. Virgin Islands", CZ: "Canal Zone", MP: "Northern Mariana Islands", AS: "American Samoa" };
@@ -68,6 +79,14 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
   const ABOUT_CHANGE = /\b(?:chang\w*|histor\w*|legal(?:ly)?|over\s+time|evolv\w*|used\s+to|revis\w*|updat\w*|amend\w*|ever)\b/i;
   if (DEFINED.test(t) && !ABOUT_CHANGE.test(t) && !hasPlace && (t.match(/\?/g) ?? []).length <= 1 && !/\b(?:and|also)\s+(?:show|give|can|how\s+many)\b|\bcan\s+you\s+show\b/i.test(t) && t.split(/\s+/).length <= 16)
     return one("definitions");
+  // Whether the data has a thing: a country, shootings, or "any data" for a place. A short plain ask with no crime counted and no year.
+  const bare = t.replace(/[?.!\s]+$/, "");
+  const scope = (topic: ScopeTopic, state: string | null = null) => one("scope", { topic, state, from: null, to: null, byYear: false });
+  if (/^which\s+countr(?:y|ies)\s+(?:do\s+you\s+|does\s+(?:this|the)\s+\w+\s+)?(?:cover|include|have)$/i.test(bare)) return scope("country");
+  if (/\bshootings?\b/i.test(bare) && !/\d/.test(bare) && bare.split(/\s+/).length <= 10
+    && /^(?:(?:do|does)\s+(?:you|we)\s+(?:have|track)\b|do\s+we\s+have\s+any\s+dataset\s+that\s+can\s+do\b)/i.test(bare)) return scope("shootings");
+  if (!/\d/.test(bare) && bare.split(/\s+/).length <= 9
+    && /^(?:do\s+you\s+have\s+(?:any\s+)?data|is\s+there\s+(?:any\s+)?data)\s+(?:specific\s+)?(?:for|to|in)\s+[a-z][a-z .'-]*$/i.test(bare)) return scope("place", stateIn(bare));
   if (hasMeasure || hasPlace) return null;
   // Agencies reporting.
   if (/\bhow\s+many\s+(?:law\s+enforcement\s+)?agen\w*\s+(?:have\s+|has\s+)?(?:reported|report|reporting|submit\w*|send\w*|contribut\w*|participat\w*|are\s+(?:in|included)|in\s+(?:the|this)\s+data)\b/i.test(t))
@@ -192,6 +211,12 @@ export function answerCoverage(cq: CoverageQuestion, d: CoverageDeps): CoverageA
       delivered: { table: { columns: [txt("coverage.source", "Source"), txt("coverage.for", "Used for")], rows: [
         ["Crime Index", "Counts and rates for a place and year"], ["FBI NIBRS", "Victims, offenders, weapons, arrests and clearances by month"],
         ["FBI Supplementary Homicide Reports", "Homicide Reports"], ["FBI Hate Crime Statistics", "Hate crimes"]] }, text }, read };
+  }
+
+  if (cq.shape === "scope") {
+    const sc = SCOPE_TEXT[cq.topic ?? "place"];
+    return { kind: "coverage", shape: "scope", period: span0, meaning: meaning("scope", null, []),
+      delivered: { table: { columns: [txt("coverage.statement", "Answer")], rows: [[sc.lines[0]]] }, text: [sc.title, ...sc.lines, COVERAGE_SOURCE] }, read };
   }
 
   const text = [`The FBI Crime Data Explorer defines these terms: ${DEFINITIONS_LINK}`, "Source: FBI Crime Data Explorer."];
