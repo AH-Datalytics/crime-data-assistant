@@ -6,6 +6,8 @@
  */
 import assert from "node:assert/strict";
 import { nearestWord, readQuestion } from "../lib/nibrs-shadow/reading";
+import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
+import { matchNibrsType } from "../lib/nibrs-question-types";
 
 const read = (q: string) => readQuestion(q, 2026);
 
@@ -88,6 +90,14 @@ for (const q of ["How many robbery suspects were charged in Tulsa in 2024?", "ro
 
 // P48: people arrested for a crime are its arrests.
 assert.equal(read("How many people were arrested for burglary in Tulsa in 2024?").text, "How many burglary arrests in Tulsa in 2024?");
+// R53: "how many people were murdered" counts the murdered people, so the victims (Codex review of PR 437).
+const unitOf = (q: string) => { const d: any = matchNibrsType(accountNibrsRequest(readQuestion(q, 2026).text)); return d.kind === "spec" ? d.spec.unit : d.kind; };
+assert.equal(read("how many people were murdered in Texas in 2023").text, "murder victims in Texas in 2023");
+assert.equal(unitOf("how many people were murdered in Texas in 2023"), "victims");
+assert.equal(unitOf("how many people were murdered in Texas in 2023 by race"), "victims", "a victim breakdown, not asked which person");
+assert.equal(read("how mnay people were murdered in Texas in 2023").text, "murder victims in Texas in 2023", "the typo fix runs first");
+assert.notEqual(unitOf("how many people were murdered by offenders under 18 in Texas in 2023"), "offenders", "never counts the offenders when people murdered are asked");
+assert.equal(unitOf("how many people were murdered by strangers in Texas in 2023"), "victims");
 assert.equal(read("people arrested for shoplifting in Tulsa").text, "shoplifting arrests in Tulsa");
 // P31: composites read as their crimes, with the weapon flagged; gun violence and shooters are undefined terms (P45).
 const gc = read("Gun crime in Tulsa in 2023");
