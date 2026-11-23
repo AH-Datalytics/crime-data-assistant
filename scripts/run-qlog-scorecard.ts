@@ -1,4 +1,4 @@
-﻿/**
+/**
  * The scorecard of every logged question (coordinator for Jeff, 2026-11-04): each label's expected outcome
  * (scripts/draft-qlog-labels.py) against what the engine does with the question, counted per source.
  *
