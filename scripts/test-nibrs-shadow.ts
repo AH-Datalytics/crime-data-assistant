@@ -323,6 +323,15 @@ assert.equal(at("ambiguous:Kansas City", "Kansas City", true).kind, "ask", "two 
 assert.equal(at("ambiguous:Richmond", "Richmond", true).kind, "ask", "Richmond VA and CA still ask in a list");
 assert.equal(at("ambiguous:Washington", "Washington").kind, "ask", "a lone Washington still asks (P28)");
 assert.equal((at("ambiguous:Washington", "Washington", true) as { agency: { state: string } }).agency.state, "DC", "Washington in a list of cities is DC");
+// A county named in a list stays the county agency, beside a city that resolves to its city (Engine 2.0's P238 case).
+assert.equal((at("county:Baltimore County:MD", "Baltimore County", true) as { agency: { kind: string } }).agency.kind, "county", "Baltimore County in a list is the county agency");
+assert.equal((at("ambiguous:Los Angeles", "Los Angeles", true) as { agency: { kind: string } }).agency.kind, "city", "Los Angeles in a list is the city");
+// A bare state name beside only small same-name towns asks (state or town), alone and in a list; never the town in silence (Engine 2.0 review).
+for (const s of ["California", "Kansas", "Nevada", "Oregon"]) for (const l of [false, true]) {
+  const r = at(`ambiguous:${s}`, s, l);
+  assert.equal(r.kind, "ask", `${s} (in a list: ${l}) asks`);
+  assert.ok(r.kind === "ask" && r.candidates.some((c) => c.kind === "state" && c.name === s), `${s} offers the state`);
+}
 for (const n of ["Baltimore", "Jacksonville", "St. Louis", "Los Angeles"]) {
   assert.equal(at(`city:${n}:`, n).kind, "ask", `${n} alone still asks city or county`);
   assert.equal(at(`city:${n}:`, n, true).kind, "agency", `${n} beside other places is the city (P196)`);

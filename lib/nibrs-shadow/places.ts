@@ -227,6 +227,13 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
     const alone = CITY_NAME_MEANS_CITY.has(base(name)) && !large.some((c) => c.kind === "state" || (c.kind === "agency" && c.agency.kind === "county" && c.agency.state === city.state));
     if (inList || alone) return asPlace(city);
   }
+  // A bare state name beside only small same-name towns ("California" is California, PA: 4,981 people; "Kansas", "Nevada",
+  // "Oregon") is never silently the town: the state or the town (Engine 2.0 review of ca2f4f3b; the old same-name-towns ask
+  // had caught these by accident).
+  if (asState && large.length === 1 && !stateNamed) {
+    const town = pool.find((a) => a.kind === "city") ?? pool[0];
+    if (town) return { kind: "ask", name, candidates: [{ kind: "agency", agency: town }, large[0]] };
+  }
   if (large.length >= 2) return { kind: "ask", name, candidates: large };
   // A small place one or two letters from a large one ("Pittsburg", "Berkley", "prince George county"): which, the large
   // one first (coordinator 2026-11-05, query-log search): never the small place in silence.
