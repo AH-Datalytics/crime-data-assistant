@@ -12,13 +12,16 @@
 import type { ResultTable } from "../nibrs-plan/result";
 import { fmt, monthName } from "./deliver";
 import { STATE_NAMES } from "./places";
+import { CURRENT_CODES, OFFENSE_CODES, type OffenseCode } from "./offense-codes";
 
 export const COVERAGE_SOURCE = "Source: FBI NIBRS.";
 /** The one constant Jeff chose for definitions (2026-11-18). */
 export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 
-export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions";
-export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean };
+export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "codes" | "columns";
+/** Which codes a "codes" question asks for. */
+export type CodeList = { by: "all" } | { by: "group"; group: "A" | "B" } | { by: "against"; against: "Person" | "Property" | "Society" } | { by: "prefix"; prefix: string };
+export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean; codes?: CodeList };
 export type CoverageAnswer = {
   kind: "coverage"; shape: CoverageShape; period: { from: string; to: string };
   meaning: { source: "nibrs"; places: unknown[]; filters: string[]; measures: { name: string; unit: string }[]; period: { from: string; to: string }; groupings: string[]; statistic: "count" };
@@ -68,6 +71,10 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
   const ABOUT_CHANGE = /\b(?:chang\w*|histor\w*|legal(?:ly)?|over\s+time|evolv\w*|used\s+to|revis\w*|updat\w*|amend\w*|ever)\b/i;
   if (DEFINED.test(t) && !ABOUT_CHANGE.test(t) && !hasPlace && (t.match(/\?/g) ?? []).length <= 1 && !/\b(?:and|also)\s+(?:show|give|can|how\s+many)\b|\bcan\s+you\s+show\b/i.test(t) && t.split(/\s+/).length <= 16)
     return one("definitions");
+  // The codes themselves, and one table's columns: fixed lists, no counts (policy row P240, Jeff 2026-11-23).
+  const codes = readCodeList(t);
+  if (codes) return one("codes", { state: null, from: null, to: null, byYear: false, codes });
+  if (/^\s*what\s+columns?\s+(?:does|do|are\s+in)\s+(?:the\s+)?historical_agency_crime\b[^?]*\??\s*$/i.test(t)) return one("columns", { state: null, from: null, to: null, byYear: false });
   if (hasMeasure || hasPlace) return null;
   // Agencies reporting.
   if (/\bhow\s+many\s+(?:law\s+enforcement\s+)?agen\w*\s+(?:have\s+|has\s+)?(?:reported|report|reporting|submit\w*|send\w*|contribut\w*|participat\w*|are\s+(?:in|included)|in\s+(?:the|this)\s+data)\b/i.test(t))
@@ -79,6 +86,19 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
     || /\bhow\s+far\s+back\s+(?:does|do|is|are)\s+(?:the|this|your)\s+data\b/i.test(t))
     return one("years", { state: null, from: null, to: null, byYear: false });
   return null;
+}
+
+/** "list nibrs offense codes in group b", "offense codes starting with 2", "what are the ucr codes": which list is asked, or null. */
+function readCodeList(t: string): CodeList | null {
+  if (t.split(/\s+/).length > 16 || /\b(?:19|20)\d{2}\b|\bhow\s+many\b|\b(?:mean|means|meaning|definition|define|difference)\b|\bwhat\s+(?:does|is)\b/i.test(t)) return null;
+  if (!/\b(?:[nl]ibrs|ucr|offense)\s+(?:offense\s+)?codes?\b|\bcodes?\s+(?:in|for|of)\s+(?:nibrs|ucr)\b/i.test(t)) return null;
+  const prefix = t.match(/\b(?:starting|starts?|beginning|begins?)\s+with\s+(?:the\s+(?:number|digit)\s+)?([0-9])\b/i);
+  if (prefix) return { by: "prefix", prefix: prefix[1] };
+  const group = t.match(/\bgroup\s+([ab])\b/i);
+  if (group) return { by: "group", group: group[1].toUpperCase() as "A" | "B" };
+  const against = t.match(/\b(person|property|society)\b/i);
+  if (against) return { by: "against", against: (against[1][0].toUpperCase() + against[1].slice(1).toLowerCase()) as "Person" | "Property" | "Society" };
+  return { by: "all" };
 }
 
 const ams = (root: string) => `read_parquet('${root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true)`;
@@ -192,6 +212,37 @@ export function answerCoverage(cq: CoverageQuestion, d: CoverageDeps): CoverageA
       delivered: { table: { columns: [txt("coverage.source", "Source"), txt("coverage.for", "Used for")], rows: [
         ["Crime Index", "Counts and rates for a place and year"], ["FBI NIBRS", "Victims, offenders, weapons, arrests and clearances by month"],
         ["FBI Supplementary Homicide Reports", "Homicide Reports"], ["FBI Hate Crime Statistics", "Hate crimes"]] }, text }, read };
+  }
+
+  if (cq.shape === "columns") {
+    const rows: string[][] = [["ori", "Agency identifier"], ["year", "Calendar year"], ["population", "Population the agency reported"], ["violent", "Violent crime total"], ["murder", "Murders"], ["rape", "Rapes"],
+      ["robbery", "Robberies"], ["assault", "Aggravated assaults"], ["property", "Property crime total"], ["burglary", "Burglaries"], ["theft", "Thefts"], ["motor_vehicle_theft", "Motor vehicle thefts"]];
+    const text = ["Columns in the Historical Agency Crime Table", "One row per agency per year.", "Source: FBI Uniform Crime Reporting."];
+    return { kind: "coverage", shape: "columns", period: span0, meaning: meaning("table columns", null, []), delivered: { table: { columns: [txt("coverage.column", "Column"), txt("coverage.meaning", "Meaning")], rows }, text }, read: { table: "historical_agency_crime", release: d.release.id } };
+  }
+
+  if (cq.shape === "codes") {
+    const c = cq.codes ?? { by: "all" as const };
+    const plain = (o: OffenseCode) => `${o.name}${o.fed ? "*" : ""}`;
+    const fedNote = "* Reported by federal and tribal agencies only.";
+    const table = (xs: OffenseCode[], extra = false) => ({ columns: [txt("coverage.code", "Code"), txt("coverage.offense", "Offense"), ...(extra ? [txt("coverage.group", "Crime against")] : [])],
+      rows: xs.map((o) => [o.code, plain(o), ...(extra ? [o.group === "B" ? "Arrest only (Group B)" : o.against ?? ""] : [])]) });
+    const done = (title: string, lines: string[], xs: OffenseCode[], extra = false) => ({ kind: "coverage" as const, shape: "codes" as const, period: span0, meaning: meaning("offense codes", null, []),
+      delivered: { table: table(xs, extra), text: [title, ...lines, ...(xs.some((o) => o.fed) ? [fedNote] : []), "Source: FBI NIBRS User Manual, 2025.0."] }, read: { table: "FBI NIBRS User Manual 2025.0", release: d.release.id } });
+    if (c.by === "prefix") {
+      const xs = CURRENT_CODES.filter((o) => o.code.startsWith(c.prefix));
+      if (!xs.length) return done(`NIBRS Offense Codes Starting With ${c.prefix}`, [`No NIBRS offense code starts with ${c.prefix}.`], []);
+      return done(`NIBRS Offense Codes Starting With ${c.prefix}`, [`${xs.length === 1 ? "One NIBRS offense code starts" : `${xs.length} NIBRS offense codes start`} with ${c.prefix}.`], xs);
+    }
+    if (c.by === "group" && c.group === "B") {
+      const now = CURRENT_CODES.filter((o) => o.group === "B");
+      const gone = OFFENSE_CODES.filter((o) => o.retired);
+      return done("NIBRS Group B Offense Codes", ["Group B offenses are reported by arrest only.",
+        `The FBI dropped ${gone.filter((o) => o.retired === 2021).map((o) => `${o.code} ${o.name}`).join(", ")} from Group B in 2021 and ${gone.filter((o) => o.retired === 2008).map((o) => `${o.code} ${o.name}`).join(", ")} in 2008.`], now);
+    }
+    if (c.by === "group") return done("NIBRS Group A Offense Codes", ["Group A offenses are reported with full incident details."], CURRENT_CODES.filter((o) => o.group === "A"), true);
+    if (c.by === "against") return done(`NIBRS Offense Codes for Crimes Against ${c.against}`, [`These are the Group A offenses the FBI classes as crimes against ${c.against.toLowerCase()}.`], CURRENT_CODES.filter((o) => o.against === c.against));
+    return done("NIBRS Offense Codes", ["These are the FBI offense codes used in NIBRS."], CURRENT_CODES, true);
   }
 
   const text = [`The FBI Crime Data Explorer defines these terms: ${DEFINITIONS_LINK}`, "Source: FBI Crime Data Explorer."];

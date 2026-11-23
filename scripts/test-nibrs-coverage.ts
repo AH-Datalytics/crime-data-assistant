@@ -114,4 +114,26 @@ notCoverage("which states have the most murders in 2024");
 assert.notEqual(shadowAnswer("how many murders in Colorado in 2022", deps).kind, "coverage");
 assert.notEqual(shadowAnswer("how many agencies reported murders in Texas in 2024", deps).kind, "coverage");
 
+// P240: the codes and one table's columns are fixed lists, never asked "which place" (the QL-nibrs / QL-hist b1 ids).
+const codeRows = (q: string) => (ask(q).delivered.table.rows as string[][]).map((r) => r[0]);
+for (const q of ["what are the ucr codes", "can you give me a list of nibrs offense codes with their descriptions?", "what are the different nibrs codes"]) {
+  assert.equal(ask(q).shape, "codes", q);
+  assert.ok(codeRows(q).includes("09A") && codeRows(q).includes("90Z") && codeRows(q).includes("720"), q);
+  assert.ok(!codeRows(q).includes("90A") && !codeRows(q).includes("90E") && !codeRows(q).includes("90I"), `${q}: retired codes are not listed`);
+}
+assert.deepEqual(codeRows("just show me a list of nibrs offense codes in the property category").filter((c) => c === "26H"), [], "26H is Society in the manual");
+assert.ok(codeRows("list of property offense codes in nibrs").includes("23A") && !codeRows("list of property offense codes in nibrs").includes("09A"));
+assert.ok(codeRows("list of person offense codes in nibrs").includes("09A") && !codeRows("list of person offense codes in nibrs").includes("09C") && !codeRows("list of person offense codes in nibrs").includes("23A"));
+assert.deepEqual(codeRows("list nibrs offense codes in group b"), ["90B", "90C", "90D", "90F", "90G", "90J", "90K", "90L", "90M", "90Z"].sort((a, b) => a.localeCompare(b)));
+assert.ok(ask("list nibrs offense codes in group b").delivered.text.some((l) => /90A Bad Checks, 90E Drunkenness, 90H Peeping Tom .* 2021 .* 90I Runaway in 2008/.test(l)));
+assert.deepEqual(codeRows("liat librs codes starting with 7"), ["720"]);
+assert.deepEqual(codeRows("liat librs codes starting with 6"), ["61A", "61B", "620", "64A", "64B"]);
+assert.equal(codeRows("liat librs codes starting with 2").length, 24);
+assert.deepEqual(codeRows("liat librs codes starting with 8"), []);
+assert.ok(ask("liat librs codes starting with 8").delivered.text.includes("No NIBRS offense code starts with 8."));
+const cols = ask("What columns does the historical_agency_crime table have?");
+assert.equal(cols.shape, "columns");
+assert.deepEqual((cols.delivered.table.rows as string[][]).map((r) => r[0]), ["ori", "year", "population", "violent", "murder", "rape", "robbery", "assault", "property", "burglary", "theft", "motor_vehicle_theft"]);
+for (const q of ["what does nibrs code 13A mean", "how many nibrs codes are there", "murders in Texas in 2024 by nibrs codes", "what columns does the nibrs table have"]) assert.notEqual(shadowAnswer(q, deps).kind === "coverage" && (shadowAnswer(q, deps) as { shape?: string }).shape, "codes", q);
+
 console.log("nibrs coverage: agencies reporting, states with no data, years, sources and definitions come from the release's agency lists or are a plain pointer");
