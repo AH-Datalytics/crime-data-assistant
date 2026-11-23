@@ -1,0 +1,12 @@
+{
+ "id": "P240",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"What are the ucr codes\", \"list nibrs offense codes in group b\", \"liat librs codes starting with 8\", \"What columns does the historical_agency_crime table have?\"",
+ "what the app does today": "The question is asked \"which place?\" although it names no crime, place or period.",
+ "proposed behavior": "A question about the data itself (offense codes, table columns, which tabs hold a kind of data, what a code means) names no crime, place or period and is answered from fixed text or a fixed list. It is not asked 'which place'. The answer holds no counts. Code lists come from the FBI codebook; a prefix that matches no code answers that no code starts that way.",
+ "exact default or choices offered": "Code lists: the current NIBRS offense codes from the FBI NIBRS User Manual 2025.0 (Group A with crime-against category, Group B arrest-only, retired Group B codes noted with their dates). Columns: the twelve columns of the historical agency crime table, one row per agency per year.",
+ "why": "Jeff 2026-11-23 (through the coordinator): static answers for these questions approved; the clearance \"1960 onward\" line waits for the clearance fix.",
+ "status": "Decided 2026-11-23 (Jeff, through the coordinator); build: Engine 2.0 (codes and columns first)",
+ "test cases": "\"list nibrs offense codes in group b\": 10 codes plus the retired-codes line. \"liat librs codes starting with 8\": \"No NIBRS offense code starts with 8.\" \"liat librs codes starting with 2\": 24 codes. \"what does code 13A mean\" and any question with a year or \"how many\": not this answer."
+}
