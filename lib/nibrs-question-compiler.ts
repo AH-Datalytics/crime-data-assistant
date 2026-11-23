@@ -1163,11 +1163,20 @@ async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, st
     const label = byState ? "each state" : placeLabel(place, cq.agency);
     const rows = cq.incomplete ? [blank(label, cq.incomplete)] : cq.none && !byState ? [blank(label, cq.none)]
       : byState
-        ? denRows.filter((r) => r.cat !== "US").map((dr) => shareRow(numRows.find((nr) => nr.cat === dr.cat), dr, STATE_NAME_BY_CODE[String(dr.cat)] ?? String(dr.cat))).sort((a, b) => (String(a.place) < String(b.place) ? -1 : 1))
+        ? denRows.filter((r) => r.cat !== "US").map((dr) => shareRow(numRows.find((nr) => nr.cat === dr.cat), dr, STATE_NAME_BY_CODE[String(dr.cat)] ?? String(dr.cat))).sort((a, b) => {
+          if (spec.rank) {
+            // Ranked by share: states with nothing to divide go last, never as 0.
+            if (a.share === null || b.share === null) return a.share === b.share ? 0 : a.share === null ? 1 : -1;
+            const d = Number(b.share) - Number(a.share);
+            if (d) return spec.rank.dir === "bottom" ? -d : d;
+          }
+          return String(a.place) < String(b.place) ? -1 : 1;
+        }).slice(0, spec.rank?.n ?? undefined)
         : [shareRow(numRows[0], denRows[0], label)];
     const applied = appliedFrom([{ measure: spec.measure, ops: [num.rec, den.rec] }]);
     post(applied).set("share", true); // applied-site: share-computed
     for (const f of clearanceConditionsApplied(num.rec, den.rec, clearanceSubset, popClearance, denKind)) post(applied).push("filters", f); // applied-site: clearance-conditions-from-operand-columns
+    if (byState && spec.rank) post(applied).set("rank", { dir: spec.rank.dir, n: spec.rank.n ?? 0 }); // applied-site: rank-sort-and-slice
     if (byState) { post(applied).push("lists", "list:state"); applied.breakdowns = (applied.breakdowns ?? []).filter((b) => b !== "state"); } // applied-site: share-per-state
     const form = periodFormValue(spec.period); if (form) post(applied).push("periodValues", form); // applied-site: relative-period-resolved-by-years-of
     const stateNote = byState ? " Each state's share is of the clearance records its reporting agencies sent to NIBRS; states with no records for this offense and year aren't listed." : "";
