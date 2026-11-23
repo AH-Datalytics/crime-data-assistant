@@ -1236,6 +1236,11 @@ assert.deepEqual(drugsYears.delivered.contractProblems, []);
 const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
 assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
 assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
+// Drug possession arrests: NIBRS has no possession/sale split for arrests, so the answer says all drug/narcotic violation arrests are counted; the marijuana form is unchanged.
+const POSSESS_LINE = "NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted.";
+const possess = as(ask("drug possession arrests in Detroit in 2023"), "answer");
+assert.ok(possess.delivered.text.includes(POSSESS_LINE), JSON.stringify(possess.delivered.text));
+assert.ok(!weed.delivered.text.includes(POSSESS_LINE));
 // Violent crime by age (Jeff 2026-11-15): NIBRS crimes against persons for the victim or the offender, with the line saying so.
 for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "victims"], ["violent crimes by offender age in Detroit in 2023", "offenders"]] as const) {
   const raw = ask(q);
@@ -3018,6 +3023,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // P180 to P182 (Jeff 2026-11-21): a missing place, period or kind of crime is filled with its default, said, with buttons; an ask whose default
 // cannot answer now stays an ask. Tested on synthetic asks (no data): the wrapper reads only the ask's options and their continuations.
 {
+  const ask0 = (q: string) => shadowAnswer(q, deps);
   const answerOf = (years: string[]): ShadowOutcome => ({ kind: "srs", delivered: { table: { columns: [], rows: years.map((y) => [y, 1]) }, text: ["Title", "Source: Crime Index."] } }) as unknown as ShadowOutcome;
   const ask = (about: string, question: string, options: { label: string; continuation?: ShadowOutcome; entry?: string }[]): ShadowOutcome => ({ kind: "clarify", about, question, options }) as unknown as ShadowOutcome;
   const live = { ...deps, noDefaults: false };
@@ -3038,6 +3044,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Place, then period, then crime in one chain: three notes in that order.
   const chain = applyDefaults("crime trends", ask("which place", "crime trends", [{ label: "The United States", continuation: ask("which period", "crime trends", [{ label: "Every year available", continuation: ask("which kind of crime", "crime trends", [{ label: "Both", continuation: answerOf(["2023", "2024"]) }]) }]) }]), live);
   assert.equal(text(chain).length, 5, JSON.stringify(text(chain)));
+  // One year is shown, so the every-year default is not also said ("DUI arrests by age group nationally" said both).
+  const dui = applyDefaults("DUI arrests by age group nationally", ask0("DUI arrests by age group nationally"), live);
+  const duiText = (dui as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
+  assert.ok(dui.kind !== "clarify", JSON.stringify(dui).slice(0, 300));
+  assert.ok(!(duiText.some((t) => /^No years were given/.test(t)) && duiText.some((t) => /^No year was given/.test(t))), JSON.stringify(duiText));
   // Stays an ask: the default is a decline, there is no default option, noDefaults is set.
   const decline = { kind: "decline", reason: "unsupported_capability", explanation: "x", alternative: null } as unknown as ShadowOutcome;
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: decline }]), live).kind, "clarify");
