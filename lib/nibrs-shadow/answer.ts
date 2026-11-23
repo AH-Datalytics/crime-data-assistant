@@ -2160,10 +2160,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const resolved = new Map<string, Place>();
   let ask: { part: Part; name: string; candidates: Candidate[]; more?: boolean } | null = null;
   let unfound: Part | null = null;
+  // Two or more cities or counties named together: a city beside other places is the city (P196, Jeff 2026-11-22).
+  const inList = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "place" && !!p.value && /^(city|county|ambiguous):/.test(p.value)).length >= 2;
   const parts = ledger0.parts.map((p) => {
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const pin = pins.get(p.span[0]);
-    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text);
+    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text, inList);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
     if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates, more: r.more }; return p; }
