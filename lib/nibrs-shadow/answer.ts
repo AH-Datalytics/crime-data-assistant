@@ -88,6 +88,8 @@ export type ShadowDeps = {
   cityShare?: { minOffenses: number | null; limit: number | null; direction: "top" | "bottom"; all?: boolean; note?: string };
   /** The question as the user asked it, set while it is answered (the county-wide decline offers it without the county-wide words). */
   asked?: string;
+  /** The question as typed asked for shares of the clearance types (the reader rewrites the question and loses the percentage words). */
+  shareAsked?: boolean;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
@@ -874,6 +876,12 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
 /** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
 /** A clearance question (P182's exception): a clearance rate, offenses cleared, clearances by type, cleared by arrest or exception. */
 const CLEARANCE_WORDS = /\bclear(?:ance|ances|ed|ing)?\b/i;
+/**
+ * QL-nibrs-9aed2136c4 (Jeff 2026-11-22): "What percentage of murders are cleared by arrest vs exceptional" is asked for shares of the clearance types.
+ * Narrow on purpose: a percentage word, a clearance word, and both "arrest" and "exceptional". Only such a question defaults a missing year to the
+ * latest complete year, gets the share column in place of counts, and is exempt from the heavy-statement deferral (the national one runs in seconds).
+ */
+const clearanceTypeShareAsked = (q: string): boolean => /\b(?:percent(?:age)?s?|shares?|proportions?)\b/i.test(q) && CLEARANCE_WORDS.test(q) && /\barrest/i.test(q) && /\bexceptional/i.test(q);
 /** NIBRS named, or an offense only NIBRS holds: a default never answers these from the Crime Index or Current Trends. */
 const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bshoplift\w*|\bsimple assaults?\b|\bintimidation\b|\bdrugs?\b|\bnarcotic\w*|\bdui\b|\bdwi\b|\barrest\w*|\bkidnap\w*|\bfraud\w*|\bvandal\w*|\bprostitut\w*|\btrafficking\b/i;
 /** A question that points back at an answer that isn't there: never answered in part by a default. */
@@ -908,7 +916,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
       option = find(/^Every year available$/);
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
-      if (!option && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
+      if (!option && !deps.shareAsked && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
         defaultDepth++;
         try {
           // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
@@ -977,7 +985,8 @@ function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps):
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
   return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
 }
-export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
@@ -2367,7 +2376,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
     // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
     // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
-    const nationalClearanceShare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "share") && CLEARANCE_WORDS.test(ledger0.question);
+    const nationalClearanceShare = (ledger0.parts.some((p) => p.clause === 0 && p.concept === "share") && CLEARANCE_WORDS.test(ledger0.question)) || !!deps.shareAsked;
     const nationOption = deferHeavy("The United States", (d) => fromLedger(filled(ledger, "place", "national", "the United States"), d, pins),
       nationalClearanceShare ? { ...deps, deferChars: Number.MAX_SAFE_INTEGER } : deps);
     const placeButtons: ShadowOption[] = [{ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }];
@@ -3448,8 +3457,11 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     && plan.geography.places.length > 1 && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length && plan.geography.combine !== "combined";
   if (placesMode && !multiClearance && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
     return decline("unsupported_capability", "This isn't available: several agencies or rates with several crimes, a breakdown, a change or rolling windows.");
+  // 9aed2136c4: the clearance types asked as percentages carry the share of the period beside the count (the incidents column is dropped below).
+  const typeShares = !!deps.shareAsked && catG.length === 1 && catG[0].dimension === "offense.clearance_type" && plan.statistics.length === 1 && plan.statistics[0].kind === "count";
+  if (typeShares) plan.statistics.push({ kind: "share", as: "share_of_period", measure: plan.measures[0].as, within: timeG.map((g) => g.dimension) });
   const [first, second, ...more] = plan.statistics;
-  const counts = plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
+  const counts =plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
@@ -3459,7 +3471,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
 
   // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
   // with the same groupings and filters, as a second count. One agency only for now.
-  if (!clearanceShare && clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
+  if (!clearanceShare && !typeShares && clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
     // P171 (Jeff 2026-11-21): clearance by type for a state is the reporting agencies' sum (one clearance grouping); the nation
     // and the nation too (the runner timed it: 4.3 s for the nation in 2024).
     const stateClearance = stateMode && stateBreakdown && catG.some((g) => g.dimension.startsWith("offense.clearance_"))
@@ -3530,7 +3542,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       ? [deferHeavy("The last 10 complete years", (d) => fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), d, pins), deps),
          deferHeavy("Every year available", (d) => fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), d, pins), deps),
          { label: "Another range", entry: "which range of years" }]
-      : [deferHeavy(`The latest complete year (${lcy})`, (d) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d, pins), deps),
+      : [deferHeavy(`The latest complete year (${lcy})`, (d) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d, pins),
+           deps.shareAsked ? { ...deps, deferChars: Number.MAX_SAFE_INTEGER } : deps),
          deferHeavy("This year so far", (d) => fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), d, pins), deps),
          { label: "Another year", entry: "which year" }];
     return { kind: "clarify", about: trend ? "which range of years" : "which period", question: ledger0.question, options: opts };
