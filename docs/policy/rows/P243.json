@@ -1,0 +1,12 @@
+{
+ "id": "P243",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Robberies by weapon in Texas in 2024\", any breakdown by weapon, and a single-weapon question such as \"robberies with a handgun\".",
+ "what the app does today": "The weapon breakdown groups on the raw weapon code, so the automatic codes are their own rows: 11A \"Firearm (Automatic)\", 12A \"Handgun (Automatic)\", 13A \"Rifle (Automatic)\" (and 14A, 15A). A single-code filter such as handgun matches 12 only. The \"firearm\" filter already includes all ten codes.",
+ "proposed behavior": "A weapon recorded with the automatic flag counts in the same row as the plain code: 12A in Handgun, 11A in Firearm (type not stated), 13A in Rifle. The flag is not a separate row. The same applies to 14A in Shotgun and 15A in Other Firearm (not named on the card; same rule). A single-weapon filter (handgun, rifle) includes its automatic code. An offense with both the plain and the automatic code counts once in that row.",
+ "exact default or choices offered": "Rows: Firearm (type not stated) = 11 + 11A; Handgun = 12 + 12A; Rifle = 13 + 13A; Shotgun = 14 + 14A; Other Firearm = 15 + 15A. No \"(Automatic)\" rows.",
+ "why": "Jeff 2026-11-23 (card answer, through the coordinator): yes, same row. The independent checker matches the engine on QL-nibrs-ea524d684d when the flag folds into the plain row. SHR already combines 12 and 12A (shr.ts).",
+ "status": "Decided 2026-11-23 (Jeff, through the coordinator); NOT built: the engine groups on the raw code today (attribute-table.ts offense_weapon.weapon, compile.ts weapon filter and cube grouping, cube.ts cubeWeaponUnits, nibrs-codes.ts WEAPON_TYPES labels). Needs an engine change with a full gate.",
+ "test cases": "QL-nibrs-ea524d684d: the weapon rows have no (Automatic) row and match the checker. An offense with weapons 12 and 12A counts once in Handgun. \"Robberies with a handgun\" counts 12 and 12A."
+}
