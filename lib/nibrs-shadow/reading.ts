@@ -146,6 +146,14 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
+  // D1 period grammar (bad-declines plan): wording for a period the engine already reads.
+  // "over the last three (3) years": the digits repeat the number word.
+  [/\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s*\(\d+\)/gi, "$1"],
+  // "as far back as there is data", "back as far as you can", "going back as far as records allow", "from oldest data": every year there is.
+  [/\b(?:(?:from|going|go)\s+)?(?:as\s+far\s+back\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|back\s+as\s+far\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|from\s+(?:the\s+)?oldest\s+data|since\s+the\s+beginning(?!\s+of\b))\b/gi, "for all years"],
+  // "since 1935 until 2025", "2000 till 2025": a span of years.
+  [/\bsince\s+((?:19|20)\d{2})\s+(?:until|till|til)\s+((?:19|20)\d{2})\b/gi, "from $1 to $2"],
+  [/\b((?:19|20)\d{2})\s+(?:until|till|til)\s+((?:19|20)\d{2})\b/gi, "$1 to $2"],
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.
