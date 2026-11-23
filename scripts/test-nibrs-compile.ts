@@ -223,6 +223,21 @@ assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024])
     assert.ok(!sql.includes("/cubes/"), `${id} must never read a cube`);
     assert.ok(sql.includes("victim_offender") && /connected_offense/.test(sql), `${id} keeps the P82 raw statement`);
   }
+  // The any-arrest month test (a reported month for every arrest question that is not the all-crime count): the cube's all-offense arrestee row when the group v4 cube holds every built year, else the raw scan.
+  {
+    const arrestSql = (cfg: typeof cubes | null) => { const r = compilePlan(askPlan("arrests.shoplifting", "arrest"), year(2025), { ...t, cube: cfg }); assert.equal(r.kind, "query"); return (r as { query: { sql: string } }).query.sql; };
+    const full = { ...cubes, years: [...new Set([...cubes.years, ...t.builtYears])] };
+    const viaCube = arrestSql(full);
+    const anyPart = (s: string) => s.slice(s.indexOf("any_arrest AS"), s.indexOf("any_arrest AS") + 3000);
+    assert.ok(viaCube.includes("any_arrest AS") && /FROM read_parquet\(\[[^\]]*\/cubes\/group\//.test(anyPart(viaCube)) && /crime_group = 'all_crime'/.test(anyPart(viaCube)), "any_arrest reads the group cube's all-offense row");
+    assert.ok(!/FROM arrestee|FROM group_b_arrest|arrestee\b.*multiple_arrestee_indicator/.test(anyPart(viaCube).split("HAVING")[0]), "the cube path does not scan the raw arrest tables for the month test");
+    const raw = arrestSql(null);
+    assert.ok(raw.includes("multiple_arrestee_indicator") && raw.includes("identical_to_line_no IS NULL") && !/crime_group = 'all_crime'/.test(raw), "no cube: the raw month test");
+    const partial = arrestSql({ ...cubes, years: [1999] });
+    assert.ok(!/crime_group = 'all_crime'/.test(partial.slice(partial.indexOf("any_arrest AS"))) , "a cube without the built years keeps the raw month test");
+    const notV4 = arrestSql({ ...full, groupV4: false } as typeof cubes);
+    assert.ok(!/crime_group = 'all_crime'/.test(notV4.slice(notV4.indexOf("any_arrest AS"))), "no group v4 cube: raw month test");
+  }
   // The new measures of the other capability PRs need their own cube-on check on a real agency (runner): justifiable homicide and the weapon forms read the cube only as their own cell.
 }
 
