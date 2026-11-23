@@ -280,6 +280,15 @@ const [[agencyMonths, offenses, incidents, differing]] = runSql(`WITH cj AS (
   SELECT count(*), sum(offenses), sum(incidents), count(*) FILTER (WHERE offenses <> incidents) FROM m`) as number[][];
 console.log(`carjacking offenses = incidents: ${agencyMonths} agency-months, ${offenses} offenses, ${incidents} incidents, ${differing} differing`);
 if (Number(differing) !== 0 || Number(offenses) !== Number(incidents)) failed++;
+// Jeff 2026-11-23: an arrest is counted in the year of its arrest date, so an arrest question also reads the year before (arrestYears); the agency-month status stays on the built years.
+{
+  const plan: NibrsPlan = { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date", measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] };
+  const c = compilePlan(plan, SYN_PERIOD, { root: SYN, builtYears: [2025, 2026], arrestYears: [2024, 2025, 2026] });
+  const sql = c.kind === "query" ? c.query.sql : "";
+  const ok = /arrestee\/data_year=2024\//.test(sql) && !/agency_month_status\/data_year=2024\//.test(sql) && /agency_month_status\/data_year=2025\//.test(sql);
+  console.log(`arrests also read the year before: ${ok ? "ok" : "FAILED"}`);
+  if (!ok) failed++;
+}
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(failed ? `compile gate: ${failed} check(s) failed` : "compile gate: every check passed");
 process.exit(failed ? 1 : 0);

@@ -23,7 +23,12 @@ function runShards(cfg) {
   const stallMs = cfg.stallMs ?? 20 * 60_000, restarts = cfg.restarts ?? 2, pollMs = cfg.pollMs ?? 15_000;
   const reason = cfg.stalledReason ?? "the shard stalled on this question and was stopped by the watchdog";
   return new Promise((resolve) => {
-    const state = cmds.map(() => ({ child: null, done: false, failed: false, starts: 0, lastSize: -1, lastChange: Date.now(), killed: false, stalled: false }));
+    // A reader that overruns (the "current" file names the label alone, no "\tdatabase" after it, and has not been written for
+    // readerStallMs) is stopped the same way, but is not a stall: it does not use up a restart, because a slow question is that
+    // question's error and the shard goes on with the next one.
+    const readerStallMs = cfg.readerStallMs ?? 0;
+    const readerReason = cfg.readerReason ?? "the reader took too long on this question and was stopped by the watchdog";
+    const state = cmds.map(() => ({ child: null, done: false, failed: false, starts: 0, lastSize: -1, lastChange: Date.now(), killed: false, stalled: false, readerKill: false }));
     let timer = null;
     const finish = () => {
       if (!state.every((s) => s.done || s.failed)) return;
@@ -40,9 +45,12 @@ function runShards(cfg) {
         if (s.killed) {
           // Stopped by the watchdog: the question it was on is an error, then the shard resumes after it (or is given up on).
           let id = "";
-          try { id = fs.readFileSync(current[i], "utf8").trim(); } catch { /* the shard had not named one */ }
+          try { id = fs.readFileSync(current[i], "utf8").split("\t")[0].trim(); } catch { /* the shard had not named one */ }
           // The "current" file is empty between questions: a stall there (a shard that never began one) records nothing and only restarts.
-          if (id) fs.appendFileSync(progress[i], JSON.stringify({ id, got: { kind: "error", source: null, reason, ms: stallMs } }) + "\n");
+          if (id) fs.appendFileSync(progress[i], JSON.stringify({ id, got: { kind: "error", source: null, reason: s.readerKill ? readerReason : reason, ms: s.readerKill ? readerStallMs : stallMs } }) + "\n");
+          // The label is recorded: clear it, so the restarted shard's start-up is not taken for the same reader still running.
+          try { fs.writeFileSync(current[i], ""); } catch { /* nothing to clear */ }
+          if (s.readerKill) { s.readerKill = false; s.starts--; console.log(`shard ${i}: restarted after ${id} (reader too slow)`); start(i); return; }
           if (s.starts <= restarts) { console.log(`shard ${i}: restarted${id ? ` after ${id}` : ""} (stall ${s.starts})`); start(i); return; }
           s.failed = true; finish(); return;
         }
@@ -55,6 +63,17 @@ function runShards(cfg) {
       const now = Date.now();
       state.forEach((s, i) => {
         if (!s.child || s.done || s.failed || s.killed) return;
+        if (readerStallMs > 0) {
+          let text = "", wrote = now;
+          try { text = fs.readFileSync(current[i], "utf8"); wrote = fs.statSync(current[i]).mtimeMs; } catch { /* no file yet */ }
+          if (text && !text.includes("\t") && now - wrote >= readerStallMs) {
+            s.killed = true; s.readerKill = true;
+            console.log(`shard ${i}: reading ${text.trim()} for ${Math.round((now - wrote) / 1000)} s (pid ${s.child.pid}): stopping it`);
+            if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(s.child.pid), "/T", "/F"], { stdio: "ignore" });
+            else s.child.kill("SIGKILL");
+            return;
+          }
+        }
         const sz = size(progress[i]);
         if (sz !== s.lastSize) { s.lastSize = sz; s.lastChange = now; return; }
         if (now - s.lastChange < stallMs) return;
