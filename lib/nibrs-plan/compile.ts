@@ -565,7 +565,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const years = isArrest ? (t.arrestYears ?? t.builtYears) : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   // The agency-month status is the month's own (an arrest month counts whatever its status), so it stays on the built years.
-  const read = (table: string) => `read_parquet([${(table === "agency_month_status" ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
+  const read = (table: string) => `read_parquet([${(table === "agency_month_status" && isArrest ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
   const and = (cs: string[]) => cs.map((c) => `
       AND ${c}`).join("");
   const restFilter = (a: string) => and([...incidentConds.map((c) => `EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`),
