@@ -568,7 +568,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
   // since the look-ahead would fail in PHRASES).
-  dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
+  dropWord(/\b(?:in|for|among|across|of)\s+(?:these|the\s+following)\s+(?:\d+\s+)?(?:cities|city\s+agencies|agencies|places|departments)\s*:?\s*(?=[A-Z])/g, "in ");
   // The share of both ("what percentage of murders are cleared by arrest vs exceptional nationally") is the clearance types side by side
   // (P191's table), not one share: the share words are dropped here (look-ahead, so not in PHRASES).
   dropWord(/\b(?:what|which)\s+(?:percent(?:age)?|share|proportion|fraction)\s+of\s+(?=[^?]*\bcleared\s+by\s+arrest\s+(?:versus|vs\.?|and|compared\s+(?:to|with)|against)\s+(?:by\s+)?exception)/gi, "");
