@@ -3362,6 +3362,35 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A crime already counted by offense, and the murder path, are left as they were.
   assert.equal((as(ask("robberies by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "offenses.robbery");
 }
+// P280 (Jeff 2026-11-23, "Offenses with a note"): a crime against a person by location or hour is counted by offense, with the one sentence.
+{
+  const SENTENCE = "These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.";
+  type P280 = { plan: { measures: { id: string; unit: string }[] }; delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
+  const loc = as(ask("Aggravated assaults by location in Houston in 2024"), "answer") as unknown as P280;
+  assert.equal(loc.plan.measures[0].id, "offenses.aggravated_assault");
+  assert.equal(loc.plan.measures[0].unit, "offense");
+  assert.equal(loc.delivered.text[0], "Houston, Texas Aggravated Assault Offenses by Location Type, 2024");
+  assert.ok(loc.delivered.text.includes(SENTENCE), JSON.stringify(loc.delivered.text));
+  // The share is of every offense counted, the row with no figure included in the grouping but not in the total (30 + 20 = 50).
+  assert.deepEqual(loc.delivered.table.rows, [["Code F", 30, 60], ["Code M", 20, 40], ["Code U", null, null]]);
+  assert.equal(loc.delivered.table.columns[2].header, "Share of all aggravated assault offenses (%)");
+  const hour = as(ask("Murders by hour of day in Texas in 2024"), "answer") as unknown as P280;
+  assert.equal(hour.plan.measures[0].id, "offenses.murder");
+  assert.equal(hour.delivered.text[0], "Texas Murder Offenses by Time of Day, 2024");
+  assert.ok(hour.delivered.text.includes(SENTENCE));
+  assert.ok(hour.delivered.text.some((t) => /^Morning is 6 AM to noon/.test(t)), "the time-of-day line stays");
+  for (const q of ["Rapes by location in Texas in 2024", "Simple assaults by location in Houston in 2024", "Rapes by time of day in Houston in 2024"])
+    assert.ok((as(ask(q), "answer") as unknown as P280).delivered.text.includes(SENTENCE), q);
+  // Property crimes and robbery were already offenses: no sentence.
+  for (const q of ["Robberies by location in Houston in 2024", "Burglaries by location in Houston in 2024", "Robberies by hour in Houston in 2024"]) {
+    const o = as(ask(q), "answer") as unknown as P280;
+    assert.equal(o.plan.measures[0].unit, "offense", q);
+    assert.ok(!o.delivered.text.includes(SENTENCE), q);
+  }
+  // Weapon stays with its own wording (P166); a second grouping is not converted.
+  assert.ok(!(as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as P280).delivered.text.includes(SENTENCE));
+  assert.equal(ask("Aggravated assaults by hour of day by victim age in Houston in 2024").kind, "decline");
+}
 // P193 (census 2026-11-21): "in these cities: A, B, C" names the places in the list; "per year and clearance type" is the clearance type by year.
 {
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;

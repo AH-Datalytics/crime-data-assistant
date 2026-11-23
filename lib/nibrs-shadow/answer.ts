@@ -35,7 +35,7 @@ import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
 import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, pointsBack, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
-import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, PERSON_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
@@ -50,7 +50,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, OFFENSES_NOT_VICTIMS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyInState, agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateCodeOf, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -3296,6 +3296,20 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P166: a breakdown by weapon counts the offenses, not the victims" });
       unbind((p) => p.concept === "unit");
     }
+    // P280 (Jeff 2026-11-23, "Offenses with a note"): a crime against a person broken down by location or by hour of day is counted by
+    // offense (NIBRS keeps location and time of day on the offense and the incident, not the victim), and the answer says so. Only when the
+    // breakdown is by location and/or hour (a victim's age, sex or relationship keeps the victim unit; weapon stays victims, P166).
+    const pCodes = MEASURE_CODES[name];
+    const byPlaceOrHour = plan.groupings.some((g) => g.dimension === "offense.location_type" || g.dimension === "incident.hour");
+    const onlyPlaceOrHour = plan.groupings.every((g) => g.dimension === "offense.location_type" || g.dimension === "incident.hour" || g.dimension.startsWith("time."));
+    const victimFilter = [...plan.filters, ...(m.filters ?? [])].some((f) => (f.kind === "attribute" && /^(?:victim|offender|relationship)\./.test(f.dimension)) || (f.kind === "exists" && f.scope !== "offense" && f.scope !== "incident"));
+    if (m.id.startsWith("victims.") && plan.measures[i].id === m.id && !!pCodes && pCodes.every((c) => PERSON_CODES.has(c)) && byPlaceOrHour && onlyPlaceOrHour && !victimFilter
+      && !["violent_crime", "property_crime", "against_property"].includes(name)) {
+      plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense" };
+      plan.groupings = plan.groupings.map(({ multiValue, ...g }) => (g.dimension === "offense.location_type" ? g : { ...g, ...(multiValue ? { multiValue } : {}) }));
+      plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P280: a crime against a person by location or hour is counted by offense, not by victim" });
+      unbind((p) => p.concept === "unit");
+    }
   });
   // P31: a composite's crimes, each in its own unit (FBI standard), with the composite's weapon on the offense that
   // connects a victim, or on the robbery offense itself.
@@ -3698,6 +3712,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
     // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
     ...(plan.defaults.some((d) => d.reason.startsWith("P166")) ? [`Counts are ${MEASURE_LABEL[plan.measures[0].id.split(".")[1]] ?? "crime"} offenses by weapon, not victims.`] : []),
+    // P280 (Jeff 2026-11-23): a person crime by location or hour is counted by offense, and says so.
+    ...(plan.defaults.some((d) => d.reason.startsWith("P280")) ? [OFFENSES_NOT_VICTIMS_LINE] : []),
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),
