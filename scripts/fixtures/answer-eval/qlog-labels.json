@@ -90176,16 +90176,24 @@
    "question": "What are the top nationwide crime trends ?",
    "previous": "Murder rate in Miami-Dade County 2022–2026?",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": "historical",
-    "about": "the whole question"
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P247-open-ended",
-    "drafted_by": "declines-owner",
-    "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
+    "rule": "P180-P182",
+    "drafted_by": "rules-v2",
+    "reviewed_by": "jeff-2026-11-21",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced."
    }
   },
   {
