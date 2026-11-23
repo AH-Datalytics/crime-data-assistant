@@ -1,0 +1,12 @@
+{
+ "id": "P242",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Carjackings in California in 2023\", \"carjacking trend in Memphis\", any carjacking count or breakdown.",
+ "what the app does today": "D18 fixes only the counting unit (robbery-based, counted by offense). The definition of a carjacking was in code only (compile.ts, CARJACK_VEHICLES).",
+ "proposed behavior": "A carjacking is a Robbery (offense code 120) in an incident that also has a property record of loss type 7 (stolen) whose property description is one of: 03 (automobile), 05 (bus), 24 (other motor vehicle), 28 (recreational vehicle) or 37 (truck). Carjacking offenses are counted by offense (each robbery of such an incident); carjacking incidents are counted by incident.",
+ "exact default or choices offered": "Definition exactly as written above; no other offense code and no other vehicle code counts.",
+ "why": "Jeff 2026-11-23 (card answer, through the coordinator): carjacking = Robbery (offense 120) in an incident with a property row of loss type 7 (stolen) and description 03, 05, 24, 28 or 37. Example: California 2023 = 1,481. Counting unit from D18.",
+ "status": "Decided 2026-11-23 (Jeff, through the coordinator); already built (compile.ts offenses.carjacking and incidents.carjacking); this row records it",
+ "test cases": "California 2023 carjackings: 1,481 (QL-nibrs-df8750a471). A robbery with a stolen non-vehicle property row: not a carjacking."
+}
