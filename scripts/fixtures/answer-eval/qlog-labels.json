@@ -102327,16 +102327,23 @@
    "question": "exceptional clearance rate for robbery in Texas",
    "previous": "robberies by time of day nationally",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "there is no state clearance rate in the data"
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R15",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P18"
+    "reviewed_by": "jeff-2026-11-22",
+    "notes": "P203 several years: same question as QL-nibrs-e04248e56d with a previous turn; the follow-up changes nothing, so it gets the same answer, one row per year. Jeff decided 2026-11-22 (typed, via the coordinator)."
    }
   },
   {
