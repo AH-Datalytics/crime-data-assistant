@@ -7,6 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
@@ -278,6 +279,52 @@ assert.deepEqual(asked(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city
 const named = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates, places)) : r.kind);
 assert.deepEqual(named(at("city:Los Angeles:", "Los Angeles")), ["Los Angeles Police Department", "Los Angeles County Sheriff's Department"]);
 assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+// Jeff 2026-11-22 (the 30-city murders question): more places than the engine compares at once (10), some of them names that exist in several
+// places, ask which of those first, in one question with a typed answer; "for these 30 cities" is read, not declined as unread words.
+{
+  const list = "Philadelphia Washington New Orleans Memphis Detroit Indianapolis Baltimore Kansas City Louisville Charlotte Jacksonville Cincinnati Jackson Chicago Milwaukee Minneapolis Dallas Albuquerque Birmingham St Louis New York City Richmond Las Vegas Los Angeles Nashville Atlanta Houston San Antonio Fort Worth Austin";
+  for (const q of [`Give me murders through April for each year from 2017 through 2025 for these 30 cities: ${list}`, `Give me murders for each year from 2017 through 2025 for these 30 cities: ${list}`]) {
+    const o = as(ask(q), "clarify");
+    assert.ok(/^which Washington, Baltimore, Kansas City\b/.test(o.about) && /Jackson\b/.test(o.about) && /Richmond\b/.test(o.about), o.about);
+    assert.ok(/for Baltimore, Jacksonville, St Louis and Los Angeles a state is not enough: name the city, as in "the city of Baltimore", or the department\)/.test(o.about), o.about);
+    assert.deepEqual(o.options.map((x) => [x.label, !!x.entry, !!x.continuation]), [["Name the state or city for each", true, false]]);
+    assert.ok(/^Give me murders .* in Philadelphia Washington New Orleans/.test(o.question) && !/these 30/.test(o.question), o.question);
+  }
+  // Ten or fewer places keep the one-name ask with its buttons.
+  assert.deepEqual(asked(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+  // "If 30 places are named it should give all 30": with each name given its state, the question is answered for every place.
+  const named30 = ["Philadelphia", "Washington DC", "New Orleans", "Memphis", "Detroit", "Indianapolis", "the city of Baltimore", "Kansas City MO", "Louisville", "Charlotte NC", "the city of Jacksonville", "Cincinnati", "Jackson MS", "Chicago", "Milwaukee",
+    "Minneapolis", "Dallas", "Albuquerque", "Birmingham", "the city of St Louis", "New York City", "Richmond VA", "Las Vegas", "Los Angeles Police Department", "Nashville", "Atlanta", "Houston", "San Antonio", "Fort Worth", "Austin"];
+  // (Whole completed years of murder are routed to Historical; the through-April form stays in NIBRS, as the original question did.)
+  const q30 = `Give me murders through April for each year from 2017 through 2025 in ${named30.join(", ")}`;
+  sqls.length = 0;
+  const done = ask(q30);
+  // With every place named the ask is over, and the table is one grouped query for all 30 places and 9 years (270 rows), not one per place.
+  const a30 = as(done, "answer") as any;
+  assert.ok(a30.sameMonths, "same-months table");
+  const rows30 = a30.delivered.table.rows as unknown[][];
+  assert.equal(rows30.length, 30 * 9, "30 places x 9 years");
+  assert.equal(new Set(rows30.map((r) => r[0])).size, 30, "every place named is in the table");
+  assert.ok(sqls.length <= 3, `one grouped query, not one per place (${sqls.length} statements)`);
+  assert.equal(a30.delivered.evidence.length, rows30.length);
+  // Each place's cells are the grid's months summed (Houston 9 a month, Dallas 7, the rest 5; four months a year), and a place alone gives the
+  // same figure (the stub answers a single place with its own flat 7 a month, which is Dallas's grid; so Dallas is the one compared alone).
+  const cell = (rows: unknown[][], place: RegExp, y: string) => rows.find((r) => place.test(String(r[0])) && r[1] === y)?.[2];
+  assert.deepEqual([/Houston/, /Dallas/, /Memphis/, /Austin/].map((re) => cell(rows30, re, "2021")), [36, 28, 20, 20]);
+  const solo = as(ask("Give me murders through April for each year from 2017 through 2025 in Dallas"), "answer") as any;
+  const soloRow = (solo.delivered.table.rows as unknown[][]).find((r) => r[0] === "2021");
+  assert.equal(soloRow?.[1], cell(rows30, /Dallas/, "2021"), "Dallas 2021 alone equals Dallas in the 30-place table");
+  // A month not known blanks that place's year only (Austin June 2024), never a partial sum; the other places keep their figure.
+  const jul = as(ask("Give me murders through July for each year from 2023 through 2025 in Houston, Austin"), "answer") as any;
+  const jr = jul.delivered.table.rows as unknown[][];
+  assert.deepEqual([cell(jr, /Houston/, "2024"), cell(jr, /Austin/, "2024"), cell(jr, /Austin/, "2023")], [63, null, 35]);
+  assert.ok(jul.delivered.text.some((l: string) => /No figure is available for Austin.* 2024: shown blank, not zero/.test(l)), jul.delivered.text.join(" | "));
+}// A single place keeps its own year-by-year answer, byte for byte (hashes taken before the several-places table existed).
+{
+  const h = (q: string) => createHash("sha256").update(JSON.stringify(ask(q))).digest("hex").slice(0, 16);
+  assert.equal(h("Give me murders through April for each year from 2017 through 2025 in Houston"), "4bef805eb6b6649d");
+  assert.equal(h("Give me robberies through March for each year from 2020 through 2024 in Dallas"), "3442c60ff313b9e0");
+}
 // P16 and P28 (Jeff 2026-11-16): "the city of X" names the city's principal police agency, so a county of the name is not asked about;
 // the plain name still asks (P28). A city of the name in several states still asks which.
 assert.equal(ori(at("ambiguous:San Diego", "City of San Diego, California")), "CA0371100");
