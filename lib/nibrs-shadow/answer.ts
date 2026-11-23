@@ -900,7 +900,6 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const notes: string[] = [];
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
-  let years = false;
   for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
     const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
@@ -921,7 +920,13 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         defaultDepth++;
         try {
           // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
-          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
+          // A synthetic series must answer as a series, not default again to one year and keep the added year grouping.
+          // When that series itself only lacks a place or a kind of crime ("top 10 largest cities rates"), it is built with the defaults on, as before; one that asks for a period cannot be a series.
+          const byYear = `${c.question.replace(/[?.!\s]+$/, "")} by year`;
+          const o = deferHeavy("Every year available", (d) => {
+            const direct = shadowAnswer(byYear, { ...d, noDefaults: true });
+            return direct.kind === "clarify" && !/^which (?:period|range of years|years)$/.test(direct.about) ? shadowAnswer(byYear, d) : direct;
+          }, deps);
           if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
@@ -930,7 +935,6 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         const latest = find(/^The latest complete year \((\d{4})\)$/);
         if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
       }
-      years = true;
       more.push({ label: "Another year", entry: "which year" });
     } else if (c.about === "which kind of crime") {
       // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
@@ -966,7 +970,6 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
   // A sentence the answer already carries is not said twice (a series built "by year" says its own "No years were given").
   const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1)];
-  void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
 /**
