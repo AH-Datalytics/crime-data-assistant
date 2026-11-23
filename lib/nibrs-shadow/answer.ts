@@ -43,6 +43,7 @@ const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { agencyPopulationSql, compilePlan, type CompileTarget } from "../nibrs-plan/compile";
+import { splitShadow, withoutShadowComment } from "../nibrs-plan/cube";
 import { compare, rankAgencies, rolling, windowMonths, type MonthCell } from "../nibrs-plan/transforms";
 import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
@@ -382,10 +383,17 @@ const DEFERRED = new WeakSet<object>();
 /** A button whose answer is built when first read (the walkers that only decide whether a button runs must not read it). */
 export const isDeferred = (x: ShadowOption): boolean => DEFERRED.has(x);
 class HeavyStatement extends Error {}
+/**
+ * The size a statement is judged by. A shadow-mode statement is the cube's SQL and the raw SQL stuck together (cube.ts shadowSql), but the
+ * executor runs them one after the other, so the biggest one that runs is the longer part, not their sum. Judged by the sum, a long agency
+ * list (all of Texas) crossed the limit in shadow mode only and "DUI arrests by race in Texas" asked "which period" there while it answered
+ * with the cube on (QL-nibrs-72eb2ad905). A plain statement is measured as before.
+ */
+export const statementChars = (sql: string): number => { const s = splitShadow(sql); return s ? Math.max(s.raw.length, s.cube.length) : withoutShadowComment(sql).length; };
 function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
   let heavy = false;
   const limit = deps.deferChars ?? HEAVY_STATEMENT;
-  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
+  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (statementChars(sql) > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
   let first: ShadowOutcome | null = null;
   try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
   if (!heavy) return { label, continuation: first!, ...extra };
