@@ -29,7 +29,7 @@ function main(): void {
   const names = knownMeasureNames();
   const cfg: CubeConfig = stand_in_cube(Object.values(MEASURE_CODES).flat().concat(["35A", "35B"]), [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
   const deps = (record: string[]): ShadowDeps => ({ places, release: { id: rel.id, firstMonth: rel.firstMonth, lastMonth: rel.lastMonth, asOf: "2026-11-04" },
-    target: { root: "/stand-in/canonical", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube: cfg, cubeAllMeasures: true },
+    target: { root: "/stand-in/canonical", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube: cfg, cubeAllMeasures: true },
     execute: (sql: string) => { record.push(sql); return []; } }) as unknown as ShadowDeps;
   const probe = (q: string) => routesToCube(() => shadowAnswer(q, deps(sqls)), sqls);
   const sqls: string[] = [];

@@ -52,7 +52,7 @@ const ids = arg("--ids") ? arg("--ids")!.split(",").map((s) => s.trim()).filter(
 const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), root);
 const execute = duckdbExecutor(python, { timeoutMs: 300_000 });
 const deps = { places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" },
-  target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+  target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
   execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined),
   hate: hateBuildAt(arg("--hate", process.env.NIBRS_HATE_ROOT ?? "") || undefined) } as ShadowDeps;
 
@@ -64,7 +64,7 @@ for (const id of ids) {
   if (!l) { skipped.push(`${id}: no such label`); continue; }
   const o = (l.kind === "follow-up" && l.previous ? shadowFollowUp(l.previous, l.question, deps) : shadowAnswer(l.question, deps)) as Parameters<typeof requestOf>[1];
   const q = requestOf(l, o);
-  if (!q) { skipped.push(`${id}: the rerun is a ${o.kind}, not an answer`); continue; }
+  if (!q) { skipped.push(`${id}: the rerun is a ${o.kind}, not an answer${o.kind === "decline" ? ` (${(o as { explanation?: string }).explanation ?? ""} ${(o as { detail?: string }).detail ?? ""})`.trimEnd() : ""}`); continue; }
   // The request must be exactly the answer the run scored: an answered entry with a digest, equal to the rerun's. (Also for
   // --ids: a label the run didn't answer, or has no digest for, is never turned into a request.)
   const scored = run.get(id);

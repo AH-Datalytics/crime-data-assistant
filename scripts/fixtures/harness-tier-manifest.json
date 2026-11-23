@@ -2484,6 +2484,15 @@
       "note": "NIBRS compiler increment 3: time transforms (period totals, two-period changes, rolling windows) from monthly cells under D6, P51, D17 and P55; pure, offline"
     },
     {
+      "id": "test-nibrs-shadow-place-aliases",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-place-aliases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "B1 place aliases: 14 labeled place spellings (town short names, Saint forms, State-after-comma, county sheriff in a state code, department names, Athens-Clarke) reach the route; stub DuckDB step, checked-in place index"
+    },
+    {
       "id": "test-nibrs-shadow",
       "tier": "F",
       "script": "scripts/test-nibrs-shadow.ts",
@@ -2851,6 +2860,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "the fuzzy place search (lib/geo-fuzzy.ts) gives exactly the answers it gave before it was made fast, for 610 fixed inputs (scripts/fixtures/geo-fuzzy-golden.json); reads the place catalog only, no database, no model, no network"
+    },
+    {
+      "id": "test-nibrs-shadow-period-grammar",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-period-grammar.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "D1 period grammar: number word with repeated digits, all-years wordings, until-as-to; 4 labeled questions reach the route; stub DuckDB step, checked-in place index."
     }
   ]
 }
