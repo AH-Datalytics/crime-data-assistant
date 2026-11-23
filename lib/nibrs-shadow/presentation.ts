@@ -202,7 +202,7 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
   const countedAs = rolling && rolling.kind === "rolling" ? `as rolling ${rolling.months}-month totals`
     : most ? `the ${fmt(o.delivered.table.rows.length)} with ${most}${rate ? " rates per 100,000 people" : ""}`
     : rate ? "as rates per 100,000 people"
-    : o.stateSum && !every ? "added up across the agencies that reported" : null;
+    : (o.stateSum || o.stateSums?.length) && !every ? "added up across the agencies that reported" : null;
   const when = cmp && cmp.kind === "period_comparison" ? `in ${periodWords(cmp.earlier.from, cmp.earlier.to)} and ${periodWords(cmp.later.from, cmp.later.to)}, with the change between them`
     : whenWords(o.period, timeG ? timeG.dimension.slice(5) : null, years);
   // A single number: one row, no breakdown, one measure; the columns beside it (agencies reporting, population covered,

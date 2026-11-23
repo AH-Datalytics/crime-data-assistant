@@ -48,13 +48,18 @@ export function answerStateMulti(plan: NibrsPlan, period: { from: string; to: st
   const merged: NibrsPlan = { ...plan, measures, statistics: outs.flatMap((o) => o.plan.statistics), coverage: outs[0].plan.coverage };
   const labels: Record<string, string> = {};
   for (const c of columns) labels[c.binding.kind === "grouping" ? `grouping:${c.binding.dimension}` : `statistic:${c.binding.as}`] = c.header;
-  const text = [...new Set(outs.flatMap((o) => o.delivered.text))];
+  // Each crime's own sentence first, in column order, then the notes they share.
+  const heads = outs.map((o) => o.delivered.headline ?? o.delivered.text[0]);
+  const text = [...new Set([...heads, ...outs.flatMap((o) => o.delivered.text)])];
   const answerStatements = [...new Set(outs.flatMap((o) => o.delivered.answerStatements))];
   const contractProblems = checkEnvelope({ plan: merged, table, evidence, answerStatements }, labels);
   if (contractProblems.length) return decline("This isn't available: several crimes in one table.", `answer contract: ${contractProblems.join("; ")}`);
-  const delivered: Delivered = { table, evidence, chart: null, text, headline: text[0], answerStatements, contractProblems };
+  const delivered: Delivered = { table, evidence, chart: null, text, headline: heads[0], answerStatements, contractProblems };
+  const metas = outs.map((o) => o.stateSum);
+  // One record per crime: each crime's agencies, coverage and years are its own, so they are kept apart, never taken from the first.
+  if (metas.some((m) => !m)) return decline("This isn't available: several crimes in one table.", "a crime's sum has no coverage record");
+  const sameMeta = metas.every((m) => JSON.stringify(m) === JSON.stringify(metas[0]));
   return { kind: "answer", plan: merged, period, sql: [...new Set(outs.map((o) => o.sql))].join(";\n"), delivered,
-    // The sums' coverage metadata is the same for every crime (the same agencies and years), so the first one carries the
-    // "added up across the agencies that reported" wording; no buttons, so no Consistent Reporting Agencies offer.
-    stateSum: outs[0].stateSum };
+    // No buttons, so no Consistent Reporting Agencies offer; the lead still says the figures are summed across the agencies that reported.
+    stateSums: metas as NonNullable<typeof metas[number]>[], ...(sameMeta ? { stateSum: metas[0] } : {}) };
 }

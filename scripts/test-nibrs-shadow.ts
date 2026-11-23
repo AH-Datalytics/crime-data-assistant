@@ -3449,8 +3449,25 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(byYear.delivered.table.rows.length, 3, "a row for each year");
   assert.deepEqual(byYear.delivered.contractProblems, []);
   const rates = ask("Shoplifting and carjacking rates per 100,000 in Texas in 2024");
-  assert.notEqual(rates.kind, "decline", `rates: ${JSON.stringify(rates).slice(0, 200)}`);
-  // A composite named together is not several crimes in columns.
-  assert.notEqual(ask("Drug crimes and carjackings in Texas by year 2022 to 2024").kind, "THROW");
+  const rt = as(rates, "answer");
+  assert.deepEqual(rt.delivered.table.columns.map((c) => c.header), ["Carjacking offenses per 100,000", "Shoplifting offenses per 100,000"]);
+  assert.deepEqual(rt.delivered.evidence.map((e) => [e.row, e.statistic]), [[0, "carjacking_rate"], [0, "shoplifting_rate"]]);
+  // Every figure is the one the crime's own single-crime answer gives (a rate is never summed).
+  const oneCj = as(ask("Carjacking rate per 100,000 in Texas in 2024"), "answer"), oneSh = as(ask("Shoplifting rate per 100,000 in Texas in 2024"), "answer");
+  assert.deepEqual(rt.delivered.table.rows[0], [oneCj.delivered.table.rows[0][0], oneSh.delivered.table.rows[0][0]]);
+  const oneCj2 = as(ask("Carjackings in Texas in 2024"), "answer"), oneSh2 = as(ask("Shoplifting in Texas in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.rows[0], [oneCj2.delivered.table.rows[0][0], oneSh2.delivered.table.rows[0][0]]);
+  // Each evidence record names its own column's statistic, on a row that exists.
+  for (const o of [two, byYear, rt]) {
+    const stats = o.delivered.table.columns.flatMap((c) => (c.binding.kind === "statistic" ? [c.binding.as] : []));
+    assert.ok(o.delivered.evidence.every((e) => stats.includes(e.statistic) && e.row < o.delivered.table.rows.length));
+    assert.equal(o.delivered.evidence.length, stats.length * o.delivered.table.rows.length);
+  }
+  // Coverage is kept for each crime, in column order, and the lead says the figures are summed across the agencies that reported.
+  assert.equal(two.stateSums?.length, 2);
+  assert.ok(two.delivered.text.filter((t) => /summed over the agencies that reported/.test(t)).length === 2, "each crime's sentence is kept");
+  // A composite named together is not several crimes in columns: a real decline.
+  const drug = as(ask("Drug crimes and carjackings in Texas by year 2022 to 2024"), "decline");
+  assert.equal(drug.reason, "unsupported_capability");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
