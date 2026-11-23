@@ -1245,6 +1245,9 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   const wrapped = `WITH g AS MATERIALIZED (${doubled}) SELECT 1`;
   assert.equal(statementChars(wrapped), `WITH g AS MATERIALIZED (${part(70_000)}) SELECT 1`.length, "a shadow block inside a wrapping statement is left out of the measure");
   assert.ok(statementChars(`WITH g AS MATERIALIZED (${shadowSql(part(120_000), part(119_000))}) SELECT 1`) > 100_000, "and a wrapped raw part over the limit is still heavy");
+  // Every wrapped block is left out, not just the first (Codex review of dca7f39d).
+  const three = `WITH a AS (${doubled}), b AS (${doubled}), c AS (${doubled}) SELECT 1`;
+  assert.equal(statementChars(three), `WITH a AS (${part(70_000)}), b AS (${part(70_000)}), c AS (${part(70_000)}) SELECT 1`.length, "three wrapped shadow blocks are all left out of the measure");
 }
 // The limit sits above the biggest single state (Pennsylvania, 2,001 listed agencies) and below a national list (~20,000 agencies).
 {
