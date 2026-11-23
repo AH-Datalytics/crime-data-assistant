@@ -7,7 +7,8 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { applyDefaults, askInsteadChecks, heavyNationalSentence, HEAVY_STATEMENT, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, statementChars, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { shadowSql } from "../lib/nibrs-plan/cube";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
@@ -1281,6 +1282,31 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.equal(sqls.slice(before).filter((x) => /'23H'/.test(x) && /offender/.test(x)).length, 0, "no national property-crime statement is run, before or instead of the ask");
   assert.equal(as(ask("property crime offenders by age in the United States in 2024"), "answer").kind, "answer");
   assert.equal(as(ask("property crime offenders by age by year 2019 to 2025 in Texas"), "answer").kind, "answer");
+}
+// The heavy-statement check judges a shadow statement by its longer part, not the cube and raw parts added together (QL-nibrs-72eb2ad905: all of
+// Texas fit the limit raw and with the cube on, but the doubled shadow statement tripped it and "which period" was asked in shadow mode only).
+{
+  const part = (n: number) => "x".repeat(n);
+  assert.equal(statementChars(part(130_000)), 130_000, "a plain statement is measured as before");
+  const doubled = shadowSql(part(130_000), part(129_000));
+  assert.ok(doubled.length > HEAVY_STATEMENT, "the doubled statement is over the limit as a whole");
+  assert.equal(statementChars(doubled), 130_000, "a shadow statement is measured by its raw part when that is the longer");
+  assert.equal(statementChars(shadowSql(part(1_000), part(90_000))), 90_000, "or by its cube part when that is the longer");
+  assert.ok(statementChars(shadowSql(part(260_000), part(259_000))) > HEAVY_STATEMENT, "a raw part over the limit is still heavy");
+  const wrapped = `WITH g AS MATERIALIZED (${doubled}) SELECT 1`;
+  assert.ok(statementChars(shadowSql(part(240_000), part(239_000))) <= HEAVY_STATEMENT, "a 240,000-character raw part is under the 250,000 limit, not heavy");
+  assert.equal(statementChars(wrapped), `WITH g AS MATERIALIZED (${part(130_000)}) SELECT 1`.length, "a shadow block inside a wrapping statement is left out of the measure");
+  assert.ok(statementChars(`WITH g AS MATERIALIZED (${shadowSql(part(260_000), part(259_000))}) SELECT 1`) > HEAVY_STATEMENT, "and a wrapped raw part over the limit is still heavy");
+  // Every wrapped block is left out, not just the first (Codex review of dca7f39d).
+  const three = `WITH a AS (${doubled}), b AS (${doubled}), c AS (${doubled}) SELECT 1`;
+  assert.equal(statementChars(three), `WITH a AS (${part(130_000)}), b AS (${part(130_000)}), c AS (${part(130_000)}) SELECT 1`.length, "three wrapped shadow blocks are all left out of the measure");
+}
+// The limit sits above the biggest single state (Pennsylvania, 2,001 listed agencies) and below a national list (~20,000 agencies).
+{
+  const listSql = (agencies: number) => 6_000 + 52 * agencies;
+  assert.ok(listSql(2_001) < HEAVY_STATEMENT / 2, "Pennsylvania's whole agency list is far under the limit");
+  assert.ok(listSql(1_847) < HEAVY_STATEMENT / 2, "and Texas's");
+  assert.ok(listSql(20_000) > HEAVY_STATEMENT * 4, "a national list is far over it");
 }
 // Heavy national choices are built when chosen (speed plan option C, 2026-11-17): the national statements of a place-less ask are not run before
 // the ask is shown; the choice that is clicked answers exactly as the eager one did; a plan a guard declines is still never offered.

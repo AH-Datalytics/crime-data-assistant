@@ -43,6 +43,7 @@ const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { agencyPopulationSql, compilePlan, type CompileTarget } from "../nibrs-plan/compile";
+import { splitShadow, withoutShadowComment } from "../nibrs-plan/cube";
 import { compare, rankAgencies, rolling, windowMonths, type MonthCell } from "../nibrs-plan/transforms";
 import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
@@ -103,7 +104,7 @@ export type ShadowDeps = {
   assaultAsked?: boolean;
   /** How many buttons in a row were rebuilt from the user's words: past three, a button's own buttons are left as built. */
   rebuilt?: number;
-  /** A statement longer than this many characters is a heavy national statement (default 100,000: an inline list of ~20,000 agencies); see deferHeavy. */
+  /** A statement longer than this many characters is a heavy national statement (default 250,000, HEAVY_STATEMENT: a national inline list of ~20,000 agencies is over 1,000,000); see deferHeavy. */
   deferChars?: number;
 };
 
@@ -377,15 +378,28 @@ const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route"
  * the button keeps a lazy `continuation` that builds the real answer on first read and remembers it. Nothing else changes: every answer, ask and
  * decline is the same; only when the heavy statements run.
  */
-const HEAVY_STATEMENT = 100_000;
+/**
+ * A statement is heavy past this many characters. The size is almost all agency literals (about 52 characters each, 6,000 of fixed text): the
+ * biggest single state listed is Pennsylvania with 2,001 agencies (about 110,000 characters), and all of Texas (1,847 listed) sat within 0-3% of
+ * the old 100,000 limit, so a state could tip over it on one more agency. A national statement lists about 20,000 agencies (over 1,000,000
+ * characters). 250,000 clears every single state by more than double and still defers every national statement by four times.
+ */
+export const HEAVY_STATEMENT = 250_000;
 const DEFERRED = new WeakSet<object>();
 /** A button whose answer is built when first read (the walkers that only decide whether a button runs must not read it). */
 export const isDeferred = (x: ShadowOption): boolean => DEFERRED.has(x);
 class HeavyStatement extends Error {}
+/**
+ * The size a statement is judged by. A shadow-mode statement is the cube's SQL and the raw SQL stuck together (cube.ts shadowSql), but the
+ * executor runs them one after the other, so the biggest one that runs is the longer part, not their sum. Judged by the sum, a long agency
+ * list (all of Texas) crossed the limit in shadow mode only and "DUI arrests by race in Texas" asked "which period" there while it answered
+ * with the cube on (QL-nibrs-72eb2ad905). A plain statement is measured as before.
+ */
+export const statementChars = (sql: string): number => { const s = splitShadow(sql); return s ? Math.max(s.raw.length, s.cube.length) : withoutShadowComment(sql).length; };
 function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
   let heavy = false;
   const limit = deps.deferChars ?? HEAVY_STATEMENT;
-  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (sql.length > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
+  const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (statementChars(sql) > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
   let first: ShadowOutcome | null = null;
   try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
   if (!heavy) return { label, continuation: first!, ...extra };
