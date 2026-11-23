@@ -1421,6 +1421,25 @@ assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").ki
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
 const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
 assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answerStatements], ["each_value", ["categories_overlap"]]);
+// Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
+{
+  const q = "Where do most robberies occur - residences, streets, or commercial buildings?";
+  const o: any = shadowAnswer(q, { ...deps, noDefaults: false });
+  assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
+  assert.deepEqual(o.plan.filters, [], "no location is grouped or picked: every location type is a row");
+  assert.equal(o.plan.groupings[0].dimension, "offense.location_type");
+  assert.equal(o.plan.measures[0].id, "offenses.robbery");
+  assert.deepEqual(o.delivered.table.columns.map((c: { header: string }) => c.header), ["Location type", "Robbery offenses", "Share of all robbery offenses (%)"]);
+  assert.deepEqual(o.delivered.text.slice(0, 3), ["United States Robbery Offenses by Location Type, 2025", "No place was named, so the United States is shown.", "No year was given, so the latest complete year, 2025, is shown."]);
+}
+// Capability (loc-peak): the peak year of the national violent crime rate, its count beside it.
+{
+  const pk: any = shadowAnswer("When was violent crime the highest?", { ...deps, historical: { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 }, noDefaults: false });
+  assert.equal(pk.kind, "srs", "peak year answered");
+  assert.deepEqual(pk.delivered.table.rows, [["1991", 758.2, 1911767]], "peak year 1991 with its count");
+  assert.match(pk.delivered.text[1], /highest in 1991, at 758\.2 per 100,000, with 1,911,767 violent crimes/);
+  assert.match(pk.delivered.text[2], /published national series/);
+}
 const cjLoc = as(ask("Carjackings in Detroit by location type in 2023"), "answer");
 assert.deepEqual([cjLoc.plan.measures[0].id, cjLoc.plan.groupings[0].multiValue], ["offenses.carjacking", undefined]);
 // P29/P49: "by men and women" -> the crimes by their offenders' sexes; one sex alone is still declined; "against" is victims.

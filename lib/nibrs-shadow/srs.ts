@@ -181,6 +181,39 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
 }
 
 /**
+ * The year the national rate was highest ("When was violent crime the highest?"): the maximum of the published national
+ * rate series, its count beside it. A year with no published rate cannot win; a tie names every tied year.
+ */
+export function answerSrsPeak(measure: string): SrsAnswer | SrsDecline {
+  const m = SRS_MEASURE[measure];
+  const place: SrsPlace = { kind: "national" };
+  const rateCol = `${m.col}_capita`, totalCol = `${m.col}_total`;
+  const years = range(SRS_YEARS.first, SRS_YEARS.last).map((y) => ({ y, row: rowFor(crime(), place, y) }))
+    .filter((r) => r.row && r.row[rateCol] !== "" && Number.isFinite(Number(r.row[rateCol])));
+  if (!years.length) return { kind: "srs-decline", explanation: `The data has no national ${m.name} rate.` };
+  const top = Math.max(...years.map((r) => Number(r.row![rateCol])));
+  const won = years.filter((r) => Number(r.row![rateCol]) === top);
+  const count = (r: Row) => (r[totalCol] !== "" ? Number(r[totalCol]) : null);
+  const period = { from: `${years[0].y}-01`, to: `${years[years.length - 1].y}-12` };
+  const yearsList = won.map((r) => String(r.y));
+  const when = yearsList.length > 1 ? `${yearsList.slice(0, -1).join(", ")} and ${yearsList[yearsList.length - 1]}` : yearsList[0];
+  const n0 = count(won[0].row!);
+  const sentence = `The national ${m.name} rate was highest in ${when}, at ${top} per 100,000${yearsList.length === 1 && n0 !== null ? `, with ${fmt(n0)} ${m.words}` : ""}.`;
+  const cap = `${m.words[0].toUpperCase()}${m.words.slice(1)}`;
+  return {
+    kind: "srs", period,
+    question: { measure, place, from: years[0].y, to: years[years.length - 1].y, byYear: false, statistic: "rate", comparison: null },
+    meaning: { source: "historical", places: [placeOf(place)], period, measures: [{ name: m.name, unit: m.unit }], filters: [], groupings: ["year"], statistic: "rate", denominator: "the national population, per 100,000" },
+    delivered: {
+      table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: `${cap} per 100,000` }, { binding: { kind: "statistic", as: "count" }, header: cap }],
+        rows: won.map((r) => [String(r.y), Number(r.row![rateCol]), count(r.row!)]) },
+      text: [`United States ${titleCase(`${m.name} rate`)}, Peak Year`, sentence, `Compared over the published national series, ${years[0].y} through ${years[years.length - 1].y}; a year with no published rate is not counted.`, SRS_SOURCE],
+    },
+    read: { file: "historical_crime_states_nation_1960-2025.csv", column: rateCol, uids: won.map((r) => r.row!.uid) },
+  };
+}
+
+/**
  * Several states, or states and the nation, side by side by year, one column each, never combined ("california vs.
  * texas violent crime rate per year", "Louisiana vs US murder rate": bad-decline audit root cause 3, 2026-11-06), as
  * several agencies are (historical.ts). A count or a rate only; a change or a clearance rate is asked one place at a time.
