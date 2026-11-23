@@ -3,7 +3,7 @@ import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shad
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 const rows = JSON.parse(fs.readFileSync(process.argv[2], "utf8")) as [string, string, string, string, string | null][];
 const places = loadPlaceIndex();
-const d = { places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/build", builtYears: [2017,2018,2019,2020,2021,2022,2023,2024,2025,2026] }, execute: () => [],
+const d = { places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/build", builtYears: [2017,2018,2019,2020,2021,2022,2023,2024,2025,2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: () => [],
   shr: { root: "/shr", release: "shr-20261101-1", latestMonth: "2026-09", crosswalk: "cw" }, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 } } as unknown as ShadowDeps;
 let n = 0, reached = 0;
 for (const [shape, id, , q, prev] of rows) {

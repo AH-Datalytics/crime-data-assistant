@@ -1,0 +1,12 @@
+{
+ "id": "P243",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Robberies by weapon in Texas in 2024\", any breakdown by weapon, and a single-weapon question such as \"robberies with a handgun\".",
+ "what the app does today": "The canonical offense_weapon segment keeps the weapon code and its automatic flag in two columns (weapon, weapon_automatic). A weapon breakdown groups on the weapon column alone, so 12A is counted in the Handgun row, 11A in Firearm (type not stated), 13A in Rifle; there is no separate (Automatic) row. A single-weapon filter on the plain code (handgun = 12) includes the automatic ones; a filter on a 3-character code matches weapon plus flag (compile.ts weaponIn).",
+ "proposed behavior": "A weapon recorded with the automatic flag counts in the same row as the plain code: 12A in Handgun, 11A in Firearm (type not stated), 13A in Rifle (and 14A in Shotgun, 15A in Other Firearm by the same rule). The flag is not a separate row.",
+ "exact default or choices offered": "Rows by the plain weapon code; the automatic flag is ignored for grouping.",
+ "why": "Jeff 2026-11-23 (card answer, through the coordinator): yes, same row. The independent checker matches the engine on QL-nibrs-ea524d684d (the Runner's run). SHR also combines 12 and 12A (shr.ts).",
+ "status": "Decided 2026-11-23 (Jeff, through the coordinator); already built (the engine groups on the weapon column, the flag is its own column); this row records it. The (Automatic) labels in nibrs-codes.ts belong to the legacy nibrs.db codes and do not appear in canonical answers. Confirmed by the Runner on QL-nibrs-ea524d684d: Handgun 438, Firearm (type not stated) 181, Rifle 14.",
+ "test cases": "QL-nibrs-ea524d684d (Arizona robbery offenses by weapon, 2024): Handgun 438, Firearm (type not stated) 181, Rifle 14, no (Automatic) row."
+}

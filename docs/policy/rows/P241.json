@@ -1,0 +1,12 @@
+{
+ "id": "P241",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Offenders by age in California in 2025\", any offender breakdown (age, sex, race, ethnicity) where an incident has no information about its offender.",
+ "what the app does today": "An offender record with offender sequence 00 (the incident has no offender information) counts as one offender with every attribute Unknown. This was only in code comments (compile.ts, attribute-table.ts, cube.ts) and the offender note, never in a policy row.",
+ "proposed behavior": "An incident whose offender record has sequence 00 counts as ONE offender of Unknown age (and Unknown sex, race and ethnicity), whatever its blank fields hold. The Unknown row of an offender breakdown therefore includes those incidents plus offenders who are listed with an unknown value. The note under offender answers stays as written: \"Offenders are counted as listed in each incident report, not as distinct people; an incident with no information about its offender counts one unknown offender.\"",
+ "exact default or choices offered": "Count: every offender record, sequence 00 included, as one offender. Unknown row: sequence 00 records plus records with an unknown value.",
+ "why": "Jeff 2026-11-23 (card answer, through the coordinator): an incident with offender sequence 00 counts as one offender of Unknown age. Example: California 2025 offenders by age, Unknown row 40,893 (counting each such incident as one unknown offender) rather than 19,562 (counting only offender records with a blank age); the 21,331 gap is exactly the sequence 00 records. Extends P44 (offenders are NIBRS offenders) and P86 (one Unknown row).",
+ "status": "Decided 2026-11-23 (Jeff, through the coordinator); already built (compile.ts \"self\" attribute, cube.ts); this row records it",
+ "test cases": "California 2025 offenders by age: Unknown row 40,893 (QL-nibrs-e785389d0c and the three other offender-age share ids 98af404ff6, 996a1aed04, fade97001c). An incident with sequence 00 only: one offender, age Unknown."
+}
