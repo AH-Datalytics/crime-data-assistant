@@ -283,6 +283,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     if (isRate) {
       const lacking = byYear.filter((y) => rateOf(y) === null).map((y) => y.year);
       if (lacking.length) lines.push(`No rate is given for ${lacking.join(", ")}: some agencies counted have no FBI population (or the population is 0).`);
+      if (!every && byYear.some((y) => y.partial > 0)) lines.push("Includes agencies that reported only part of a year.");
       lines.push(`Each year's rate uses the combined population of ${every ? `the ${CRA}` : "the agencies counted"} that year (the FBI's populations).`);
     }
     return { lines, rows: byYear.map((y) => { const v = isRate ? rateOf(y) : (every ? y.every.sum : y.sum); return { key: String(y.year), value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }; }),
