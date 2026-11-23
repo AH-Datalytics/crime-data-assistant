@@ -584,7 +584,19 @@ function recordDemographicRate(ledger: RequestLedger): void {
  * same turn also asks for a number ("how many robberies ... and why?"), so the number is answered and the explanation
  * named (L7).
  */
+/** The reader asks for the same long text's ledger many times in one answer; place resolution makes each build slow, so the last few are kept and a copy is handed out. */
+const LEDGERS = new Map<string, RequestLedger>();
+const LEDGERS_KEPT = 8;
 export function accountNibrsRequest(question: string): RequestLedger {
+  const have = LEDGERS.get(question);
+  if (have) return have.clone();
+  const built = buildNibrsLedger(question);
+  if (LEDGERS.size >= LEDGERS_KEPT) LEDGERS.delete(LEDGERS.keys().next().value as string);
+  LEDGERS.set(question, built.clone());
+  return built;
+}
+
+function buildNibrsLedger(question: string): RequestLedger {
   const ledger = new RequestLedger(question);
   recordContext(ledger);
   // Before places: codes, decade words, rolling windows, months ("May 2025" is not a place), refused topics and the
