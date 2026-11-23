@@ -256,7 +256,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   if (!stateShareRanking && (rankParts.length || thresholdParts.length || cityListParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:"))))) {
     take(rankParts); take(thresholdParts); take(entityParts); take(clearance); take(cityListParts);
     // Counties ranked (Jeff 2026-11-10): the county's own agency, the sheriff or county police.
-    const entity0 = entityParts.map((p) => p.value)[0] ?? ((rankParts.length && listParts.length === 0) || cityListParts.length ? "city" : null);   // "Top 10 auto theft rates in 2025": cities (Jeff 2026-11-23, rankings group A)
+    const entity0 = entityParts.map((p) => p.value)[0] ?? (of("measure").some((p) => p.rule !== "shadow:button") && ((rankParts.length && listParts.length === 0) || cityListParts.length) ? "city" : null);   // "Top 10 auto theft rates in 2025": cities (Jeff 2026-11-23, rankings group A)
     const entity = entity0 === "counties" ? "county" : entity0;
     if (!entity || !["state", "city", "agency", "county"].includes(entity)) return { kind: "none" };
     // Rankings group B (Jeff 2026-11-23): "highest crime rate" with no crime named is violent and property crime (P180-P182; a clearance keeps its ask),
