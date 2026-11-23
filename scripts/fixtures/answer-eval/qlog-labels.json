@@ -4486,16 +4486,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Kansas City and Richmond"
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>R14>2nd",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "Several unqualified place names meet P28 ambiguity rules."
+    "notes": "Washington = Washington, D.C. (P238). Baltimore, Jacksonville, St Louis, Los Angeles and Charlotte resolve to the city (P196/P238). Jackson = Jackson, MS (P28: only one city of that name has 100,000+ people). Kansas City (MO/KS) and Richmond (VA/CA) still ask (P28)."
    }
   },
   {
@@ -8323,19 +8324,24 @@
    "question": "Compare monthly murders in Baltimore and Detroit",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "notes": "Baltimore named in a list of cities resolves to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Baltimore). Values pending the Runner verification."
    }
   },
   {
@@ -13116,21 +13122,24 @@
    "question": "Compare murders in Los Angeles and Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
+    "notes": "Baltimore and Los Angeles named in a list of cities resolve to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Baltimore / which Los Angeles). Values pending the Runner verification."
    }
   },
   {
@@ -26533,20 +26542,24 @@
    "question": "how do robbery clearance rates compare between Los Angeles and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
+    "reviewed_by": null,
+    "notes": "Los Angeles named in a list of cities resolves to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Los Angeles). Values pending the Runner verification."
    }
   },
   {
@@ -68603,19 +68616,20 @@
    "question": "Compare robbery clearance rates between Chicago and Los Angeles by year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
+    "reviewed_by": null,
+    "notes": "Los Angeles named in a list of cities resolves to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Los Angeles). Values pending the Runner verification."
    }
   },
   {
@@ -85406,16 +85420,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Kansas City and Richmond"
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "F1+P238>R14>2nd",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "Several unqualified place names remain ambiguous."
+    "notes": "Washington = Washington, D.C. (P238). Baltimore, Jacksonville, St Louis, Los Angeles and Charlotte resolve to the city (P196/P238). Jackson = Jackson, MS (P28: only one city of that name has 100,000+ people). Kansas City (MO/KS) and Richmond (VA/CA) still ask (P28)."
    }
   },
   {
