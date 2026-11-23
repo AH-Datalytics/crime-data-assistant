@@ -507,11 +507,13 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
     const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
     text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
   }
-  if (leftOut.length) {
+  // A count has no cut, so thousands of agencies with no figure is noise; only a few, named, are worth saying (Coordinator 2026-11-23).
+  if (leftOut.length && (rate || leftOut.length <= 5)) {
     const names = leftOut.length <= 5 ? leftOut.map((a) => a.name).sort((x, y) => x.localeCompare(y)) : null;
     text.push(`${names ? andList(names) : `${fmt(leftOut.length)} ${unit}`} ${names && names.length === 1 ? "isn't" : "aren't"} ranked because Crime Index has no ${figure} for ${names && names.length === 1 ? "it" : "them"} in ${rq.year}.`);
   }
-  text.push(states ? "Ties are ordered by name." : "Ties are ordered by agency name.");
+  // P17 orders ties by name; the sentence is said only when two ranked places actually tie.
+  if (ranked.some((x, i) => i > 0 && x.value === ranked[i - 1].value)) text.push(states ? "Ties are ordered by name." : "Ties are ordered by agency name.");
   if (rate) {
     text.push(`Rates are per 100,000 of each ${states ? "state" : "agency"}'s population as published by Crime Index.`);
     const computed = ranked.filter((a) => a.computed).map((a) => a.name);
