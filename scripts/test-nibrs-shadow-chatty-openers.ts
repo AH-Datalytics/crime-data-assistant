@@ -32,6 +32,9 @@ const checks: [string, () => void][] = [
   ["greeting is dropped", () => assert.equal(read("Hello there, murders in Denver in 2024").trim(), "murders in Denver in 2024")],
   ["a word starting with hi is kept", () => assert.ok(/^high school/i.test(read("high school robberies in Denver in 2024").trim()))],
   ["a request wrapper is dropped", () => assert.ok(/^show me murders in Denver/.test(read("Could you please give me murders in Denver in 2024")), read("Could you please give me murders in Denver in 2024"))],
+  ["HI in capitals is Hawaii (Codex 03d136e1)", () => assert.ok(/^HI murders in 2024/.test(read("HI murders in 2024").trim()), read("HI murders in 2024"))],
+  ["The Dalles keeps its The (Codex 03d136e1)", () => assert.ok(/The Dalles murders/.test(read("Can you show me The Dalles murders in 2024")), read("Can you show me The Dalles murders in 2024"))],
+  ["a comma after the greeting name (Codex 03d136e1)", () => assert.ok(/^show me murders in Texas/.test(read("Hi, Jeff, can you show me murders in Texas in 2024").trim()), read("Hi, Jeff, can you show me murders in Texas in 2024"))],
   ["a place starting with a greeting name is kept (Codex 464d5d03)", () => assert.ok(/^Jefferson City murders in 2024/.test(read("Hi Jefferson City murders in 2024").trim()), read("Hi Jefferson City murders in 2024"))],
   ["a wrapped change question still reads as a change (Codex 464d5d03)", () => assert.equal(read("Can you show me how murder in Denver has changed since 2020"), read("show me how murder in Denver has changed since 2020"))],
 ];
