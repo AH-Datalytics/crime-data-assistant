@@ -201,7 +201,7 @@ const execute = (sql: string): unknown[][] => {
 };
 const deps: ShadowDeps = {
   places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" },
-  target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+  target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
   execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined), hate: hateBuildAt(arg("--hate", process.env.NIBRS_HATE_ROOT ?? "") || undefined),
 } as ShadowDeps;
 

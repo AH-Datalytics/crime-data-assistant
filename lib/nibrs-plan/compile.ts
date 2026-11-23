@@ -73,7 +73,7 @@ export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "u
  * names (several agencies, combined, or a state's agencies). Totals, combined sums, rates and rankings are rolled from
  * the grid (lib/nibrs-plan/transforms.ts), so each agency-month keeps its own status (D6).
  */
-export type CompileTarget = { root: string; builtYears: number[]; /** Probe only (scripts/gen-cube-measure-checks.ts): lets every measure reach a cube so the generator can see which forms would. Never set in production. */ cubeAllMeasures?: boolean; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
+export type CompileTarget = { root: string; builtYears: number[]; /** Data years an arrest question also reads (Jeff 2026-11-23: an arrest is counted in the year of its arrest date, and the year before holds late-reported ones); defaults to builtYears. */ arrestYears?: number[]; /** Probe only (scripts/gen-cube-measure-checks.ts): lets every measure reach a cube so the generator can see which forms would. Never set in production. */ cubeAllMeasures?: boolean; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
 
 const CARJACK_VEHICLES = ["03", "05", "24", "28", "37"];
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -562,9 +562,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const inYears = (col: string) => (yearSet ? ` AND substr(${col}, 1, 4) IN (${list(yearSet.map(String))})` : "");
   const from = span.from.replace("-", ""), to = span.to.replace("-", "");
   const firstYear = Number(span.from.slice(0, 4));
-  const years = isArrest ? t.builtYears : t.builtYears.filter((y) => y >= firstYear);
+  const years = isArrest ? (t.arrestYears ?? t.builtYears) : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
-  const read = (table: string) => `read_parquet([${years.map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
+  // The agency-month status is the month's own (an arrest month counts whatever its status), so it stays on the built years.
+  const read = (table: string) => `read_parquet([${(table === "agency_month_status" ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
   const and = (cs: string[]) => cs.map((c) => `
       AND ${c}`).join("");
   const restFilter = (a: string) => and([...incidentConds.map((c) => `EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`),
