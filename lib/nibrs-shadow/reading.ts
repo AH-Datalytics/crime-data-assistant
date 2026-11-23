@@ -150,7 +150,7 @@ const PHRASES: [RegExp, string][] = [
   // "over the last three (3) years": the digits repeat the number word.
   [/\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s*\(\d+\)/gi, "$1"],
   // "as far back as there is data", "back as far as you can", "going back as far as records allow", "from oldest data": every year there is.
-  [/\b(?:(?:from|going|go)\s+)?(?:as\s+far\s+back\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|back\s+as\s+far\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|from\s+(?:the\s+)?oldest\s+data|since\s+the\s+beginning)\b/gi, "for all years"],
+  [/\b(?:(?:from|going|go)\s+)?(?:as\s+far\s+back\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|back\s+as\s+far\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|from\s+(?:the\s+)?oldest\s+data|since\s+the\s+beginning(?!\s+of\b))\b/gi, "for all years"],
   // "since 1935 until 2025", "2000 till 2025": a span of years.
   [/\bsince\s+((?:19|20)\d{2})\s+(?:until|till|til)\s+((?:19|20)\d{2})\b/gi, "from $1 to $2"],
   [/\b((?:19|20)\d{2})\s+(?:until|till|til)\s+((?:19|20)\d{2})\b/gi, "$1 to $2"],

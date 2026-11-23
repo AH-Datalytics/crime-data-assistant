@@ -34,6 +34,7 @@ const checks: [string, () => void][] = [
   ["a number word with its digits repeated", () => assert.ok(/last three years/.test(read("murders in Denver over the last three (3) years")))],
   ["all-years wordings", () => { for (const w of ["back as far as you can", "from oldest data", "since the beginning"]) assert.ok(/murders in Denver by year/.test(read(`murders in Denver ${w}`)), w); }],
   ["until reads as to", () => assert.ok(/2021 to 2025/.test(read("murders in Denver 2021 until 2025")) && /from 2019 to 2024/.test(read("murders in Denver since 2019 until 2024")))],
+  ["a qualified start is not an all-years wording", () => assert.ok(/since the beginning of 2024/.test(read("murders in Denver since the beginning of 2024")), read("murders in Denver since the beginning of 2024"))],
 ];
 for (const [name, fn] of checks) { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}: ${(e as Error).message}`); failed++; } }
 if (failed) { console.log(`${failed} failed`); process.exit(1); }
