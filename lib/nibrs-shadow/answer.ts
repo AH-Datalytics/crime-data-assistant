@@ -3026,6 +3026,15 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (sp.period.form === "none") {
       const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
       const thisYear = Number(release.lastMonth.slice(0, 4));
+      // Jeff 2026-11-23: a city or agency ranking with a crime named and no year is the latest complete year, said in the title; no ask.
+      if ((sp.entity === "city" || sp.entity === "agency") && lcy <= deps.historical.lastYear && clause0("measure").some((p) => p.value !== "unspecified" && p.rule !== "shadow:button")) {
+        const r = fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins);
+        if (r.kind === "historical") {
+          const x = r as typeof r & { delivered: { text: string[] } };
+          x.delivered.text.splice(1, 0, `No year was given, so the latest complete year, ${lcy}, is shown.`);
+        }
+        return r;
+      }
       return { kind: "clarify", about: "which period", question: ledger0.question, options: [
         { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps, pins) },

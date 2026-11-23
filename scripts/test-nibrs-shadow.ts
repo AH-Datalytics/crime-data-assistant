@@ -881,8 +881,14 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   // PR 195 run: a national city ranking with no year asks the year (P05), never "a state or the nation together with other places";
   // "the annual number of murders" is by year (P06); a "why" about the data (no crime named) is not an explanation decline.
   const hdeps = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
-  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"])
-    assert.equal(as(shadowAnswer(q, hdeps), "clarify").about, "which period", q);
+  // Jeff 2026-11-23 supersedes the year ask for a city ranking with a crime named: it is the latest complete year (2025), said; the stub has no data, so it reaches the 2025 ranking and declines there.
+  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"]) {
+    const o = shadowAnswer(q, hdeps) as { kind: string; about?: string; explanation?: string };
+    assert.ok(!(o.kind === "clarify" && o.about === "which period"), q);
+    assert.ok(/2025/.test(o.explanation ?? ""), q);
+  }
+  // No crime named, or a ranking of states, keeps the period ask.
+  assert.equal((shadowAnswer("top 10 states by murder", hdeps) as { about?: string }).about, "which period");
   assert.ok(!/number of/.test(readQuestion("show me the annual number of murders in the us", 2026).text), "read as annual murders, a series by year");
   // A question about the data itself is answered from the release's agency lists (Jeff 2026-11-18, test-nibrs-coverage.ts), no longer asked "which place".
   assert.equal(shadowAnswer("why can't you tell me which states are not represented?", { ...deps, execute: () => [] }).kind, "coverage");
