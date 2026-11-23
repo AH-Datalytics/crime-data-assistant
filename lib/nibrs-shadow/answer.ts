@@ -1987,9 +1987,13 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
  * that place, never a partial sum. The table is long, Agency | Year | figure, one row per place and year, in the order the places were named.
  */
 function answerSameMonthsPlaces(ledger0: RequestLedger, n: number, years: [number, number], subQuestion: string, deps: ShadowDeps, NO: () => ShadowOutcome): ShadowOutcome {
+  return sameMonthsTable(ledger0, n, years, shadowAnswer(subQuestion, deps), NO);
+}
+/** The table for one outcome of the several-places sub-question. An ask (a name in several places, Kansas City, Richmond) stays an ask with the
+ * same buttons: each button's continuation is the table in turn, so the months are never forgotten (Jeff 2026-11-22; P238). */
+function sameMonthsTable(ledger0: RequestLedger, n: number, years: [number, number], o: ShadowOutcome, NO: () => ShadowOutcome): ShadowOutcome {
   type Delivering = Extract<ShadowOutcome, { delivered: unknown }>;
-  const o = shadowAnswer(subQuestion, deps);
-  if (o.kind === "clarify") return o.options.length && o.options.every((x) => x.entry && !x.continuation) ? { ...o, question: ledger0.question } : NO();
+  if (o.kind === "clarify") return o.options.length ? { ...o, question: ledger0.question, options: o.options.map((x) => (x.continuation ? { ...x, continuation: sameMonthsTable(ledger0, n, years, x.continuation, NO) } : x)) } : NO();
   if (o.kind === "decline") return o;
   if (o.kind !== "answer") return NO();
   const d = (o as Delivering).delivered as { table: { columns: { binding: { kind: string; dimension?: string; as?: string }; header: string }[]; rows: unknown[][] }; text: string[] };
@@ -2218,11 +2222,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const resolved = new Map<string, Place>();
   let ask: { part: Part; name: string; candidates: Candidate[]; more?: boolean } | null = null;
   let unfound: Part | null = null;
+  // Two or more cities or counties named together: a city beside other places is the city (P196, Jeff 2026-11-22).
+  const inList = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "place" && !!p.value && /^(city|county|ambiguous):/.test(p.value)).length >= 2;
   const askedNames: string[] = [];
   const parts = ledger0.parts.map((p) => {
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const pin = pins.get(p.span[0]);
-    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text);
+    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text, inList);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
     if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates, more: r.more }; askedNames.push(r.name); return p; }
