@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { bucket, type Label, type Got } from "./qlog-bucket";
-import { labelIdentity, readLabels, comparedLabelsFile, splitCompare, formatSplitCompare, appendTrend, readTrend, formatTrend, TREND_COLUMNS, type TrendRow } from "./scoreboard-v2";
+import { labelIdentity, readLabels, comparedLabelsFile, splitCompare, formatSplitCompare, appendTrend, readTrend, formatTrend, sumCheck, TREND_COLUMNS, type TrendRow } from "./scoreboard-v2";
 
 let failed = 0;
 function check(name: string, fn: () => void) {
@@ -61,20 +61,27 @@ try {
     const result = splitCompare(oldLabels, newLabels, oldDone, newDone, bucket, same);
     assert.deepEqual(result, {
       labelChange: { count: 1, moves: { "bad decline -> correct": 1 }, correctDelta: 1 },
-      engineChange: { count: 2, moves: { "wrong answer -> correct": 1, "correct -> wrong clarify": 1 }, correctDelta: 0 },
-      engineAlsoLabel: 1, added: 1, removed: 1,
+      engineChange: { count: 1, moves: { "wrong answer -> correct": 1 }, correctDelta: 1 },
+      bothChanged: { count: 1, moves: { "correct -> wrong clarify": 1 }, correctDelta: -1 },
+      added: 1, removed: 1,
     });
     assert.equal(formatSplitCompare(result), [
       "label change: 1 bucket moves (same answer text, different label)", "  1  bad decline -> correct",
-      "engine change: 2 bucket moves (the answer changed)", "  1  correct -> wrong clarify", "  1  wrong answer -> correct",
-      "engine moves with a different label: 1; labels added: 1, removed: 1 (outside both lines); net correct: label change +1, engine change 0",
+      "engine change: 1 bucket moves (the answer changed, the label did not)", "  1  wrong answer -> correct",
+      "both changed: 1 bucket moves (the answer and the label both changed: not blamed on either)", "  1  correct -> wrong clarify",
+      "labels added: 1, removed: 1 (outside all three lines); net correct: label change +1, engine change +1, both changed -1",
     ].join("\n"));
+  });
+
+  check("sum check", () => {
+    assert.equal(sumCheck(9, { correct: 5, error: 1, disputed: 2, "not run": 1 }), null);
+    assert.match(sumCheck(9, { correct: 5, disputed: 2 })!, /^SUM CHECK FAILED: correct 5 \+ disputed 2 = 7, but the label count is 9$/);
   });
 
   check("trend header, append, duplicate skip, and reader", () => {
     const file = path.join(dir, "nested", "trend.tsv");
-    const row: TrendRow = { date: "2026-11-23T00:00:00.000Z", head: "a".repeat(40), label_hash: "b".repeat(40), scored: 7,
-      correct: 1, wrong: 1, bad_decline: 1, wrong_clarify: 1, follow_up_error: 1, unverified: 1, error: 1, digest: "c".repeat(64) };
+    const row: TrendRow = { date: "2026-11-23T00:00:00.000Z", head: "a".repeat(40), label_hash: "b".repeat(40), labels: 9, scored: 7,
+      correct: 1, wrong: 1, bad_decline: 1, wrong_clarify: 1, follow_up_error: 1, unverified: 1, error: 1, disputed: 1, not_run: 1, digest: "c".repeat(64) };
     assert.equal(formatTrend(readTrend(file)), "No trend rows.");
     assert.equal(appendTrend(file, row), true);
     const original = fs.readFileSync(file, "utf8");

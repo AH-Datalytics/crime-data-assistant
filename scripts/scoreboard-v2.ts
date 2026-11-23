@@ -36,7 +36,7 @@ function stable(value: unknown): string {
 }
 
 type Moves = { count: number; moves: Record<string, number>; correctDelta: number };
-export type SplitComparison = { labelChange: Moves; engineChange: Moves; engineAlsoLabel: number; added: number; removed: number };
+export type SplitComparison = { labelChange: Moves; engineChange: Moves; bothChanged: Moves; added: number; removed: number };
 
 export function splitCompare(
   oldLabels: readonly Label[], newLabels: readonly Label[],
@@ -47,7 +47,7 @@ export function splitCompare(
   const old = new Map(oldLabels.map(l => [l.id, l]));
   const next = new Map(newLabels.map(l => [l.id, l]));
   const empty = (): Moves => ({ count: 0, moves: {}, correctDelta: 0 });
-  const result: SplitComparison = { labelChange: empty(), engineChange: empty(), engineAlsoLabel: 0,
+  const result: SplitComparison = { labelChange: empty(), engineChange: empty(), bothChanged: empty(),
     added: [...next.keys()].filter(id => !old.has(id)).length,
     removed: [...old.keys()].filter(id => !next.has(id)).length };
   for (const [id, a] of old) {
@@ -57,12 +57,12 @@ export function splitCompare(
     const ba = bucketFn(a, ga), bb = bucketFn(b, gb);
     if (ba === bb) continue;
     const sameAnswer = sameFn(ga, gb);
-    const group = sameAnswer ? result.labelChange : result.engineChange;
+    const labelMoved = stable(a) !== stable(b);
+    const group = sameAnswer ? result.labelChange : labelMoved ? result.bothChanged : result.engineChange;
     group.count++;
     const move = `${ba} -> ${bb}`;
     group.moves[move] = (group.moves[move] ?? 0) + 1;
     group.correctDelta += Number(bb === "correct") - Number(ba === "correct");
-    if (!sameAnswer && stable(a) !== stable(b)) result.engineAlsoLabel++;
   }
   return result;
 }
@@ -72,16 +72,24 @@ export function formatSplitCompare(result: SplitComparison): string {
   const lines: string[] = [];
   for (const [name, group, detail] of [
     ["label change", result.labelChange, "same answer text, different label"],
-    ["engine change", result.engineChange, "the answer changed"],
+    ["engine change", result.engineChange, "the answer changed, the label did not"],
+    ["both changed", result.bothChanged, "the answer and the label both changed: not blamed on either"],
   ] as const) {
     lines.push(`${name}: ${group.count} bucket moves (${detail})`);
     for (const [move, count] of Object.entries(group.moves).sort()) lines.push(`  ${count}  ${move}`);
   }
-  lines.push(`engine moves with a different label: ${result.engineAlsoLabel}; labels added: ${result.added}, removed: ${result.removed} (outside both lines); net correct: label change ${signed(result.labelChange.correctDelta)}, engine change ${signed(result.engineChange.correctDelta)}`);
+  lines.push(`labels added: ${result.added}, removed: ${result.removed} (outside all three lines); net correct: label change ${signed(result.labelChange.correctDelta)}, engine change ${signed(result.engineChange.correctDelta)}, both changed ${signed(result.bothChanged.correctDelta)}`);
   return lines.join("\n");
 }
 
-export const TREND_COLUMNS = ["date", "head", "label_hash", "scored", "correct", "wrong", "bad_decline", "wrong_clarify", "follow_up_error", "unverified", "error", "digest"] as const;
+export const TREND_COLUMNS = ["date", "head", "label_hash", "labels", "scored", "correct", "wrong", "bad_decline", "wrong_clarify", "follow_up_error", "unverified", "error", "disputed", "not_run", "digest"] as const;
+/** Every label must land in exactly one place: the seven buckets (error included), disputed, or not run. Returns a failure message, or null when the parts add up. */
+export function sumCheck(total: number, parts: Record<string, number>): string | null {
+  const sum = Object.values(parts).reduce((a, n) => a + n, 0);
+  const text = Object.entries(parts).map(([k, n]) => `${k} ${n}`).join(" + ");
+  return sum === total ? null : `SUM CHECK FAILED: ${text} = ${sum}, but the label count is ${total}`;
+}
+
 export type TrendRow = Record<typeof TREND_COLUMNS[number], string | number>;
 export const DEFAULT_TREND_FILE = path.join(__dirname, "..", "docs", "reports", "qlog-trend.tsv");
 
