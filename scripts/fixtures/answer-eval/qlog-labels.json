@@ -4486,16 +4486,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Kansas City and Richmond"
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>R14>2nd",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "Several unqualified place names meet P28 ambiguity rules."
+    "notes": "Washington = Washington, D.C. (P238). Baltimore, Jacksonville, St Louis, Los Angeles and Charlotte resolve to the city (P196/P238). Jackson = Jackson, MS (P28: only one city of that name has 100,000+ people). Kansas City (MO/KS) and Richmond (VA/CA) still ask (P28)."
    }
   },
   {
@@ -4619,20 +4620,24 @@
    "question": "Did Los Angeles have more homicides than ny city?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -5025,19 +5030,24 @@
    "question": "Compare property crime in New York City and Los Angeles annually since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -6023,20 +6033,24 @@
    "question": "Compare robbery rates in New York City, Los Angeles, and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -6896,20 +6910,24 @@
    "question": "compare new york city vs Los angeles murders",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -7757,21 +7775,24 @@
    "question": "Compare murder rates in Washington and Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Washington",
-     "which Baltimore",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
     ],
-    "about": "which Washington"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P28 requires resolving both ambiguous place names.; with the 2026-11-07 rules' parts"
+    "notes": "Washington in a list of cities means Washington, D.C.; a city named beside other places resolves to the city, no ask (P196, P238; Jeff 2026-11-22). Was clarify (which Washington / which Baltimore / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -7784,22 +7805,24 @@
    "question": "Compare murders in Sacramento, El Paso, and San Diego",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Sacramento",
-    "about_any": [
-     "which Sacramento",
-     "which El Paso",
-     "which San Diego",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Sacramento / which El Paso / which San Diego / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -8323,19 +8346,24 @@
    "question": "Compare monthly murders in Baltimore and Detroit",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "notes": "Baltimore named in a list of cities resolves to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Baltimore). Values pending the Runner verification."
    }
   },
   {
@@ -8938,19 +8966,24 @@
    "question": "Show me violent crime per capita over time in Charlotte",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Charlotte",
-    "about_any": [
-     "which Charlotte"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "Charlotte means Charlotte, NC, alone or in a list, no ask (P238; Jeff 2026-11-22). Was clarify (which Charlotte). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -9460,20 +9493,24 @@
    "question": "compare NYC vs Los Angeles murder",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -11371,19 +11408,24 @@
    "question": "show homicide rates for los angeles and ny city since 2017",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -13116,21 +13158,24 @@
    "question": "Compare murders in Los Angeles and Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
+    "notes": "Baltimore and Los Angeles named in a list of cities resolve to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Baltimore / which Los Angeles). Values pending the Runner verification."
    }
   },
   {
@@ -13712,20 +13757,24 @@
    "question": "Compare the current homicide rates in Chicago and Baltimore.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "Baltimore city and county require disambiguation.; with the 2026-11-07 rules' parts"
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Baltimore / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -14326,19 +14375,24 @@
    "question": "Murders per year from 2022 to 2025 in Houston, Dallas, Plano, Atlanta, Memphis, New Orleans, Birmingham, Baton Rouge and Mobile",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Mobile",
-    "about_any": [
-     "which Mobile"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Mobile). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -15349,19 +15403,24 @@
    "question": "Compare murders in Baltimore and Detroit per year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Baltimore). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -16266,19 +16325,24 @@
    "question": "violent crime in Charlotte monthly",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Charlotte",
-    "about_any": [
-     "which Charlotte"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "Charlotte means Charlotte, NC, alone or in a list, no ask (P238; Jeff 2026-11-22). Was clarify (which Charlotte). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -17484,20 +17548,24 @@
    "question": "Murder rates in Baltimore, Washington DC, and Detroit",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "Washington in a list of cities means Washington, D.C.; a city named beside other places resolves to the city, no ask (P196, P238; Jeff 2026-11-22). Was clarify (which Baltimore / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -17809,21 +17877,24 @@
    "question": "Murder rates in Washington DC, Baltimore, and St. Louis per 100K",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore",
-     "period",
-     "which St. Louis"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "notes": "Washington in a list of cities means Washington, D.C.; a city named beside other places resolves to the city, no ask (P196, P238; Jeff 2026-11-22). Was clarify (which Baltimore / period / which St. Louis). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -18265,20 +18336,24 @@
    "question": "Compare murders in Houston, Dallas, San Antonio, Austin, Fort Worth, and El Paso",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which El Paso",
-    "about_any": [
-     "which El Paso",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which El Paso / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -18724,19 +18799,24 @@
    "question": "Compare NYC and LA murders by month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which LA"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "historical"
     ],
-    "about": "which LA"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-15-which-la",
-    "reviewed_by": "jeff-2026-11-15-which-la",
-    "notes": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "NYC and LA read as New York City and Los Angeles (P196, P28: only one Los Angeles has 100,000+). Awaiting Jeff's one-line yes on the abbreviations. Was clarify (which LA). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -19097,19 +19177,24 @@
    "question": "Compare NYC and LA murders per month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which LA"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "historical"
     ],
-    "about": "which LA"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-15-which-la",
-    "reviewed_by": "jeff-2026-11-15-which-la",
-    "notes": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "NYC and LA read as New York City and Los Angeles (P196, P28: only one Los Angeles has 100,000+). Awaiting Jeff's one-line yes on the abbreviations. Was clarify (which LA). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -20166,20 +20251,24 @@
    "question": "los angeles vs new york city murder rates",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -23992,21 +24081,23 @@
    "question": "Compare officers per capita in New York and Los Angeles",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "New York does not explicitly specify the city.; with the 2026-11-07 rules' parts"
+    "notes": "Bare New York in a list of cities is read as New York City (P196: city named beside other places; no other New York has 100,000+). Not named in Jeff's 2026-11-22 decision: awaiting his one-line yes. Was clarify (which New York / period / which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -24914,21 +25005,23 @@
    "question": "compare murder clearance rates in Los Angeles versus New York",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "period",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "New York requires city versus state clarification.; with the 2026-11-07 rules' parts"
+    "notes": "Bare New York in a list of cities is read as New York City (P196: city named beside other places; no other New York has 100,000+). Not named in Jeff's 2026-11-22 decision: awaiting his one-line yes. Was clarify (which New York / period / which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -25919,19 +26012,23 @@
    "question": "Show me the number of officers per capita in New York City, Los Angeles, and Chicago over time",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -26533,20 +26630,24 @@
    "question": "how do robbery clearance rates compare between Los Angeles and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
+    "reviewed_by": null,
+    "notes": "Los Angeles named in a list of cities resolves to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Los Angeles). Values pending the Runner verification."
    }
   },
   {
@@ -29123,19 +29224,23 @@
    "question": "Compare murder trends in Los Angeles and New York City since 1985",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -29865,19 +29970,23 @@
    "question": "Compare murder rates in 1935 between New York and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "New York does not explicitly specify city versus state."
+    "notes": "Bare New York in a list of cities is read as New York City (P196: city named beside other places; no other New York has 100,000+). Not named in Jeff's 2026-11-22 decision: awaiting his one-line yes. Was clarify (which New York). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -32365,19 +32474,23 @@
    "question": "Can you give me the population per year of New Orleans, New York City, Baltimore, Detroit, DC and Philadelphia from 1960 to 2024?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "Population is available in Historical but Baltimore is ambiguous.; with the 2026-11-07 rules' parts"
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Baltimore). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -34031,20 +34144,23 @@
    "question": "compare los angeles and new york's homicide rate since 1930",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
+    "notes": "Bare New York in a list of cities is read as New York City (P196: city named beside other places; no other New York has 100,000+). Not named in Jeff's 2026-11-22 decision: awaiting his one-line yes. Was clarify (which New York / which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -37905,19 +38021,23 @@
    "question": "Compare the total annual number of homicides in Baltimore and Chicago over the past 10 years.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Baltimore"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which Baltimore"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Baltimore). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -38944,19 +39064,23 @@
    "question": "Compare murder trends in New York City and Los Angeles since 1985",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -39120,20 +39244,23 @@
    "question": "compare los angeles vs nyc murders",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -42006,20 +42133,23 @@
    "question": "Can I see the violent crime rate in New York vs. Los Angeles since 1930?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
+    "notes": "Bare New York in a list of cities is read as New York City (P196: city named beside other places; no other New York has 100,000+). Not named in Jeff's 2026-11-22 decision: awaiting his one-line yes. Was clarify (which New York / which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -42059,20 +42189,23 @@
    "question": "Compare murders in New York and Los Angeles historically",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which New York",
-     "which Los Angeles"
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
     ],
-    "about": "which New York"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
+    "notes": "Bare New York in a list of cities is read as New York City (P196: city named beside other places; no other New York has 100,000+). Not named in Jeff's 2026-11-22 decision: awaiting his one-line yes. Was clarify (which New York / which Los Angeles). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -49785,20 +49918,23 @@
    "question": "How do robbery clearance rates compare between Chicago and Los Angeles?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -50664,19 +50800,23 @@
    "question": "Charlotte aggravated assaults per month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Charlotte",
-    "about_any": [
-     "which Charlotte"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "Charlotte means Charlotte, NC, alone or in a list, no ask (P238; Jeff 2026-11-22). Was clarify (which Charlotte). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -52999,20 +53139,23 @@
    "question": "Compare carjackings in New York City and Los Angeles",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -68603,19 +68746,20 @@
    "question": "Compare robbery clearance rates between Chicago and Los Angeles by year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "codex-p238",
+    "reviewed_by": null,
+    "notes": "Los Angeles named in a list of cities resolves to the city (P196, P238; Jeff 2026-11-22), no ask. Was clarify (which Los Angeles). Values pending the Runner verification."
    }
   },
   {
@@ -72291,19 +72435,23 @@
    "question": "firearm murders in Charlotte since 2018",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Charlotte",
-    "about_any": [
-     "which Charlotte"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "Charlotte means Charlotte, NC, alone or in a list, no ask (P238; Jeff 2026-11-22). Was clarify (which Charlotte). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -78497,20 +78645,23 @@
    "question": "Compare homicides in New York City, Los Angeles and Chicago",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "status": "draft",
+    "rule": "P238>P196",
+    "drafted_by": "claude-p238",
+    "reviewed_by": null,
+    "notes": "A city named in a list of cities resolves to the city, no ask (P196, P238; Jeff 2026-11-22); Los Angeles and Baltimore have only one city of the name with 100,000+ people (P28). Was clarify (which Los Angeles / period). Values unchecked: pending Runner verification."
    }
   },
   {
@@ -85406,16 +85557,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Kansas City and Richmond"
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "F1+P238>R14>2nd",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "Several unqualified place names remain ambiguous."
+    "notes": "Washington = Washington, D.C. (P238). Baltimore, Jacksonville, St Louis, Los Angeles and Charlotte resolve to the city (P196/P238). Jackson = Jackson, MS (P28: only one city of that name has 100,000+ people). Kansas City (MO/KS) and Richmond (VA/CA) still ask (P28)."
    }
   },
   {
