@@ -151,8 +151,11 @@ function planView(plan: unknown): Record<string, unknown> {
 }
 const UNIVERSE = "Agencies with a batch header in the data year's file whose header state is the state asked; the nation is the 50 "
   + "states and DC (Nebraska's header code is NB), federal agencies and territories left out. A month is summed when its "
-  + "agency_month_status is REPORTED_CRIMES or REPORTED_ZERO; for arrests, a month with arrests is summed whatever its status. "
-  + "The consistent reporters are the agencies with a header in every year and every month summed, over the whole period.";
+  + "agency_month_status is REPORTED_CRIMES or REPORTED_ZERO; for arrests, a month with arrests is summed whatever its status, "
+  + "but only in a year in which the agency has a header. "
+  + "The consistent reporters are the agencies with a header in every year summed and REPORTED_CRIMES in every month of the whole period "
+  + "(Jeff 2026-11-16): an agency with any month reported as zero crimes (REPORTED_ZERO) is not a consistent reporter, although that "
+  + "month still counts in the all-agencies sum. Arrest counts come from the arrest records by agency and month only, never from window_arrestee.";
 export function blindOf(q: VerifyRequest): Record<string, unknown> {
   return { id: q.id, tab: q.tab, question: q.question, follow_up_of: q.follow_up_of, source: q.source, measure: q.measure, statistic: q.statistic, grain: q.grain,
     places: q.places, combine: q.combine, period: q.period,
