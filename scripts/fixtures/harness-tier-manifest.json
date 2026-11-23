@@ -2851,6 +2851,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "the fuzzy place search (lib/geo-fuzzy.ts) gives exactly the answers it gave before it was made fast, for 610 fixed inputs (scripts/fixtures/geo-fuzzy-golden.json); reads the place catalog only, no database, no model, no network"
+    },
+    {
+      "id": "test-nibrs-shadow-chatty-openers",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-chatty-openers.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "H1 chatty openers: a greeting or request wrapper is dropped; 2 labeled questions reach the route; stub DuckDB step, checked-in place index."
     }
   ]
 }

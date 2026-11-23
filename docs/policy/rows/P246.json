@@ -1,0 +1,12 @@
+{
+ "id": "P246",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"Hi Jeff can you get me murder rates for denver since 1980\", \"hi; any way to tell me about violent crime data in albuquerque new mexico\".",
+ "what the app does today": "A leading greeting, a name, or a request wrapper (can you get me, I am looking for, any way to tell me about, summarize) is dropped and the rest is read as the plain question.",
+ "proposed behavior": "The opener adds no meaning; the question gets the answer it would get without it.",
+ "exact default or choices offered": "None.",
+ "why": "Bad-declines plan family H1 (declines owner, 2026-11-23). Open-ended asks (no crime, no years) are not made answerable here; they are on the clarify list for Jeff.",
+ "status": "Built in the H1 chatty-openers change.",
+ "test cases": "scripts/test-nibrs-shadow-chatty-openers.ts (2 labeled questions); other H1 ids need spelling fixes (H2), crime vocabulary, or are open-ended asks for the clarify list."
+}
