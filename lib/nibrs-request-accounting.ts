@@ -383,7 +383,7 @@ const RULES: Rule[] = [
   { concept: "statistic", value: () => "rate", pattern: R(String.raw`\b(?:incident\s+)?rates?\b`) },
   { concept: "statistic", value: () => "count", pattern: R(String.raw`\bhow\s+many\b|\b(?:total\s+)?(?:annual\s+)?(?:numbers?|counts?)(?:\s+of)?\b`) },
   // ---- ranking ----
-  { concept: "rank", value: (m) => `${/bottom/i.test(m[1]) ? "bottom" : "top"}:${numberToken(m[2])}`, pattern: R(String.raw`\b(top|bottom)\s+(${NUMBER})\b`) },
+  { concept: "rank", value: (m) => `${/bottom/i.test(m[1]) ? "bottom" : "top"}:${numberToken(m[2])}`, pattern: R(String.raw`\b(top|bottom)[\s-]+(${NUMBER})\b`) },
   { concept: "rank", value: (m) => `${/lowest|fewest|least|smallest/i.test(m[0]) ? "bottom" : "top"}:`, pattern: R(String.raw`\b(?<!\bat\s)(?:the\s+)?(?:highest|lowest|most|fewest|least|largest|smallest|greatest|biggest)\b`) },
   { concept: "rank", value: () => "rank:", pattern: R(String.raw`\b(?:rank(?:ed|ing|ings)?|top)\b`) },
   // "Where does Houston stand on murder rate in 2024" is where it ranks (Jeff 2026-11-17, P132): the same rank word, so the same answer or ask.
