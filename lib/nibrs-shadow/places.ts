@@ -25,8 +25,12 @@ export type PlaceResolution =
   | { kind: "unresolved"; why: string; named?: boolean };
 
 export const ASK_POPULATION = 100_000;
+/** Names Jeff decided mean the city with no ask even alone (2026-11-22): "Charlotte" is Charlotte, NC, not Charlotte County, FL. */
+const CITY_NAME_MEANS_CITY = new Set(["charlotte"]);
 /** Same-name towns (Jeff 2026-11-03, no population floor): at most this many cities are offered, one per state. */
 export const ASK_TOWNS = 3;
+// A Village, Town or Borough found only by the name asks beside a smaller same-name city when it has this many people.
+export const ASK_SUFFIXED = 5_000;
 export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
 export const stateName = (code: string) => STATE_NAMES[code] ?? code;
 const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]) => c !== "DC").map(([c, n]) => [n.toLowerCase(), c]));
@@ -72,7 +76,8 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   const namesFile = JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")) as { names: Record<string, string>; return_a?: string[] };
   const names = new Map<string, string>([...Object.entries(namesFile.names), ...Object.entries(AGENCY_NAMES)]);
   const returnA = new Set(namesFile.return_a ?? []);
-  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
+  // An index row with no name (", Indiana", ", Illinois") cannot be named in an answer: never found, not even by its alias (Engine 2.0 review item 4).
+  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.filter((a: Agency) => (a.name ?? "").trim() !== "").map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
@@ -167,7 +172,7 @@ export function agencyInState(idx: PlaceIndex, name: string, stateCode: string):
 }
 export const stateCodeOf = (name: string): string | undefined => STATE_BY_NAME[name.toLowerCase()] ?? (/^district of columbia$/i.test(name) ? "DC" : undefined);
 const REQUEST_WORD =/^(?:just|only|show|me|compare|using|use|calculate|give|tell|get|find|list|display|plot|chart|graph|see|view|what|about|data|now|please|also|then|so|ok|okay)\s+\S/i;
-export function resolvePlace(idx: PlaceIndex, value: string, text: string): PlaceResolution {
+export function resolvePlace(idx: PlaceIndex, value: string, text: string, inList = false): PlaceResolution {
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
   let name = (m[2] ?? m[4]).trim();
@@ -214,6 +219,34 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
     .sort((x, y) => (x.kind === y.kind ? y.population - x.population : x.kind === "city" ? -1 : 1)).map((a) => ({ kind: "agency", agency: a }));
   const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
   if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
+  // One large city beside large places that are not cities (Jeff 2026-11-22): a city's name means its police (P16). Alone,
+  // when the others are counties in other states and no state ("Charlotte" is Charlotte, NC, not Charlotte County, FL);
+  // within a list of places also when the county is in the city's own state or the name is a state too ("Baltimore",
+  // "Los Angeles", "St. Louis" beside other cities: P196; "Washington" is DC). Two large cities still ask (Kansas City, Richmond).
+  const bigCities = large.filter((c) => c.kind === "agency" && c.agency.kind === "city");
+  if (large.length >= 2 && bigCities.length === 1 && !countyNamed && !stateNamed) {
+    const city = (bigCities[0] as Extract<Candidate, { kind: "agency" }>).agency;
+    // Alone, only the names Jeff decided ("Charlotte"); every other city-and-county pair still asks by P28.
+    const alone = CITY_NAME_MEANS_CITY.has(base(name)) && !large.some((c) => c.kind === "state" || (c.kind === "agency" && c.agency.kind === "county" && c.agency.state === city.state));
+    if (inList || alone) return asPlace(city);
+  }
+  // A bare state name beside only small same-name towns ("California" is California, PA: 4,981 people; "Kansas", "Nevada",
+  // "Oregon") is never silently the town: the state or the town (Engine 2.0 review of ca2f4f3b; the old same-name-towns ask
+  // had caught these by accident).
+  if (asState && large.length === 1 && !stateNamed) {
+    const town = pool.find((a) => a.kind === "city") ?? pool[0];
+    if (town) return { kind: "ask", name, candidates: [{ kind: "agency", agency: town }, large[0]] };
+  }
+  // The name's own cities: an agency named exactly that, a large one, or one the crosswalk names. A "Smith Township" found only by the
+  // alias "smith" is a town of a different name, never preferred to a city of the name by population alone (Engine 2.0 review item 3).
+  const ownCity = (a: Agency) => a.kind === "city" && (base(a.name).replace(/ /g, "") === base(name).replace(/ /g, "") || a.population >= ASK_POPULATION || !!PLACE_ALIASES[a.ori]);
+  const bestCity = () => pool.find(ownCity) ?? pool.find((a) => a.kind === "city");
+  // One large county beside only small places of the name (Osceola County, FL; Osceola, AR): never silently the small place alone (Engine 2.0
+  // review item 2). Within a list the city still wins (P196); those names are listed for Jeff.
+  if (large.length === 1 && !inList && !asState && !countyNamed && !stateNamed && large[0].kind === "agency" && large[0].agency.kind === "county") {
+    const town = bestCity();
+    if (town) return { kind: "ask", name, candidates: [large[0], { kind: "agency", agency: town }] };
+  }
   if (large.length >= 2) return { kind: "ask", name, candidates: large };
   // A small place one or two letters from a large one ("Pittsburg", "Berkley", "prince George county"): which, the large
   // one first (coordinator 2026-11-05, query-log search): never the small place in silence.
@@ -226,13 +259,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
     const own = countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0];
     if (near.length === 1) return { kind: "ask", name, candidates: [{ kind: "agency", agency: near[0] }, { kind: "agency", agency: own }] };
   }
-  // Same-name towns with no large candidate ("Clinton": 29 agencies): when no city of the name is clearly the main one
-  // (the largest at least twice the next), ask which, the largest few one per state, and "another place" for the rest.
-  const towns = firsts.filter((a) => a.kind === "city").sort((x, y) => y.population - x.population);
-  // A large county of the name ("Greenville County, South Carolina") is offered after the towns.
-  if (!countyNamed && !stateNamed && towns.length >= 2 && towns[0].population < 2 * towns[1].population)
-    return { kind: "ask", name, candidates: [...towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), ...large.filter((c) => c.kind === "agency" && c.agency.kind === "county")],
-      more: towns.length > ASK_TOWNS };
+  // No "twice the next town" ask (removed 2026-11-22): P28 asks only when two or more same-name places have 100,000+;
+  // otherwise the most populous city, with no ask ("Jackson" is Jackson, MS).
   // A county named without its state, in several states, none large ("Mecklenburg County": Virginia's sheriff serves
   // more people than North Carolina's): which. A sheriff's population is not the county's.
   const counties = firsts.filter((a) => a.kind === "county").sort((x, y) => y.population - x.population);
@@ -242,5 +270,18 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   // unless the words name a county (or the only large candidate is the county asked by name). "Clinton" is the city of
   // Clinton, not Clinton County, New York; with every agency in the index (Jeff 2026-11-03) small cities share names
   // with large counties far more often.
+  if (!countyNamed) {
+    const own = pool.find(ownCity);
+    if (own) {
+      // A bigger Village, Town or Borough found only by the name ("Hempstead Village", NY, 59,748 beside Hempstead, TX, 6,983): which, never the
+      // small city in silence (Jeff 2026-11-23, "Ask in those cases"). A township stays behind the city (item 3); under 5,000 people is no ask.
+      const suffixed = pool.find((a) => a.kind === "city" && a !== own && !ownCity(a) && !/township/i.test(a.name) && a.population >= ASK_SUFFIXED && a.population > own.population);
+      if (suffixed) return { kind: "ask", name, candidates: [suffixed, own].map((a): Candidate => ({ kind: "agency", agency: a })) };
+      return asPlace(own);
+    }
+    // Only towns found by an alias, several of them ("Bedminster": Bedminster Township, NJ or PA): which, never the biggest in silence.
+    const towns = pool.filter((a) => a.kind === "city" && pool.findIndex((b) => b.kind === "city" && b.state === a.state) === pool.indexOf(a));
+    if (towns.length >= 2) return { kind: "ask", name, candidates: towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), more: towns.length > ASK_TOWNS };
+  }
   return asPlace(countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0]);
 }
