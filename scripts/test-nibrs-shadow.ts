@@ -29,6 +29,7 @@ import { titleCase } from "../lib/nibrs-shadow/titles";
 // P185 (Jeff 2026-11-21): the FBI master-files sentence follows the note under a NIBRS state or national sum (never under one agency's answer).
 const FBI_MASTER_FILES = "The FBI's master files, which this tool uses, don't always match the aggregated totals the FBI publishes on its Crime Data Explorer, so counts here may differ from the FBI's published figures.";
 import { seriesTitle, titleTimeframe } from "../lib/nibrs-shadow/headline";
+import { cityClearanceShare } from "../lib/nibrs-shadow/answer";
 import { allBlankMonthly, CHART_MARKER_SENTENCE, isChartEdit, plainMeanings, withYearlyOffer } from "../lib/nibrs-shadow/answer";
 import { deterministicRewriter } from "../lib/nibrs-shadow/follow-up";
 // P147: a monthly count series with every month blank is declined in one sentence, without the timeframe; part blank keeps its table.
@@ -1896,6 +1897,16 @@ assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_r
     const texas = rk.delivered.table.rows.find((r) => r[0] === "Texas")!;
     assert.deepEqual([texas[1], texas[2], texas[3]], [34.6, 312, 4], "Texas: the same figures as its own rate answer (stub data)");
   }
+  // Several years (Jeff 2026-11-22): State | Year | rate, a block for each year, each ranked highest first on its own; each year's rows are that year's own figures.
+  const rk3 = as(ask("Which states have the highest murder clearance rate from 2023 to 2025?"), "answer");
+  assert.deepEqual(rk3.delivered.table.columns.slice(0, 3).map((c) => c.header), ["State", "Year", "Murders cleared (%)"]);
+  assert.deepEqual([...new Set(rk3.delivered.table.rows.map((r) => r[1]))], ["2023", "2024", "2025"]);
+  for (const y of ["2023", "2024", "2025"]) {
+    const block = rk3.delivered.table.rows.filter((r) => r[1] === y).map((r) => r[2] as number | null);
+    assert.ok(block.length >= 50 && block.every((v, i) => i === 0 || v === null || block[i - 1] === null || (block[i - 1] as number) >= v), `${y}: every state, highest first`);
+    const one = as(ask(`Which states have the highest murder clearance rate in ${y}?`), "answer");
+    assert.deepEqual(rk3.delivered.table.rows.find((r) => r[1] === y && r[0] === "Texas")!.slice(2), one.delivered.table.rows.find((r) => r[0] === "Texas")!.slice(1), `${y} Texas equals the year alone`);
+  }
   const early = as(ask("Show the burglary clearance rate in Texas since 2000"), "answer");
   assert.ok(early.delivered.text.includes("NIBRS state figures start in 2017; 2000 through 2016 are outside them."), JSON.stringify(early.delivered.text));
 }
@@ -3047,6 +3058,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
   assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
 }
+// A city named with its state is that state's agency, checked against the place index; never the same name in another state
+// (coordinator 2026-11-22: "burglaries in Westlake, Florida" answered Westlake, Ohio plus the state of Florida).
+{
+  const dallasTx = as(ask("shoplifting in Dallas, Texas in 2024"), "answer") as unknown as { delivered: { table: { rows: unknown[][] }; text: string[] } };
+  assert.ok(dallasTx.delivered.text.join(" ").includes("Dallas"), dallasTx.delivered.text.join(" | "));
+  // Dallas is in the index only in Texas: in Florida it is declined, never answered as Dallas, Texas.
+  const dallasFl = ask("shoplifting in Dallas, Florida in 2024");
+  assert.ok(dallasFl.kind === "decline" && dallasFl.reason === "unresolved_place" && /Dallas, Florida/.test(dallasFl.explanation ?? ""), JSON.stringify(dallasFl).slice(0, 300));
+  // A name the index does not have at all, with its state: the same decline.
+  const none = ask("shoplifting in Zzyzx, Florida in 2024");
+  assert.ok(none.kind === "decline" && none.reason === "unresolved_place" && /Zzyzx, Florida/.test(none.explanation ?? ""), JSON.stringify(none).slice(0, 300));
+}
 // P188 (Jeff 2026-11-21): loose words are read as a set meaning, each said in a note.
 {
   // The note reaches the answer, just before the source line.
@@ -3107,8 +3130,6 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(/^In the United States in 2025, [\d.]+% of the murder clearances were prosecution declined/.test(nation.delivered.text[0]), nation.delivered.text[0]);
   const byState = as(ask("what share of all murder clearances in the United States were prosecution declined in 2025 by state"), "answer") as unknown as Out;
   assert.ok(byState.delivered.table.rows.length >= 1 && byState.delivered.table.rows.every((r) => typeof r[0] === "string"), JSON.stringify(byState.delivered.table.rows));
-  const names = byState.delivered.table.rows.map((r) => String(r[0]));
-  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
   // P180: no place named is the United States, with the note and the place buttons; "by state" needs neither.
   const liveAsk = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
   const noPlace = as(liveAsk("what share of murders were cleared by exception in 2025?"), "answer") as unknown as Out & { buttons?: { label: string }[] };
@@ -3120,6 +3141,46 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
   assert.ok(noPlaceStates.delivered.table.rows.length >= 1);
   assert.ok(!noPlaceStates.delivered.text.some((t) => /No place was named/.test(t)), noPlaceStates.delivered.text.join(" | "));
+  // Ranked by the share, highest first (Jeff 2026-11-22); equal shares by the state's name.
+  const shares = byState.delivered.table.rows.map((r) => Number(r[1]));
+  assert.deepEqual(shares, [...shares].sort((a, b) => b - a), JSON.stringify(byState.delivered.table.rows));
+  // Several years are a row for each year, never pooled (Jeff 2026-11-22): the same share for each year as for that year alone.
+  const multi = as(ask("what share of murders in Texas were cleared by exception from 2023 to 2025"), "answer") as unknown as Out;
+  assert.deepEqual(multi.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], JSON.stringify(multi.delivered.table.rows));
+  for (const y of [2023, 2024, 2025]) {
+    const one = as(ask(`what share of murders in Texas were cleared by exception in ${y}`), "answer") as unknown as Out;
+    assert.equal(multi.delivered.table.rows.find((r) => r[0] === String(y))![1], one.delivered.table.rows[0][0], `${y} equals the year alone`);
+  }
+  assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), multi.delivered.text.join(" | "));
+  // One year asked with "exceptional means" is that year alone (the runner saw nine years for 'in Virginia in 2022').
+  for (const q of ["what share of murders were cleared by exceptional means in Texas in 2024?", "what share of murders in Texas were cleared by exceptional means in 2024", "what share of murders were cleared by exception in Texas in 2024"]) {
+    const one = shadowAnswer(q, { ...deps, noDefaults: false }) as unknown as Out;
+    assert.equal(one.kind, "answer", q);
+    assert.deepEqual(one.delivered.table.rows.map((r) => r.length), [1], `${q}: ${JSON.stringify(one.delivered.table.rows)}`);
+  }
+  { const v = shadowAnswer("what share of rapes were cleared by exceptional means in Virginia in 2022?", { ...deps, noDefaults: false }) as unknown as { period?: { from: string; to: string }; delivered?: { text: string[] } };
+    assert.deepEqual(v.period, { from: "2022-01", to: "2022-12" }, "one year is that year alone"); assert.ok(!v.delivered!.text.some((t) => /No years were given/.test(t))); }
+  // The wordings of the labels (QL-nibrs-9598316bab, cb75da0bdb): "each year from ... to ...", and "exceptional means".
+  for (const q of ["what share of murders were cleared by exceptional means in Texas each year from 2023 to 2025?", "what share of murders were cleared by exception each year from 2023 to 2025 in Texas?"]) {
+    const w = as(ask(q), "answer") as unknown as Out;
+    assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["2023", "2024", "2025"], q);
+  }
+  // "Exceptional clearance rate for murder in Texas" with no year (QL-nibrs-e04248e56d): the share cleared by exception, every year by year (P181).
+  const rate = shadowAnswer("exceptional clearance rate for murder in Texas", { ...deps, noDefaults: false }) as unknown as Out;
+  assert.equal(rate.kind, "answer", JSON.stringify(rate).slice(0, 400));
+  assert.ok(rate.delivered.table.rows.length > 1 && rate.delivered.table.rows.every((r) => /^\d{4}$/.test(String(r[0]))), JSON.stringify(rate.delivered.table.rows));
+  // By state over several years: State | Year | Share, a block for each year, each ranked highest first on its own (Jeff 2026-11-22).
+  const msb = as(ask("what share of all murder clearances in the United States were prosecution declined from 2023 to 2025 by state"), "answer") as unknown as Out & { delivered: { table: { columns: { header: string }[] } } };
+  assert.deepEqual(msb.delivered.table.columns.slice(0, 3).map((c) => c.header), ["State", "Year", "Share (%)"]);
+  for (const y of ["2023", "2024", "2025"]) {
+    const block = msb.delivered.table.rows.filter((r) => r[1] === y);
+    assert.ok(block.length >= 1, y);
+    const v = block.map((r) => Number(r[2]));
+    assert.deepEqual(v, [...v].sort((a, b) => b - a), `${y} ranked`);
+  }
+  assert.deepEqual(msb.delivered.table.rows.map((r) => r[1]), [...msb.delivered.table.rows.map((r) => r[1])].sort(), "the years in order, a block each");
+  // Part of a year by state is still declined.
+  assert.equal(ask("what share of all murder clearances in the United States were prosecution declined from March 2023 to 2025 by state").kind === "answer", false);
 }
 // P194 (Jeff 2026-11-21): clearance by type for several named agencies is one row each (offenses, cleared by arrest, cleared by exceptional means,
 // not cleared), never summed.
@@ -3207,11 +3268,51 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(ask("robberies in Chicago in 2024 cleared by arrest versus exceptional means").kind, ask("robberies in Chicago in 2024 by clearance type").kind);
   for (const q of ["annual murder rates for the entire US", "murder rate across the whole country by year", "show me the annual murder rate in the entire United States since 2000"])
     assert.equal(ask(q).kind, ask(q.replace(/(?:for|in|across)\s+the\s+(?:entire|whole)\s+(?:US|United States|country)/i, "nationwide")).kind, q);
+  // "What percentage ... cleared by arrest vs exceptional" asks for both shares: the clearance types side by side, like "by clearance type".
+  assert.equal(readQuestion("What percentage of murders are cleared by arrest vs exceptional nationally?", 2026, "2026-09").text, "murders nationally?");
+  assert.equal(ask("What percentage of murders in Dallas in 2024 are cleared by arrest vs exceptional?").kind, ask("murders in Dallas in 2024 by clearance type").kind);
+  assert.equal(readQuestion("what share of robberies were cleared by exception in 2024", 2026, "2026-09").text.includes("share"), true, "one share stays a share");
   // "Per year and type" beside exceptional clearances is the year and the clearance type together, answered like "by type by year".
   // (The read text is compared: a decline here would come from the test's stub rows, not the wording.)
   for (const q of ["newark exceptional murder clearances per year and type from 2022 to 2025", "Tulsa exceptional homicide clearances per year and type since 2019"])
     assert.ok(/cleared by exception by type by year/.test(readQuestion(q, 2026, "2026-09").text), q);
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
+}
+// Cities ranked by the share of a crime cleared one way (QL-nibrs-cff5d76134): the question's own "at least N murders" is the only bound; none named is the
+// cities of 250,000 or more (P128, Jeff 2026-11-22).
+{
+  const ask = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  const names = (q: string) => as(ask(q), "answer").delivered.table.rows.map((r) => String(r[0]));
+  const n30 = names("What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by exception ?");
+  assert.deepEqual(n30.slice(0, 3), ["Houston, Texas", "Dallas, Texas", "Austin, Texas"], "equal shares: more murders first");
+  assert.ok(n30.includes("Greensboro, North Carolina"), "a city under 250,000 is ranked when the question's minimum is the only bound");
+  const t = as(ask("What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by exception ?"), "answer");
+  assert.equal(t.delivered.text[0], "Share of Murders Cleared by Exceptional Means (%) by City, 2025");
+  assert.ok(t.delivered.text.includes("Only cities with at least 30 murders reported in 2025 are ranked."), JSON.stringify(t.delivered.text));
+  assert.deepEqual(t.delivered.table.columns.map((c) => c.header), ["City", "Share (%)", "Offenses"]);
+  // No N named: the floor is the 250,000 or more, said in the title and a note; the cut is the one asked.
+  const big = as(ask("top 2 cities by share of murders cleared by exception in 2024"), "answer");
+  assert.equal(big.delivered.text[0], "Share of Murders Cleared by Exceptional Means (%) by City, Population 250,000 or More, 2024");
+  assert.deepEqual(big.delivered.table.rows.map((r) => r[0]), ["Houston, Texas", "Dallas, Texas"]);
+  assert.ok(big.delivered.text.includes("No city size was named, so the cities of 250,000 or more are ranked."));
+  // The minimum is a count of the crime reported that year: 100 leaves Houston (108) only; "lowest" and "at least" are different words.
+  assert.deepEqual(names("What cities with at least 100 murders in 2024 had the lowest share of murders cleared by exception ?"), ["Houston, Texas"]);
+  assert.ok(as(ask("What cities with at least 30 murders in 2024 had the lowest share of murders cleared by exception ?"), "answer").delivered.table.rows[0][0] === "Austin, Texas", "Austin's June is missing in the stub: the lowest share");
+  // No city meets the minimum: a decline naming it, never the place ask.
+  const none = as(ask("cities with at least 9999 murders in 2024 with the highest share of murders cleared by exception"), "decline");
+  assert.equal(none.explanation, "No city had at least 9999 murders in 2024.");
+  // Several years (QL-nibrs-77ef8b10f0): a ranking for each year, stacked, never pooled; "any agency" is every agency, not only cities.
+  const multi = as(ask("A list of the highest share of murders cleared by exception for any agency in any year since 2021 (min 20 murders reported in that year)"), "answer");
+  assert.deepEqual(multi.delivered.table.columns.map((c) => c.header).slice(0, 3), ["Agency", "Year", "Share (%)"], JSON.stringify(multi.delivered.table.columns));
+  const yrs = multi.delivered.table.rows.map((r) => String(r[1]));
+  assert.ok(yrs.length > 3 && new Set(yrs).size > 1 && yrs.every((y, i) => i === 0 || y >= yrs[i - 1]), "a block for each year, in year order: " + JSON.stringify(yrs));
+  assert.ok(multi.delivered.text.some((t) => /the years are not added together/.test(t)), JSON.stringify(multi.delivered.text));
+  assert.ok(multi.delivered.text.includes("Since 2021 is read as the whole years 2021 to 2025: the 2026 data is not a whole year."), JSON.stringify(multi.delivered.text));
+  const threeYears = as(ask("top 2 cities by share of murders cleared by exception from 2022 to 2024"), "answer");
+  assert.deepEqual(threeYears.delivered.table.rows.map((r) => r[1]), ["2022", "2022", "2023", "2023", "2024", "2024"], "the first 2 of each year");
+  // A place, a rate or another grouping is not this ranking.
+  assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
+  assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

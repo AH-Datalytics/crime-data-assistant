@@ -288,6 +288,8 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       places = [p];
       periodValue = periodOf(spec.period, false);
       if (spec.byState) groupings.push({ dimension: "geo.state", unknown: "visible", absent: "show" });
+      // "Each year" on a clearance share (Jeff 2026-11-22): a row for each year, so the yearly grain is bound to a year grouping.
+      if (clearedSubset && ledger.parts.some((q) => q.clause === 0 && q.concept === "grain" && q.value === "year")) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
       statistics.push({ kind: "ratio", as: "share", numerator: "subset", denominator: "population" });
       break;
     }

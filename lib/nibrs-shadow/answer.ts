@@ -50,7 +50,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyInState, agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateCodeOf, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -84,6 +84,8 @@ export type ShadowDeps = {
   shr?: ShrBuild;
   /** The hate crime export (hate.ts): with it, hate crime questions are answered from it; without it they are declined. Never NIBRS. */
   hate?: HateBuild;
+  /** Set while a ranking of cities by a clearance share is answered (cityClearanceShare): the minimum offenses (null: the 250,000+ floor), the cut and the direction. */
+  cityShare?: { minOffenses: number | null; limit: number | null; direction: "top" | "bottom"; all?: boolean; note?: string };
   /** The question as the user asked it, set while it is answered (the county-wide decline offers it without the county-wide words). */
   asked?: string;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
@@ -954,7 +956,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
   const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
-  const text = [x.delivered.text[0], ...say, ...x.delivered.text.slice(1)];
+  // A sentence the answer already carries is not said twice (a series built "by year" says its own "No years were given").
+  const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1)];
   void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
@@ -1109,11 +1112,42 @@ export const CHART_EDIT = new RegExp([
 /** A request to change a chart (a date marker or any other change the page cannot make). */
 export const isChartEdit = (turn: string) => CHART_MARKER.test(turn) || CHART_EDIT.test(turn);
 
+/**
+ * Cities ranked by the share of a crime cleared one way ("What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by
+ * exception?", QL-nibrs-cff5d76134): read as the by-state share question of the same crime, clearance and year, answered per city agency (clearance-share.ts)
+ * with the question's own bound: the cities with at least N of the crime reported that year, else the cities of 250,000 or more (P128; Jeff 2026-11-22).
+ * One crime, one clearance (arrest or exception), one year, no place; anything else keeps its own path.
+ */
+export function cityClearanceShare(question: string, deps: ShadowDeps): { rewritten: string; cityShare: NonNullable<ShadowDeps["cityShare"]> } | null {
+  const q = question.replace(/\s+/g, " ");
+  if (!/\b(?:cities|agenc(?:y|ies))\b/i.test(q) || !/\bshares?\b|\bpercent(?:age)?\b|%/i.test(q)) return null;
+  if (/\b(?:rates?|per\s+100,?000|by\s+(?:state|month|year|type)|each\s+(?:month|year|state)|compar\w+|vs\.?|versus|firearm|weapon|felony|misdemeanou?rs?|big|large\w*|major)\b/i.test(q)) return null;
+  const clearance = /\bcleared\s+by\s+(exception(?:al)?(?:\s+means)?|arrest)\b/i.exec(q);
+  const crime = /\b(murders?|homicides?|rapes?|robber(?:y|ies)|aggravated\s+assaults?|burglar(?:y|ies)|larcen(?:y|ies)(?:-theft)?s?|motor\s+vehicle\s+thefts?|arsons?)\b/i.exec(q);
+  const years = [...q.matchAll(/\b(20\d{2}|19\d{2})\b/g)].map((m) => Number(m[1]));
+  // One year, "since 2021", or "from 2021 to 2024" (several years are a ranking for each year, stacked, never pooled: P203/P173).
+  const since = /\bsince\s+(?:the\s+year\s+)?(\d{4})\b/i.exec(q);
+  const lastYear = Number(deps.release.lastMonth.slice(0, 4)), lastComplete = deps.release.lastMonth.endsWith("-12") ? lastYear : lastYear - 1;
+  // "Since 2021" is the whole years through the last complete one (part of a year is not ranked), said in a note.
+  const when = since ? (Number(since[1]) < lastComplete ? `from ${since[1]} to ${lastComplete}` : `in ${lastComplete}`) : years.length === 1 ? `in ${years[0]}` : years.length === 2 && /\b(?:to|through|thru|-|–|and)\b/i.test(q) ? `from ${Math.min(...years)} to ${Math.max(...years)}` : null;
+  if (!clearance || !crime || !when) return null;
+  const allAgencies = !/\bcities\b/i.test(q);
+  const min = /\b(?:at\s+least|min(?:imum)?\.?\s+(?:of\s+)?)\s*(\d+)\s+(?:murders?|homicides?|rapes?|robber\w*|assaults?|burglar\w*|larcen\w*|thefts?|arsons?|offen[cs]es?)\b/i.exec(q);
+  const limit = /\b(?:top|what|which|the)\s+(\d+)\s+cities\b/i.exec(q);
+  const places = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
+  if (places.length) return null;
+  const how = /exception/i.test(clearance[1]) ? "by exception" : "by arrest";
+  return { rewritten: `what share of ${crime[1]} were cleared ${how} ${when} in the United States by state`,
+    cityShare: { ...(allAgencies ? { all: true } : {}), ...(since ? { note: `Since ${since[1]} is read as the whole years ${since[1]} to ${lastComplete}: the ${lastYear} data is not a whole year.` } : {}), minOffenses: min ? Number(min[1]) : null, limit: limit ? Number(limit[1]) : null, direction: /\b(?:lowest|fewest|bottom)\b|(?<!\bat\s)\bleast\b/i.test(q) ? "bottom" : "top" } };
+}
 function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   const cov = coverageOf(question, deps);
   if (cov) return cov;
   // A change to a chart is declined with one sentence, before any place or crime is asked (P157).
   if (isChartEdit(question)) return decline("unsupported_capability", CHART_MARKER_SENTENCE);
+  // Cities ranked by a clearance share, answered per city agency (clearance-share.ts).
+  const cityClear = deps.cityShare ? null : cityClearanceShare(question, deps);
+  if (cityClear) return shadowAnswer(cityClear.rewritten, { ...deps, cityShare: cityClear.cityShare, rewritten: true });
   // With an SHR release, "murders by victim-offender relationship" is the relationship breakdown: the two words the
   // reader would read as two counting units are taken out of the question as asked, before it is read, so every other
   // part (a clearance, a year past the data) is read as usual (Codex SHR-A confirmations 01.7, 01.8).
@@ -1933,7 +1967,59 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
     delivered: { ...firstOut.delivered, table, evidence, chart, text, ...((firstOut.delivered as Partial<Delivered>).headline ? { headline: title } : {}) } } as unknown as ShadowOutcome;
 }
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
-function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
+/**
+ * "City, State" is checked against the place index (coordinator 2026-11-22: "burglaries in Westlake, Florida" answered Westlake, Ohio plus the state
+ * of Florida, and "Deltona, Florida" was not understood, because the reader's own city list lacks cities the index has). A name followed by a state
+ * is that state's agency of the name: one merged place; and if the index has none there, a decline. Never the same name in another state.
+ */
+function reconcileCityState(ledger: RequestLedger, deps: ShadowDeps): { ledger: RequestLedger; decline?: ShadowOutcome } {
+  if (!deps.places) return { ledger };
+  const parts = [...ledger.parts].sort((a, b) => a.span[0] - b.span[0]);
+  const out: Part[] = [];
+  const drop = new Set<Part>();
+  // The commas and fillers between a name and its state are parts of their own; the next part that means something is the state.
+  const meaningful = parts.filter((x) => x.state !== "context");
+  for (let i = 0; i < meaningful.length - 1; i++) {
+    const p = meaningful[i], s = meaningful[i + 1];
+    // A two-word name the reader split ("Litchfield" read as a place, "Park," not understood, then the state): the words together, kept only
+    // when the index has the whole name in that state.
+    const st3 = meaningful[i + 2];
+    if (p.clause === 0 && p.concept === "place" && /^(?:city|county|ambiguous):/.test(p.value ?? "") && s.concept === "unrecognized" && /^[A-Z][A-Za-z.'-]*,?$/.test(s.text.trim())
+      && st3 && st3.concept === "place" && /^state:/.test(st3.value ?? "") && /^\s*,?\s*$/.test(ledger.question.slice(s.span[1], st3.span[0]))) {
+      const code3 = stateCodeOf(String(st3.value).slice("state:".length));
+      const name3 = `${p.text.trim()} ${s.text.trim().replace(/,$/, "")}`;
+      const a3 = code3 ? agencyInState(deps.places, name3, code3) : null;
+      if (a3) {
+        out.push({ ...p, concept: "place", value: `${a3.kind}:${a3.name}:${a3.state}`, text: `${name3}, ${stateName(code3!)}`, span: [p.span[0], st3.span[1]], explains: [[p.span[0], st3.span[1]]],
+          rule: "shadow:city-state", state: "recognized", explanation: null } as unknown as Part);
+        drop.add(p); drop.add(s); drop.add(st3);
+        i += 2;
+        continue;
+      }
+    }
+    if (p.clause !== 0 || s.clause !== 0 || s.concept !== "place" || !/^state:/.test(s.value ?? "")) continue;
+    if (!/^[\s,]+$/.test(ledger.question.slice(p.span[1], s.span[0]).replace(/[()]/g, "")) && !/^\s*,\s*$/.test(ledger.question.slice(p.span[1], s.span[0]))) continue;
+    // A name read as a city or county, or text the reader did not understand that ends in a capitalized name ("in Deltona,").
+    let name: string | null = null;
+    if (p.concept === "place" && /^(?:city|county|ambiguous):/.test(p.value ?? "") && !/,\s*[A-Za-z .]+$/.test(p.text.trim())) name = p.text.trim();
+    else if (p.concept === "unrecognized") name = /(?:^|\s)(?:in|for|of|at|near)\s+((?:[A-Z][A-Za-z.'-]*)(?:\s+[A-Z][A-Za-z.'-]*){0,3}),?\s*$/.exec(p.text.trim())?.[1] ?? null;
+    if (!name) continue;
+    const code = stateCodeOf(String(s.value).slice("state:".length));
+    if (!code) continue;
+    const full = `${name}, ${stateName(code)}`;
+    const a = agencyInState(deps.places, name, code);
+    if (!a) return { ledger, decline: decline("unresolved_place", `I couldn't find "${full}" among the city and county police agencies, states and the nation here.`) };
+    const merged = { ...p, concept: "place", value: `${a.kind}:${a.name}:${a.state}`, text: full, span: [p.concept === "unrecognized" ? p.span[1] - name.length - (/,\s*$/.test(p.text) ? 1 : 0) : p.span[0], s.span[1]],
+      explains: [[p.span[0], s.span[1]]], rule: "shadow:city-state", state: "recognized", explanation: null } as unknown as Part;
+    drop.add(p); drop.add(s); out.push(merged);
+  }
+  if (!out.length) return { ledger };
+  return { ledger: withParts(ledger, [...parts.filter((x) => !drop.has(x)), ...out]) };
+}
+function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
+  const reconciled = reconcileCityState(ledgerIn, deps);
+  if (reconciled.decline) return reconciled.decline;
+  const ledger0 = reconciled.ledger;
   const { release } = deps;
   const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
   // The same months of each year (Q1): answered by its own function, or declined; the months are never dropped.
@@ -3396,7 +3482,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (spec.period?.form === "none") {
     const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
     const thisYear = Number(release.lastMonth.slice(0, 4));
-    const trend = !!spec.grain && spec.grain !== "total";
+    // A clearance share "by year" with no years named (Jeff 2026-11-22: a row for each year) is a series too, asked for the range of years.
+    const yearlyShare = d.spec.type === "share" && stateMode && d.spec.subset.some((f) => f.startsWith("clearance:"))
+      && ledger0.parts.some((p) => p.clause === 0 && p.concept === "grain" && p.value === "year");
+    const trend = (!!spec.grain && spec.grain !== "total") || yearlyShare;
     // Jeff 2026-11-11, "All years by default": "by year", "per month", "over time" with no range is every year the source
     // has, said, never asked. By year (or quarter): NIBRS's first year through the latest complete year; by month or a
     // rolling window: every month through the latest. Only when that answers; otherwise the question is asked as before.
