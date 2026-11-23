@@ -116,6 +116,8 @@ export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; s
 export type NibrsSpec = SeriesSpec | BreakdownSpec | ShareSpec | RankSpec | ChangeSpec;
 /** The most named agencies one clearance-by-type table covers (P194). */
 export const MAX_CLEARANCE_PLACES = 50;
+/** Jeff 2026-11-22: "If 30 places are named it should give all 30". The most places one series answer compares (was 10). */
+export const MAX_SERIES_PLACES = 50;
 
 export type NibrsTypeDecision =
   | { kind: "spec"; spec: NibrsSpec; explainLimitation: string | null }
@@ -433,7 +435,7 @@ function cannotReason(p: Part): string {
 }
 
 export function validateSpec(spec: NibrsSpec): string | null {
-  if (spec.type === "series" && spec.places.length > 10) return "I can compare up to 10 named places at a time.";
+  if (spec.type === "series" && spec.places.length > MAX_SERIES_PLACES) return `I can compare up to ${MAX_SERIES_PLACES} named places at a time.`;
   if (spec.type === "change" && !(spec.earlier < spec.later)) return "The earlier year must come before the later year.";
   return null;
 }

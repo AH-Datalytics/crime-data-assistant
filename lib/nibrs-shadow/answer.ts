@@ -1863,11 +1863,17 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   base = base.replace(/\s+/g, " ").replace(/\s+([,?.!])/g, "$1").replace(/[?.!\s]+$/, "").replace(/(?:\s+(?:in|for|of|from|during|by|each|every))+$/i, "").trim();
   const month = MONTH_NAME[n - 1];
   const sub = (y: number) => (n === 1 ? `${base} in January ${y}` : `${base} from January ${y} through ${month} ${y}`);  type Delivering = Extract<ShadowOutcome, { delivered: unknown }>;
+  // Several places (Jeff 2026-11-22, "if 30 places are named it should give all 30"): one grouped query for every place and every month
+  // of the span, summed to the months asked in each year, never one query per place. One place keeps the year-by-year path below.
+  if (parts0.filter((p) => p.concept === "place").length > 1)
+    return answerSameMonthsPlaces(ledger0, n, years, `${base} from January ${years[0]} through December ${years[1]} by month`, deps, NO);
   const results = [] as { y: number; o: ShadowOutcome }[];
   for (let y = years[0]; y <= years[1]; y++) {
     const o = shadowAnswer(sub(y), deps);
     // The first year's ask or decline stands for the question (a place asked, a limit): never buttons that forget the months.
-    if (y === years[0] && o.kind === "clarify") return NO();
+    // The one ask that has no choice buttons, only a typed answer (the places named in more than one state, more than ten of them),
+    // stands for the whole question: nothing in it forgets the months.
+    if (y === years[0] && o.kind === "clarify") return o.options.length && o.options.every((x) => x.entry && !x.continuation) ? { ...o, question: ledger0.question } : NO();
     results.push({ y, o });
   }
   // The year's figure: the sum of its months (the engine's own month rows), blank when any month is not known (never a partial sum as the
@@ -1931,6 +1937,61 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
     ...(fo.plan ? { plan: { ...fo.plan, period: { kind: "absolute", ...span }, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] } } : {}),
     ...(firstOut.kind === "shr" && fo.question ? { question: { ...fo.question, from: span.from, to: span.to, grain: "year" } } : {}),
     delivered: { ...firstOut.delivered, table, evidence, chart, text, ...((firstOut.delivered as Partial<Delivered>).headline ? { headline: title } : {}) } } as unknown as ShadowOutcome;
+}
+/**
+ * The same months of each year for several places: ONE sub-question (every place, every month from January of the first year to December
+ * of the last) answered by the engine, then each place's year is the sum of its months 1 to n. A year with a month not known is blank for
+ * that place, never a partial sum. The table is long, Agency | Year | figure, one row per place and year, in the order the places were named.
+ */
+function answerSameMonthsPlaces(ledger0: RequestLedger, n: number, years: [number, number], subQuestion: string, deps: ShadowDeps, NO: () => ShadowOutcome): ShadowOutcome {
+  type Delivering = Extract<ShadowOutcome, { delivered: unknown }>;
+  const o = shadowAnswer(subQuestion, deps);
+  if (o.kind === "clarify") return o.options.length && o.options.every((x) => x.entry && !x.continuation) ? { ...o, question: ledger0.question } : NO();
+  if (o.kind === "decline") return o;
+  if (o.kind !== "answer") return NO();
+  const d = (o as Delivering).delivered as { table: { columns: { binding: { kind: string; dimension?: string; as?: string }; header: string }[]; rows: unknown[][] }; text: string[] };
+  const cols = d.table.columns;
+  const pi = cols.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension === "geo.place");
+  const mi = cols.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension === "time.month");
+  const lastCol = cols[cols.length - 1];
+  if (pi < 0 || mi < 0 || cols.length !== 3 || lastCol.binding.kind !== "statistic") return NO();
+  // place -> "YYYY-MM" -> figure (a number, or null when not known)
+  const byPlace = new Map<string, Map<string, number | null>>();
+  for (const r of d.table.rows) {
+    const v = r[r.length - 1];
+    if (v !== null && typeof v !== "number") return NO();
+    const key = String(r[pi]);
+    if (!byPlace.has(key)) byPlace.set(key, new Map());
+    byPlace.get(key)!.set(String(r[mi]), v as number | null);
+  }
+  if (!byPlace.size) return NO();
+  const rows: unknown[][] = [], blanks = new Map<string, number[]>();
+  for (const [place, months] of byPlace) for (let y = years[0]; y <= years[1]; y++) {
+    let sum = 0, known = true;
+    for (let m = 1; m <= n; m++) { const v = months.get(`${y}-${String(m).padStart(2, "0")}`); if (typeof v === "number") sum += v; else known = false; }
+    rows.push([place, String(y), known ? sum : null]);
+    if (!known) blanks.set(place, [...(blanks.get(place) ?? []), y]);
+  }
+  const month = MONTH_NAME[n - 1];
+  const sameWhat = `${lastCol.header.toLowerCase()} ${n === 1 ? "in January" : `January through ${month}`}`;
+  const sameYears = years[0] === years[1] ? String(years[0]) : `${years[0]} to ${years[1]}`;
+  const title = `${sameYears} ${titleCase(sameWhat)} by Year`;
+  const runsOf = (ys: number[]) => {
+    const out: string[] = [];
+    for (let i = 0; i < ys.length;) { let j = i; while (j + 1 < ys.length && ys[j + 1] === ys[j] + 1) j++; out.push(j > i ? `${ys[i]} to ${ys[j]}` : `${ys[i]}`); i = j + 1; }
+    return out.length > 2 ? `${out.slice(0, -1).join(", ")} and ${out[out.length - 1]}` : out.join(" and ");
+  };
+  const noFigure = [...blanks].map(([p, ys]) => `No figure is available for ${p} in ${runsOf(ys)}: shown blank, not zero.`);
+  const text = [title, `Each year counts the same months: January through ${month}.`, ...(!/year:|range:|since:/.test(ledger0.parts.find((p) => p.concept === "period" && p.clause === 0)?.value ?? "")
+    ? [`No years were given, so every year in the data is shown: ${years[0]} through ${years[1]}.`] : []), ...noFigure, ...d.text.slice(1)];
+  const asName = lastCol.binding.as ?? "count";
+  const outTable = { columns: [{ ...cols[pi] }, { binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }, { ...lastCol }], rows };
+  const evidence = rows.map((r, i) => ({ row: i, statistic: asName, status: typeof r[2] === "number" ? "VALUE" : "UNKNOWN" })) as unknown as Delivered["evidence"];
+  const span = { from: `${years[0]}-01`, to: `${years[1]}-${String(n).padStart(2, "0")}` };
+  const fo = o as unknown as { plan?: { groupings?: { dimension: string }[] } & Record<string, unknown> };
+  return { ...o, sameMonths: true, period: span,
+    ...(fo.plan ? { plan: { ...fo.plan, period: { kind: "absolute", ...span }, groupings: [...(fo.plan.groupings ?? []).filter((g) => g.dimension === "geo.place"), { dimension: "time.year", unknown: "visible", absent: "show" }] } } : {}),
+    delivered: { ...(o as Delivering).delivered, table: outTable, evidence, chart: null, text, ...(((o as Delivering).delivered as Partial<Delivered>).headline ? { headline: title } : {}) } } as unknown as ShadowOutcome;
 }
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
@@ -2062,13 +2123,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const resolved = new Map<string, Place>();
   let ask: { part: Part; name: string; candidates: Candidate[]; more?: boolean } | null = null;
   let unfound: Part | null = null;
+  const askedNames: string[] = [];
   const parts = ledger0.parts.map((p) => {
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const pin = pins.get(p.span[0]);
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
-    if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates, more: r.more }; return p; }
+    if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates, more: r.more }; askedNames.push(r.name); return p; }
     const value = `${r.agency.kind}:${r.agency.name}:${r.agency.state}`;
     resolved.set(value, r.place);
     return { ...p, value };
@@ -2076,6 +2138,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const ledger = withParts(ledger0, parts);
   if (ask) {
     const a: { part: Part; name: string; candidates: Candidate[]; more?: boolean } = ask;
+    // Several names that each exist in several places (Jeff 2026-11-22, the 30-city murders question): one ask naming them all,
+    // answered by typing each with its state. One ask per name would chain a question for each and build a follow-up answer for
+    // every combination of choices, so more than three such names are asked together.
+    if (new Set(askedNames).size > 3) {
+      const names = [...new Set(askedNames)].map((n) => n.replace(/\b\w/g, (c) => c.toUpperCase()));
+      const said = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
+      // Names a state does not settle (a county or a second department shares the name): say so now, so one reply is enough.
+      const city = names.filter((n) => /^(baltimore|jacksonville|st\.? louis|los angeles)$/i.test(n));
+      const need = city.length ? ` (for ${city.length > 1 ? `${city.slice(0, -1).join(", ")} and ${city[city.length - 1]}` : city[0]} a state is not enough: name the city, as in "the city of ${city[0]}", or the department)` : "";
+      return { kind: "clarify", about: `which ${said}${need}`, question: ledger0.question, options: [{ label: "Name the state or city for each", entry: "which city or agency" }] };
+    }
     const options: ShadowOption[] = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates, deps.places), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
     // A question no choice could answer is declined, not asked about (D28): when no button leads to an answer or a
     // further question, the most likely reading's refusal is given.
