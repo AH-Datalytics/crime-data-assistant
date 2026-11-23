@@ -206,23 +206,32 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   // Two separate conditions on a record's one weapon, relationship or circumstance ("handguns versus rifles") would
   // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
   // Counted per condition, whatever its group (Codex SHR-A review 02.2).
-  const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [NIBRS_DIM[c.f.dimension]] : []));
+  // A person's detail too (QL-shr-c5a7750e9c "female vs male murder victims per year"): two sex filters ANDed counted nobody, a 0 in every year.
+  const recordDims = conditions.flatMap((c) => (c && NIBRS_DIM[c.f.dimension] && !/age$/.test(NIBRS_DIM[c.f.dimension]) ? [NIBRS_DIM[c.f.dimension]] : []));
   // "Gun murders versus knife murders" (the question says compare, versus or vs): the two values are two categories of the
   // one breakdown, never both on a record that has one weapon (Jeff 2026-11-15 order, item 2).
   let weaponGroups: { label: string; codes: string[] }[] | null = null;
   if (new Set(recordDims).size !== recordDims.length) {
-    const onlyWeapons = recordDims.length === 2 && recordDims.every((d) => d === "weapon") && conditions.length === 2 && conditions.every((c) => c && c.f.op === "in" && c.f.values && c.group !== undefined);
-    if (!(opts.compare && onlyWeapons && !breakdown)) return { why: "two values of one record detail compared" };
-    const sets = conditions.map((c) => codesOf("weapon", c!.f.values!));
+    // Exactly one detail appears twice; the others once ("firearm" beside "female vs male": the weapon is a filter, the sexes the breakdown).
+    const repeated = [...new Set(recordDims)].filter((d) => recordDims.filter((x) => x === d).length > 1);
+    const pairDim = repeated[0];
+    const onlyPair = repeated.length === 1 && recordDims.filter((x) => x === pairDim).length === 2 && conditions.filter((c) => c && NIBRS_DIM[c.f.dimension] === pairDim).length === 2
+      && conditions.every((c) => !c || NIBRS_DIM[c.f.dimension] !== pairDim || (c.f.op === "in" && c.f.values && (pairDim !== "weapon" || c.group !== undefined)));
+    // A person's detail (the sexes, two races) never means both at once, so no "versus" is needed; a record's weapon, relationship or circumstance does (job SA1).
+    if (!((opts.compare || !RECORD_DIMS.has(pairDim as ShrDim)) && onlyPair && !breakdown)) return { why: "two values of one record detail compared" };
+    const pair = conditions.filter((c) => c && NIBRS_DIM[c.f.dimension] === pairDim);
+    const sets = pair.map((c) => codesOf(pairDim, c!.f.values!));
     if (sets.some((x) => !x) || sets[0]!.some((c) => sets[1]!.includes(c))) return { why: "a code Homicide Reports record differently" };
-    const label = (codes: string[]) => (codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => SHR_WEAPON[c] ?? c).join(" or "));
+    const names = DIM_LABELS[pairDim as ShrDim] ?? {};
+    const label = (codes: string[]) => (pairDim !== "weapon" ? codes.map((c) => names[c] ?? c).join(" or ")
+      : codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => SHR_WEAPON[c] ?? c).join(" or "));
     weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
-    breakdown = { dim: "weapon", groups: weaponGroups };
+    breakdown = { dim: pairDim as ShrDim, groups: weaponGroups };
   }
   const notes: string[] = [];
   for (const c of conditions) {
     if (!c) return { why: "a negated condition" };
-    if (weaponGroups && NIBRS_DIM[c.f.dimension] === "weapon") continue;
+    if (weaponGroups && breakdown?.groups && NIBRS_DIM[c.f.dimension] === breakdown.dim) continue;
     const { f, group } = c;
     const dim = NIBRS_DIM[f.dimension];
     if (!dim) return { why: "a detail Homicide Reports don't record" };
@@ -349,7 +358,16 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     : (() => { const out: { key: string[]; label: string; year: number }[] = []; for (let v = ym(sq.from); v <= ym(sq.to); v = v % 100 === 12 ? v + 89 : v + 1)
       out.push({ key: [String(Math.floor(v / 100)), String(v % 100)], label: `${Math.floor(v / 100)}-${String(v % 100).padStart(2, "0")}`, year: Math.floor(v / 100) }); return out; })();
   // A total over several years is blank if any year in it is (no total over a gap).
-  const blankPeriod = (p: typeof periods[number]) => (sq.grain === "total" ? Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some((y) => !counted(y)) : !counted(p.year));
+  // Months after the last one with any Homicide Report in a state or the nation (the final year is still being filed) are blank, never 0:
+  // a 0 would claim no murders (coordinator 2026-11-22, QL-shr-b31e79fb3a: 2026-07 to 2026-09).
+  let lastFiledMonth: number | null = null;
+  // An agency too, but only in the year the build is still being filed: in a complete past year a small agency's zero months are real zeros (Jeff via the Engine, PR 364).
+  if (sq.grain === "month" && (sq.place.kind !== "agency" || toY === Number(build.latestMonth.slice(0, 4)))) {
+    const m = execute(`SELECT max(r.offense_month) FROM ${table(build, "shr_record")} r WHERE r.counted AND r.data_year = ${toY} AND ${placeWhere(sq.place)}`)[0]?.[0];
+    if (m !== undefined && m !== null && Number.isFinite(Number(m))) lastFiledMonth = Number(m);
+  }
+  const afterLastFiled = (p: typeof periods[number]) => lastFiledMonth !== null && p.year === toY && p.key.length === 2 && Number(p.key[1]) > lastFiledMonth;
+  const blankPeriod = (p: typeof periods[number]) => (sq.grain === "total" ? Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some((y) => !counted(y)) : !counted(p.year) || afterLastFiled(p));
   const catsOf = (b: NonNullable<ShrQuestion["breakdown"]>, pos: number): { code: string; label: string }[] => {
     if (b.groups) return b.groups.map((g, i) => ({ code: String(i), label: g.label }));
     if (b.bins) return [...b.bins.map(([lo, hi], i) => ({ code: String(i), label: hi >= 120 ? `${lo} and older` : `${lo} to ${hi}` })), { code: "", label: "Unknown" }];
@@ -438,10 +456,12 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   if (sq.place.kind === "agency") {
     const gaps = periods.filter((p) => blankPeriod(p)).map((p) => p.year);
     if (gaps.length) text.push(`A blank ${sq.grain === "month" ? "month" : "year"} is one in which ${sq.place.label} filed no Homicide Reports.`);
+    if (lastFiledMonth !== null && periods.some((p) => afterLastFiled(p))) text.push(`A blank month is one after the last month in which ${sq.place.label} filed Homicide Reports.`);
     if (hist) { const note = partialNote(sq, build, execute, hist, filed); if (note) text.push(note); }
   } else {
     // S2: the filing agencies, how many, and the share of Crime Index's population they cover; nothing estimated.
     text.push(`A ${sq.place.kind === "state" ? "state" : "national"} total here is the sum of what the agencies that filed Homicide Reports reported; nothing is estimated for agencies that didn't.`);
+    if (lastFiledMonth !== null && periods.some((p) => afterLastFiled(p))) text.push(`A blank month is one after the last month in which ${sq.place.kind === "state" ? stateName(sq.place.code) : "any agency"} filed Homicide Reports.`);
     const years = Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i);
     const share = hist ? coverageShares(sq, filed, years, hist, execute) : new Map<number, number>();
     for (const y of years) {

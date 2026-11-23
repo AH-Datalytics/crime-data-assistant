@@ -1,0 +1,12 @@
+{
+  "id": "P200",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"female vs male murder victims per year\", \"Male vs female firearm murder victims per month since 2018\"",
+  "what the app does today": "Showed 0 in every year or month: the two sexes were counted as one record with both, and months after the last filed month showed 0.",
+  "proposed behavior": "Two values of one person detail (female and male victims, two races) are two categories of one breakdown, never both on one person, so no \"versus\" is needed. For a state or the nation by month, months after the last month with any Homicide Report in the final year are blank, never 0, and the answer says so (\"A blank month is one after the last month in which any agency filed Homicide Reports.\"): a 0 would claim no murders (S3).",
+  "exact default or choices offered": "The breakdown table; blank months with the gap note.",
+  "why": "Coordinator 2026-11-22, blind check of QL-shr-b31e79fb3a, QL-shr-c5a7750e9c, QL-shr-c674f79a08: a 0 claims no murders.",
+  "status": "Decided 2026-11-22 (S3, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"female vs male murder victims\", \"female murder victims nationally per month in 2026\")."
+}
