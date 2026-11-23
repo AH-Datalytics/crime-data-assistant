@@ -3030,6 +3030,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // No period: every year, said with its span; a ranking: the latest complete year.
   const years = applyDefaults("murders in Philadelphia", ask("which period", "murders in Philadelphia", [{ label: "Every year available", continuation: answerOf(["1960", "1961", "2025"]) }, { label: "Another year", entry: "which year" }]), live);
   assert.equal(text(years)[1], "No years were given, so every year in the data is shown: 1960 through 2025.");
+  // A clearance rate is a share, not a per-capita rate: no place and no period keeps the every-year default, not the since-2019 one (coordinator review of 403, 2026-11-23).
+  for (const q of ["Robbery clearance rate", "what is the clearance rate for rapes", "homicide clearance rates?"]) {
+    const o = applyDefaults(q, ask("which place", q, [{ label: "The United States", continuation: ask("which period", q, [{ label: "Every year available", continuation: answerOf(["1960", "1961", "2025"]) }]) }]), live);
+    assert.equal(o.kind, "srs", q);
+    assert.ok(text(o).includes("No years were given, so every year in the data is shown: 1960 through 2025."), `${q}: ${text(o).join(" | ")}`);
+    assert.ok(!text(o).some((t) => /2019/.test(t)), q);
+  }
   const ranking = applyDefaults("Top 10 cities for homicide rate", ask("which period", "Top 10 cities for homicide rate", [{ label: "The latest complete year (2025)", continuation: answerOf(["x"]) }, { label: "Another year", entry: "which year" }]), live);
   assert.equal(text(ranking)[1], "No year was given, so the latest complete year, 2025, is shown.");
   // No kind of crime: violent and property crime.
