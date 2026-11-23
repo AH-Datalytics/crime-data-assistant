@@ -72,10 +72,9 @@ if (!hung) process.exit(0);`, JSON.stringify([progress, current, ids, hangOn])];
   // A reader that overruns (the label alone in the "current" file for readerStallMs) is stopped long before the stall limit, its question is an
   // error with the reader's reason, and it does not use up a restart: with restarts 0 the shard still goes on and finishes every other question.
   {
-    const t = Date.now();
     const r = await run([[["a", "b", "c", "d"], "reader-twice"]], { stallMs: 60_000, readerStallMs: 400, restarts: 0 });
     assert.deepEqual([r.bad, r.stalled], [0, []], JSON.stringify(r));
-    assert.ok(Date.now() - t < 30_000, "stopped by the reader limit, not the stall limit");
+    // Structural, no clock: a stall-limit stop would list the shard in r.stalled and give the "stopped by the watchdog" reason; the reader reason below proves the reader limit fired.
     const o = r.outcomes[0];
     assert.deepEqual(o.map((x: { id: string }) => x.id), ["a", "b", "c", "d"]);
     assert.deepEqual(o.map((x: { got: { kind: string } }) => x.got.kind), ["answer", "error", "error", "answer"]);
