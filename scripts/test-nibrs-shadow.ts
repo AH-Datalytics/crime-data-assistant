@@ -3214,4 +3214,24 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // "type" with no clearance word beside it is not the clearance type.
   assert.ok(readerDecline("Houston homicides per year and type since 2019"));
 }
+// Place-name typos (coordinator 2026-11-22, QL-hist-8042325c95): a one-edit typo beside its state is the one city of that state; without a state it is offered first, never silent.
+{
+  const ask2 = (q: string) => shadowAnswer(q, { ...deps, noDefaults: false });
+  for (const [typo, city] of [["Toldeo, Ohio", "Toledo"], ["Akrn, Ohio", "Akron"], ["Columbs, Ohio", "Columbus"]]) {
+    const o = ask2(`carjackings in ${typo} in 2024`) as unknown as { kind: string; delivered?: { text: string[] } };
+    assert.equal(o.kind, "answer", `${typo}: ${JSON.stringify(o).slice(0, 200)}`);
+    assert.ok((o.delivered?.text ?? []).some((t) => t.includes(`the ${city} Police Department`) || t.includes(`for ${city}`)), `${typo}: ${JSON.stringify(o.delivered?.text)}`);
+  }
+  // No state: "Toldeo carjackings" asks, with Toledo first.
+  const bare = as(ask2("Toldeo carjackings in 2024"), "clarify");
+  assert.equal(bare.options[0].label, "Toledo, Ohio");
+  // Jeff 2026-11-22 keeps the 11-03 path: a misspelled LARGE place after "in", no state, exactly one close large place, is answered and the reply names the city used.
+  for (const [typo, city] of [["phialdelphia", "Philadelphia"], ["Clevland", "Cleveland"]]) {
+    const o = ask2(`carjackings in ${typo} in 2024`) as unknown as { kind: string; delivered?: { text: string[] } };
+    assert.equal(o.kind, "answer", `${typo}: ${JSON.stringify(o).slice(0, 200)}`);
+    assert.ok((o.delivered?.text ?? []).join(" ").includes(city), `${typo}: ${JSON.stringify(o.delivered?.text)}`);
+  }
+  // An ordinary word one letter from a large city stays an ordinary word ("bolder" is not Boulder).
+  assert.ok(!as(ask2("bolder carjackings in 2024"), "clarify").options.some((o) => /Boulder/.test(o.label)));
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
