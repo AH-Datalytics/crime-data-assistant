@@ -17515,12 +17515,15 @@
 }
 },
 "QL-nibrs-9598316bab": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance rates including exceptional-clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 (Jeff 2026-11-22: several years answer one row per year): the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year, from the clearance-by-type sums over the agencies that reported (P171). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-9613f5089b": {
@@ -19115,12 +19118,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-cb75da0bdb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 several years: the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year (P171 sums). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-cba5a55b84": {
@@ -19420,12 +19426,15 @@
 }
 },
 "QL-nibrs-d40fc08288": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 (one year, by state: the share of rape offenses cleared by exception, from the clearance-by-type sums over the agencies that reported, P171), every state ranked by share, highest first (P173; Jeff 2026-11-22), a state with nothing to divide blank, not 0. By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-d4532e17b1": {
@@ -19696,7 +19705,15 @@
 },
 "QL-nibrs-e04248e56d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P203 several years: 'exceptional clearance rate for robbery in Texas' is read as the share of Texas robberies cleared by exception; no period is every year (P181), so one row per year (P171 sums); the reading is said in a note. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-nibrs-e068021917": {
 "status": "draft",
