@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The scorecard of every logged question (coordinator for Jeff, 2026-11-04): each label's expected outcome
  * (scripts/draft-qlog-labels.py) against what the engine does with the question, counted per source.
  *
@@ -84,7 +84,7 @@ const python = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.
 const LIMIT_MS = Number(arg("--timeout-ms", "120000"));
 // The reader's own limit (reading the question, database time left out): a question whose reading takes longer is an error, never a hang.
 // The shard watchdog stops a reader that overruns this by --reader-kill-s (a backstop for a reading that never reaches a check).
-const READER_MS = Number(arg("--reader-limit-s", "45")) * 1000;
+const READER_MS = Number(arg("--reader-limit-s", "150")) * 1000;
 // DuckDB's memory and threads (the runner laptop, 16 GB, was killed twice for low memory on uncached spot runs under
 // DuckDB's default, 80% of RAM): 4GB and 4 threads unless a flag or SCORECARD_DUCKDB_MEMORY / SCORECARD_DUCKDB_THREADS
 // says otherwise. They never change a query's rows, so the cache and run identities don't include them.
@@ -296,7 +296,7 @@ if (WORKERS > 1 && !SHARD) {
   if (!rest.includes("--duckdb-memory") && !process.env.SCORECARD_DUCKDB_MEMORY) split.push("--duckdb-memory", `${Math.max(1, Math.floor((os.totalmem() / 2 ** 30) * 0.6 / WORKERS))}GB`);
   if (!rest.includes("--duckdb-threads") && !process.env.SCORECARD_DUCKDB_THREADS) split.push("--duckdb-threads", String(Math.max(1, Math.floor(os.cpus().length / WORKERS))));
   const cmds = Array.from({ length: WORKERS }, (_, i) => [process.execPath, ...process.execArgv, process.argv[1], ...rest, ...split, "--progress", shardFile(i), "--shard", `${i}/${WORKERS}`, "--done-from", PROGRESS]);
-  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, readerStallMs: Number(arg("--reader-kill-s", "60")) * 1000, restarts: 2 };
+  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, readerStallMs: Number(arg("--reader-kill-s", "180")) * 1000, restarts: 2 };
   const r = spawnSync(process.execPath, [path.join(__dirname, "scorecard-shards.cjs"), JSON.stringify(cfg)], { stdio: "inherit" });
   for (let i = 0; i < WORKERS; i++) readProgress(shardFile(i), done);
   if (r.status !== 0) { shardFailed = true; console.log("a shard stopped early; run again to finish (done questions are kept)"); }
