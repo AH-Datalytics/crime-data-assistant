@@ -350,6 +350,15 @@ assert.equal(at("ambiguous:Smith", "Smith").kind, "ask", "Smith alone asks (Smit
 for (const [n, state] of [["Rice", "MN"], ["Russell", "KS"], ["Scott", "LA"], ["St Clair", "MI"], ["Webb", "AL"], ["Wallace", "NC"], ["Brockway", "PA"], ["Gaston", "SC"]] as const)
   assert.equal((at(`ambiguous:${n}`, n) as { agency: { state: string } }).agency.state, state, `${n} is the city of that name, not a township or another agency's alias`);
 assert.equal(at("ambiguous:Bedminster", "Bedminster").kind, "ask", "two Bedminster townships ask, never the larger in silence");
+// A bigger Village or Town (5,000+) beside a smaller same-name city asks, alone and in a list (Jeff 2026-11-23); a township, a small one, or a city that is
+// itself bigger does not.
+for (const [n, big, small] of [["Hempstead", "NY", "TX"], ["Yorktown", "NY", "IN"], ["Hamburg", "NY", "PA"]] as const) for (const l of [false, true]) {
+  const r = at(`ambiguous:${n}`, n, l) as { kind: string; candidates: { agency: { state: string } }[] };
+  assert.equal(r.kind, "ask", `${n} (in a list: ${l}) asks`);
+  assert.deepEqual(r.candidates.map((c) => c.agency.state), [big, small], `${n} offers the Village or Town first, then the city`);
+}
+for (const [n, state] of [["Nichols", "SC"], ["Liverpool", "TX"], ["Friendship", "TN"], ["Robinson", "TX"], ["West Chester", "PA"]] as const)
+  assert.equal((at(`ambiguous:${n}`, n) as { agency: { state: string } }).agency.state, state, `${n}: too small, or a township: the city of the name`);
 // A row with no name is never found.
 assert.ok([...places.byName.values()].every((xs) => xs.every((a) => (a.name ?? "").trim() !== "")), "no index row without a name");
 for (const n of ["Baltimore", "Jacksonville", "St. Louis", "Los Angeles"]) {

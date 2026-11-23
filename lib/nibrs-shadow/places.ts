@@ -29,6 +29,8 @@ export const ASK_POPULATION = 100_000;
 const CITY_NAME_MEANS_CITY = new Set(["charlotte"]);
 /** Same-name towns (Jeff 2026-11-03, no population floor): at most this many cities are offered, one per state. */
 export const ASK_TOWNS = 3;
+// A Village, Town or Borough found only by the name asks beside a smaller same-name city when it has this many people.
+export const ASK_SUFFIXED = 5_000;
 export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
 export const stateName = (code: string) => STATE_NAMES[code] ?? code;
 const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]) => c !== "DC").map(([c, n]) => [n.toLowerCase(), c]));
@@ -270,7 +272,13 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
   // with large counties far more often.
   if (!countyNamed) {
     const own = pool.find(ownCity);
-    if (own) return asPlace(own);
+    if (own) {
+      // A bigger Village, Town or Borough found only by the name ("Hempstead Village", NY, 59,748 beside Hempstead, TX, 6,983): which, never the
+      // small city in silence (Jeff 2026-11-23, "Ask in those cases"). A township stays behind the city (item 3); under 5,000 people is no ask.
+      const suffixed = pool.find((a) => a.kind === "city" && a !== own && !ownCity(a) && !/township/i.test(a.name) && a.population >= ASK_SUFFIXED && a.population > own.population);
+      if (suffixed) return { kind: "ask", name, candidates: [suffixed, own].map((a): Candidate => ({ kind: "agency", agency: a })) };
+      return asPlace(own);
+    }
     // Only towns found by an alias, several of them ("Bedminster": Bedminster Township, NJ or PA): which, never the biggest in silence.
     const towns = pool.filter((a) => a.kind === "city" && pool.findIndex((b) => b.kind === "city" && b.state === a.state) === pool.indexOf(a));
     if (towns.length >= 2) return { kind: "ask", name, candidates: towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), more: towns.length > ASK_TOWNS };
