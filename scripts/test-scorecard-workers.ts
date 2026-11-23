@@ -24,7 +24,8 @@ let hung = false;
 for (const id of ids) {
   if (doneIds().includes(id)) continue;
   fs.writeFileSync(current, id);
-  if (hangOn === id || hangOn === "always") { hung = true; setInterval(() => {}, 1000); break; }
+  if (hangOn === "db:" + id) fs.writeFileSync(current, id + "\\tdatabase");
+  if (hangOn === id || hangOn === "always" || hangOn === "db:" + id || (hangOn === "reader-twice" && ["b", "c"].includes(id))) { hung = true; setInterval(() => {}, 1000); break; }
   fs.appendFileSync(progress, JSON.stringify({ id, got: { kind: "answer", source: "nibrs", ms: 1 } }) + "\\n");
   fs.writeFileSync(current, "");
 }
@@ -68,7 +69,40 @@ if (!hung) process.exit(0);`, JSON.stringify([progress, current, ids, hangOn])];
     const r = await runShards({ cmds: [[NODE, "-e", "process.exit(3)"]], progress, current, stallMs: 800, pollMs: 100, restarts: 2 });
     assert.deepEqual([r.bad, r.stalled], [1, []]);
   }
+  // A reader that overruns (the label alone in the "current" file for readerStallMs) is stopped long before the stall limit, its question is an
+  // error with the reader's reason, and it does not use up a restart: with restarts 0 the shard still goes on and finishes every other question.
+  {
+    const r = await run([[["a", "b", "c", "d"], "reader-twice"]], { stallMs: 60_000, readerStallMs: 400, restarts: 0 });
+    assert.deepEqual([r.bad, r.stalled], [0, []], JSON.stringify(r));
+    // Structural, no clock: a stall-limit stop would list the shard in r.stalled and give the "stopped by the watchdog" reason; the reader reason below proves the reader limit fired.
+    const o = r.outcomes[0];
+    assert.deepEqual(o.map((x: { id: string }) => x.id), ["a", "b", "c", "d"]);
+    assert.deepEqual(o.map((x: { got: { kind: string } }) => x.got.kind), ["answer", "error", "error", "answer"]);
+    assert.match(o[1].got.reason, /reader took too long/);
+    assert.equal(o[1].got.source, null);
+  }
+  // A question waiting for the database ("id<TAB>database" in the file) is not a reader: the reader limit leaves it, only the stall limit stops it.
+  {
+    const r = await run([[["a", "b"], "db:b"]], { stallMs: 1500, readerStallMs: 300, restarts: 2 });
+    assert.deepEqual([r.bad, r.stalled], [0, [0]], JSON.stringify(r));
+    const o = r.outcomes[0];
+    assert.match(o[1].got.reason, /stopped by the watchdog/);
+    assert.doesNotMatch(o[1].got.reason, /reader/);
+  }
+  // The reader's own clock (lib/reader-deadline.ts): no limit set does nothing; past the limit it throws; database time is not the reader's.
+  {
+    const { startReaderClock, noteDatabaseTime, checkReaderClock, ReaderTookTooLong } = await import("../lib/reader-deadline");
+    startReaderClock(null, 0);
+    checkReaderClock(10 ** 9);
+    startReaderClock(45_000, 1000);
+    checkReaderClock(1000 + 45_000);
+    assert.throws(() => checkReaderClock(1000 + 45_001), (e: unknown) => e instanceof ReaderTookTooLong && /took too long/.test(String(e)) && !/no answer within/.test(String(e)));
+    noteDatabaseTime(100_000);
+    checkReaderClock(1000 + 100_000 + 45_000);
+    assert.throws(() => checkReaderClock(1000 + 100_000 + 45_001), ReaderTookTooLong);
+    startReaderClock(null);
+  }
   fs.rmSync(dir, { recursive: true, force: true });
-  console.log("scorecard workers: shards finish, a stalled one is stopped and its question is an error, a shard that keeps stalling is given up");
+  console.log("scorecard workers: shards finish, a stalled one is stopped and its question is an error, a shard that keeps stalling is given up, a slow reader is stopped without a restart");
   process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });
