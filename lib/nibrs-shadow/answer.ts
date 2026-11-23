@@ -183,6 +183,8 @@ const OUTSIDE: [RegExp, boolean, string][] = [
   // Item 11: population on its own is answered for agencies, states and the nation, by year; anything more is said.
   [/\bpopulations?\b/i, true, "Population is answered on its own for an agency, a state or the nation, a year or by year, as Crime Index publishes it; this question asks for more than that."],
   [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; ask for one crime in one place at a time."],
+  // Jeff 2026-11-23 (declines owner, Group 2): how the data is built, or what it holds that no table answers, gets one plain sentence.
+  [/\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i, true, "That data is not available."],
 ];
 
 /**
@@ -998,7 +1000,21 @@ function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps):
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
   return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
 }
+/**
+ * Jeff 2026-11-23 (declines owner, Group 1): an open-ended ask names no kind of crime or measure to count, so it asks what to show
+ * instead of choosing for the user. Only these wordings; P182's violent-plus-property default stays for "crime in X" asks.
+ * "tell me more about", "what's going on in", "a time line of", "major/top crime trends" with no year, "how many crime incidents
+ * ... since YEAR", "is X's murder rate ... considered high", "what Part 1 data do you have".
+ */
+const OPEN_ENDED_ANY = /\btell\s+me\s+more\s+about\b|\bwhat(?:'|’)?s\s+(?:going\s+on|happening)\s+in\b|\btime\s*line\s+of\b|\bconsidered\s+high\b|\bpart\s+1\s+data\s+do\s+you\s+have\b/i;
+const OPEN_ENDED_NO_YEAR = /\b(?:major|top)\s+(?:nationwide\s+)?crime\s+trends\b/i;
+const OPEN_ENDED_SINCE = /\bhow\s+many\s+crime\s+incidents\b[^?]*\bsince\s+(?:19|20)\d\d\b/i;
+export function isOpenEnded(question: string): boolean {
+  return OPEN_ENDED_ANY.test(question) || OPEN_ENDED_SINCE.test(question) || (OPEN_ENDED_NO_YEAR.test(question) && !/\b(?:19|20)\d\d\b/.test(question));
+}
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  if (!depsIn.rewritten && !depsIn.checkingOffer && isOpenEnded(question))
+    return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);

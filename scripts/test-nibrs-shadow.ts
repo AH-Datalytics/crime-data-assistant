@@ -958,7 +958,7 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     assert.equal(stripped("national murder trend rolling over 12 months with an annotation in May 2020"), "national murder trend rolling over 12 months");
     // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
     assert.equal(fillerRewrite("Tell me more about crime in Arlington, VA"), null);
-    assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");
+    assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "clarify"); // Jeff 2026-11-23: an open-ended ask is asked back, never answered for Arlington, Texas.
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");
