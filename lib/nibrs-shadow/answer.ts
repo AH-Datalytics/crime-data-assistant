@@ -977,9 +977,11 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const rows = x.delivered.table?.rows ?? [];
   const first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
-  const say = notes.map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
+  // A latest-year default ("No year was given, so the latest complete year, 2025, is shown.") means the answer is one year, so an earlier every-year default in the same chain is not said.
+  const latestYear = [...notes, ...x.delivered.text].some((n) => /^No year was given, so the latest complete year/.test(n));
+  const say = notes.filter((n) => n || !latestYear).map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
   // A sentence the answer already carries is not said twice (a series built "by year" says its own "No years were given").
-  const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1)];
+  const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1).filter((t) => !(latestYear && /^No years were given/.test(t)))];
   void years;
   return { ...x, delivered: { ...x.delivered, text }, buttons: [...(x.buttons ?? []), ...buttons] } as ShadowOutcome;
 }
@@ -3682,6 +3684,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
     // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.
     ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
+    // "Drug possession arrests": NIBRS records an arrest by the drug/narcotic violation, with no split between possessing and selling, so the whole
+    // violation is counted and the answer says so (wording drafted by the Engine session, awaiting Jeff's yes).
+    ...(/\bpossess/i.test(ledger0.question) && plan.measures.length === 1 && plan.measures[0].id === "arrests.drug_possession" && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)
+      ? ["NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted."] : []),
     // P168: a person counted by a weapon of the incident's crime (the data does not link a person to one offense), one agency.
     ...([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_weapon" && (f.scope === "offender" || f.scope === "arrestee"))
       ? ["A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."] : []),
