@@ -1005,18 +1005,21 @@ const PEAK_MEASURE: [RegExp, string][] = [
   [/\brapes?\b/i, "rape"], [/\brobber(?:y|ies)\b/i, "robbery"], [/\baggravated\s+assaults?\b/i, "aggravated_assault"],
   [/\bburglar(?:y|ies)\b/i, "burglary"], [/\b(?:larceny|theft)s?\b/i, "theft"], [/\bmotor\s+vehicle\s+thefts?\b|\bauto\s+thefts?\b/i, "motor_vehicle_theft"],
 ];
+/** Every word a plain "peak year of the national rate" question may carry. A word outside this list (a place, "intimate", "firearm", "victims", "reports", an age, a sex) means a different question: it falls through to the old route. */
+const PEAK_WORDS = new Set(("when was were did has have been is are the a an what which year years peak peaked highest worst most ever recorded history overall all time "
+  + "national nationally nationwide nation country america us u.s. usa united states in of for at on across rate rates per 100,000 100000 crime crimes "
+  + "violent property murder murders homicide homicides rape rapes robbery robberies aggravated assault assaults burglary burglaries larceny larcenies theft thefts motor vehicle auto").split(/\s+/));
 function peakMeasure(question: string): string | null {
   if (!PEAK_ASK.test(question)) return null;
-  // The nation only: any other place named ("in Texas", "in Chicago") is not this question.
-  const place = /\b(?:in|for|of|at)\s+(?!the\s+(?:united\s+states|u\.?s\.?a?\.?|country|nation)\b|u\.?s\.?a?\.?\b|america\b|all\b|history\b|recorded\b|\d{4}\b)[A-Z][a-z]/;
-  if (place.test(question.replace(/^\S+\s/, ""))) return null;
+  const words = question.toLowerCase().replace(/[?!.,;:]+(?=\s|$)/g, "").split(/\s+/).filter(Boolean);
+  if (words.some((w) => !PEAK_WORDS.has(w))) return null;
   const hit = PEAK_MEASURE.filter(([re]) => re.test(question));
   return hit.length === 1 ? hit[0][1] : null;
 }
 
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  // "Where do most robberies occur" asks for the nation-wide split by location: the statement is long, but it is what was asked, so it runs (as for a share) rather than waiting behind a button.
   { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
+  // "Where do most robberies occur" asks for the nation-wide split by location: the statement is long, but it is what was asked, so it runs (as for a share) rather than waiting behind a button.
   const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) || WHERE_MOST_ONCE.test(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);

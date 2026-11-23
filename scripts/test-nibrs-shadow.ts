@@ -1427,6 +1427,8 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
   const o: any = shadowAnswer(q, { ...deps, noDefaults: false });
   assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
   assert.deepEqual(o.plan.filters, [], "no location is grouped or picked: every location type is a row");
+  // The stub has no national location grid, so row counts and the sum-to-total check are the Runner's, on real data.
+  assert.equal(o.plan.groupings.length, 1, "one grouping, no row limit");
   assert.equal(o.plan.groupings[0].dimension, "offense.location_type");
   assert.equal(o.plan.measures[0].id, "offenses.robbery");
   assert.deepEqual(o.delivered.table.columns.map((c: { header: string }) => c.header), ["Location type", "Robbery offenses", "Share of all robbery offenses (%)"]);
@@ -1439,6 +1441,23 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
   assert.deepEqual(pk.delivered.table.rows, [["1991", 758.2, 1911767]], "peak year 1991 with its count");
   assert.match(pk.delivered.text[1], /highest in 1991, at 758\.2 per 100,000, with 1,911,767 violent crimes/);
   assert.match(pk.delivered.text[2], /published national series/);
+}
+// A peak question that carries a place or a qualifier is not the national peak: it falls through to the old route.
+{
+  const hd = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
+  for (const q of ["When was robbery highest in texas?", "when was robbery highest in chicago", "What year was the peak for intimate partner homicides?", "When were firearm homicides the highest?", "When was murder the highest among victims under 18?", "Peak year for homicide reports"]) {
+    let r: any = {};
+    try { r = shadowAnswer(q, { ...deps, historical: hd, noDefaults: false }); } catch { /* the old route reached the stub's SQL: not the national peak */ }
+    assert.ok(!(r.kind === "srs" && /Peak Year/.test(String(r.delivered?.text?.[0]))), "not the national peak: " + q);
+  }
+  const p: any = shadowAnswer("What was the peak year for homicide in the US?", { ...deps, historical: hd, noDefaults: false });
+  assert.equal(p.kind, "srs", "plain homicide, nation named, is the national murder peak");
+}
+// The latest year blank: the blank year cannot win, the last published year still can.
+{
+  const row = (year: string, rate: string, total: string) => ({ type: "nation", year, uid: "n_" + year, violent_capita: rate, violent_total: total } as any);
+  const t: any = answerSrsPeak("violent_crime", [row("2023", "400", "5"), row("2024", "450", "6"), row("2025", "", "")]);
+  assert.deepEqual(t.delivered.table.rows, [["2024", 450, 6]]);
 }
 // A tie names every tied year; a blank rate cannot win.
 {
