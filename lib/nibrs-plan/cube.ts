@@ -504,10 +504,14 @@ export function splitShadow(sql: string): { raw: string; cube: string } | null {
  * which puts the shadow block inside the text instead of at its start; the comment is only carried text there, so what runs is what is left.
  */
 export function withoutShadowComment(sql: string): string {
-  const open = sql.indexOf(SHADOW_OPEN);
-  if (open < 0) return sql;
-  const end = sql.indexOf(SHADOW_CLOSE, open);
-  return end < 0 ? sql : sql.slice(0, open) + sql.slice(end + SHADOW_CLOSE.length);
+  let out = "", at = 0;
+  for (;;) {
+    const open = sql.indexOf(SHADOW_OPEN, at);
+    const end = open < 0 ? -1 : sql.indexOf(SHADOW_CLOSE, open);
+    if (end < 0) return out + sql.slice(at);
+    out += sql.slice(at, open);
+    at = end + SHADOW_CLOSE.length;
+  }
 }
 /** Run a shadowed statement: raw rows come back; a difference or a failure of the cube side is logged, never thrown. */
 export function runShadow(sql: string, run: (s: string) => unknown[][], log: (line: string) => void): unknown[][] | null {
