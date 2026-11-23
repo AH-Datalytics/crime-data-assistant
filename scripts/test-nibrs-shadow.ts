@@ -332,12 +332,36 @@ for (const s of ["California", "Kansas", "Nevada", "Oregon"]) for (const l of [f
   assert.equal(r.kind, "ask", `${s} (in a list: ${l}) asks`);
   assert.ok(r.kind === "ask" && r.candidates.some((c) => c.kind === "state" && c.name === s), `${s} offers the state`);
 }
+// Every state name offers the state, alone and in a list (Engine 2.0 review item 1).
+for (const s of Object.values(STATE_NAMES)) if (s !== "District of Columbia") for (const l of [false, true]) {
+  const r = at(`ambiguous:${s}`, s, l);
+  // A state with no same-name agency is not a place here (unresolved: the state itself is read elsewhere); one with a town must ask.
+  // (a large city of the name is the city in a list: "New York", P196/P26)
+  assert.ok(r.kind === "unresolved" || (r.kind === "agency" && l && r.agency.population >= 100_000) || (r.kind === "ask" &&r.candidates.some((c) => c.kind === "state" && c.name === s)), `${s} (in a list: ${l}) is never silently a town`);
+}
+// A 100,000+ county beside only small same-name places asks alone (county first, the small place second); in a list the city stays (listed for Jeff).
+for (const [n, county, town] of [["Osceola", "FL", "AR"], ["Ottawa", "MI", "IL"], ["Stafford", "VA", "TX"], ["Union", "NC", "MO"], ["New Castle", "DE", "PA"]] as const) {
+  const r = at(`ambiguous:${n}`, n);
+  assert.ok(r.kind === "ask" && r.candidates.length === 2 && r.candidates[0].kind === "agency" && r.candidates[0].agency.kind === "county" && r.candidates[0].agency.state === county && r.candidates[1].kind === "agency" && r.candidates[1].agency.state === town, `${n} alone asks county then town`);
+  assert.equal(at(`ambiguous:${n}`, n, true).kind, "agency", `${n} in a list is the city`);
+}
+assert.equal(at("ambiguous:Smith", "Smith").kind, "ask", "Smith alone asks (Smith County, TX is 100,000+)");
+// A township found only by an alias never outranks a city of the name by population; several alias-only towns ask.
+for (const [n, state] of [["Rice", "MN"], ["Russell", "KS"], ["Scott", "LA"], ["St Clair", "MI"], ["Webb", "AL"], ["Wallace", "NC"], ["Brockway", "PA"], ["Gaston", "SC"]] as const)
+  assert.equal((at(`ambiguous:${n}`, n) as { agency: { state: string } }).agency.state, state, `${n} is the city of that name, not a township or another agency's alias`);
+assert.equal(at("ambiguous:Bedminster", "Bedminster").kind, "ask", "two Bedminster townships ask, never the larger in silence");
+// A row with no name is never found.
+assert.ok([...places.byName.values()].every((xs) => xs.every((a) => (a.name ?? "").trim() !== "")), "no index row without a name");
 for (const n of ["Baltimore", "Jacksonville", "St. Louis", "Los Angeles"]) {
   assert.equal(at(`city:${n}:`, n).kind, "ask", `${n} alone still asks city or county`);
   assert.equal(at(`city:${n}:`, n, true).kind, "agency", `${n} beside other places is the city (P196)`);
   assert.equal((at(`city:${n}:`, n, true) as { agency: { kind: string } }).agency.kind, "city");
 }
-assert.equal((at("city:Greenville:SC", "Greenville") as { agency: { state: string } }).agency.state, "NC", "Greenville: no pair at 100,000+, so the most populous Greenville city (P28)");
+{
+  const g = at("city:Greenville:SC", "Greenville");
+  assert.ok(g.kind === "ask" && g.candidates[0].kind === "agency" && g.candidates[0].agency.kind === "county" && g.candidates[0].agency.state === "SC", "Greenville alone: Greenville County, SC is 100,000+, so it asks (county, then the city)");
+  assert.equal((at("city:Greenville:SC", "Greenville", true) as { agency: { state: string } }).agency.state, "NC", "Greenville in a list is the city (P196)");
+}
 assert.equal(ori(at("city:Franklin:TN", "Franklin")), places.byName.get("franklin")!.find((x) => x.state === "TN" && x.kind === "city")!.ori, "Franklin, Tennessee is twice any other Franklin");
 assert.equal(at("city:Clinton:MI", "Clinton, Michigan").kind, "agency", "a state named settles it");
 assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: string } }).agency.kind, "city", "Clinton, Michigan is the city, not Clinton County");
