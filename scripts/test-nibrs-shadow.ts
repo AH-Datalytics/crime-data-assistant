@@ -3207,12 +3207,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
   assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
   // P229 (Jeff 2026-11-22): a trend or per-capita question with no place and no period is the United States by year since 2019, said, with its buttons.
-  for (const q of ["murder rate", "robbery rate trend in NIBRS"]) {
+  for (const q of ["robbery rate trend in NIBRS"]) {
     const o = shadowAnswer(q, { ...deps, noDefaults: false, deferChars: 1 }) as unknown as Out & { buttons?: { label: string }[] };
     assert.ok(/(?:by|per) Year/i.test(o.delivered.text[0]), `${q}: ${o.delivered.text.join(" | ")}`);
     assert.ok(o.delivered.text.includes("No place was named, so the United States is shown."), `${q}: ${o.delivered.text.join(" | ")}`);
     assert.ok(o.delivered.text.some((t) => /^No years were given, so 2019 through \d{4} is shown\.$/.test(t)), `${q}: ${o.delivered.text.join(" | ")}`);
     for (const b of ["A state", "A city or agency", "Another year"]) assert.ok((o.buttons ?? []).some((x) => x.label === b), `${q}: button ${b} in ${(o.buttons ?? []).map((x) => x.label).join(",")}`);
+  }
+  // A source that offers "Every year available" (the Crime Index national rate) keeps that default, not since 2019 (Jeff 2026-11-23).
+  for (const q of ["murder rate", "show robbery rate", "what is per capita murder rate"]) {
+    const o = shadowAnswer(q, { ...deps, noDefaults: false, deferChars: 1 }) as unknown as Out;
+    const tx = o.delivered.text.join(" | ");
+    assert.ok(o.delivered.text.some((t) => /^No years were given, so every year in the data is shown: 1960 through \d{4}\.$/.test(t)), `${q}: ${tx}`);
+    assert.ok(!/2019/.test(tx), `${q}: ${tx}`);
   }
   // A named period is never replaced by the since-2019 default (coordinator review of 403, 2026-11-23).
   for (const q of ["NIBRS robbery rate in 2023", "murder rate since 2021 in NIBRS", "NIBRS murder rate last year"]) {
