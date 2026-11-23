@@ -25,6 +25,8 @@ export type PlaceResolution =
   | { kind: "unresolved"; why: string; named?: boolean };
 
 export const ASK_POPULATION = 100_000;
+/** Names Jeff decided mean the city with no ask even alone (2026-11-22): "Charlotte" is Charlotte, NC, not Charlotte County, FL. */
+const CITY_NAME_MEANS_CITY = new Set(["charlotte"]);
 /** Same-name towns (Jeff 2026-11-03, no population floor): at most this many cities are offered, one per state. */
 export const ASK_TOWNS = 3;
 export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
@@ -167,7 +169,7 @@ export function agencyInState(idx: PlaceIndex, name: string, stateCode: string):
 }
 export const stateCodeOf = (name: string): string | undefined => STATE_BY_NAME[name.toLowerCase()] ?? (/^district of columbia$/i.test(name) ? "DC" : undefined);
 const REQUEST_WORD =/^(?:just|only|show|me|compare|using|use|calculate|give|tell|get|find|list|display|plot|chart|graph|see|view|what|about|data|now|please|also|then|so|ok|okay)\s+\S/i;
-export function resolvePlace(idx: PlaceIndex, value: string, text: string): PlaceResolution {
+export function resolvePlace(idx: PlaceIndex, value: string, text: string, inList = false): PlaceResolution {
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
   let name = (m[2] ?? m[4]).trim();
@@ -214,6 +216,17 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
     .sort((x, y) => (x.kind === y.kind ? y.population - x.population : x.kind === "city" ? -1 : 1)).map((a) => ({ kind: "agency", agency: a }));
   const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
   if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
+  // One large city beside large places that are not cities (Jeff 2026-11-22): a city's name means its police (P16). Alone,
+  // when the others are counties in other states and no state ("Charlotte" is Charlotte, NC, not Charlotte County, FL);
+  // within a list of places also when the county is in the city's own state or the name is a state too ("Baltimore",
+  // "Los Angeles", "St. Louis" beside other cities: P196; "Washington" is DC). Two large cities still ask (Kansas City, Richmond).
+  const bigCities = large.filter((c) => c.kind === "agency" && c.agency.kind === "city");
+  if (large.length >= 2 && bigCities.length === 1 && !countyNamed && !stateNamed) {
+    const city = (bigCities[0] as Extract<Candidate, { kind: "agency" }>).agency;
+    // Alone, only the names Jeff decided ("Charlotte"); every other city-and-county pair still asks by P28.
+    const alone = CITY_NAME_MEANS_CITY.has(base(name)) && !large.some((c) => c.kind === "state" || (c.kind === "agency" && c.agency.kind === "county" && c.agency.state === city.state));
+    if (inList || alone) return asPlace(city);
+  }
   if (large.length >= 2) return { kind: "ask", name, candidates: large };
   // A small place one or two letters from a large one ("Pittsburg", "Berkley", "prince George county"): which, the large
   // one first (coordinator 2026-11-05, query-log search): never the small place in silence.
@@ -226,13 +239,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
     const own = countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0];
     if (near.length === 1) return { kind: "ask", name, candidates: [{ kind: "agency", agency: near[0] }, { kind: "agency", agency: own }] };
   }
-  // Same-name towns with no large candidate ("Clinton": 29 agencies): when no city of the name is clearly the main one
-  // (the largest at least twice the next), ask which, the largest few one per state, and "another place" for the rest.
-  const towns = firsts.filter((a) => a.kind === "city").sort((x, y) => y.population - x.population);
-  // A large county of the name ("Greenville County, South Carolina") is offered after the towns.
-  if (!countyNamed && !stateNamed && towns.length >= 2 && towns[0].population < 2 * towns[1].population)
-    return { kind: "ask", name, candidates: [...towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), ...large.filter((c) => c.kind === "agency" && c.agency.kind === "county")],
-      more: towns.length > ASK_TOWNS };
+  // No "twice the next town" ask (removed 2026-11-22): P28 asks only when two or more same-name places have 100,000+;
+  // otherwise the most populous city, with no ask ("Jackson" is Jackson, MS).
   // A county named without its state, in several states, none large ("Mecklenburg County": Virginia's sheriff serves
   // more people than North Carolina's): which. A sheriff's population is not the county's.
   const counties = firsts.filter((a) => a.kind === "county").sort((x, y) => y.population - x.population);
