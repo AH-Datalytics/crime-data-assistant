@@ -4486,16 +4486,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Kansas City and Richmond"
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "P238>R14>2nd",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "Several unqualified place names meet P28 ambiguity rules."
+    "notes": "Washington = Washington, D.C. (P238). Baltimore, Jacksonville, St Louis, Los Angeles and Charlotte resolve to the city (P196/P238). Jackson = Jackson, MS (P28: only one city of that name has 100,000+ people). Kansas City (MO/KS) and Richmond (VA/CA) still ask (P28)."
    }
   },
   {
@@ -85393,16 +85394,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+     "which Kansas City",
+     "which Richmond"
     ],
-    "about": "which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+    "about": "which Kansas City and Richmond"
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
+    "rule": "F1+P238>R14>2nd",
+    "drafted_by": "codex-p238",
     "reviewed_by": null,
-    "notes": "Several unqualified place names remain ambiguous."
+    "notes": "Washington = Washington, D.C. (P238). Baltimore, Jacksonville, St Louis, Los Angeles and Charlotte resolve to the city (P196/P238). Jackson = Jackson, MS (P28: only one city of that name has 100,000+ people). Kansas City (MO/KS) and Richmond (VA/CA) still ask (P28)."
    }
   },
   {
