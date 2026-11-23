@@ -562,7 +562,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const inYears = (col: string) => (yearSet ? ` AND substr(${col}, 1, 4) IN (${list(yearSet.map(String))})` : "");
   const from = span.from.replace("-", ""), to = span.to.replace("-", "");
   const firstYear = Number(span.from.slice(0, 4));
-  const years = isArrest ? (t.arrestYears ?? t.builtYears) : t.builtYears.filter((y) => y >= firstYear);
+  // An arrest dated in year Y sits in data year Y or Y - 1 (P50, Jeff 2026-11-23), so a period from FIRST to LAST reads the data years FIRST - 1 through LAST.
+  const lastYear = Number(span.to.slice(0, 4));
+  const years = isArrest ? (t.arrestYears ?? t.builtYears).filter((y) => y >= firstYear - 1 && y <= lastYear) : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   // The agency-month status is the month's own (an arrest month counts whatever its status), so it stays on the built years.
   const read = (table: string) => `read_parquet([${(table === "agency_month_status" && isArrest ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;

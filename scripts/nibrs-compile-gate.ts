@@ -153,8 +153,9 @@ write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
 # (April, an arrest in the 2026 file) is counted, not a conflict; an M segment is left out (P68).
 A = ["ori", "incident_num", "arrestee_seq", "key_occurrence", "arrest_date", "arrest_offense", "multiple_arrestee_indicator", "age"]
 write("arrestee", 2025, A, [("XX0000000", "OLD-1", "01", 1, "20250120", "240", "N", "30"),
-    ("XX0000000", "MAR-1", "01", 1, "20250310", "240", "N", "30"), ("XX0000000", "MAR-1", "02", 1, "20250310", "240", "M", "30")])
-write("arrestee", 2026, A, [("XX0000000", "JAN-LATE", "01", 1, "20250415", "240", "N", "30")])
+    ("XX0000000", "MAR-1", "01", 1, "20250310", "240", "N", "30"), ("XX0000000", "MAR-1", "02", 1, "20250310", "240", "M", "30"),
+    ("XX0000000", "JAN-LATE", "01", 1, "20250415", "240", "N", "30")])
+# P50 (Jeff 2026-11-23): an arrest dated in 2025 sits in data file 2025 or 2024, so the April arrest is in the 2025 file; an arrest question reads FIRST - 1 through LAST only.
 B = ["ori", "arrest_transaction_num", "arrestee_seq", "occurrence", "arrest_date", "arrest_offense", "identical_to_line_no", "age"]
 for y in (2025, 2026):
     write("group_b_arrest", y, B, [("WW0000000", f"T-{y}", "01", 1, f"{y}0110", "90D", None, "40")])
