@@ -20,7 +20,7 @@ import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
 import { presentationOf, sentencesOf, unsaid } from "../lib/nibrs-shadow/presentation";
 import { ANSWER_STATEMENTS } from "../lib/nibrs-plan/result";
 import { chartOptionsOf, NOTE_TEXT } from "../lib/answer-contract/contract";
-import { answerSrsSeveral } from "../lib/nibrs-shadow/srs";
+import { answerSrsPeak, answerSrsSeveral } from "../lib/nibrs-shadow/srs";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
@@ -1439,6 +1439,14 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
   assert.deepEqual(pk.delivered.table.rows, [["1991", 758.2, 1911767]], "peak year 1991 with its count");
   assert.match(pk.delivered.text[1], /highest in 1991, at 758\.2 per 100,000, with 1,911,767 violent crimes/);
   assert.match(pk.delivered.text[2], /published national series/);
+}
+// A tie names every tied year; a blank rate cannot win.
+{
+  const row = (year: string, rate: string, total: string) => ({ type: "nation", year, uid: "n_" + year, violent_capita: rate, violent_total: total } as any);
+  const t: any = answerSrsPeak("violent_crime", [row("1990", "700", "1"), row("1991", "758.2", "2"), row("1992", "758.2", "3"), row("1993", "", "9999")]);
+  assert.equal(t.kind, "srs");
+  assert.deepEqual(t.delivered.table.rows.map((r: any) => r[0]), ["1991", "1992"], "tie lists both years");
+  assert.match(t.delivered.text[1], /highest in 1991 and 1992, at 758\.2 per 100,000\./);
 }
 const cjLoc = as(ask("Carjackings in Detroit by location type in 2023"), "answer");
 assert.deepEqual([cjLoc.plan.measures[0].id, cjLoc.plan.groupings[0].multiValue], ["offenses.carjacking", undefined]);

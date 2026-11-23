@@ -184,11 +184,11 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
  * The year the national rate was highest ("When was violent crime the highest?"): the maximum of the published national
  * rate series, its count beside it. A year with no published rate cannot win; a tie names every tied year.
  */
-export function answerSrsPeak(measure: string): SrsAnswer | SrsDecline {
+export function answerSrsPeak(measure: string, source: Row[] = crime()): SrsAnswer | SrsDecline {
   const m = SRS_MEASURE[measure];
   const place: SrsPlace = { kind: "national" };
   const rateCol = `${m.col}_capita`, totalCol = `${m.col}_total`;
-  const years = range(SRS_YEARS.first, SRS_YEARS.last).map((y) => ({ y, row: rowFor(crime(), place, y) }))
+  const years = range(SRS_YEARS.first, SRS_YEARS.last).map((y) => ({ y, row: rowFor(source, place, y) }))
     .filter((r) => r.row && r.row[rateCol] !== "" && Number.isFinite(Number(r.row[rateCol])));
   if (!years.length) return { kind: "srs-decline", explanation: `The data has no national ${m.name} rate.` };
   const top = Math.max(...years.map((r) => Number(r.row![rateCol])));
