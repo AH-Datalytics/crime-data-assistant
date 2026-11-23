@@ -169,9 +169,10 @@ write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occur
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
+// January: a zero-report flag but one late incident row: the row wins (P183, Jeff 2026-11-21), a VALUE of 1.
 // February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
+  ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
