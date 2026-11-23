@@ -7,7 +7,8 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { applyDefaults, askInsteadChecks, heavyNationalSentence, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, statementChars, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { shadowSql } from "../lib/nibrs-plan/cube";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
@@ -1230,6 +1231,20 @@ for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "vic
   assert.equal(sqls.slice(before).filter((x) => /'23H'/.test(x) && /offender/.test(x)).length, 0, "no national property-crime statement is run, before or instead of the ask");
   assert.equal(as(ask("property crime offenders by age in the United States in 2024"), "answer").kind, "answer");
   assert.equal(as(ask("property crime offenders by age by year 2019 to 2025 in Texas"), "answer").kind, "answer");
+}
+// The heavy-statement check judges a shadow statement by its longer part, not the cube and raw parts added together (QL-nibrs-72eb2ad905: all of
+// Texas fit the limit raw and with the cube on, but the doubled shadow statement tripped it and "which period" was asked in shadow mode only).
+{
+  const part = (n: number) => "x".repeat(n);
+  assert.equal(statementChars(part(70_000)), 70_000, "a plain statement is measured as before");
+  const doubled = shadowSql(part(70_000), part(69_000));
+  assert.ok(doubled.length > 100_000, "the doubled statement is over the limit as a whole");
+  assert.equal(statementChars(doubled), 70_000, "a shadow statement is measured by its raw part when that is the longer");
+  assert.equal(statementChars(shadowSql(part(1_000), part(90_000))), 90_000, "or by its cube part when that is the longer");
+  assert.ok(statementChars(shadowSql(part(120_000), part(119_000))) > 100_000, "a raw part over the limit is still heavy");
+  const wrapped = `WITH g AS MATERIALIZED (${doubled}) SELECT 1`;
+  assert.equal(statementChars(wrapped), `WITH g AS MATERIALIZED (${part(70_000)}) SELECT 1`.length, "a shadow block inside a wrapping statement is left out of the measure");
+  assert.ok(statementChars(`WITH g AS MATERIALIZED (${shadowSql(part(120_000), part(119_000))}) SELECT 1`) > 100_000, "and a wrapped raw part over the limit is still heavy");
 }
 // Heavy national choices are built when chosen (speed plan option C, 2026-11-17): the national statements of a place-less ask are not run before
 // the ask is shown; the choice that is clicked answers exactly as the eager one did; a plan a guard declines is still never offered.
