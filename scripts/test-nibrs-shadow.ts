@@ -268,7 +268,7 @@ for (const q of ["DC violent crime rolling over 12 months with a line at August 
 
 // Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
 // (cities in two states, a city and a county, a state) is asked about, cities first.
-const at = (v: string, text: string) => resolvePlace(places, v, text);
+const at = (v: string, text: string, inList = false) => resolvePlace(places, v, text, inList);
 const ori = (r: ReturnType<typeof at>) => (r.kind === "agency" ? r.agency.ori : r.kind);
 const asked = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates)) : r.kind);
 assert.equal(ori(at("city:Memphis:TN", "Memphis")), "TNMPD0000");
@@ -313,17 +313,68 @@ assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "
 // list, never dozens; a name with one clearly main city (twice the next) is that city; a city's name is a city (P16).
 assert.ok(places.byName.get("clinton")!.length > 20 && places.byName.get("franklin")!.length > 20, "dozens of same-name agencies");
 assert.deepEqual(asked(at("ambiguous:Springfield", "Springfield")), ["Springfield, Missouri", "Springfield, Massachusetts", "Springfield, Illinois"]);
+// P28 (2026-11-22): the "twice the next town" ask is gone; with no same-name pair at 100,000+, the most populous city, no ask.
 const clinton = at("city:Clinton:IA", "Clinton");
-assert.ok(clinton.kind === "ask" && clinton.candidates.length === 3 && clinton.more, "Clinton: three towns, one per state, and the rest one step away");
-assert.deepEqual(asked(at("city:Greenville:SC", "Greenville")), ["Greenville, North Carolina", "Greenville city, South Carolina", "Greenville, Texas", "Greenville County, South Carolina"]);
+assert.equal(clinton.kind, "agency", "Clinton: no two same-name places at 100,000+, so the most populous Clinton");
+assert.equal(ori(clinton), places.byName.get("clinton")!.filter((x) => x.kind === "city")[0].ori, "the most populous Clinton city");
+assert.equal(at("city:Jackson:MS", "Jackson").kind, "agency", "Jackson: only Jackson, MS has 100,000+ (P28)");
+assert.equal((at("city:Jackson:MS", "Jackson") as { agency: { state: string } }).agency.state, "MS");
+assert.equal(at("ambiguous:Kansas City", "Kansas City", true).kind, "ask", "two cities at 100,000+ still ask, in a list too");
+assert.equal(at("ambiguous:Richmond", "Richmond", true).kind, "ask", "Richmond VA and CA still ask in a list");
+assert.equal(at("ambiguous:Washington", "Washington").kind, "ask", "a lone Washington still asks (P28)");
+assert.equal((at("ambiguous:Washington", "Washington", true) as { agency: { state: string } }).agency.state, "DC", "Washington in a list of cities is DC");
+// A county named in a list stays the county agency, beside a city that resolves to its city (Engine 2.0's P238 case).
+assert.equal((at("county:Baltimore County:MD", "Baltimore County", true) as { agency: { kind: string } }).agency.kind, "county", "Baltimore County in a list is the county agency");
+assert.equal((at("ambiguous:Los Angeles", "Los Angeles", true) as { agency: { kind: string } }).agency.kind, "city", "Los Angeles in a list is the city");
+// A bare state name beside only small same-name towns asks (state or town), alone and in a list; never the town in silence (Engine 2.0 review).
+for (const s of ["California", "Kansas", "Nevada", "Oregon"]) for (const l of [false, true]) {
+  const r = at(`ambiguous:${s}`, s, l);
+  assert.equal(r.kind, "ask", `${s} (in a list: ${l}) asks`);
+  assert.ok(r.kind === "ask" && r.candidates.some((c) => c.kind === "state" && c.name === s), `${s} offers the state`);
+}
+// Every state name offers the state, alone and in a list (Engine 2.0 review item 1).
+for (const s of Object.values(STATE_NAMES)) if (s !== "District of Columbia") for (const l of [false, true]) {
+  const r = at(`ambiguous:${s}`, s, l);
+  // A state with no same-name agency is not a place here (unresolved: the state itself is read elsewhere); one with a town must ask.
+  // (a large city of the name is the city in a list: "New York", P196/P26)
+  assert.ok(r.kind === "unresolved" || (r.kind === "agency" && l && r.agency.population >= 100_000) || (r.kind === "ask" &&r.candidates.some((c) => c.kind === "state" && c.name === s)), `${s} (in a list: ${l}) is never silently a town`);
+}
+// A 100,000+ county beside only small same-name places asks alone (county first, the small place second); in a list the city stays (listed for Jeff).
+for (const [n, county, town] of [["Osceola", "FL", "AR"], ["Ottawa", "MI", "IL"], ["Stafford", "VA", "TX"], ["Union", "NC", "MO"], ["New Castle", "DE", "PA"]] as const) {
+  const r = at(`ambiguous:${n}`, n);
+  assert.ok(r.kind === "ask" && r.candidates.length === 2 && r.candidates[0].kind === "agency" && r.candidates[0].agency.kind === "county" && r.candidates[0].agency.state === county && r.candidates[1].kind === "agency" && r.candidates[1].agency.state === town, `${n} alone asks county then town`);
+  assert.equal(at(`ambiguous:${n}`, n, true).kind, "agency", `${n} in a list is the city`);
+}
+assert.equal(at("ambiguous:Smith", "Smith").kind, "ask", "Smith alone asks (Smith County, TX is 100,000+)");
+// A township found only by an alias never outranks a city of the name by population; several alias-only towns ask.
+for (const [n, state] of [["Rice", "MN"], ["Russell", "KS"], ["Scott", "LA"], ["St Clair", "MI"], ["Webb", "AL"], ["Wallace", "NC"], ["Brockway", "PA"], ["Gaston", "SC"]] as const)
+  assert.equal((at(`ambiguous:${n}`, n) as { agency: { state: string } }).agency.state, state, `${n} is the city of that name, not a township or another agency's alias`);
+assert.equal(at("ambiguous:Bedminster", "Bedminster").kind, "ask", "two Bedminster townships ask, never the larger in silence");
+// A bigger Village or Town (5,000+) beside a smaller same-name city asks, alone and in a list (Jeff 2026-11-23); a township, a small one, or a city that is
+// itself bigger does not.
+for (const [n, big, small] of [["Hempstead", "NY", "TX"], ["Yorktown", "NY", "IN"], ["Hamburg", "NY", "PA"]] as const) for (const l of [false, true]) {
+  const r = at(`ambiguous:${n}`, n, l) as { kind: string; candidates: { agency: { state: string } }[] };
+  assert.equal(r.kind, "ask", `${n} (in a list: ${l}) asks`);
+  assert.deepEqual(r.candidates.map((c) => c.agency.state), [big, small], `${n} offers the Village or Town first, then the city`);
+}
+for (const [n, state] of [["Nichols", "SC"], ["Liverpool", "TX"], ["Friendship", "TN"], ["Robinson", "TX"], ["West Chester", "PA"]] as const)
+  assert.equal((at(`ambiguous:${n}`, n) as { agency: { state: string } }).agency.state, state, `${n}: too small, or a township: the city of the name`);
+// A row with no name is never found.
+assert.ok([...places.byName.values()].every((xs) => xs.every((a) => (a.name ?? "").trim() !== "")), "no index row without a name");
+for (const n of ["Baltimore", "Jacksonville", "St. Louis", "Los Angeles"]) {
+  assert.equal(at(`city:${n}:`, n).kind, "ask", `${n} alone still asks city or county`);
+  assert.equal(at(`city:${n}:`, n, true).kind, "agency", `${n} beside other places is the city (P196)`);
+  assert.equal((at(`city:${n}:`, n, true) as { agency: { kind: string } }).agency.kind, "city");
+}
+{
+  const g = at("city:Greenville:SC", "Greenville");
+  assert.ok(g.kind === "ask" && g.candidates[0].kind === "agency" && g.candidates[0].agency.kind === "county" && g.candidates[0].agency.state === "SC", "Greenville alone: Greenville County, SC is 100,000+, so it asks (county, then the city)");
+  assert.equal((at("city:Greenville:SC", "Greenville", true) as { agency: { state: string } }).agency.state, "NC", "Greenville in a list is the city (P196)");
+}
 assert.equal(ori(at("city:Franklin:TN", "Franklin")), places.byName.get("franklin")!.find((x) => x.state === "TN" && x.kind === "city")!.ori, "Franklin, Tennessee is twice any other Franklin");
 assert.equal(at("city:Clinton:MI", "Clinton, Michigan").kind, "agency", "a state named settles it");
 assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: string } }).agency.kind, "city", "Clinton, Michigan is the city, not Clinton County");
-{
-  const c = as(ask("Shoplifting in Clinton in 2024"), "clarify");
-  assert.equal(c.options.length, 4);
-  assert.deepEqual(c.options.at(-1), { label: "Another Clinton", entry: "which city or agency" });
-}
+assert.equal(ask("Shoplifting in Clinton in 2024").kind, "answer", "a bare Clinton is the most populous Clinton city (P28), no ask");
 
 // "LA" asks Los Angeles or Louisiana; after a place it qualifies, it stays the state (coordinator 2026-11-03).
 {
@@ -1652,9 +1703,9 @@ assert.ok(roll.delivered.text.some((t) => /^No data is available for March 2024:
 // P56: the last 12 months, one total, months named.
 const last12 = as(ask("Shoplifting in Detroit over the last 12 months"), "answer");
 assert.deepEqual([last12.period, last12.plan.groupings, last12.delivered.text[0]], [{ from: "2025-10", to: "2026-09" }, [], "Detroit had 84 shoplifting offenses in October 2025 through September 2026."]);
-// Charlotte: found by its place name, named as its agency; a bare "Charlotte" is a city and a county (P28).
+// Charlotte: found by its place name, named as its agency; a bare "Charlotte" is Charlotte, NC with no ask (Jeff 2026-11-22).
 assert.match(as(ask("Shoplifting in Charlotte, North Carolina in 2023"), "answer").delivered.text[0], /^Charlotte had /);
-assert.equal(ask("Shoplifting in Charlotte in 2023").kind, "clarify");
+assert.match(as(ask("Shoplifting in Charlotte in 2023"), "answer").delivered.text[0], /^Charlotte had /);
 
 // Codex increment-3 review. A future comparison declines with an alternative that answers its label (no recursion); a
 // forecast's alternative is the trend it names; the reader's own change form keeps P01.
