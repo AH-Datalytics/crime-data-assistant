@@ -69,11 +69,15 @@ import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
 import { bucket, type Bucket, type Got, type Label } from "./qlog-bucket";
+import { labelIdentity, readLabels, comparedLabelsFile, splitCompare, formatSplitCompare, appendTrend, DEFAULT_TREND_FILE } from "./scoreboard-v2";
 import { qualifies, readerBinding, readerKey, looksPersonal, validateProposal, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const LABELS = arg("--labels")!, PROGRESS = arg("--progress")!;
 if (!LABELS || !PROGRESS) throw new Error("--labels and --progress are required");
+const identity = labelIdentity(LABELS);
+const identityLine = `labels: ${JSON.stringify(identity.version)}; blob: ${identity.blob}`;
+console.log(identityLine);
 const root = arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!;
 const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), root);
 // A query past the limit closes the executor for good (duckdb.ts); here a new one takes over, so one slow question
@@ -260,7 +264,7 @@ if (!SHARD) {
   const leftover = fs.existsSync(PROGRESS) || Array.from({ length: 64 }, (_, i) => shardFile(i)).some((f) => fs.existsSync(f));
   if (leftover && (!fs.existsSync(meta) || JSON.parse(fs.readFileSync(meta, "utf8")).fingerprint !== fp))
     throw new Error(`${PROGRESS} (or its shards) came from other code, labels or mode; use a new --progress`);
-  fs.writeFileSync(meta, JSON.stringify({ fingerprint: fp, spot: SPOT, labels: LABELS, cache: CACHE_DIR ?? null }));
+  fs.writeFileSync(meta, JSON.stringify({ fingerprint: fp, spot: SPOT, labels: path.resolve(LABELS), label_hash: identity.blob, label_version: identity.version, cache: CACHE_DIR ?? null }));
 }
 const done = new Map<string, Got | null>();
 readProgress(PROGRESS, done);
@@ -381,7 +385,20 @@ console.log(`hard gate (wrong answers = 0): ${gate}`);
 {
   const h = createHash("sha256");
   for (const l of scored) { const g = done.get(l.id) ?? null; h.update(`${l.id}\t${JSON.stringify(g ? { ...g, ms: 0 } : null)}\n`); }
-  console.log(`outcomes digest: ${h.digest("hex")} (${scored.length} labels, ${Math.round(scored.reduce((a, l) => a + (done.get(l.id)?.ms ?? 0), 0) / 1000)} s of question time)`);
+  const digest = h.digest("hex");
+  console.log(`outcomes digest: ${digest} (${scored.length} labels, ${Math.round(scored.reduce((a, l) => a + (done.get(l.id)?.ms ?? 0), 0) / 1000)} s of question time)`);
+  if (!SPOT && !process.argv.includes("--first") && !process.argv.includes("--limit") && !shardFailed
+    && !allLabels.some(l => l.expected.outcome !== "exclude" && !done.has(l.id)) && !process.argv.includes("--no-trend")) {
+    const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: path.join(__dirname, ".."), encoding: "utf8" });
+    const head = revision.status === 0 && /^[0-9a-f]{40}$/.test(revision.stdout.trim()) ? revision.stdout.trim() : "unknown";
+    const added = appendTrend(arg("--trend-file", DEFAULT_TREND_FILE)!, {
+      date: new Date().toISOString(), head, label_hash: identity.blob, scored: all.n,
+      correct: all.c.correct, wrong: all.c["wrong answer"], bad_decline: all.c["bad decline"],
+      wrong_clarify: all.c["wrong clarify"], follow_up_error: all.c["follow-up error"],
+      unverified: all.c.unverified, error: all.c.error, digest,
+    });
+    console.log(added ? "trend: appended" : "trend: duplicate skipped");
+  }
 }
 if (READINGS) {
   // The Gemini reader's questions, by what happened: used (and the bucket it reached), or refused and why.
@@ -426,6 +443,10 @@ if (COMPARE) {
   console.log(`new wrong answers against ${COMPARE}: ${[...moved].filter(([k]) => /-> wrong answer$/.test(k) && !/^wrong answer ->/.test(k)).reduce((x, [, n]) => x + n, 0)}`);
   for (const [k, n] of [...moved].sort()) console.log(`  ${n}  ${k}`);
   for (const d of diffs) console.log(d);
+  const oldLabelsFile = comparedLabelsFile(COMPARE, arg("--compare-labels"));
+  if (!oldLabelsFile) console.log("label file of the compared run unknown: split not available");
+  else if (labelIdentity(oldLabelsFile).blob !== identity.blob)
+    console.log(formatSplitCompare(splitCompare(readLabels(oldLabelsFile), allLabels, before, done, bucket, same)));
 }
 
 // Per rule, for triage (local): each rule's buckets.
@@ -440,6 +461,7 @@ if (process.argv.includes("--report") && !incomplete) {
   const draftAll = all.n - all.drafts - all.reviewed === 0;
   const out = [
     `# Query-log scorecard${draftAll ? " (DRAFT: no label is confirmed yet)" : ""}`, "",
+    identityLine, "",
     "Every logged question gets one expected outcome: answer (with its source), clarify (with what is asked) or decline (with the plain reason). Labels come from written rules (scripts/draft-qlog-labels.py), never from the engine's output; this run compares the engine with them (scripts/run-qlog-scorecard.ts). The labels, with each question as written (Jeff 2026-11-04), are scripts/fixtures/answer-eval/qlog-labels.json, keyed by a hash of the normalized question; the rules are docs/reports/qlog-label-rules.md. The log copy itself stays outside the repo.", "",
     `Release ${deps.release.id}; run ${new Date().toISOString().slice(0, 10)}. A first question is the first row of each session in each tab; a follow-up is any later row, labeled with the row before it. Distinct questions per tab (the same words counted once; "times" in the label file says how often each was asked).`, "",
     `**Label status: ${all.n - all.drafts - all.reviewed} confirmed, ${all.reviewed} reviewed (two labelers agree: the rules and an independent second labeler), ${all.drafts} draft (a second-labeler correction, or a rule label not yet reviewed).** No label is confirmed, so this is still a draft scorecard: a miss here is a candidate, not a finding.`, "",
