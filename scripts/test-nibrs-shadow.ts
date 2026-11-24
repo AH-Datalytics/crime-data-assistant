@@ -346,7 +346,16 @@ assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city
 assert.equal(ori(at("ambiguous:San Diego", "City of San Diego, California")), "CA0371100");
 assert.equal(ori(at("ambiguous:Los Angeles", "the city of Los Angeles")), "CA0194200");
 assert.equal(ori(at("ambiguous:St. Louis", "City of St. Louis")), "MOSPD0000");
-assert.deepEqual(named(at("ambiguous:San Diego", "San Diego, California")), ["San Diego Police Department", "San Diego County Sheriff's Office"]);
+// Cause A (Coordinator 2026-11-24): a city read with its state ("Los Angeles, CA") is that city's police, never "which Los Angeles" (the county's sheriff
+// of the same state is not asked about). The name alone still asks (above), and a county read as one stays the county.
+assert.equal(ori(at("city:Los Angeles:CA", "Los Angeles, CA")), "CA0194200");
+assert.equal(ori(at("city:San Diego:CA", "San Diego, CA")), "CA0371100");
+assert.equal(ori(at("city:Los Angeles:CA", "Los Angeles, California")), "CA0194200");
+assert.equal(ori(at("county:Los Angeles County:CA", "Los Angeles County, CA")), "CA0190000", "a county named stays the county");
+// Coordinator 2026-11-24: "San Diego, California" is the same as "Los Angeles, CA" (P16): the city with its state is that city's police, no ask.
+assert.equal(ori(at("ambiguous:San Diego", "San Diego, California")), "CA0371100");
+assert.equal(ori(at("ambiguous:Los Angeles", "Los Angeles, California")), "CA0194200");
+assert.equal(at("ambiguous:Kansas City", "Kansas City").kind, "ask", "no state named still asks");
 assert.equal(at("ambiguous:Kansas City", "city of Kansas City").kind, "ask", "two states have a Kansas City");
 assert.equal(ori(at("county:St. Louis County:MO", "St. Louis County")), "MO0950000", "a county named stays the county");
 assert.equal(agencyName(places, "CA0190000"), "Los Angeles County Sheriff's Department");
