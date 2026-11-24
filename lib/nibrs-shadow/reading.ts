@@ -634,7 +634,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // open with a request wrapper that adds no meaning; the chart words are read on their own further on. Only when a crime word follows.
   text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?(?:make|create|build|draw)\s+(?:me\s+)?an?\s+(?=(?:(?:line\s+)?(?:graph|chart|plot)|time\s*series)\b[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property|crime))/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
-  text = text.replace(/^\s*(?:please\s+)?show\s+my\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property|crime))/i,
+  text = text.replace(/^\s*(?:please\s+)?show\s+my\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?))/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "show me " }); return "show me "; });
   text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });

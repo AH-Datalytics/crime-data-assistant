@@ -3461,6 +3461,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("Please show my murder and aggravated assault statistics in Atlanta since 1977"), "show me murder and aggravated assault statistics in Atlanta since 1977");
   assert.equal(rd("make a graph of the weather"), "make a graph of the weather", "no crime word: left as asked");
   assert.equal(rd("show my location"), "show my location");
+  assert.equal(rd("Show my property value in Dallas"), "Show my property value in Dallas");
   assert.equal(ask("make a graph of murder rate in the US last 20 years").kind, ask("graph of murder rate in the US last 20 years").kind);
 }
 // A city named with its state is that state's agency, checked against the place index; never the same name in another state
