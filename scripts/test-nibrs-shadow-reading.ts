@@ -215,3 +215,6 @@ assert.equal(rq("Carjackings in Houston by month for all years since 2020").text
 assert.equal(rq("DWI in El Paso, Texas per month over time Texas").text, "DWI in El Paso, Texas per month over time", "a repeated trailing state is the same place");
 assert.ok(/handgun and rifles murders/i.test(rq("Compare handgun vs rifle murders in Texas in 2024").text), "rifle beside another weapon is the weapon");
 assert.ok(/Rifle, Colorado/.test(rq("murders in Rifle, Colorado in 2024").text), "the city Rifle kept");
+for (const q of ["Murder rates in 2024 in El Paso, Texas versus Texas", "Charlotte, North Carolina versus North Carolina", "Murders in 2024 in Richmond, Virginia versus West Virginia", "Murders in 2024 in Richmond, Virginia and West Virginia"])
+  assert.equal(rq(q).text, q.replace(" versus ", " and "), `a state after a joining word is a second place, kept (Codex 450): ${q}`);
+assert.ok(/handgun and Rifle Colorado/.test(rq("Compare murders in Denver involving a handgun to Rifle Colorado in 2024").text), "Rifle Colorado after a weapon is the city (Codex 450)");
