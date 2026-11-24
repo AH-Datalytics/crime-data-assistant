@@ -164,10 +164,12 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "location:07", pattern: R(String.raw`\b(?:at|in)\s+(?:a\s+|the\s+)?convenience\s+stores?\b`) },
   { concept: "filter", value: () => "location:14", pattern: R(String.raw`\b(?:at|in)\s+(?:a\s+|the\s+)?(?:hotels?|motels?)(?:\s*(?:\/|or|and)\s*motels?)?\b`) },
   // Stage 3b owner decision (plan r1.3): "commercial" = the business location types (lib/nibrs-codes.ts).
-  { concept: "filter", value: () => "location:commercial", pattern: R(String.raw`\bcommercial\b`) },
+  { concept: "filter", value: () => "location:commercial", pattern: R(String.raw`\bcommercial\b`), when: (_m, q) => !WHERE_MOST_ONCE.test(q) },
   { concept: "filter", value: () => "relationship:ST", pattern: R(String.raw`\bby\s+strangers\b|\bstrangers\b`) },
 ];
 
+const WHERE_MOST = R(String.raw`\bwhere\s+(?:do|does|did|are|were)\s+(?:most|the\s+most)(?=\s+[\w\s]*?\b(?:occur|occurs|happen|happens|take\s+place|committed)\b)`);
+export const WHERE_MOST_ONCE = R(WHERE_MOST.source, "i");
 /** Breakdown dimensions ("by X"). Two-dimension forms the source holds as one declared dimension come first. */
 const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "victim-offender-race", pattern: R(String.raw`\bby\s+(?:the\s+)?race\s+of\s+(?:the\s+)?victims?\s+and\s+(?:the\s+)?race\s+of\s+(?:the\s+)?offenders?\b|\bby\s+victim[-\s]offender\s+race\b`) },
@@ -184,6 +186,8 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "ethnicity", pattern: R(String.raw`\bby\s+ethnicity\b`) },
   { concept: "breakdown", value: () => "weapon", pattern: R(String.raw`\bby\s+weapon(?:\s+types?)?\b`) },
   { concept: "breakdown", value: () => "location", pattern: R(String.raw`\bby\s+location(?:\s+types?)?\b`) },
+  // "Where do most robberies occur - residences, streets, or commercial buildings?" asks for every location type, largest first.
+  { concept: "breakdown", value: () => "location", pattern: WHERE_MOST },
   { concept: "breakdown", value: () => "hour", pattern: R(String.raw`\bby\s+(?:hour(?:\s+of\s+(?:the\s+)?day)?|time\s+of\s+day)\b`) },
   { concept: "breakdown", value: () => "relationship", pattern: R(String.raw`\bby\s+relationship(?:\s+to\s+(?:the\s+)?offenders?)?\b`) },
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
@@ -235,6 +239,7 @@ const MEASURES: Rule[] = [
   // offenses" are the three together; "intimidation" is its own.
   { concept: "measure", value: () => "assault_offenses", pattern: R(String.raw`\ball\s+assaults?\b|\bassault\s+offen[cs]es\b`) },
   { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
+  { concept: "measure", value: () => "kidnapping", pattern: R(String.raw`\bkidnap(?:ping|pings|ped)?s?\b`) },
   { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))(?![\s-]+(?:rifles?|weapons?|guns?|pistols?|style|offen[cs]es)\b)`) },
   { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
@@ -513,7 +518,9 @@ const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of
  */
 const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
 function recordNibrsPhraseFiller(ledger: RequestLedger): void {
-  for (const re of NIBRS_PHRASE_FILLER) {
+  // "Where do most robberies occur - residences, streets, or commercial buildings?": the verb and the list of example places never restrict.
+  const whereMost = WHERE_MOST_ONCE.test(ledger.question) ? [new RegExp(String.raw`\b(?:occur|occurs|happen|happens|take\s+place|committed)\b`, "i"), /\s[-–—:]\s*[a-z][a-z,\s]*?(?=\s*\??\s*$)/i] : [];
+  for (const re of [...NIBRS_PHRASE_FILLER, ...whereMost]) {
     const m = re.exec(ledger.question);
     if (!m) continue;
     const span: Span = [m.index, m.index + m[0].length];

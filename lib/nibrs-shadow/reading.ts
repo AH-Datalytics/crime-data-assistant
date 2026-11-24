@@ -151,6 +151,17 @@ const PHRASES: [RegExp, string][] = [
   // H1 chatty openers (bad-declines plan): a request wrapper adds no meaning; the rest is the question. Before "how" the wrapper is dropped
   // outright (the how-rules below are anchored on "how"). A greeting is dropped before this loop runs (see readQuestion).
   [H1_WRAPPER, "show me "],
+  // B1: "johnson county sheriff in ks": the state's code after "in" (not IN, OR, ME, HI or OK, which are words).
+  [/\b(County\s+Sheriff(?:'?s)?(?:\s+(?:Office|Department))?)\s+in\s+(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|ID|IL|KS|KY|LA|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, "$1, $2"],
+  [/,\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s+State\b/gi, ", $1"],
+  // D1 period grammar (bad-declines plan): wording for a period the engine already reads.
+  // "over the last three (3) years": the digits repeat the number word.
+  [/\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s*\(\d+\)/gi, "$1"],
+  // "as far back as there is data", "back as far as you can", "going back as far as records allow", "from oldest data": every year there is.
+  [/\b(?:(?:from|going|go)\s+)?(?:as\s+far\s+back\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|back\s+as\s+far\s+as\s+(?:there\s+is\s+data|(?:you|we)\s+can|possible|the\s+data\s+goes|records\s+(?:all)?ow|data\s+allows)|from\s+(?:the\s+)?oldest\s+data|since\s+the\s+beginning(?!\s+of\b))\b/gi, "for all years"],
+  // "since 1935 until 2025", "2000 till 2025": a span of years.
+  [/\bsince\s+((?:19|20)\d{2})\s+(?:until|till|til)\s+((?:19|20)\d{2})\b/gi, "from $1 to $2"],
+  [/\b((?:19|20)\d{2})\s+(?:until|till|til)\s+((?:19|20)\d{2})\b/gi, "$1 to $2"],
   // Comparison and change wording (Jeff 2026-11-11: "a lot of the issues seem to be a lack of understanding of the word
   // 'how'"). "How has X changed / trended / fared ..." is X by year over the period asked; "how does X compare to Y" is
   // X and Y side by side; "Y statewide" is the state; "the national rate" is the United States.

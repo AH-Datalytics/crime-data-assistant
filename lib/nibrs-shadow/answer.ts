@@ -31,7 +31,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
-import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
+import { DEMOGRAPHIC_RATE, negatedBefore, WHERE_MOST_ONCE } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
 import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, pointsBack, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
@@ -53,11 +53,12 @@ import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyInState, agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateCodeOf, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
-import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
+import { answerSrs, answerSrsPeak, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
+import { answerStateSet } from "./state-set";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
@@ -305,7 +306,9 @@ export type ShadowOutcome =
   /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
   | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered; buttons?: ShadowOption[];
     /** A state or national sum (P61): agencies counted, coverage and the every-month view, per year (state-sum.ts). */
-    stateSum?: StateSumMeta }
+    stateSum?: StateSumMeta;
+    /** Several crimes in one table (P271): each crime's own record, in column order (its agencies and coverage differ). `stateSum` is set only when they are all the same. */
+    stateSums?: StateSumMeta[] }
   /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
   | SrsAnswer
   /** A Part I figure for one or several agencies, read from the Crime Index build (Historical, P75-P79; historical.ts). */
@@ -998,8 +1001,29 @@ function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps):
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
   return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
 }
+/** "When was violent crime the highest?" / "peak year for murder": the nation's peak year of a Crime Index rate, no place named. */
+const PEAK_ASK = /\b(?:when\s+(?:was|were|did|has|have)\b.*\b(?:highest|worst|peak(?:ed)?|most)\b|(?:what|which)\s+year\b.*\b(?:highest|worst|peak|most)\b|peak\s+year\b)/i;
+const PEAK_MEASURE: [RegExp, string][] = [
+  [/\bviolent\s+crimes?\b/i, "violent_crime"], [/\bproperty\s+crimes?\b/i, "property_crime"], [/\bmurders?\b|\bhomicides?\b/i, "murder"],
+  [/\brapes?\b/i, "rape"], [/\brobber(?:y|ies)\b/i, "robbery"], [/\baggravated\s+assaults?\b/i, "aggravated_assault"],
+  [/\bburglar(?:y|ies)\b/i, "burglary"], [/\b(?:larceny|theft)s?\b/i, "theft"], [/\bmotor\s+vehicle\s+thefts?\b|\bauto\s+thefts?\b/i, "motor_vehicle_theft"],
+];
+/** Every word a plain "peak year of the national rate" question may carry. A word outside this list (a place, "intimate", "firearm", "victims", "reports", an age, a sex) means a different question: it falls through to the old route. */
+const PEAK_WORDS = new Set(("when was were did has have been is are the a an what which year years peak peaked highest worst most ever recorded history overall all time "
+  + "national nationally nationwide nation country america us u.s. usa united states in of for at on across rate rates per 100,000 100000 crime crimes "
+  + "violent property murder murders homicide homicides rape rapes robbery robberies aggravated assault assaults burglary burglaries larceny larcenies theft thefts motor vehicle auto").split(/\s+/));
+function peakMeasure(question: string): string | null {
+  if (!PEAK_ASK.test(question)) return null;
+  const words = question.toLowerCase().replace(/[?!.,;:]+(?=\s|$)/g, "").split(/\s+/).filter(Boolean);
+  if (words.some((w) => !PEAK_WORDS.has(w))) return null;
+  const hit = PEAK_MEASURE.filter(([re]) => re.test(question));
+  return hit.length === 1 ? hit[0][1] : null;
+}
+
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) } : depsIn;
+  { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
+  // "Where do most robberies occur" asks for the nation-wide split by location: the statement is long, but it is what was asked, so it runs (as for a share) rather than waiting behind a button.
+  const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) || WHERE_MOST_ONCE.test(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
@@ -1692,8 +1716,10 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
       period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
     } else period = { from: r.from, to: r.to };
   } catch { return null; }
-  const compare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "versus") || /\bcompar/i.test(ledger0.question);
-  const sq = shrQuestionOf(plan, period, deps.shr, { compare });
+  const compare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "versus") || /\bcompar/i.test(ledger0.question)
+    // The reader rewrites a comparison's "vs" as "and"; the question as asked keeps it ("female vs male murder victims per year").
+    || /\s(?:vs\.?|versus)\s/i.test(deps.asked ?? "");
+  const sq = shrQuestionOf(plan, period, deps.shr, { compare, other: /\bother\b/i.test(deps.asked ?? ledger0.question), percent: /%|\bpercent|\bshare\b|\bproportion/i.test(deps.asked ?? "") });
   if ("why" in sq) return null;
   // P163 (Jeff 2026-11-19): justifiable homicides are shown for both kinds together; "police" in the question alone is the felons killed by
   // police (code 81), "civilians" or "private citizens" alone the felons killed by a private citizen (80). Both words ask for the two side by side.
@@ -2879,7 +2905,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       && (sp.statistic === "count" || sp.statistic === "rate")) {
       if (sp.period.form === "none" && sp.grain === "total") return askCrimeIndexPeriod();
       const cmp = flags(ledger0).comparison;
-      const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+      // Owner rule (Jeff 2026-11-23): an agency beside the nation with no period starts at the earliest national year, 1960,
+      // not 1930 with blank national cells. An agency beside a state, or any stated period, is unchanged.
+      const nationAsked = each.some((x) => x?.kind === "national");
+      const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), nationAsked && sp.period.form === "none" ? Math.max(1960, deps.historical.firstYear) : deps.historical.firstYear);
       if (yrs) {
         if (partYear(sp, cmp)) return decline("unsupported_capability", "Crime Index figures for an agency beside a state or the nation are whole years only.", { alternative: byYearInstead(ledger, deps, pins) });
         const thisYear = Number(release.lastMonth.slice(0, 4));
@@ -3194,7 +3223,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     && p.where.every((w) => (w.field === "agency.type" && JSON.stringify(w.value) === '["city"]') || w.field === "agency.population");
   // Increment 5: one state or the nation, summed over the agencies that reported (P61).
   const geoPlace = (p: Place) => p.kind === "state" || p.kind === "national";
-  if (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p) && !geoPlace(p)) || ((plan.geography.places.some(citySet) || plan.geography.places.some(geoPlace)) && plan.geography.places.length > 1))
+  // P270: several states, or a state and the nation, are separate rows (answerStateSet); beside agencies or city sets they stay declined.
+  if (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p) && !geoPlace(p)) || ((plan.geography.places.some(citySet) || plan.geography.places.some(geoPlace)) && plan.geography.places.length > 1
+    && !plan.geography.places.every(geoPlace)))
     return decline("unsupported_capability", "This isn't available: a state or the nation together with other places.");
   // The same agency named twice is one member (never counted twice).
   const namedPlaces = plan.geography.places.filter((p): p is Extract<Place, { kind: "agency" }> => p.kind === "agency");
@@ -3450,6 +3481,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   }
   // With a release, a state or national detail SHR can't answer as asked (a location beside it, a rate) goes on to
   // NIBRS's own path (Codex SHR-A review 01.8); without one, it is routed, as before.
+  // P270: Homicide Reports and the clearance share read one place; several states or the nation with others wait.
+  if (stateMode && plan.geography.places.length > 1 && (murderDetail || (d.spec.type === "share" && flags(ledger0).clearance)))
+    return decline("unsupported_capability", "This isn't available: Homicide Reports details or a clearance share for several states or the nation together. Ask for one place.");
   if (stateMode && deps.shr && murderDetail) {
     const s = shrOutcome(plan, deps, ledger0);
     if (s) return s;
@@ -3736,6 +3770,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     return decline("unsupported_capability", heavyNationalSentence("property crime", by, lastYear));
   }
   if (clearanceShare && d.spec.type === "share") return answerClearanceShare(checked, d.spec, period, yearSet, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
+  if (stateMode && checked.geography.places.length > 1) return answerStateSet(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
   const placesNote = sheriffNote(deps, checked.geography.places.flatMap((p) => (p.kind === "agency" ? [p.ori] : [])), ledger0.question);
