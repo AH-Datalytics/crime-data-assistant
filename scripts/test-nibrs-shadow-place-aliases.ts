@@ -5,6 +5,7 @@
  * isn't available here."): never "couldn't find", "didn't understand" or "couldn't use". No database, no model, no network.
  */
 import assert from "node:assert/strict";
+import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { agencyInState, loadPlaceIndex, resolvePlace } from "../lib/nibrs-shadow/places";
 
@@ -51,8 +52,10 @@ const checks: [string, () => void][] = [
     assert.ok(!/couldn't find|didn't understand/i.test(String(o.explanation ?? "")));
   }],
   ["a state name beside a state is not read as one city (Kansas, Missouri)", () => {
-    const o = shadowAnswer("Robberies in Kansas, Missouri in 2024 according to NIBRS", deps) as unknown as { explanation?: string };
-    assert.ok(/state or the nation together with other places/.test(String(o.explanation ?? "")), String(o.explanation));
+    // Since P270 two states in one question are answerable (side by side), so the check is the reading, not a decline: the
+    // reader sees two states and no city. (This offline stub has no agencies, so a NIBRS route can still decline in the plan step.)
+    const places = accountNibrsRequest("Robberies in Kansas, Missouri in 2024 according to NIBRS").parts.filter((p) => p.concept === "place").map((p) => p.value);
+    assert.deepEqual(places, ["state:Kansas", "state:Missouri"]);
   }],
 ];
 for (const [name, fn] of checks) { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}: ${(e as Error).message}`); failed++; } }
