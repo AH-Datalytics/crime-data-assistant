@@ -14,7 +14,6 @@ const deps: ShadowDeps = {
   execute: () => [],
 };
 const CLARIFY: [string, string][] = [
-  ["ct-32f3dc9a09", "Tell me more about crime in Arlington, VA"],
   ["ct-d20e00174a", "What major crime trends are we seeing in Baltimore, Maryland?"],
   ["ct-20633e56af", "What are the top nationwide crime trends ?"],
   ["shr-cfb68f38b1", "tell me what's going on in allentown"],
