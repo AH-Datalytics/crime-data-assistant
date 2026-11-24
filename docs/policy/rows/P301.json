@@ -1,0 +1,12 @@
+{
+  "id": "P301",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"do for nyc\", \"i want for the District\", \"this for denver\", \"dallas's rate\", \"Is this in California?\", \"show me portland\" (several Portlands), \"NIBRS information of City of Miami\", \"incident rates in California over time\".",
+  "what the app does today": "The place-only composite (P148) answered every typed place with the violent and property crime composite, even with odd opener words, an ambiguous place, or NIBRS or incident wording.",
+  "proposed behavior": "The composite answers only a bare place (optionally \"show me\" or \"tell me about\"), \"<place> crime\", a crime word or Part I. Odd openers or filler around a place clarify. An ambiguous place asks which one first. A question that says NIBRS or incident is not given the Crime Index composite: \"NIBRS information of X\" and \"incident rates in X\" ask which kind of crime (Jeff 2026-11-24).",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (\"Clarify odd openers\"); the 11 wrong answers in the gate on dev ade18390.",
+  "status": "Decided 2026-11-24 (Jeff, by coordinator card)",
+  "test cases": "scripts/test-nibrs-shadow.ts: P301 block (8 clarify, 3 answer)."
+}
