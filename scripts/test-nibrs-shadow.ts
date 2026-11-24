@@ -886,6 +886,15 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas Robbery Offenses With an Offender Under 18 Per Month, 2024");
   assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas Robbery Offenses Per Month, 2024", "no age: property victims stay counted by offense (P11)");
 }
+// Jeff 2026-11-24: "juvenile crime" with a place and no crime named is juvenile (under 18) arrests per year, noting arrests are not crimes,
+// with the consistent-reporters option beside it.
+for (const q of ["show me the trend of juvenile crime in Kansas since 2020", "juvenile crime in Kansas since 2020"]) {
+  const a = as(ask(q), "answer");
+  assert.equal(a.delivered.text[0], "Kansas Arrests of Arrestees Under 18 Per Year, Jan 2020-Sep 2026", q);
+  assert.equal(a.delivered.text[1], "Arrests do not equal crimes.", q);
+  assert.ok(a.buttons?.some((b) => /Consistent Reporting Agencies/.test(b.label)), q);
+}
+assert.equal(as(ask("juvenile arrests in Kansas since 2020"), "answer").delivered.text[1], "Summed over the agencies that reported each year.", "asking for arrests leaves the answer as it was");
 // Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
 {
   const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;
