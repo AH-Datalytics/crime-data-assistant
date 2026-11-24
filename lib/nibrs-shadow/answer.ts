@@ -2474,7 +2474,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // unread-looking words ("do for nyc", "this for denver", "Is this in X", "dallas's rate") clarify. An ambiguous place ("portland") asks which one first.
     const bareOnly = clause0("measure").length > 0 || hasPartI || ledger0.parts.every((p) => p.clause !== 0 || (p.concept !== "filler" && p.concept !== "possessive" && p.concept !== "statistic"
       && (p.concept !== "opener" || /^(?:show|tell|give)\s+me(?:\s+about)?$/i.test(p.text.trim()))));
-    const ambiguousPlace = clause0("place").some((p) => String(p.value ?? "").startsWith("ambiguous:"));
+    const ambiguousPlace = ledger.parts.some((p) => p.clause === 0 && p.concept === "place" && String(p.value ?? "").startsWith("ambiguous:"));
     // P300: a place filled by a default button ("The United States") is not a typed place; a bare fragment keeps its clarification.
     const typedPlace = clause0("place").some((p) => p.rule !== "shadow:button");
     if (onlyCrimeOverTime && ((ms.length === 0 && (hasPartI || clause0("place").length >= 1)) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && (hasPartI || typedPlace || deps.noDefaults) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
