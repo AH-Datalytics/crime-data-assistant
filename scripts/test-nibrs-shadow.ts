@@ -201,6 +201,22 @@ for (const q of ["do for nyc", "i want for the District", "i want to see this fo
 for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q); // "Nopd" = Orleans Parish composite, answer:historical (QL-hist-2fccc68bd6, ruling 2026-11-24)
 // QL-nibrs-4bce7663f2, QL-nibrs-93270941d0 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" are not given the Crime Index composite; they ask which kind of crime.
 // (Asserted below, after the stub's data is loaded.)
+// Row 4 of the follow-up errors (coordinator 2026-11-24): "usa" and "u.s." in any case are the United States, and a state code in any case after
+// show/in/for/of is that state, as the capitalised forms already were. Words that are also codes (or, me, in, hi, ok, oh, id, la, de, ma, pa) stay words.
+{
+  const same = (a: string, b: string) => { const x = shadowAnswer(a, { ...deps, noDefaults: false }), y = shadowAnswer(b, { ...deps, noDefaults: false }); assert.equal(x.kind, y.kind, a); assert.notEqual(x.kind, "clarify", a); };
+  same("violent crime in the usa in 2025", "violent crime in the USA in 2025");
+  same("violent crime in usa in 2025", "violent crime in the USA in 2025");
+  same("violent crime in the u.s. in 2025", "violent crime in the USA in 2025");
+  same("violent crime in ca in 2025", "violent crime in CA in 2025");
+  same("show ca violent crime per year", "show California violent crime per year");
+  same("show CA violent crime per year", "show California violent crime per year");
+  same("show tx violent crime per year", "show Texas violent crime per year");
+  // Codex review: an opening command followed by in/for/of must leave the preposition for the place ("show me in CA ...").
+  same("show me in CA violent crime per year", "show me in California violent crime per year");
+  same("show me for tx violent crime per year", "show me for Texas violent crime per year");
+  for (const q of ["violent crime in or 2025", "violent crime in me 2025"]) assert.ok(!/Oregon|Maine/.test(JSON.stringify(shadowAnswer(q, { ...deps, noDefaults: false }))), q);
+}
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
 {
   sqls.length = 0;
@@ -232,6 +248,19 @@ for (const q of ["Compare offender demographics for robbery by sex nationally in
   const o = as(ask(q), "answer");
   assert.deepEqual(o.plan.groupings.map((g) => g.dimension), ["offender.sex"], q);
   assert.equal(o.plan.measures[0].id, "offenders.robbery", q);
+}
+// P306 (Jeff 2026-11-24): a "typical" dollar value or loss asks whether the average or the median is meant.
+{
+  for (const q of ["what is the typical dollar value of shoplifting offenses in california",
+    "typical dollar value of theft offenses with the location type is a type of business in california",
+    "what is the typical dollar loss for shoplifitng offenses in california?"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" && o.about === "mean or median value" && o.question === "Do you mean the average or the median?", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    assert.deepEqual(o.options.map((x) => x.label), ["Average", "Median"], q);
+    assert.ok(o.options.every((x, i) => typeof x.question === "string" && x.question.includes(i === 0 ? "average" : "median") && !/typical/i.test(x.question)), JSON.stringify(o.options));
+  }
+  // "Typical" without a dollar value is not this ask.
+  assert.notEqual((ask("typical weather in california") as { about?: string }).about, "mean or median value");
 }
 // P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
 const PEER_ASK_TEXT = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
@@ -1947,6 +1976,17 @@ const chg = as(ask("Change in shoplifting in Detroit from 2022 to 2023"), "answe
 assert.deepEqual(chg.delivered.table.columns.map((c) => c.header), ["Shoplifting offenses, 2022", "Shoplifting offenses, 2023", "Change", "Percent change (%)"]);
 assert.deepEqual(chg.delivered.table.rows, [[84, 84, 0, 0]]);
 assert.ok(chg.delivered.text.includes("Detroit had 84 shoplifting offenses in 2022 and 84 in 2023, a change of 0 (0%)."), chg.delivered.text.join(" / "));
+// P396 (Jeff 2026-11-24): "change in X in 2023", one year, is the year before to that year, and says so; two years are left alone.
+for (const q of ["Change in shoplifting in Detroit in 2023", "What was the percent change in shoplifting in Detroit in 2023?"]) {
+  const one = as(ask(q), "answer");
+  assert.deepEqual(one.delivered.table.columns.map((c) => c.header), ["Shoplifting offenses, 2022", "Shoplifting offenses, 2023", "Change", "Percent change (%)"], q);
+  assert.ok(one.delivered.text.includes("\"Change in 2023\" is read as 2022 to 2023."), one.delivered.text.join(" / "));
+}
+assert.ok(!as(ask("Change in shoplifting in Detroit from 2022 to 2023"), "answer").delivered.text.some((t) => /is read as 2022 to 2023/.test(t)));
+assert.equal(ask("Shoplifting in Detroit in 2023").kind, "answer"); // no "change": untouched
+for (const q of ["Change in shoplifting in Detroit in 2023 compared with 2021", "What was the change in shoplifting in Detroit? Show robberies in 2023."]) assert.ok(!JSON.stringify(ask(q)).includes("is read as 2022 to 2023") && !JSON.stringify(ask(q)).includes("from 2022 to 2023"), q);
+// Cause 12 (Jeff 2026-11-24): "per 1,000 people" and "on 1000 persons" keep the fixed per-100,000 decline.
+for (const q of ["Shoplifting rate per 1,000 people in Detroit in 2023", "Shoplifting rate on 1000 persons in Detroit in 2023"]) { const d = ask(q); assert.equal(d.kind, "decline", q); assert.ok(JSON.stringify(d).includes("Rates are given per 100,000"), q); }
 // P304 (Jeff 2026-11-24): one calendar day is answered for its month, and the answer says a single day is not available.
 { const month = as(ask("Shoplifting in Detroit in May 2023"), "answer");
   for (const q of ["Shoplifting in Detroit on May 14, 2023", "SHOPLIFTING IN DETROIT ON MAY 14TH, 2023", "Shoplifting in Detroit on 14 May 2023"]) {
@@ -3462,6 +3502,12 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // No kind of crime: violent and property crime.
   const crime = applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime" }, { label: "Both", continuation: answerOf(["2024"]) }]), live);
   assert.equal(text(crime)[1], "No kind of crime was named, so violent crime and property crime are shown.");
+  // A weapon named with no crime ("how many firearms crimes in the usa"): weapons are recorded for violent crime, so only that button runs and it is the default, said
+  // (QL-ct-cdad672651, gate on 493); with no weapon named a lone button stays an ask.
+  const gunCrime = applyDefaults("how many firearms crimes in the usa last year", ask("which kind of crime", "how many firearms crimes in the usa last year", [{ label: "Violent crime", continuation: { kind: "answer", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } as unknown as ShadowOutcome }]), live);
+  assert.equal(gunCrime.kind, "answer");
+  assert.equal(text(gunCrime)[1], "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).");
+  assert.equal(applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime", continuation: answerOf(["2024"]) }]), live).kind, "clarify");
   // Place, then period, then crime in one chain: three notes in that order.
   const chain = applyDefaults("crime trends", ask("which place", "crime trends", [{ label: "The United States", continuation: ask("which period", "crime trends", [{ label: "Every year available", continuation: ask("which kind of crime", "crime trends", [{ label: "Both", continuation: answerOf(["2023", "2024"]) }]) }]) }]), live);
   assert.equal(text(chain).length, 5, JSON.stringify(text(chain)));

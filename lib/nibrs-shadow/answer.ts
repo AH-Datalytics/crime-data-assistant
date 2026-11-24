@@ -915,6 +915,7 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
 /** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
 /** A clearance question (P182's exception): a clearance rate, offenses cleared, clearances by type, cleared by arrest or exception. */
 const CLEARANCE_WORDS = /\bclear(?:ance|ances|ed|ing)?\b/i;
+const WEAPON_WORDS = /\b(?:firearms?|guns?|handguns?|rifles?|shotguns?|knife|knives|weapons?)\b/i;
 /**
  * QL-nibrs-9aed2136c4 (Jeff 2026-11-22): "What percentage of murders are cleared by arrest vs exceptional" is asked for shares of the clearance types.
  * Narrow on purpose: a percentage word, a clearance word, and both "arrest" and "exceptional". Only such a question defaults a missing year to the
@@ -978,6 +979,12 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
+      // A weapon named with no crime ("how many firearms crimes in the usa"): weapons are recorded for violent crime, so only that button runs; it is the default, said.
+      const violentOnly = c.options.length === 1 && /^Violent crime$/.test(c.options[0].label);
+      if (!option && violentOnly && WEAPON_WORDS.test(question) && !CLEARANCE_WORDS.test(question)) {
+        option = c.options[0];
+        note = "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).";
+      }
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
       // E (Jeff 2026-11-24): a victim-sex, relationship or weapon word with no crime named is a homicide question, answered from Homicide Reports.
       if (deps.shr && !CLEARANCE_WORDS.test(question) && SHR_NO_CRIME.test(question)) {
@@ -1078,6 +1085,9 @@ const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+/** P306: "typical dollar value" / "typical loss" (also amount, cost, worth); "typical" alone or with other nouns is not this ask. */
+const TYPICAL_VALUE = /\btypical\s+(?:dollar\s+)?(?:value|loss|amount|cost|worth)\b/i;
+const TYPICAL_ASK = "Do you mean the average or the median?";
 /** P305: peers named by wording ("similar cities", "peer cities", "3 agencies of similar size", "to other cities"). "Other large cities" is a different ask. */
 const PEER_CITIES = /\b(?:(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+)?(?:other\s+)?(?:(?:similar(?:ly)?(?:[-\s]?sized?|\s+situated)?|comparable|peer)\s+(?:cities|city|counties|agencies|departments|places)|(?:cities|counties|agencies|departments|places)\s+of\s+(?:a\s+)?(?:similar|comparable|the\s+same)\s+size)\b|\b(?:to|versus|vs\.?|against|with|than)\s+(?:the\s+)?other\s+(?:cities|counties|agencies|departments|places)\b/i;
 const PEER_ASK = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
@@ -1131,6 +1141,8 @@ function weaponRow(label: string): number {
  *  full calendar years (a part-year 2026 is not one), with the counts: "Yes. Carjackings fell from X in 2024 to Y in 2025." The by-year table stays under it. */
 const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
 const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
+/** P396: "(percent) change in <measure> in 2025" with one year and no second year. */
+const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
@@ -1192,6 +1204,16 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  // P306 (Jeff 2026-11-24): a "typical" dollar value or loss does not say which summary is meant; ask average or median.
+  { const ty = TYPICAL_VALUE.exec(question);
+    if (ty) {
+      const swap = (word: string) => question.replace(/\btypical\b/i, word);
+      return { kind: "clarify", about: "mean or median value", question: TYPICAL_ASK, options: [
+        { label: "Average", question: swap("average") },
+        { label: "Median", question: swap("median") },
+      ] };
+    }
+  }
   // P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
   // A place that has to be told apart (Richmond, Baltimore) is still asked first: the peer wording rides on each of its buttons.
   { const pm = PEER_CITIES.exec(question);
@@ -1220,6 +1242,15 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
     }
     return o;
+  }
+  // P396 (Jeff 2026-11-24): "change in X in 2025", one year, is read as the year before to that year (2024 to 2025); the title says so.
+  { const one = SINGLE_YEAR_CHANGE.exec(question);
+    if (one && (question.match(/\b(?:19|20)\d{2}\b/g) ?? []).length === 1 && Number(one[2]) > 1930 && Number(one[2]) <= new Date().getFullYear()) {
+      const y = Number(one[2]);
+      const o = shadowAnswer(question.replace(one[0], `${one[1]} from ${y - 1} to ${y}`), depsIn);
+      const dl = (o as { delivered?: { text: string[] } }).delivered; if (dl && o.kind !== "decline" && o.kind !== "clarify") dl.text.splice(1, 0, `"Change in ${y}" is read as ${y - 1} to ${y}.`);
+      return o;
+    }
   }
   // P304 (Jeff 2026-11-24): one calendar day ("on May 24, 2025") is answered for its month, and the answer says so.
   { const days = [...question.matchAll(SINGLE_DAY_G)];
