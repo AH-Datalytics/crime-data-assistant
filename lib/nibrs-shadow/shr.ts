@@ -234,7 +234,8 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     const label = (codes: string[]) => (dim === "weapon" && codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => labels[c] ?? c).join(" or "));
     weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
     // "white, black and other": the codes not named make an Other group (race only; Unknown stays out).
-    if (opts.other && dim.endsWith(".race")) { const used = weaponGroups.flatMap((g) => g.codes); const rest = ["I", "A", "P"].filter((c) => !used.includes(c)); if (rest.length) weaponGroups.push({ label: "Other", codes: rest }); }
+    // A share is out of ALL victims: an Other group also covers whatever the named values leave (Unknown included) so the columns add to 100.
+    if ((opts.other || opts.percent) && !RECORD_DIMS.has(dim)) { const used = weaponGroups.flatMap((g) => g.codes); const rest = Object.keys(DIM_LABELS[dim] ?? {}).filter((c) => !used.includes(c)); if (rest.length) weaponGroups.push({ label: "Other", codes: rest }); }
     groupedDim = dim;
     breakdown = { dim, groups: weaponGroups };
   }

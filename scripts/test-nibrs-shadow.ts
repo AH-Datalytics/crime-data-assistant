@@ -644,6 +644,16 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
         // A share is out of ALL victims: the SQL does not limit the people to the named groups.
         if (/%/.test(q)) assert.ok(!vsql.some((s) => /p\.\w*race\w* IN \('B', 'W'/.test(s) && /WHERE[^;]*p\.\w*race\w* IN \('B', 'W', /.test(s)), q);
       }
+      // Non-zero cells: the group query returns the group index ('0' white... ) per year.
+      {
+        const nz = (sql: string): unknown[][] => /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) && /AS k1/.test(sql) ? [[2010, "0", 6], [2010, "1", 3], [2010, "2", 1]]
+          : /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) ? [[10]] : vstub(sql);
+        const o = as(shadowAnswer("% of white, black, and other murder victims per year from 2010 to 2011 nationally", { ...vdeps, execute: nz } as ShadowDeps), "shr");
+        const r = o.delivered.table.rows.find((x) => x[0] === "2010")!;
+        assert.deepEqual(r.slice(1), [60, 30, 10], "shares of all victims");
+        assert.equal(r.slice(1).reduce((a, b) => a + Number(b), 0), 100, `shares add to 100: ${JSON.stringify(r)}`);
+        assert.ok(r.slice(1).every((v) => Number(v) > 0), JSON.stringify(r));
+      }
       assert.equal(as(shadowAnswer("male vs female firearm murder victims per month since 2018 nationally", vdeps), "shr").delivered.text[0],
         "United States Murder Victims With a Firearm by Month and the Victims' Sex, Jan 2018-Sep 2026");
     }
