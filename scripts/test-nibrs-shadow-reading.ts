@@ -210,3 +210,12 @@ console.log("nibrs shadow reading: general wording forms read; boundaries keep t
 // All years by default (Jeff 2026-11-11): "going back as far as possible" is by year with no range.
 assert.equal(rq("indianapolis homicide counts going back as far as possible").text, "indianapolis homicide counts by year");
 assert.equal(rq("Carjackings in Houston by month for all years since 2020").text.replace(/\s+/g, " "), "Carjackings in Houston by month since 2020", "a grain and a range of its own: the phrase is dropped");
+
+// D (QL-shr-04141126f2): "Summarize current crime trends for Asheville, NC" names no crime: it reads as the opener "crime trends" (P182 default), not Current Trends' monthly series.
+{
+  const a = rq("Summarize current crime trends for Asheville, NC"), b = rq("Summarize crime trends for Asheville, NC");
+  assert.equal(a.ledger.parts.some((x) => x.concept === "recent"), false, "no recent part when no crime is named");
+  assert.deepEqual(a.ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], "Summarize is filler");
+  assert.equal(a.text, b.text);
+  assert.equal(rq("current murder trends in Asheville, NC").ledger.parts.some((x) => x.concept === "recent"), true, "a named crime keeps the Current Trends reading");
+}
