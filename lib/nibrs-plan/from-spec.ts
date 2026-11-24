@@ -113,7 +113,7 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
     case "dv": return DV[val] ? { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", DV[val])] } : null;
     case "relationship": return { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", [val])] };
     case "circumstance": return { kind: "exists", scope: "victim", entity: "victim_circumstance", where: [attr("victim_circumstance.circumstance", val.split("+"))] };
-    case "bias": return { kind: "exists", scope: "offense", entity: "offense_bias", where: [attr("offense_bias.bias", [val])] };
+    case "bias": return { kind: "exists", scope: "offense", entity: "offense_bias", where: [attr("offense_bias.bias", val === "lgbtq" ? ["41", "42", "43", "45", "71", "72"] : [val])] };
     case "clearance":
       return ["arrest", "exceptional"].includes(val) ? onEntity("offense", attr("offense.clearance_method", [val])) : onEntity("offense", attr("offense.clearance_type", [val]));
     default: return null;
