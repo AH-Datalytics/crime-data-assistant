@@ -62,6 +62,7 @@ import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } fr
 import { answerStateSet } from "./state-set";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
+import { answerStolenValue, isStolenValue } from "./stolen-value";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { buildScorecard, type ScorecardPlace } from "./scorecard";
@@ -1119,7 +1120,10 @@ const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  const ud = UP_DOWN_YES_NO.exec(question);
+  // A pasted "Q: ..." label is not part of the question (QL-nibrs-96e29db407): the question is read without it, so every default applies as it does without the label.
+  const unlabeled = question.replace(/^\s*Q\s*:\s*/i, "");
+  if (unlabeled !== question && unlabeled.trim()) return shadowAnswer(unlabeled, depsIn);
+  const ud =UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
     const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
     const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
@@ -3786,13 +3790,15 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const stateMulti = stateMode && plan.geography.places.length === 1 && plan.measures.length > 1 && !catG.length && !plan.transforms.length && !combined
     && plan.statistics.length === plan.measures.length && plan.statistics.every((x) => x.kind === "count" || x.kind === "rate")
     && plan.groupings.every((g) => g.dimension === "time.year");
-  if (stateMode && !stateBreakdown && !clearanceShare && !stateMulti && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
+  // Stolen property value (Jeff 2026-11-24) has its own module (stolen-value.ts), which names what it cannot do.
+  const stolenValue = isStolenValue(plan);
+  if (!stolenValue && stateMode && !stateBreakdown && !clearanceShare && !stateMulti && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
     return decline("unsupported_capability", "This isn't available: a state or national sum of several crimes, a breakdown, a change or a ranking.");
   const placesMode = !stateMode && (plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate"));
   // P194 (Jeff 2026-11-21): several named agencies' clearance by type is a row for each, never summed.
   const multiClearance = placesMode && catG.length === 1 && catG[0].dimension === "offense.clearance_type" && plan.measures.length === 1
     && plan.geography.places.length > 1 && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length && plan.geography.combine !== "combined";
-  if (placesMode && !multiClearance && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
+  if (!stolenValue && placesMode && !multiClearance && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
     return decline("unsupported_capability", "This isn't available: several agencies or rates with several crimes, a breakdown, a change or rolling windows.");
   // 9aed2136c4: the clearance types asked as percentages carry the share of the period beside the count (the incidents column is dropped below).
   const typeShares = !!deps.shareAsked && catG.length === 1 && catG[0].dimension === "offense.clearance_type" && plan.statistics.length === 1 && plan.statistics[0].kind === "count";
@@ -3802,7 +3808,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
-  if (!clearanceShare && (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
+  if (!clearanceShare && !stolenValue && (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
     || (several && !stateMulti && (catG.length || !counts)) || (combined && timeG.length && combined.label !== "drug crimes")))
     return decline("unsupported_capability", "This isn't available: this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share.");
 
@@ -4088,6 +4094,11 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
     const by = checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => { const [who, attr] = g.dimension.split("."); return who === "offender" || who === "victim" || who === "arrestee" ? `${who} ${attr.replace(/_/g, " ")}` : attr.replace(/_/g, " "); }).join(" and ");
     return decline("unsupported_capability", heavyNationalSentence("property crime", by, lastYear));
+  }
+  if (isStolenValue(checked)) {
+    const st = (d.spec as { statistic?: string }).statistic;
+    return answerStolenValue(checked, st === "average_value" ? "average_value" : st === "median_value" ? "median_value" : "total_value", period, yearSet, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }),
+      ledger0.parts.some((p) => p.concept === "statistic" && /percent(?:ile|age)/i.test(p.text)));
   }
   if (clearanceShare && d.spec.type === "share") return answerClearanceShare(checked, d.spec, period, yearSet, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (stateMode && stateMulti) return answerStateMulti(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));

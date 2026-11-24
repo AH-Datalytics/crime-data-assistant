@@ -49,7 +49,7 @@ export type NibrsApplied = {
   /** Family measures the statement restricts to (domestic_violence, hate_crime, carjacking, ...). */
   families?: string[];
   units?: string[];
-  statistic?: "count" | "rate" | "share" | "clearance_rate" | "total_value" | "average_value" | null;
+  statistic?: "count" | "rate" | "share" | "clearance_rate" | "total_value" | "average_value" | "median_value" | null;
   /** r2.1 F1: a rolling-window sum the compiler performed (window length in months). */
   rolling?: number;
   /** r2.1 F1: a period total the compiler performed (counts summed, or a clearance rate / average pooled). */
@@ -134,7 +134,7 @@ function applies(part: Part, a: NibrsApplied, now: Date, ledger: RequestLedger):
       if (!a.statistic) return false;
       if (v === "count") return a.statistic === "count";
       if (v === "rate" || v === "per100k" || v === "percapita") return a.statistic === "rate";
-      if (v === "total_value" || v === "average_value") return a.statistic === v;
+      if (v === "total_value" || v === "average_value" || v === "median_value") return a.statistic === v;
       return false;
     }
     case "rolling": return v === "rolling12" && a.rolling === 12;

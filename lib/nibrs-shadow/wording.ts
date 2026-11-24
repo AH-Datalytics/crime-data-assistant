@@ -65,6 +65,7 @@ export const REASONS: Record<string, (x: string) => string> = {
   "we don't have LEOKA data.": () => "We don't have LEOKA data (officers killed and assaulted).",
   "the data covers U.S. law enforcement agencies only.": (x) => `The data covers U.S. law enforcement agencies only, so there are no figures for ${q(x)}.`,
   "I give one breakdown per answer; ask for one breakdown at a time.": (x) => `I can break the numbers down one way at a time; ${q(x)} would be a second breakdown.`,
+  "a dollar value is given for stolen property, not for other offenses.": (x) => `A median value is given for stolen property, not for other offenses, so ${q(x)} can't be used with a count of crimes. For example: "What was the median value of stolen property in Philadelphia in 2024?"`,
   "rates are given per 100,000 people.": () => "Rates are given per 100,000.",
   "I rank places by a level, not by a change, in this version.": () => "Places can be ranked by their numbers for one year, not by how much they changed. For example: \"Which Texas cities had the most robberies in 2024?\"",
   "I can apply one minimum population (\"at least\" or \"over\"), not a maximum.": () => "A ranking can take one minimum population (\"at least\" or \"over\"), not a maximum.",

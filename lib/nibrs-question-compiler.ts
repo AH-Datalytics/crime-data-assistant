@@ -729,6 +729,8 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
   const filterDims = spec.filters.map((f) => f.split(":")[0]);
   const usedTables: Table[] = [];
   const isValue = spec.statistic === "total_value" || spec.statistic === "average_value";
+  // The median is answered by the shadow engine's stolen-value module only; the older tables hold sums and counts.
+  if (spec.statistic === "median_value") return { kind: "decline", explanation: "A median value isn't available from this source.", statements };
   if (isValue && !spec.filters.some((f) => f.startsWith("loss:"))) {
     return { kind: "clarify", explanation: "Which property loss should I total: stolen, recovered, damaged or seized? NIBRS records property value by loss type, so I won't combine them.", statements };
   }
