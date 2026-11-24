@@ -230,7 +230,7 @@ function loadHistoricalFacts() {
     console.warn("[dynamic-facts] Failed to load Historical facts:", e);
     return {
       agencyTotal: 24571, typeBreakdown: "city (14,080), county (3,134), other (2,675), state_police (1,660), state_agency (1,533), university (1,139), tribal (236), federal (61), state (52), nation (1)",
-      crimeMinYear: 1930, crimeMaxYear: 2025, stateNatMinYear: 1958, stateNatMaxYear: 2024,
+      crimeMinYear: 1930, crimeMaxYear: 2025, stateNatMinYear: 1960, stateNatMaxYear: 2024,
       staffingMinYear: 1930, staffingMaxYear: 2025, popRows: 940000, popMinYear: 1930, popMaxYear: 2025,
       staffingRows: 851000, clearanceRows: 65, agencyClearanceRows: 1151000,
       clearanceMinYear: 1960, clearanceMaxYear: 2025,
