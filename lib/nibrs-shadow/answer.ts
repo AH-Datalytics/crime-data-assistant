@@ -1116,6 +1116,8 @@ function weaponRow(label: string): number {
  *  full calendar years (a part-year 2026 is not one), with the counts: "Yes. Carjackings fell from X in 2024 to Y in 2025." The by-year table stays under it. */
 const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
 const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
+/** P397: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
+const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
   const ud = UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
@@ -1185,6 +1187,15 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
     }
     return o;
+  }
+  // P397 (Jeff 2026-11-24): one calendar day ("on May 24, 2025") is answered for its month, and the answer says so.
+  { const days = [...question.matchAll(SINGLE_DAY_G)];
+    if (days.length === 1) {
+      const d = days[0]; const month = d[1] ?? d[3]; const year = d[2] ?? d[4];
+      const o = shadowAnswer(question.replace(d[0], `in ${month} ${year}`), depsIn);
+      const dl = (o as { delivered?: { text: string[] } }).delivered; if (dl && o.kind !== "decline" && o.kind !== "clarify") dl.text.splice(1, 0, "A single day is not available, so the month is shown.");
+      return o;
+    }
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);

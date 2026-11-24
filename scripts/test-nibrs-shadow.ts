@@ -1916,6 +1916,16 @@ const chg = as(ask("Change in shoplifting in Detroit from 2022 to 2023"), "answe
 assert.deepEqual(chg.delivered.table.columns.map((c) => c.header), ["Shoplifting offenses, 2022", "Shoplifting offenses, 2023", "Change", "Percent change (%)"]);
 assert.deepEqual(chg.delivered.table.rows, [[84, 84, 0, 0]]);
 assert.ok(chg.delivered.text.includes("Detroit had 84 shoplifting offenses in 2022 and 84 in 2023, a change of 0 (0%)."), chg.delivered.text.join(" / "));
+// P397 (Jeff 2026-11-24): one calendar day is answered for its month, and the answer says a single day is not available.
+{ const month = as(ask("Shoplifting in Detroit in May 2023"), "answer");
+  for (const q of ["Shoplifting in Detroit on May 14, 2023", "SHOPLIFTING IN DETROIT ON MAY 14TH, 2023", "Shoplifting in Detroit on 14 May 2023"]) {
+    const day = as(ask(q), "answer");
+    assert.deepEqual(day.delivered.table.rows, month.delivered.table.rows, q);
+    assert.equal(day.delivered.text[1], "A single day is not available, so the month is shown.", q);
+  } }
+assert.ok(!as(ask("Shoplifting in Detroit in May 2023"), "answer").delivered.text.some((x) => /single day/.test(x)));
+assert.ok(!JSON.stringify(ask("Shoplifting in Detroit from May 2023 to June 2023")).includes("single day"));
+assert.ok(!JSON.stringify(ask("Shoplifting in Detroit on May 14, 2023 and May 20, 2023")).includes("single day is not available, so the month")); // two days: left to the reader
 // P54: no comparison year -> the year before; D17: no change from a year with a month unknown, the month named (D04).
 const goUp = as(ask("Did shoplifting go up in Detroit in 2024?"), "answer");
 assert.deepEqual(goUp.delivered.table.rows, [[84, null, null, null]]);

@@ -8,5 +8,5 @@
  "exact default or choices offered": "None.",
  "why": "Bad-declines plan family D1 (declines owner, 2026-11-23): the labels expect these answered; the periods are ones the engine already reads.",
  "status": "Built in the D1 period-grammar change.",
- "test cases": "scripts/test-nibrs-shadow-period-grammar.ts (4 labeled questions); open: summer, January to July, excluding a year, through April, since COVID-19, a single day, year to date with a crime word, \"over 12 months\" (need route or Jeff decisions)."
+ "test cases": "scripts/test-nibrs-shadow-period-grammar.ts (4 labeled questions); open: summer, January to July, excluding a year, through April, since COVID-19, year to date with a crime word, \"over 12 months\" (need route or Jeff decisions). A single day is decided: see P397."
 }
