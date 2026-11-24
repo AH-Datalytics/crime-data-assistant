@@ -6760,24 +6760,16 @@
    "question": "Tell me more about crime in District of Columbia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
+    "outcome": "clarify",
     "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "the whole question"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "rule": "P247-open-ended",
+    "drafted_by": "declines-owner",
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23 (declines owner Group 1, Option 1): 'tell me more about' is a listed chatty opener, so it asks what to show instead of taking the P182 default; same as QL-ct-32f3dc9a09 (Arlington, VA). Was P180-P182 answer."
    }
   },
   {
