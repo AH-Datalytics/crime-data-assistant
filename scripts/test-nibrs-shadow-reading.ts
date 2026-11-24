@@ -211,6 +211,14 @@ console.log("nibrs shadow reading: general wording forms read; boundaries keep t
 assert.equal(rq("indianapolis homicide counts going back as far as possible").text, "indianapolis homicide counts by year");
 assert.equal(rq("Carjackings in Houston by month for all years since 2020").text.replace(/\s+/g, " "), "Carjackings in Houston by month since 2020", "a grain and a range of its own: the phrase is dropped");
 
+// A state said again at the end, and "rifle" beside another weapon (state/nation-places slice).
+assert.equal(rq("DWI in El Paso, Texas per month over time Texas").text, "DWI in El Paso, Texas per month over time", "a repeated trailing state is the same place");
+assert.ok(/handgun and rifles murders/i.test(rq("Compare handgun vs rifle murders in Texas in 2024").text), "rifle beside another weapon is the weapon");
+assert.ok(/Rifle, Colorado/.test(rq("murders in Rifle, Colorado in 2024").text), "the city Rifle kept");
+for (const q of ["Murder rates in 2024 in El Paso, Texas versus Texas", "Charlotte, North Carolina versus North Carolina", "Murders in 2024 in Richmond, Virginia versus West Virginia", "Murders in 2024 in Richmond, Virginia and West Virginia"])
+  assert.equal(rq(q).text, q.replace(" versus ", " and "), `a state after a joining word is a second place, kept (Codex 450): ${q}`);
+assert.ok(/handgun and Rifle Colorado/.test(rq("Compare murders in Denver involving a handgun to Rifle Colorado in 2024").text), "Rifle Colorado after a weapon is the city (Codex 450)");
+
 // H2 typos (bad-declines): stray characters, one changed letter in a word that is no English word, and slips in asking words.
 // A garbled year is never repaired into a year (QL-hist-7c5f94c559): the word slip is fixed, the digits stay for the ask.
 assert.equal(read("SWhow me murders in new orleans back to 1`980").text, "Show me murders in new orleans back to 1`980");
@@ -240,3 +248,13 @@ assert.equal(rq("show me willful murders in salem oregon since 1991").text, "sho
 assert.equal(rq("willful homicides in Salem Oregon in 2024").text, "murders in Salem Oregon in 2024", "willful homicide is murder (09A), never negligent manslaughter (Codex 447 P1)");
 assert.equal(rq("show data on robberies in new orleans").text, "show me robberies in new orleans");
 assert.equal(rq("the data on robberies in new orleans").text, "the data on robberies in new orleans", "only a leading 'show data on' is the opener");
+
+// D (QL-shr-04141126f2): "Summarize current crime trends for Asheville, NC" names no crime: it reads as the opener "crime trends" (P182 default), not Current Trends' monthly series.
+{
+  const a = rq("Summarize current crime trends for Asheville, NC"), b = rq("Summarize crime trends for Asheville, NC");
+  assert.equal(a.ledger.parts.some((x) => x.concept === "recent"), false, "no recent part when no crime is named");
+  assert.deepEqual(a.ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], "Summarize is filler");
+  assert.equal(a.text, b.text);
+  assert.equal(rq("current murder trends in Asheville, NC").ledger.parts.some((x) => x.concept === "recent"), true, "a named crime keeps the Current Trends reading");
+  assert.equal(rq("Show current crime trends for robberies in Asheville, NC").ledger.parts.some((x) => x.concept === "recent"), true, "a crime named after 'current crime trends' keeps the Current Trends reading");
+}

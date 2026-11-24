@@ -1,0 +1,12 @@
+{
+    "id":  "P296",
+    "topic":  "Already decided",
+    "decision needed":  "None: already decided",
+    "situation (example wording)":  "A national or state Historical scorecard shows a Violent Crime or Property Crime group rate, for example the national property rate for 2025.",
+    "what the app does today":  "The group rate was the sum of the three or four already-rounded component rates, so the national 2025 property rate showed 1,534.7 (193.6 + 1,144.1 + 197.0) while the published Crime Index figure is 1,534.8.",
+    "proposed behavior":  "A group rate is the summed offense count over the population per 100,000, rounded once, which matches the published figure (national 2025 property 1,534.8, violent 327.6). Component rows are unchanged.",
+    "exact default or choices offered":  "None.",
+    "why":  "Coordinator decision 2026-11-24: the scorecard must show the published Crime Index figure.",
+    "status":  "Decided 2026-11-24 (Coordinator)",
+    "test cases":  "scripts/test-historical-scorecard.ts; QL-hist-366ee46db2, QL-hist-c3b02ec3c0."
+}
