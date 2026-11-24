@@ -53809,7 +53809,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "Yes or No from the last two full calendar years, with both counts (P299), and the by-year table",
     "meaning": null,
     "values": {
      "status": "pending"
