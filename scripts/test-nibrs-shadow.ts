@@ -8,6 +8,7 @@ import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { applyDefaults, askInsteadChecks, heavyNationalSentence, HEAVY_STATEMENT, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, statementChars, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { shadowSql } from "../lib/nibrs-plan/cube";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
@@ -1433,6 +1434,16 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
   assert.equal(o.plan.measures[0].id, "offenses.robbery");
   assert.deepEqual(o.delivered.table.columns.map((c: { header: string }) => c.header), ["Location type", "Robbery offenses", "Share of all robbery offenses (%)"]);
   assert.deepEqual(o.delivered.text.slice(0, 3), ["United States Robbery Offenses by Location Type, 2025", "No place was named, so the United States is shown.", "No year was given, so the latest complete year, 2025, is shown."]);
+}
+// Capability (loc-peak): the verb "occur" is accounted by the where-most filler (a real word boundary), so the question is answered, not declined.
+{
+  const o: any = shadowAnswer("Where do most burglaries occur?", { ...deps, noDefaults: false });
+  assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
+  assert.equal(o.plan.groupings[0].dimension, "offense.location_type");
+  assert.equal(o.plan.measures[0].id, "offenses.burglary");
+  assert.deepEqual(o.plan.filters, []);
+  const fill = (accountNibrsRequest("Where do most burglaries occur?") as any).parts.filter((x: any) => x.rule === "nibrs-phrase-filler").map((x: any) => x.text);
+  assert.ok(fill.includes("occur"), "the where-most filler regex matched the verb: " + JSON.stringify(fill));
 }
 // Capability (loc-peak): the peak year of the national violent crime rate, its count beside it.
 {
