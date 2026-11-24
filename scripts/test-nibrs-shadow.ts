@@ -3519,6 +3519,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   }
   // The nation is the same answer over every state.
   assert.ok(/^In the United States in 2025, [\d.]+% of the aggravated assault incidents had a domestic violence victim/.test((as(ask("what share of aggravated assaults in the United States are domestic violence according to NIBRS in 2025"), "answer") as unknown as Out).delivered.text[0]));
+  // Other crimes, the victims unit and the consistent-reporters variant do not get this answer (they would be mislabeled).
+  for (const q of ["what share of murder incidents in Texas are domestic violence according to NIBRS in 2025", "what share of aggravated assault victims in Texas are domestic violence according to NIBRS in 2025", "what share of aggravated assaults in Texas are domestic violence according to NIBRS in 2025 for consistent reporting agencies"]) {
+    const r = ask(q) as unknown as Out;
+    assert.ok(r.kind !== "answer" || !/aggravated assault incidents had a domestic violence victim/.test(r.delivered.text[0]), `${q}: ${r.kind} ${r.delivered?.text?.[0]}`);
+  }
   // The three-way breakdown stays declined.
   assert.notEqual(ask("what share of female murder victims in Texas in 2025 were cleared and domestic violence according to NIBRS").kind, "answer");
 }

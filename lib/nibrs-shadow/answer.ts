@@ -3752,7 +3752,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     && d.spec.subset[0].startsWith("clearance:") && (plan.transforms.length === 0 || (!!d.spec.rank && d.spec.byState === true && plan.transforms.every((t) => t.kind === "rank"))) && !plan.defaults.some((x) => x.path === "unit");
   // P302 (Jeff 2026-11-24): the share of a state's or the nation's aggravated assault incidents with a domestic violence victim.
   const dvShare = d.spec.type === "share" && stateMode && plan.geography.places.length === 1 && d.spec.population.length === 0 && d.spec.subset.length === 1
-    && d.spec.subset[0] === "dv:domestic" && plan.transforms.length === 0 && !d.spec.byState && !catG.length;
+    && d.spec.subset[0] === "dv:domestic" && plan.transforms.length === 0 && !d.spec.byState && !catG.length
+    && d.spec.measure === "aggravated_assault" && d.spec.unit === "incidents" && !flags(ledger0).consistent;
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
   // P271: several crimes for one state or the nation, a column each (count or rate, no breakdown but a year, no change).
