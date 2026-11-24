@@ -3691,4 +3691,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   as(ask("Carjackings in Houston and Texas in 2024"), "decline");
   as(ask("Share of murders cleared in Texas and Ohio in 2024"), "decline");
 }
+// Engine 2.0 2026-11-24: "the city of X" after an opener that already owns "the" ("Show me the", "What is the") keeps its place; the overlap had dropped it and the ask was "which place".
+{ const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const want: Record<string, string> = { "Show me the city of charlotte murder rate from beginning of data until present": "Charlotte, North Carolina Murder Rate Per Year, 1930-2025",
+    "What is the City of Atlanta's number of murders since 1970": "Atlanta, Georgia Murders Per Year, 1970-2025" };
+  for (const [q, title] of Object.entries(want)) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
