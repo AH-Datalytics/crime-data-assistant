@@ -26611,19 +26611,15 @@
    "question": "Nopd",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "answer",
+    "source": "historical"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "P301",
+    "drafted_by": "rules-v2",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P301 (Jeff 2026-11-24): NOPD is a place, and a bare place answers the violent and property composite; relabeled from clarify the whole question (R08)."
    }
   },
   {
