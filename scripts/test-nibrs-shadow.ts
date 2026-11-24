@@ -198,7 +198,7 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
 for (const q of ["In 2025", "Yearly counts", "all", "NIBRS", "Show me by month"]) as(shadowAnswer(q, { ...deps, noDefaults: false }), "clarify");
 // P301 (Jeff 2026-11-24, "clarify odd openers"): odd openers around a place clarify; a bare place answers; NIBRS or incident wording skips the composite.
 for (const q of ["do for nyc", "i want for the District", "i want to see this for denver", "can you show me dallas's rate", "Is this in California?", "show me portland", "NIBRS information of Texas", "incident rates in Texas over time"]) assert.ok(["clarify", "decline"].includes(shadowAnswer(q, { ...deps, noDefaults: false }).kind), q);
-for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q);
+for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q); // "Nopd" = Orleans Parish composite, answer:historical (QL-hist-2fccc68bd6, ruling 2026-11-24)
 // QL-nibrs-4bce7663f2, QL-nibrs-93270941d0 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" are not given the Crime Index composite; they ask which kind of crime.
 // (Asserted below, after the stub's data is loaded.)
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
@@ -986,7 +986,7 @@ for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile 
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas Murder Victims Under 18 Per Month, 2024");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
   // P301 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" ask which kind of crime (QL-nibrs-4bce7663f2, QL-nibrs-93270941d0).
-  for (const q of ["NIBRS information of Texas", "What are incident rates in Texas over time?"]) assert.equal(as(ask(q), "clarify").about, "which kind of crime", q);
+  for (const q of ["NIBRS information of Texas", "What are incident rates in Texas over time?", "What are incident rates in California over time?"]) assert.equal(as(ask(q), "clarify").about, "which kind of crime", q);
   // The age word plural, and after the crime (Coordinator 2026-11-16): the same meaning as the singular.
   for (const [q, want] of [
     ["teenagers arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/], ["teens arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/],
@@ -3893,4 +3893,21 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const [q, title] of Object.entries(want)) {
     const o = shadowAnswer(q, live) as any;
     assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
+// QL-ct-ad0277beb7: "people murdered ... that are of Hispanic or Latino descent" is Hispanic murder victims (one ethnicity, never "or" choices); with no
+// place named the nation's answer is Homicide Reports', routed, never a "which place" ask.
+{ const live = { ...deps, execute: () => [], noDefaults: false } as unknown as ShadowDeps;
+  for (const q of ["How many people were murdered in the last five years that are of Hispanic or Latino descent",
+    "How many people were murdered in the last five years in the United States that are of Hispanic descent",
+    "How many Hispanic people were murdered in the last five years", "How many people were murdered in the last five years that are Black",
+    "How many people were murdered in the last five years that are Hispanic in Texas", "How many Hispanic or Latino people were murdered in Texas in 2024"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 300)}`); }
+  // Bare places and fragments with no race named keep their ask (the Runner's gate ids).
+  for (const q of ["do for nyc", "i want for the District", "Nopd", "i want to see this for denver", "can you show me dallas's rate", "Is this in California?", "show me portland", "Show me juvenile crime trends"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind !== "route", `${q}: ${JSON.stringify(o).slice(0, 200)}`); }
+  // Two different groups are never collapsed to the first (Codex review): "Black or Hispanic" keeps both words.
+  for (const q of ["How many Black or Hispanic people were murdered in Texas in 2024", "How many people were murdered in Texas in 2024 who were Black and Hispanic"]) {
+    const t = readQuestion(q, 2026, "2026-09").text;
+    assert.ok(/hispanic/i.test(t) && /black/i.test(t), `${q}: ${t.slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
