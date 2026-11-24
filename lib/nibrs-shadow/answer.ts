@@ -1116,6 +1116,8 @@ function weaponRow(label: string): number {
  *  full calendar years (a part-year 2026 is not one), with the counts: "Yes. Carjackings fell from X in 2024 to Y in 2025." The by-year table stays under it. */
 const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
 const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
+/** P396: "(percent) change in <measure> in 2025" with one year and no second year. */
+const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+.+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
   const ud = UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
@@ -1185,6 +1187,15 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
     }
     return o;
+  }
+  // P396 (Jeff 2026-11-24): "change in X in 2025", one year, is read as the year before to that year (2024 to 2025); the title says so.
+  { const one = SINGLE_YEAR_CHANGE.exec(question);
+    if (one && Number(one[2]) > 1930 && Number(one[2]) <= new Date().getFullYear()) {
+      const y = Number(one[2]);
+      const o = shadowAnswer(question.replace(one[0], `${one[1]} from ${y - 1} to ${y}`), depsIn);
+      const dl = (o as { delivered?: { text: string[] } }).delivered; if (dl && o.kind !== "decline" && o.kind !== "clarify") dl.text.splice(1, 0, `"Change in ${y}" is read as ${y - 1} to ${y}.`);
+      return o;
+    }
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
