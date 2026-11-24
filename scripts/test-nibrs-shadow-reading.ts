@@ -5,7 +5,7 @@
  * flagged. Boundaries keep their own meaning. The wordings here are not the held-out cases' (LS-246..LS-270). Offline.
  */
 import assert from "node:assert/strict";
-import { nearestWord, readQuestion } from "../lib/nibrs-shadow/reading";
+import { fuzzyWord, nearestWord, readQuestion } from "../lib/nibrs-shadow/reading";
 
 const read = (q: string) => readQuestion(q, 2026);
 
@@ -210,3 +210,16 @@ console.log("nibrs shadow reading: general wording forms read; boundaries keep t
 // All years by default (Jeff 2026-11-11): "going back as far as possible" is by year with no range.
 assert.equal(rq("indianapolis homicide counts going back as far as possible").text, "indianapolis homicide counts by year");
 assert.equal(rq("Carjackings in Houston by month for all years since 2020").text.replace(/\s+/g, " "), "Carjackings in Houston by month since 2020", "a grain and a range of its own: the phrase is dropped");
+
+// H2 typos (bad-declines): stray characters, one changed letter in a word that is no English word, and slips in asking words.
+assert.equal(read("SWhow me murders in new orleans back to 1`980").text, "Show me murders in new orleans since 1980");
+assert.equal(read("Can you calcul;ate the national murder rate by year?").text, "Can you calculate the national murder rate by year?");
+assert.equal(read("vilont ctime rate in NH since 2000").text, "violent crime rate in NH since 2000");
+assert.equal(read("Can ypu list Chicago murders in 2024").text, "Can you list Chicago murders in 2024");
+assert.equal(read("can I seen homicides in Chicago in 2024").text, "can I see homicides in Chicago in 2024");
+assert.equal(read("show me aggravates assaults in salem oregon").text, "show me aggravated assaults in salem oregon");
+assert.equal(read("murders per 100.000 in Texas").text, "murders per 100,000 in Texas");
+assert.equal(read("Murders in El Paso, Texas tecas over time").text, "Murders in El Paso, Texas over time", "a repeated state is dropped");
+assert.equal(fuzzyWord("ctime", "ctime in Ohio"), "crime");
+assert.equal(fuzzyWord("tecas", "murders in Ohio"), null, "a state is a target only when the question names it");
+for (const w of ["sample", "lark", "countywy", "tacoma"]) assert.equal(fuzzyWord(w, "x in Ohio"), null, w);
