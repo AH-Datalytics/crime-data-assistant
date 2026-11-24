@@ -175,6 +175,9 @@ function keeps(t: string, asked: string, year: number, except: (typeof CONDITION
 /** A plain example of a question that works, for a decline with no button (Jeff's rule: every decline a next step). */
 export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
 /** Asks outside the data (Historical step one, cause 7), first match wins: [words, only when no crime is named, the limit said plainly]. */
+/** Asks about how the data is built or what it holds that no table answers (Jeff 2026-11-23): one plain sentence, whatever crime is named. */
+const DATA_ABSENT = /\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i;
+const DATA_ABSENT_TEXT = "That data is not available.";
 const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bon\s+a\s+map\b|\bmaps?\s+of\b/i, false, "Maps aren't available here; answers come as tables and charts."],
   [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here."],
@@ -184,7 +187,7 @@ const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bpopulations?\b/i, true, "Population is answered on its own for an agency, a state or the nation, a year or by year, as Crime Index publishes it; this question asks for more than that."],
   [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; ask for one crime in one place at a time."],
   // Jeff 2026-11-23 (declines owner, Group 2): how the data is built, or what it holds that no table answers, gets one plain sentence.
-  [/\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i, true, "That data is not available."],
+  [DATA_ABSENT, false, DATA_ABSENT_TEXT],
 ];
 
 /**
@@ -296,7 +299,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   }
   // No question that runs keeps both: an example that works for what the question did name (its place, else its crime),
   // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
-  if (/\bfor example\b/i.test(o.explanation)) return o;
+  if (/\bfor example\b/i.test(o.explanation) || o.explanation === DATA_ABSENT_TEXT) return o;
   const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
   const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate" || r.kind === "coverage"; };
   const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
@@ -1018,7 +1021,7 @@ export function isOpenEnded(question: string, year = 2026): boolean {
   return OPEN_ENDED_ANY.test(question) || OPEN_ENDED_SINCE.test(question) || (OPEN_ENDED_NO_YEAR.test(question) && !/\b(?:19|20)\d\d\b/.test(question));
 }
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  if (!depsIn.rewritten && !depsIn.checkingOffer && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
+  if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
     return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
