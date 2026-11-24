@@ -229,6 +229,26 @@ for (const q of ["Compare offender demographics for robbery by sex nationally in
   assert.deepEqual(o.plan.groupings.map((g) => g.dimension), ["offender.sex"], q);
   assert.equal(o.plan.measures[0].id, "offenders.robbery", q);
 }
+// P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
+const PEER_ASK_TEXT = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
+{
+  for (const q of ["Compare trend in Iowa City Iowa aggravated assault rate to similarly situated cities",
+    "how does baltimore's violent crime rate compare to the national rate, or to other cities?",
+    "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
+    "Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size",
+    "murders in Denver compared to other cities in 2024", "murders in Denver versus peer cities in 2024"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" && o.about === "which cities" && o.question === PEER_ASK_TEXT, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    assert.deepEqual(o.options.map((x) => [x.label, x.entry]), [["Name the cities", "which cities"]], q); // the app never offers a peer group of its own
+  }
+  // A place that must be told apart is asked first (the Richmond lesson), and each button keeps the peer wording so the peers are still asked after it.
+  const rich = as(ask("MURDERS IN RICHMOND IN MAY 2025 compared to similar cities"), "clarify"), plain = as(ask("MURDERS IN RICHMOND IN MAY 2025"), "clarify");
+  assert.equal(rich.about, plain.about);
+  assert.ok(rich.options.every((o) => !o.question || /compared to similar cities/.test(o.question)), JSON.stringify(rich.options.map((o) => o.question)));
+  // Other comparisons and sets are untouched: no peer ask.
+  for (const q of ["los angeles homicide rate in 2025 vs. other large cities", "Compare assault rates in Seattle vs other major cities", "murders in Denver and Portland in 2024"])
+    assert.notEqual((ask(q) as { about?: string }).about, "which cities", q);
+}
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
@@ -1132,20 +1152,20 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");
-    // Peers (Jeff 2026-11-21: no partial answers): never the place alone; the reader's decline, which asks for the agencies to compare.
+    // Peers (Jeff 2026-11-21: no partial answers; P305, Jeff 2026-11-24): never the place alone; the cities to compare with are asked.
     for (const q of ["Crime trends in Philadelphia compared to similar cities", "i want to know how crime in nashville compares to peer cities"]) {
       const o = ask(q);
-      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+      assert.ok(o.kind === "clarify" && o.about === "which cities" && o.question === PEER_ASK_TEXT, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
     }
     for (const q of ["Do you have any data for NYC?", "Do we have data for the United States?", "does Olathe KS report NIBRS data?"]) assert.ok(covers(q), q);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
     // Both crime and place missing: the place is asked first (Jeff 2026-11-14); a place named asks the crime.
     assert.equal((ask("national crime scorecard") as { about?: string }).about, "which kind of crime");
-    // Peers with no place named are declined for the peers, never asked for a place first (P187, no partial answers).
+    // Peers with no place named ask for the cities to compare with, never for a place first (P187, no partial answers; P305).
     for (const q of ["Crime trends compared to similar cities", "murders compared to peer cities"]) {
       const o = ask(q);
-      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+      assert.ok(o.kind === "clarify" && o.about === "which cities" && o.question === PEER_ASK_TEXT, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
     }
     // The shootings ask never leaves out an average (Codex 01.2).
     assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, SENT);
@@ -1156,8 +1176,8 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
       const o = ask(q);
       assert.ok(o.kind === "clarify" && o.about === "which years" && o.options.length === 1 && !!o.options[0].entry, q);
     }
-    // A named crime with peers keeps its decline (the ask is only for the crime type).
-    assert.notEqual(ask("robberies in Philadelphia compared to similar cities in 2024").kind, "clarify");
+    // A named crime with peers asks for the cities to compare with (P305), not for the crime type.
+    assert.equal((ask("robberies in Philadelphia compared to similar cities in 2024") as { about?: string }).about, "which cities");
     // Rankings PR A (coordinator 2026-11-11; job S4): a set never turns a capability decline into a place ask, and the
     // reader's unread words alone don't stop the place being asked as before.
     assert.equal(ask("Chart domestic violence calls over time in the four largest cities in the country").kind, "decline");

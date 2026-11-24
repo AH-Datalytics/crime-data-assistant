@@ -3235,24 +3235,19 @@
    "question": "Compare trend in Iowa City Iowa aggravated assault rate to similarly situated cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which cities"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
