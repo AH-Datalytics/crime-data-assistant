@@ -635,22 +635,23 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       // Named together without "vs": still categories of one attribute, never ANDed (Coordinator 2026-11-23).
       for (const [q, cols] of [
         ["female and male murder victims per year from 2000 to 2020 nationally", ["Year", "Female", "Male"]],
-        ["% of white, black, and other homicide victims in philadelphia by year since 2010", ["Year", "Black (%)", "White (%)", "Other (%)"]],
+        ["% of white, black, and other homicide victims in philadelphia by year since 2010", ["Year", "Black (%)", "White (%)", "Other (%)", "Unknown (%)"]],
       ] as const) {
         vsql.length = 0;
         const o = as(shadowAnswer(q, vdeps), "shr");
         assert.deepEqual(o.delivered.table.columns.map((c) => c.header), [...cols], q);
         assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'|race\s*=\s*'W'\s+AND[^;]*race\s*=\s*'B'/i.test(s)), q);
         // A share is out of ALL victims: the SQL does not limit the people to the named groups.
+        if (/%/.test(q)) assert.ok(vsql.some((s) => /ELSE '3'/.test(s)), `${q}: Unknown gathers blank and unlisted codes`);
         if (/%/.test(q)) assert.ok(!vsql.some((s) => /p\.\w*race\w* IN \('B', 'W'/.test(s) && /WHERE[^;]*p\.\w*race\w* IN \('B', 'W', /.test(s)), q);
       }
       // Non-zero cells: the group query returns the group index ('0' white... ) per year.
       {
-        const nz = (sql: string): unknown[][] => /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) && /AS k1/.test(sql) ? [[2010, "0", 6], [2010, "1", 3], [2010, "2", 1]]
+        const nz = (sql: string): unknown[][] => /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) && /AS k1/.test(sql) ? [[2010, "0", 5], [2010, "1", 3], [2010, "2", 1], [2010, "3", 1]]
           : /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) ? [[10]] : vstub(sql);
         const o = as(shadowAnswer("% of white, black, and other murder victims per year from 2010 to 2011 nationally", { ...vdeps, execute: nz } as ShadowDeps), "shr");
         const r = o.delivered.table.rows.find((x) => x[0] === "2010")!;
-        assert.deepEqual(r.slice(1), [60, 30, 10], "shares of all victims");
+        assert.deepEqual(r.slice(1), [50, 30, 10, 10], "shares of all victims, Unknown in its own column");
         assert.equal(r.slice(1).reduce<number>((a, b) => a + Number(b), 0), 100, `shares add to 100: ${JSON.stringify(r)}`);
         assert.ok(r.slice(1).every((v) => Number(v) > 0), JSON.stringify(r));
       }

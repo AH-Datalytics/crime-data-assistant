@@ -95,11 +95,11 @@ export type ShrQuestion = {
   measure: "murder" | "homicide" | "homicide_all" | "justifiable"; unit: "victims" | "offenders"; place: ShrPlace;
   /** Months inclusive ("1985-01".."2024-12"), already cut to 1985 and the release's latest month. */
   from: string; to: string; grain: "total" | "year" | "month";
-  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
+  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[]; rest?: boolean }[] } | null; share: boolean;
   /** Categories asked as percentages by year or month ("% of white, black and other victims by year"): a column each, every share out of ALL the period's victims. */
   pct?: true;
   /** P164 (Jeff 2026-11-19): a second breakdown of the same person ("race and sex of the victims"): the first down the side, this one across. Counts only; no share. */
-  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] };
+  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[]; rest?: boolean }[] };
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
   /** Several agencies (shrSeveral in answer.ts): `place` is the first, these the others. */
@@ -235,7 +235,9 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
     // "white, black and other": the codes not named make an Other group (race only; Unknown stays out).
     // A share is out of ALL victims: an Other group also covers whatever the named values leave (Unknown included) so the columns add to 100.
-    if ((opts.other || opts.percent) && !RECORD_DIMS.has(dim)) { const used = weaponGroups.flatMap((g) => g.codes); const rest = Object.keys(DIM_LABELS[dim] ?? {}).filter((c) => !used.includes(c)); if (rest.length) weaponGroups.push({ label: "Other", codes: rest }); }
+    if ((opts.other || opts.percent) && !RECORD_DIMS.has(dim)) { const used = weaponGroups.flatMap((g) => g.codes); const left = Object.keys(DIM_LABELS[dim] ?? {}).filter((c) => !used.includes(c)); const rest = left.filter((c) => labels[c] !== "Unknown"); const unk = left.filter((c) => labels[c] === "Unknown");
+      // Jeff 2026-11-23: Unknown is its own column (not folded into Other); it also gathers a blank code and any code outside the list.
+      if (rest.length) weaponGroups.push({ label: "Other", codes: rest }); if (unk.length && !sets.some((s) => s!.some((c) => unk.includes(c)))) weaponGroups.push({ label: "Unknown", codes: unk, rest: true }); }
     groupedDim = dim;
     breakdown = { dim, groups: weaponGroups };
   }
@@ -313,7 +315,7 @@ function condition(f: ShrFilter, a: string): string {
 function categorySql(sq: ShrQuestion, a: string, which: 1 | 2 = 1): string {
   const b = (which === 1 ? sq.breakdown : sq.breakdown2)!;
   const col = RECORD_DIMS.has(b.dim) ? `r.${DIM_COLUMN[b.dim]}` : `CASE WHEN ${a}.in_record THEN ${a}.${DIM_COLUMN[b.dim]} END`;
-  if (b.groups) return `CASE ${b.groups.map((g, i) => `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`).join(" ")} END`;
+  if (b.groups) return `CASE ${b.groups.map((g, i) => (g.rest ? `ELSE '${i}'` : `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`)).sort((x, y) => Number(x.startsWith("ELSE")) - Number(y.startsWith("ELSE"))).join(" ")} END`;
   if (!b.bins) return col;
   const ageCol = `CASE WHEN ${a}.in_record THEN ${a}.age END`;
   return `CASE ${b.bins.map(([lo, hi], i) => `WHEN ${ageCol} BETWEEN ${lo} AND ${hi} THEN '${i}'`).join(" ")} END`;
