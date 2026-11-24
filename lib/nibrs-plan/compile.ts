@@ -449,7 +449,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     if (!!d.age !== !!g.bins) return no(d.age ? `v0 groups ${g.dimension} in bins` : `v0 bins ages only, not ${g.dimension}`);
     const bins = g.bins ?? [];
     if (bins.some((b, i) => b.from > b.to || bins.some((c, j) => j !== i && b.from <= c.to && c.from <= b.to))) return no("age bins must not overlap (P5)");
-    groupCols.push(g.bins ? (d.binned ? d.binned(g.bins) : ageBins(d.col, g.bins)) : d.col);
+    // The violent-crime weapon table (victimWeapons): the grouping is the weapon GROUP (firearm 11-15, knife 20, blunt 30, personal 40, other),
+    // so the unit query's DISTINCT counts a victim once per group, not once per weapon code (a victim with a handgun and a rifle is one firearm victim).
+    const weaponGroup = entity === "victim" && g.dimension === "offense_weapon.weapon" && t.victimWeapons;
+    groupCols.push(weaponGroup ? `CASE WHEN ${d.col} IN ('11', '12', '13', '14', '15') THEN '11' WHEN ${d.col} = '20' THEN '20' WHEN ${d.col} = '30' THEN '30' WHEN ${d.col} = '40' THEN '40' ELSE '90' END`
+      : g.bins ? (d.binned ? d.binned(g.bins) : ageBins(d.col, g.bins)) : d.col);
     if (d.join) joins.push(d.join);
   }
   if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
@@ -510,6 +514,14 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       if (!w || !codes.length) return no("v0 filters offenders by their relationship to a victim of the counted crime only");
       unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r4 JOIN ${read("victim_offense")} vo4 ON ${sameVictim("vo4", "r4")}
         WHERE ${sameIncident("r4", "f")} AND r4.offender_number = f.offender_seq AND r4.offender_relationship IN (${list(w.values!.map(String))}) AND vo4.connected_offense IN (${list(codes)}))`);
+      continue;
+    }
+    // P302: incidents with a victim of the measure's crime whose offender had one of the relationships (domestic violence), each incident once.
+    if (f.kind === "exists" && !f.negate && f.entity === "victim_offender" && f.scope === "incident" && entity === "incident") {
+      const w = f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].dimension === "victim_offender.relationship" && f.where[0].op === "in" && f.where[0].values?.length ? f.where[0] : null;
+      if (!w || !codes.length) return no("v0 filters incidents by a victim's relationship to the offender for a named crime only");
+      unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r4 JOIN ${read("victim_offense")} vo4 ON ${sameVictim("vo4", "r4")}
+        WHERE ${sameIncident("r4", "o")} AND r4.offender_relationship IN (${list(w.values!.map(String))}) AND vo4.connected_offense IN (${list(codes)}))`);
       continue;
     }
     if (f.kind === "exists" && !f.negate && f.entity !== "property") {

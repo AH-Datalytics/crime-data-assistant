@@ -134,6 +134,8 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "dv:family", pattern: R(String.raw`\bfamily\s+violence\b|\bby\s+(?:family|household)\s+members?\b`) },
   // P169 (Jeff 2026-11-19): "domestic homicides" / "domestic murders" are the murders whose victim was an intimate partner or a family or household member.
   { concept: "filter", value: () => "dv:domestic", pattern: R(String.raw`\bdomestic(?:\s+violence)?(?=\s+(?:homicides?|murders?|killings?)\b)`) },
+  // Jeff 2026-11-24: "what share of aggravated assaults are domestic violence" is the share of incidents with a domestic violence victim. Only after a linking verb, so "domestic violence aggravated assault incidents" stays the measure.
+  { concept: "filter", value: () => "dv:domestic", pattern: R(String.raw`(?<=\b(?:are|were|is|was|involv(?:e|es|ed|ing))\s+(?:(?:a|an)\s+)?)domestic\s+violence(?:\s+(?:incidents?|related))?\b`) },
   // bias motivations
   { concept: "filter", value: () => "bias:21", pattern: R(String.raw`\banti[-\s]?(?:jewish|semitic)\b|\bantisemitic\b`) },
   { concept: "filter", value: () => "bias:12", pattern: R(String.raw`\banti[-\s]?black\b`) },
