@@ -3320,7 +3320,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const drugPart = clause0("measure").find((p) => p.value === "drug_possession" && !/possess/i.test(p.text));
   // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
   if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "This isn't available: drug crimes (drug and narcotic offenses plus drug equipment violations) beside other crimes.");
-  if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+  const drugStatePlace = plan.geography.places[0]?.kind === "state" || plan.geography.places[0]?.kind === "national";
+  if (drugPart && drugStatePlace && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+    // Coordinator 2026-11-24: a state or national sum counts the one composite measure (35A + 35B), so it is a single column.
+    plan.measures[0] = { ...plan.measures[0], id: "offenses.drug_crimes" };
+    combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  } else if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
