@@ -1066,6 +1066,9 @@ const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+/** P306: "typical dollar value" / "typical loss" (also amount, cost, worth); "typical" alone or with other nouns is not this ask. */
+const TYPICAL_VALUE = /\btypical\s+(?:dollar\s+)?(?:value|loss|amount|cost|worth)\b/i;
+const TYPICAL_ASK = "Do you mean the average or the median?";
 function kingsCountyAsk(question: string): ShadowOutcome | null {
   const m = KINGS_COUNTY.exec(question);
   if (!m) return null;
@@ -1175,6 +1178,16 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  // P306 (Jeff 2026-11-24): a "typical" dollar value or loss does not say which summary is meant; ask average or median.
+  { const ty = TYPICAL_VALUE.exec(question);
+    if (ty) {
+      const swap = (word: string) => question.replace(/\btypical\b/i, word);
+      return { kind: "clarify", about: "mean or median value", question: TYPICAL_ASK, options: [
+        { label: "Average", question: swap("average") },
+        { label: "Median", question: swap("median") },
+      ] };
+    }
+  }
   if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?|arsons?)\b/i.test(question) && !/\brates?\b/i.test(question)) { // a rates ask is never rewritten to arrests (P293)
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.

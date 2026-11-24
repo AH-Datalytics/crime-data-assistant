@@ -229,6 +229,19 @@ for (const q of ["Compare offender demographics for robbery by sex nationally in
   assert.deepEqual(o.plan.groupings.map((g) => g.dimension), ["offender.sex"], q);
   assert.equal(o.plan.measures[0].id, "offenders.robbery", q);
 }
+// P306 (Jeff 2026-11-24): a "typical" dollar value or loss asks whether the average or the median is meant.
+{
+  for (const q of ["what is the typical dollar value of shoplifting offenses in california",
+    "typical dollar value of theft offenses with the location type is a type of business in california",
+    "what is the typical dollar loss for shoplifitng offenses in california?"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" && o.about === "mean or median value" && o.question === "Do you mean the average or the median?", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    assert.deepEqual(o.options.map((x) => x.label), ["Average", "Median"], q);
+    assert.ok(o.options.every((x, i) => typeof x.question === "string" && x.question.includes(i === 0 ? "average" : "median") && !/typical/i.test(x.question)), JSON.stringify(o.options));
+  }
+  // "Typical" without a dollar value is not this ask.
+  assert.notEqual((ask("typical weather in california") as { about?: string }).about, "mean or median value");
+}
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
