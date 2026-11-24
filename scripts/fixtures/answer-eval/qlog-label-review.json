@@ -25557,7 +25557,12 @@
 },
 "QL-ct-8e2a235e68": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-24",
+"why": "Jeff 2026-11-24: Pittsburg stays an ask, which Pittsburgh/Pittsburg",
+"expected": {
+"outcome": "clarify",
+"about": "which Pittsburgh"
+}
 },
 "QL-ct-911d670a87": {
 "status": "reviewed",
@@ -26907,15 +26912,11 @@
 },
 "QL-hist-6181577034": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-24",
+"why": "Jeff 2026-11-24: a map is declined (\"Maps aren't available here\")",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline",
+"reason": "Maps aren't available here"
 }
 },
 "QL-hist-618159881c": {

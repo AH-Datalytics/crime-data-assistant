@@ -3243,6 +3243,12 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Engine 2.0 2026-11-24 (g449c): "more about", "look like in" and "in the last few years" beside a place and "crime" ask for nothing: the composite answers, as "Dallas crime" does, not the reader's decline.
   { const fx = shadowAnswer("What was the violent crime rate in Fairfax County, VA, in 2020, 2021, 2022, 2023, 2024, and 2025?", { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps);
     assert.ok(fx.kind === "historical" && fx.delivered.text[0] === "Fairfax County, Virginia Violent Crime Rate Per Year, 2020-2025", JSON.stringify(fx).slice(0, 300)); }
+  // Jeff 2026-11-24 (QL-ct-d38c172ccc, QL-ct-72ccc72ccc): a county police department's name is a place, so "crime" or "crime trends" for it
+  // answers with the composite (P182), no ask which kind of crime, as "Houston Police Department" does.
+  for (const q of ["crime in Fairfax County Police Department", "what are the crime trends for Fairfax County Virginia Police Department for the past three years?", "crime in Arlington County Police Department", "Nassau County Police Department crime"]) {
+    const fo = shadowAnswer(q, { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps);
+    assert.notEqual(fo.kind, "clarify", `${q}: ${JSON.stringify(fo).slice(0, 200)}`);
+  }
   for (const t of ["more about", "look like in", "in the last few years"]) assert.ok(askInsteadChecks.pureFillerOnly(t), t);
   assert.ok(!askInsteadChecks.pureFillerOnly("last few years") && !askInsteadChecks.pureFillerOnly("in the last 5 years"), "other period words stay unread");
   for (const q of ["Tell me more about crime in Dallas", "What does crime look like in Dallas?", "tell me about Dallas crime in the last few years"]) {

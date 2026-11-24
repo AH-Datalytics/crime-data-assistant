@@ -2482,7 +2482,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const hasPartI = ledger0.parts.some((p) => p.clause === 0 && partI(p));
     // Nothing else asked: offenses is allowed, but no arrests, victims, breakdown, cohort, filter or source named.
     const onlyCrimeOverTime = ledger0.parts.every((p) => p.clause !== 0 || p.state === "context" || ["measure", "place", "period", "grain", "statistic"].includes(p.concept)
-      || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
+      || (p.concept === "unit" && p.value === "offenses") || partI(p)
+      // "Fairfax County Police Department": the reader splits the agency noun off a county or city place; it is the place's own agency, not a second ask.
+      || (p.concept === "entity" && p.value === "agency" && /^(?:police|sheriff'?s?)\s+(?:department|office)$/i.test(p.text.trim()) && clause0("place").length === 1 && /^(?:county|city):/.test(String(clause0("place")[0].value))) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
     // P301 (Jeff 2026-11-24, "clarify odd openers"): with no crime word and no Part I, only a bare place answers (an opener "show me" is fine);
