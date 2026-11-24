@@ -258,6 +258,9 @@ const PHRASES: [RegExp, string][] = [
   // San Francisco's initials and short name (scorecard 2026-11-16: "SF aggravated assault per month", "What is SFPD rape clearance rate?").
   // "The annual number of murders" is "annual murders": a series by year (P06), not a question with no period.
   [/\b(annual)\s+number\s+of\b/gi, "$1"],
+  // "At an annual tempo" / "at a monthly pace" is the series by year / by month (the coordinator, 2026-11-24, QL-ct-497f978f17).
+  [/\bat\s+an?\s+(?:annual|yearly)\s+(?:tempo|pace|rhythm)\b/gi, "by year"],
+  [/\bat\s+a\s+monthly\s+(?:tempo|pace|rhythm)\b/gi, "by month"],
   [/\bsfpd\b/gi, "San Francisco Police Department"],
   [/\bsan\s+fran\b/gi, "San Francisco"],
   [/(?<![A-Za-z.])sf(?![A-Za-z.\d])/gi, "San Francisco"],
