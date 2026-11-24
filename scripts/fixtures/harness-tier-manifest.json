@@ -2871,6 +2871,15 @@
       "note": "the fuzzy place search (lib/geo-fuzzy.ts) gives exactly the answers it gave before it was made fast, for 610 fixed inputs (scripts/fixtures/geo-fuzzy-golden.json); reads the place catalog only, no database, no model, no network"
     },
     {
+      "id": "test-nibrs-shadow-open-ended",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-open-ended.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "open-ended asks clarify and data-absent asks get a plain decline (Jeff 2026-11-23); 13 labeled questions plus neighbors; stub DuckDB step, checked-in place index."
+    },
+    {
       "id": "test-nibrs-shadow-period-grammar",
       "tier": "F",
       "script": "scripts/test-nibrs-shadow-period-grammar.ts",
