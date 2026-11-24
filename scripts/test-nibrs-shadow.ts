@@ -202,6 +202,13 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   assert.equal(w.delivered.text[0], "Pennsylvania Weapon Types Used in Violent Crimes, Victims, 2025");
   assert.ok(w.delivered.text.some((t) => /counted in each weapon's row/.test(t)), JSON.stringify(w.delivered.text));
 }
+// QL-nibrs-58d3c67ab3 (ruling B, P299): "Have carjackings decreased ... past two years" is a yes or no with the counts, and the by-year table stays.
+{
+  const o = as(ask("Have carjackings decreased in Rhode Island in the past two years?"), "answer");
+  assert.match(o.delivered.text[0], /^Rhode Island Carjacking Offenses Per Year, 2024-2025$/);
+  assert.ok(o.delivered.text.some((t) => /^(Yes|No)\. Carjacking offenses (were|rose|fell)/.test(t) && /2024/.test(t) && /2025/.test(t)), JSON.stringify(o.delivered.text));
+  assert.equal((o.delivered.table as { rows: unknown[] }).rows.length, 2);
+}
 // Wrong clarifies, Fairfax (QL-ct-fe39e34290): three or more years named one by one are separate years, as two are ("2019 and 2021"), not "which period".
 {
   const list = as(ask("Murders in Houston according to NIBRS in 2019, 2020, 2021, and 2023"), "answer") as unknown as { plan: { period: { kind: string; years: number[] } } };
@@ -924,6 +931,15 @@ for (const q of ["show me the trend of juvenile crime in Kansas since 2020", "ju
   assert.ok(a.buttons?.some((b) => /Consistent Reporting Agencies/.test(b.label)), q);
 }
 assert.equal(as(ask("juvenile arrests in Kansas since 2020"), "answer").delivered.text[1], "Summed over the agencies that reported each year.", "asking for arrests leaves the answer as it was");
+// Codex 472: "Virginia West Virginia" keeps its final state (West Virginia is a second state, not Virginia said again).
+assert.match(readQuestion("Murders in Richmond, Virginia West Virginia", 2026, "2026-10").text, /West Virginia\s*$/);
+// Codex 472: a named offense (arson) or a rates ask is not the generic juvenile-arrests rewrite.
+for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile crime in Kansas"]) {
+  const o = ask(q);
+  const text = o.kind === "answer" ? o.delivered.text : [];
+  assert.ok(!text.includes("Arrests do not equal crimes."), `${q}: ${JSON.stringify(text)}`);
+  assert.ok(!text.some((t: string) => /^Kansas Arrests of Arrestees Under 18/.test(t)), q);
+}
 // Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
 {
   const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;
@@ -1679,7 +1695,13 @@ for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for
 }
 for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrests for violent crimes by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025", "arrests by sex by year in Texas from 2021 to 2025"])
   as(ask(q), "answer");
-const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
+// P293: a bare juvenile crime trend is the nation's juvenile arrests by year, with the arrests note (here the nation resolves).
+{
+  const j = as(shadowAnswer("show me juvenile crime trend 2005 to 2025", { ...deps, noDefaults: false }), "answer");
+  assert.ok(j.delivered.text.includes("Arrests do not equal crimes."), JSON.stringify(j.delivered.text));
+  assert.match(j.delivered.text[0], /^United States Arrests of Arrestees Under 18 Per Year/, JSON.stringify(j.delivered.text));
+}
+const charged =as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 // Jeff 2026-11-11, all years by default: by year / per month / a trend with no range is every year the source has, said.
 const perYear = as(ask("Carjackings per year in houston"), "answer");
 assert.equal(perYear.delivered.text[1], "No years were given, so every year in the data is shown: 2017 through 2025.");

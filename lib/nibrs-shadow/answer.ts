@@ -184,6 +184,11 @@ export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
 /** Asks about how the data is built or what it holds that no table answers (Jeff 2026-11-23): one plain sentence, whatever crime is named. */
 const DATA_ABSENT = /\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i;
 const DATA_ABSENT_TEXT = "That data is not available.";
+/** Jeff 2026-11-24: misdemeanor/felony arrests (NIBRS does not record the class of an arrest) and a national overall/violent rate by month (national rates are annual, from Historical). */
+const MISDEMEANOR_ARREST = /\b(?:misdemeanou?rs?|felony|felonies)\s+arrests?\b|\barrests?\s+(?:for|of|as)\s+(?:a\s+)?(?:misdemeanou?rs?|felony|felonies)\b/i;
+const DAILY_WORDS = /\bper\s+day\b|\beach\s+day\b|\bby\s+(?:the\s+)?day\b|\bday[-\s]by[-\s]day\b|\bdaily\b/i;
+const MISDEMEANOR_TEXT ="That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor.";
+const NATIONAL_MONTHLY_RATE = /\b(?:national|nationwide|united\s+states|u\.?s\.?)\b[^?]*\bcrime\s+rates?\b[^?]*\b(?:monthly|by\s+month|each\s+month|per\s+month)\b|\bcrime\s+rates?\b[^?]*\b(?:in|for|across|of)\s+(?:the\s+)?(?:united\s+states|u\.?s\.?a?\.?|nation|country)\b[^?]*\b(?:monthly|by\s+month|each\s+month|per\s+month)\b|\b(?:monthly|by\s+month|each\s+month|per\s+month)\b[^?]*\b(?:national|nationwide)\b[^?]*\bcrime\s+rates?\b|\b(?:monthly|by\s+month|each\s+month|per\s+month)\b[^?]*\bcrime\s+rates?\b[^?]*\b(?:in|for|across|of)\s+(?:the\s+)?(?:united\s+states|u\.?s\.?a?\.?|nation|country)\b/i;
 const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bon\s+a\s+map\b|\bmaps?\s+of\b/i, false, "Maps aren't available here; answers come as tables and charts."],
   [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here."],
@@ -1058,7 +1063,7 @@ function peakMeasure(question: string): string | null {
 
 const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 /** Jeff 2026-11-24: "juvenile crime" with no crime, victim or offender named is juvenile arrests (NIBRS, under 18) per year, the answer saying arrests are not crimes. */
-const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?))/i;
+const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
 function kingsCountyAsk(question: string): ShadowOutcome | null {
@@ -1107,7 +1112,28 @@ function weaponRow(label: string): number {
   if (/^personal|^unarmed/i.test(label)) return 3;
   return 4;
 }
+/** Coordinator 2026-11-24, ruling B (QL-nibrs-58d3c67ab3): "Have carjackings decreased in Rhode Island in the past two years?" is answered yes or no from the
+ *  full calendar years (a part-year 2026 is not one), with the counts: "Yes. Carjackings fell from X in 2024 to Y in 2025." The by-year table stays under it. */
+const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
+const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const ud = UP_DOWN_YES_NO.exec(question);
+  if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
+    const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
+    const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "answer" && t && t.columns.length === 2 && t.rows.length >= 2 && t.rows.every((r) => typeof r[1] === "number" && /^\d{4}$/.test(String(r[0])))) {
+      const first = t.rows[0], last = t.rows[t.rows.length - 1];
+      const a = first[1] as number, b = last[1] as number;
+      const wantUp = /^(?:increased|gone\s+up|risen)$/i.test(ud[2].replace(/\s+/g, " "));
+      const noun = t.columns[1].header;
+      const sentence = a === b
+        ? `No. ${noun} were ${a.toLocaleString("en-US")} in ${first[0]} and ${b.toLocaleString("en-US")} in ${last[0]}.`
+        : `${(b > a) === wantUp ? "Yes" : "No"}. ${noun} ${b > a ? "rose" : "fell"} from ${a.toLocaleString("en-US")} in ${first[0]} to ${b.toLocaleString("en-US")} in ${last[0]}.`;
+      o.delivered = { ...o.delivered, text: [o.delivered.text[0], sentence, ...o.delivered.text.slice(1)] } as typeof o.delivered;
+      return o;
+    }
+    return o;
+  }
   const vw = question.match(VIOLENT_WEAPON_TYPES);
   if (vw) {
     const crimes = ["Murder", "Rape", "Robbery", "Aggravated assault"];
@@ -1149,7 +1175,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
-  if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?)\b/i.test(question)) {
+  if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?|arsons?)\b/i.test(question) && !/\brates?\b/i.test(question)) { // a rates ask is never rewritten to arrests (P293)
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
     if (/\btrends?\s+(?:of|in)\b/i.test(q)) q = q.replace(/\b(?:the\s+)?trends?\s+(?:of|in)\s+/i, "").replace(/\s*\?*\s*$/, /\b(?:per|by)\s+(?:year|month)\b/i.test(q) ? "" : " per year");
@@ -1162,6 +1188,8 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
+  if (MISDEMEANOR_ARREST.test(question)) return decline("unsupported_capability", MISDEMEANOR_TEXT);
+  if (NATIONAL_MONTHLY_RATE.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
     return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
@@ -1808,7 +1836,7 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
   // What this count is not: a supporting column, a person's detail, a clearance, a property or composite count, or a unit other than incidents
   // ("hate crime victims"): declined, never answered as the plain count (Codex review 04, 05).
   const f = flags(ledger0);
-  if (f.column || f.people || f.clearance || f.property || f.composite || f.combined || f.arrestsThrough || ledger0.parts.some((p) => p.clause === 0 && p.concept === "unit")) return null;
+  if (f.column || f.people || f.clearance || f.property || f.composite || f.combined || f.arrestsThrough || ledger0.parts.some((p) => p.clause === 0 && p.concept === "unit" && p.value !== "incidents")) return null;
   let period: { from: string; to: string };
   // No range named for a series: every year the hate crime data have, said (Jeff 2026-11-11, "All years by default").
   const allYears = plan.defaults.some((x) => x.path === "period");
@@ -1845,7 +1873,8 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
     if (hq.why === "after the latest month") return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the hate crime data; the latest complete month available is ${monthName(deps.hate.latestMonth)}.`);
     return null;
   }
-  const a = answerHate(allYears ? { ...hq, allYears: true } : hq, deps.hate, deps.execute);
+  const direction = /\b(?:getting|gotten|got)\s+(?:worse|better)\b|\bgoing\s+(?:up|down)\b|\b(?:rising|falling|increasing|decreasing)\b|\bup\s+or\s+down\b/i.test([ledger0.question ?? "", ...(flags(ledger0).readings ?? []).map((r) => r.from)].join(" "));
+  const a = answerHate({ ...hq, ...(allYears ? { allYears: true } : {}), ...(direction ? { direction: true } : {}) }, deps.hate, deps.execute);
   return a.kind === "hate" ? a : decline("outside_release_coverage", a.explanation);
 }
 function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
@@ -3955,6 +3984,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "This isn't available: this weapon or relationship selection.");
   const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
+    // P291 (Jeff 2026-11-24): "per day" answers by month, and says so.
+    ...((flags(ledger0).readings ?? []).some((x) => x.kind === "phrase" && x.to === "by month" && DAILY_WORDS.test(x.from)) ? ["Per day is not available, so monthly figures are shown."] : []),
+    // P293 (Jeff 2026-11-24): "juvenile crime trend" is read as juvenile arrests; arrests are not crimes.
+    ...((flags(ledger0).readings ?? []).some((x) => x.kind === "phrase" && /^juveniles?\s+arrests\s+in\s+the\s+united\s+states\s+by\s+year$/i.test(x.to)) ? ["Arrests do not equal crimes."] : []),
     // P84 (Jeff 2026-11-01): how the phrase was read.
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
     // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.

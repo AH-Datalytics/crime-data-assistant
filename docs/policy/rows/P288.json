@@ -1,0 +1,12 @@
+{
+  "id": "P288",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What are the trends in misdemeanor arrests nationally since 1991?\", \"felony arrests in Texas\"",
+  "what the app does today": "The question asked which place.",
+  "proposed behavior": "The question declines: \"That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor.\"",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator): NIBRS has no felony or misdemeanor class for an arrest.",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (misdemeanor arrests); QL-nibrs-d30b62640a."
+}

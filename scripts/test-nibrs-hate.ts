@@ -92,18 +92,30 @@ assert.ok(everyYear.delivered.text.includes("No years were given, so every year 
 const total = ask("hate crimes in Texas from 2020 to 2024");
 as(total, "hate");
 assert.match(sqls[sqls.length - 1], /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/);
-assert.notEqual(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013").kind, "hate", "the window reaches 2012, when code 14 meant another group");
+// Jeff 2026-11-24 (P290): code 14 before 2013 was Asian/Pacific Islander: combined with 16, labeled so, with a note; no clean older group for 16.
+const asian = as(ask("anti-Asian hate crimes in California from 1980 to 1995"), "hate");
+assert.ok(/bias_code IN \('14', '16'\)/.test(sqls[sqls.length - 1]), sqls[sqls.length - 1]);
+assert.ok(asian.delivered.text.some((t) => /Anti-Asian or Pacific Islander hate crimes/i.test(t)) && asian.delivered.text.includes("The FBI combined Asian and Pacific Islander bias before 2013."), asian.delivered.text.join(" / "));
+assert.ok(asian.delivered.text.includes("Hate crime data by bias starts in 1991."));
+assert.equal(as(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013"), "hate").delivered.text.includes("The FBI combined Asian and Pacific Islander bias before 2013."), true);
+// Codex review of 472: code 16 cannot be asked by name here (its phrase is not read), so the cutoff is proved on the combined anti-LGBTQ group, whose
+// codes 71 and 72 had no older meaning: the same span answers from 2013 on and declines before, so the cutoff is what declines it.
+assert.equal(as(ask("anti-LGBTQ hate crimes in Texas from 2014 to 2020"), "hate").period.from, "2014-01", "from 2013 on answers");
+assert.equal(ask("anti-LGBTQ hate crimes in Texas from 2005 to 2015").kind, "decline", "lgbtq group before 2013 declines");
+// Two biases with a note each: the combined answer carries the note once.
+const asianJewish = as(ask("anti-Asian and anti-Jewish hate crimes in California from 2005 to 2015"), "hate");
+assert.equal(asianJewish.delivered.text.filter((t: string) => t === "The FBI combined Asian and Pacific Islander bias before 2013.").length, 1, asianJewish.delivered.text.join(" | "));
+assert.ok(asianJewish.delivered.text.some((t: string) => /Anti-Jewish/i.test(t)), "the anti-Jewish bias is in the answer: " + asianJewish.delivered.text.join(" | "));
 // 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
-const asian = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
-assert.ok(asian.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asian.delivered.text.join(" | "));
+const asianAll = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
+assert.ok(asianAll.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asianAll.delivered.text.join(" | "));
 assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");
 assert.match(modernFromNote({ year: 2015, biases: [{ name: "Anti-Arab", year: 2015 }, { name: "Anti-Jehovah's Witness", year: 2015 }] }), /shown from 2015, when the bias category took its current meaning/);
-assert.notEqual(ask("anti-Asian hate crimes in Texas from 2010 to 2024").kind, "hate", "an explicit range before 2013 is not answered");
 const asianNy = ask("Compare anti-Asian hate crimes in California and New York by year");
 assert.equal(asianNy.kind, "clarify", "which New York is asked, as it is for anti-Jewish");
 assert.equal(as(ask("hate crimes in Texas in 1980"), "decline").explanation, "Hate crime data here start in 1991, so 1980 isn't included.");
 assert.equal(as(ask("hate crimes in Texas from 1960 to 1990"), "decline").explanation, "Hate crime data here start in 1991, so 1960 through 1990 aren't included.");
-assert.ok(as(ask("hate crimes in Texas by year from 1990 to 1993"), "hate").delivered.text.includes("Hate crime data here start in 1991, so 1990 isn't included."));
+assert.ok(as(ask("hate crimes in Texas by year from 1990 to 1993"), "hate").delivered.text.includes("Hate crime data by bias starts in 1991."));
 assert.notEqual(ask("hate crime victims in Texas in 2024").kind, "hate", "victims are not incidents");
 assert.notEqual(ask("hate crimes in Texas in 2024 with the number of agencies reporting").kind, "hate", "a supporting column is not dropped");
 // Without a build, or for a shape this source does not answer, a plain decline: never a NIBRS answer, never the weapon sentence.
@@ -137,6 +149,14 @@ assert.notEqual(rate.kind, "answer", "a rate is not built");
   assert.deepEqual(byBias.delivered.table.rows, [["Anti-Jewish", 7], ["Anti-Black or African American", 5], ["Location not confirmed", 9], ["Not recorded", 1]]);
   assert.ok(byBias.delivered.text.includes("An incident with more than one bias is counted under each, so the rows add to more than 857 hate crimes."), byBias.delivered.text.join(" / "));
   assert.ok(/ GROUP BY c$/.test(sqls[sqls.length - 2]) && /bias_label AS c/.test(sqls[sqls.length - 2]), sqls[sqls.length - 2]);
+  assert.ok(byBias.delivered.text.some((t) => /^Anti-Jewish is the most common bias, with 7 hate crimes\.$/.test(t)), byBias.delivered.text.join(" / "));
+  const common = as(ask("What was the most common bias/motivation for hate crimes in Philadelphia in 2024?"), "hate");
+  assert.ok(common.delivered.text.some((t) => /is the most common bias, with \d+ hate crimes\.$/.test(t)), common.delivered.text.join(" / "));
+  const worse = as(ask("What is the hate crime trend in Texas? Is it getting worse?"), "hate");
+  assert.ok(worse.delivered.text.some((t) => /^Incidents (?:rose|fell) from \d+ in \d{4} to \d+ in \d{4}\.$|^Incidents were \d+ in both/.test(t)), worse.delivered.text.join(" / "));
+  const pre91 = as(ask("hate crimes in Texas by year from 1980 to 1995"), "hate");
+  assert.ok(pre91.delivered.text.includes("Hate crime data by bias starts in 1991."), pre91.delivered.text.join(" / "));
+  assert.equal(ask("antisemitic incidents in Texas in 2023").kind, "hate");
   const yearly = as(ask("hate crimes by bias in Texas by year from 2023 to 2024"), "hate");
   assert.deepEqual(yearly.delivered.table.columns.map((c) => c.header), ["Year", "Bias", "Hate crimes"]);
   assert.deepEqual(yearly.delivered.table.rows, [["2023", "Anti-Black or African American", 8], ["2023", "Anti-Jewish", 7], ["2023", "Location not confirmed", 9], ["2024", "Anti-Jewish", 3]]);
