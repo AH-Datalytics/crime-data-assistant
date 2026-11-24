@@ -1150,7 +1150,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       const m = first.match(/^(.*?) Murder Victims by Weapon, (.*)$/);
       const title = m ? `${m[1]} Weapon Types Used in Violent Crimes, Victims, ${m[2]}` : first;
       const rest = answers[0].delivered.text.slice(1).filter((x) => !/^A crime that falls in several/.test(x) && !/^Counts are /.test(x) && !/^Property crimes are counted by offense/.test(x));
-      const note = "Counts are victims; a victim of an offense with two weapons is counted in each weapon's row, so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
+      const note = "Counts are victims; a victim is counted once in each weapon row that applies (two firearms count once; a firearm and a knife count in both rows), so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
       const evidence = rows.flatMap((r, ri) => r.slice(1).map((v, ci) => ({ row: ri, statistic: (columns[ci + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
       const o = answers[0];
       return { ...o, delivered: { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest, note] } as typeof o.delivered };

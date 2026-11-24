@@ -203,11 +203,15 @@ for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(sh
 // (Asserted below, after the stub's data is loaded.)
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
 {
+  sqls.length = 0;
   const w = as(ask("what weapon types were used in violent crimes in pennsylvania in 2025"), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
   assert.deepEqual(w.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder", "Rape", "Robbery", "Aggravated assault"]);
   assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["Firearm (handgun, rifle, shotgun, other or unknown firearm)", "Knife or cutting instrument", "Blunt object", "Personal weapons (hands, fists, feet)", "Other or none/unknown"]);
   assert.equal(w.delivered.text[0], "Pennsylvania Weapon Types Used in Violent Crimes, Victims, 2025");
-  assert.ok(w.delivered.text.some((t) => /counted in each weapon's row/.test(t)), JSON.stringify(w.delivered.text));
+  assert.ok(w.delivered.text.some((t) => /counted once in each weapon row that applies/.test(t)), JSON.stringify(w.delivered.text));
+  // Distinct victims per weapon GROUP (Coordinator 2026-11-24, Pennsylvania double count): the unit query groups by the group, so its DISTINCT counts a victim once per group.
+  const wsql = sqls.filter((s) => /offense_weapon/.test(s) && /AS g0/.test(s));
+  assert.ok(wsql.length >= 4 && wsql.every((s) => /CASE WHEN w\.weapon IN \('11', '12', '13', '14', '15'\) THEN '11' WHEN w\.weapon = '20' THEN '20'/.test(s) && /SELECT DISTINCT/.test(s)), wsql[0]);
 }
 // QL-nibrs-58d3c67ab3 (ruling B, P299): "Have carjackings decreased ... past two years" is a yes or no with the counts, and the by-year table stays.
 {
