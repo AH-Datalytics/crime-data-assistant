@@ -1477,6 +1477,10 @@ assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").ki
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
 const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
 assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answerStatements], ["each_value", ["categories_overlap"]]);
+// Reader: "what weapons are most commonly used in X" and "by weapons" read as X by weapon; "value of items stolen in" reads as the value stolen in.
+for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
+  assert.equal(ask(q).kind, "answer", q);
+}
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
 {
   const q = "Where do most robberies occur - residences, streets, or commercial buildings?";
