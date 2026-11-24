@@ -1052,7 +1052,11 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
     if (/\btrends?\s+(?:of|in)\b/i.test(q)) q = q.replace(/\b(?:the\s+)?trends?\s+(?:of|in)\s+/i, "").replace(/\s*\?*\s*$/, /\b(?:per|by)\s+(?:year|month)\b/i.test(q) ? "" : " per year");
     const o = shadowAnswer(q, depsIn);
-    if (o.kind === "answer" && !o.delivered.text.includes(ARRESTS_NOT_CRIMES)) o.delivered.text.splice(1, 0, ARRESTS_NOT_CRIMES);
+    if (o.kind === "answer" && !o.delivered.text.includes(ARRESTS_NOT_CRIMES)) {
+      o.delivered.text.splice(1, 0, ARRESTS_NOT_CRIMES);
+      // The title says people, not "arrests of arrestees" (Coordinator 2026-11-24); the period keeps its partial-year ending.
+      o.delivered.text[0] = o.delivered.text[0].replace("Arrests of Arrestees Under 18", "Arrests of People Under 18");
+    }
     return o;
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.

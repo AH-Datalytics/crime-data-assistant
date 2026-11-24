@@ -10280,7 +10280,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "NIBRS arrests of people under 18 in Kansas per year, 2020 to the latest year, titled \"Kansas Arrests of Arrestees Under 18 Per Year\", noting that arrests do not equal crimes, with the Consistent Reporting Agencies option beside it",
+    "answer": "NIBRS arrests of people under 18 in Kansas per year, 2020 to the latest year, titled \"Kansas Arrests of People Under 18 Per Year\", noting that arrests do not equal crimes, with the Consistent Reporting Agencies option beside it",
     "meaning": null,
     "values": {
      "status": "pending"
