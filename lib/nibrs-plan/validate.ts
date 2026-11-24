@@ -309,6 +309,7 @@ const FILTER_DIMENSIONS: Record<string, string[]> = {
 /** Ledger filter values that name a range or a family rather than one code: the exact condition they mean. */
 const FILTER_VALUE_RANGE: Record<string, [number, number]> = { "age:Under 18": [1, 17] };
 const FILTER_VALUE_SET: Record<string, string[]> = {
+  "bias:lgbtq": ["41", "42", "43", "45", "71", "72"],
   "weapon:firearm": ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"],
   "dv:intimate_partner": ["SE", "CS", "BG", "XS", "XR", "HR"],
   "dv:family": ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"],
@@ -360,7 +361,7 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
         // A cleared-offense measure applies its offense ("rape clearances": offenses.rape_cleared), but only when the
         // question asks about clearances; otherwise it would answer a subset of what was asked.
         const last = parts[parts.length - 1];
-        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v || (v === "violent_crime" && last === "person_crimes") || (v === "property_crime" && last === "against_property") ? null : `the measure at ${path} is not "${v}"`;
+        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v || (v === "violent_crime" && last === "person_crimes") || (v === "property_crime" && last === "against_property") || (v === "drug_possession" && last === "drug_crimes") ? null : `the measure at ${path} is not "${v}"`;
       }
     case "unit":
       if (!/^measures\[\d+\]\.unit$/.test(path)) return "a unit binds to measures[i].unit";

@@ -2844,6 +2844,15 @@
       "note": "Hate crimes in the new engine (Jeff 2026-11-15): answered from the hate crime export only, never NIBRS; the release manifest check, the bias code and distinct-incident SQL, the latest-date rule, the reporting caveat; a stub executor stands in for DuckDB"
     },
     {
+      "id": "test-round-half-away",
+      "tier": "F",
+      "script": "scripts/test-round-half-away.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "percent changes that land exactly on a half round away from zero for both signs (Jeff 2026-11-24, P294): -6.25 shows -6.3 and +6.25 shows +6.3; pure functions, no database, no model, no network"
+    },
+    {
       "id": "test-nibrs-coverage",
       "tier": "F",
       "script": "scripts/test-nibrs-coverage.ts",
@@ -2869,6 +2878,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "the fuzzy place search (lib/geo-fuzzy.ts) gives exactly the answers it gave before it was made fast, for 610 fixed inputs (scripts/fixtures/geo-fuzzy-golden.json); reads the place catalog only, no database, no model, no network"
+    },
+    {
+      "id": "test-nibrs-shadow-open-ended",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-open-ended.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "open-ended asks clarify and data-absent asks get a plain decline (Jeff 2026-11-23); 13 labeled questions plus neighbors; stub DuckDB step, checked-in place index."
     },
     {
       "id": "test-nibrs-shadow-period-grammar",

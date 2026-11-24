@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { hateBuildAt, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
+import { hateBuildAt, modernFromNote, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 // A release folder as the export writes it: the latest incident date is mid-October 2026, so the last complete month is September 2026.
@@ -53,6 +53,12 @@ const sql = sqls[sqls.length - 1];
 assert.ok(/hate_crime_incident\/data\.parquet/.test(sql) && /bias_code = '32'/.test(sql) && /state = 'TX'/.test(sql) && /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/.test(sql), sql);
 assert.ok(!/read_parquet\([^)]*(?:offense|victim)\//.test(sql), "never a NIBRS table");
 
+// Anti-LGBTQ is the six sexual orientation and gender codes as one group of distinct incidents; a year before its codes existed is refused.
+const lgbtq = as(ask("anti-LGBTQ hate crimes in Texas in 2024"), "hate");
+const lsql = sqls[sqls.length - 1];
+assert.ok(/bias_code IN \('41', '42', '43', '45', '71', '72'\)/.test(lsql) && /count\(DISTINCT year/.test(lsql), lsql);
+assert.ok(/anti-LGBTQ/.test(lgbtq.delivered.text[0]), lgbtq.delivered.text[0]);
+
 // A plain count by year and by month, and a rolling window; nothing is NIBRS's.
 const byYear = as(ask("hate crimes in Texas by year from 2022 to 2024"), "hate");
 assert.deepEqual(byYear.delivered.table.columns.map((c) => c.header), ["Year", "Hate crimes"]);
@@ -87,6 +93,14 @@ const total = ask("hate crimes in Texas from 2020 to 2024");
 as(total, "hate");
 assert.match(sqls[sqls.length - 1], /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/);
 assert.notEqual(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013").kind, "hate", "the window reaches 2012, when code 14 meant another group");
+// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
+const asian = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
+assert.ok(asian.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asian.delivered.text.join(" | "));
+assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");
+assert.match(modernFromNote({ year: 2015, biases: [{ name: "Anti-Arab", year: 2015 }, { name: "Anti-Jehovah's Witness", year: 2015 }] }), /shown from 2015, when the bias category took its current meaning/);
+assert.notEqual(ask("anti-Asian hate crimes in Texas from 2010 to 2024").kind, "hate", "an explicit range before 2013 is not answered");
+const asianNy = ask("Compare anti-Asian hate crimes in California and New York by year");
+assert.equal(asianNy.kind, "clarify", "which New York is asked, as it is for anti-Jewish");
 assert.equal(as(ask("hate crimes in Texas in 1980"), "decline").explanation, "Hate crime data here start in 1991, so 1980 isn't included.");
 assert.equal(as(ask("hate crimes in Texas from 1960 to 1990"), "decline").explanation, "Hate crime data here start in 1991, so 1960 through 1990 aren't included.");
 assert.ok(as(ask("hate crimes in Texas by year from 1990 to 1993"), "hate").delivered.text.includes("Hate crime data here start in 1991, so 1990 isn't included."));
@@ -143,5 +157,40 @@ assert.notEqual(rate.kind, "answer", "a rate is not built");
   assert.equal(school.delivered.text[0], "Texas had 857 anti-Black or African American hate crimes at schools in 2024.");
   assert.ok(school.delivered.text.includes(SCHOOL_LINE) && school.delivered.text.includes("4 hate crimes in 2024 have no confirmed location and are not counted."), school.delivered.text.join(" / "));
   assert.equal(as(ask("hate crimes at schools by year nationally"), "hate").delivered.table.columns[1].header, "Hate crimes at schools");
+}
+// B3 (Jeff): several places asked together are each answered on their own and set side by side in a Place column; never added together.
+{
+  const before = sqls.length;
+  const two = as(ask("How many anti-Black hate crimes occurred in Texas versus Florida in 2024?"), "hate");
+  assert.equal(two.delivered.table.columns[0].header, "Place");
+  assert.deepEqual(two.delivered.table.rows.map((r) => r[0]), ["Texas", "Florida"]);
+  assert.equal(sqls.length - before, 2, "one query per place, no summing");
+  assert.ok(/'TX'/.test(sqls[before]) && /'FL'/.test(sqls[before + 1]), sqls.slice(before).join(" / "));
+  assert.equal(two.delivered.text[two.delivered.text.length - 1], "Source: FBI Hate Crime Statistics.");
+  // By year: a Place column ahead of the Year column, one block of years per place.
+  const yr = as(ask("anti-Black hate crimes in Texas and Florida by year from 2022 to 2024"), "hate");
+  assert.deepEqual(yr.delivered.table.columns.slice(0, 2).map((c) => c.header), ["Place", "Year"]);
+  assert.equal(yr.delivered.table.rows.length, 6);
+  // New York is asked about first (the state or the city); either choice still answers both places.
+  const ny = ask("hate crimes in New York and Texas in 2024");
+  assert.equal(ny.kind, "clarify");
+  for (const o of (ny as Extract<ShadowOutcome, { kind: "clarify" }>).options) {
+    const c = o.continuation as Extract<ShadowOutcome, { kind: "hate" }>;
+    assert.equal(c.kind, "hate");
+    assert.equal(c.delivered.table.rows.length, 2, "both places answered after the choice");
+  }
+  // The same place twice is not two places (declined); more than six places is declined.
+  assert.equal(ask("anti-Black hate crimes in Texas and Texas in 2024").kind, "decline", "one place named twice is not a comparison");
+  assert.equal(ask("hate crimes in Texas, Florida, Ohio, Iowa, Utah, Maine and Idaho in 2024").kind, "decline");
+}
+// Codex review of B3: a mixed list keeps every place; each place's own figures lead; place-specific lines name their place.
+{
+  const mixed = as(ask("hate crimes in Texas, Chicago and Boston in 2024"), "hate");
+  assert.equal(mixed.delivered.table.rows.length, 3, JSON.stringify(mixed.delivered.table.rows));
+  assert.equal(mixed.delivered.table.rows[0][0], "Texas");
+  const two = as(ask("anti-Islamic and anti-Jewish hate crimes in Texas and Florida in 2024"), "hate");
+  assert.ok(two.delivered.text[0].includes("Texas") && two.delivered.text[0].includes("Florida"), two.delivered.text[0]);
+  const sch = as(ask("hate crimes at schools in Texas and Florida in 2024"), "hate");
+  assert.ok(sch.delivered.text.filter((t) => /not counted/.test(t)).every((t) => /^(Texas|Florida): /.test(t)), sch.delivered.text.join(" / "));
 }
 console.log("nibrs hate: hate crime questions are answered from the hate crime data only, with its caveat and its latest-date rule");
