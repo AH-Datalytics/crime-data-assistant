@@ -20,7 +20,7 @@ import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
 import { combineMonths, rankAgencies, rate, rollup, truncatedTieSentence, type Cell, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { agencyName, reportedBy, stateName } from "./places";
-import { deliverMonthly, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
+import { deliverMonthly, deliverTable, deliverTable2, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 import { periodTitle, titleCase } from "./titles";
 import { agencySubject, rateNoun, rateSentence, seriesTitle, titleTimeframe } from "./headline";
@@ -44,7 +44,10 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   // Group 5: several named agencies by month, a count, one row per month and agency.
   const monthMode = !isRate && !popStat && !!geoG && !yearG && plan.groupings.length === 2 && plan.groupings.some((g) => g.dimension === "time.month")
     && plan.geography.places.length > 1 && plan.geography.combine !== "combined" && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length;
-  if (!monthRate && !monthMode && (plan.groupings.some((g) => !g.dimension.startsWith("geo.") && g.dimension !== "time.year") || (geoG && yearG)))
+  // Several named agencies by year (Jeff 2026-11-24, QL-nibrs-b303d9bbed): a row for each agency and year, each year's figure its own cell.
+  const yearMode = !popStat && !!geoG && yearG && plan.groupings.length === 2 && plan.geography.places.length > 1 && plan.geography.combine !== "combined"
+    && plan.geography.places.every((p) => p.kind === "agency") && !plan.transforms.length;
+  if (!monthRate && !monthMode && !yearMode && (plan.groupings.some((g) => !g.dimension.startsWith("geo.") && g.dimension !== "time.year") || (geoG && yearG)))
     return decline("This isn't available: several agencies by month, by year or by category.");
   // A set of years ("2019 and 2023") is those years only, each its own row; never the years between (Codex 02.1).
   const yearSet = plan.period.kind === "years" ? [...plan.period.years].sort((a, b) => a - b) : null;
@@ -177,6 +180,23 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     for (const a of agencies) { const miss = rollup(byOri.get(a.ori) ?? []).missing; if (miss.length) lines.push(`No data is available for ${runs(miss)} for ${a.label}, shown blank.`); }
     const delivered = deliverMonthly(plan, { dimension: geoG!.dimension, header: "Agency" }, { as: st.as, header: Header },
       agencies.map((a) => ({ key: a.name, cells: byOri.get(a.ori) ?? [] })), lines, statements, deps.release.id, readings);
+    return done(plan, period, c.query.sql, delivered, decline);
+  }
+  if (yearMode) {
+    const geoFirst = plan.groupings.findIndex((g) => g.dimension === geoG!.dimension) < plan.groupings.findIndex((g) => g.dimension === "time.year");
+    const rows = agencies.flatMap((a) => years.map((y) => {
+      const v = valueOf((byOri.get(a.ori) ?? []).filter((x) => x.ym.startsWith(`${y}-`)), a.ori, y);
+      return { a, y, value: v.value, status: v.status, missing: v.missing };
+    }));
+    const listed = agencies.map((a) => a.label);
+    lines.push(seriesTitle(when, isRate ? `${what} per 100,000` : what, "Year", andList(listed)), reporter);
+    if (isRate) lines.push(`Each year's rate uses the FBI's population for that year.`);
+    for (const a of agencies) { const miss = rows.filter((r) => r.a === a).flatMap((r) => r.missing); if (miss.length) lines.push(`No data is available for ${runs(miss)} for ${a.label}: that year's ${isRate ? "rate" : "total"} is not given.`); }
+    const g1 = { dimension: geoG!.dimension, header: "Agency" }, g2 = { dimension: "time.year", header: "Year" };
+    const flat = rows.map((r) => ({ k1: geoFirst ? r.a.name : String(r.y), k2: geoFirst ? String(r.y) : r.a.name, value: r.value, status: r.status }));
+    const ordered = geoFirst ? flat : [...flat].sort((x, z) => x.k1.localeCompare(z.k1) || agencies.findIndex((a) => a.name === x.k2) - agencies.findIndex((a) => a.name === z.k2));
+    const delivered = geoFirst ? deliverTable2(plan, g1, g2, { as: st.as, header: statHeader }, ordered, lines, statements, deps.release.id, readings)
+      : deliverTable2(plan, g2, g1, { as: st.as, header: statHeader }, ordered, lines, statements, deps.release.id, readings);
     return done(plan, period, c.query.sql, delivered, decline);
   }
   // One agency's values by year. Several agencies by year (combined or not) come later (Codex 02 re-check A).

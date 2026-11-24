@@ -3984,4 +3984,23 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const q of ["How many Black or Hispanic people were murdered in Texas in 2024", "How many people were murdered in Texas in 2024 who were Black and Hispanic"]) {
     const t = readQuestion(q, 2026, "2026-09").text;
     assert.ok(/hispanic/i.test(t) && /black/i.test(t), `${q}: ${t.slice(0, 300)}`); } }
-console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
+// Several named places and crimes (Capability 2026-11-24, ids b303d9bbed, 3a51bb5f96, ffbd537ab6): a count with a row per agency and year, and an offender's
+// age for several places or crimes, each asked on its own and stacked under a Place or Crime column (never added together).
+{
+  const o = as(ask("Vehicle burglaries per year in Denver, Houston and Minneapolis since 2018"), "answer");
+  const tb = o.delivered.table as unknown as { columns: { header: string }[]; rows: (string | number | null)[][] };
+  assert.deepEqual(tb.columns.slice(0, 2).map((c) => c.header), ["Agency", "Year"], JSON.stringify(tb.columns));
+  assert.ok(/Denver[\s\S]*Houston[\s\S]*Minneapolis/.test(o.delivered.text[0]) && /Per Year/i.test(o.delivered.text[0]), o.delivered.text[0]);
+  assert.equal(new Set(tb.rows.map((r) => r[0])).size, 3, JSON.stringify(tb.rows.slice(0, 4)));
+  const p = as(ask("show me violent crimes by offender age for worcester county, md sheriff's office and pocomoke city, md police department"), "answer");
+  const pt = p.delivered.table as unknown as { columns: { header: string }[]; rows: (string | number | null)[][] };
+  assert.equal(pt.columns[0].header, "Place");
+  assert.deepEqual([...new Set(pt.rows.map((r) => r[0]))], ["Worcester County, Maryland", "Pocomoke City, Maryland"]);
+  assert.ok(/Worcester County, Maryland and Pocomoke City, Maryland Violent Crime Offenders by Offender Age Group/.test(p.delivered.text[0]), p.delivered.text[0]);
+  const c = as(ask("robbery and aggravated assault by age of offender in Texas in 2024"), "answer");
+  const ct = c.delivered.table as unknown as { columns: { header: string }[] };
+  assert.equal(ct.columns[0].header, "Crime");
+  assert.ok(/Robbery.*and.*Aggravated Assault/.test(c.delivered.text[0]), c.delivered.text[0]);
+  // A crime the source cannot give for this place (national murder by offender age is Homicide Reports) keeps the whole ask a decline.
+  assert.equal(ask("nationwide robbery, murder, and aggravated assault by age of offender from 2020 to 2024").kind, "decline");
+}console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
