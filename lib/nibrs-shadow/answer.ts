@@ -2894,7 +2894,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       && (sp.statistic === "count" || sp.statistic === "rate")) {
       if (sp.period.form === "none" && sp.grain === "total") return askCrimeIndexPeriod();
       const cmp = flags(ledger0).comparison;
-      const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+      // Owner rule (Jeff 2026-11-23): an agency beside the nation with no period starts at the earliest national year, 1960,
+      // not 1930 with blank national cells. An agency beside a state, or any stated period, is unchanged.
+      const nationAsked = each.some((x) => x?.kind === "national");
+      const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), nationAsked && sp.period.form === "none" ? Math.max(1960, deps.historical.firstYear) : deps.historical.firstYear);
       if (yrs) {
         if (partYear(sp, cmp)) return decline("unsupported_capability", "Crime Index figures for an agency beside a state or the nation are whole years only.", { alternative: byYearInstead(ledger, deps, pins) });
         const thisYear = Number(release.lastMonth.slice(0, 4));

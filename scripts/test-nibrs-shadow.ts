@@ -1042,6 +1042,10 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === v), q);
   assert.deepEqual(MEASURE_CODES.assault_offenses, ["13A", "13B", "13C"]);
   assert.deepEqual(MEASURE_CODES.intimidation, ["13C"]);
+  // Kidnapping is a measure of its own (NIBRS 100): "kidnappings by location" is read, not a reader decline.
+  assert.deepEqual(MEASURE_CODES.kidnapping, ["100"]);
+  for (const q of ["kidnapping in Houston in 2024", "kidnappings in Houston in 2024", "kidnapping by hour of day in Houston in 2024", "kidnappings by location in Houston in 2024"])
+    assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "kidnapping"), q);
   // Codex ties/P75 review 01: "assault offenses" is all three, never "offenses" read as the unit; a weapon is not a crime;
   // the user's own words survive the rewrite ("during an argument" keeps its circumstance).
   assert.ok(readQuestion("assault offenses in Houston in 2024", 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault_offenses"));
