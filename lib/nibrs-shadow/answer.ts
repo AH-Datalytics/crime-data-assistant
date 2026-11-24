@@ -651,8 +651,11 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
 const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will wanna gimme lemme tell give show see get let us plot chart graph draw " +
   "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
   "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
+// "More about", "look like in", "in the last few years" on a place-only question (P148): the phrases ask for nothing beyond the composite.
+const PURE_PHRASES = /\b(?:more\s+about|(?:look|looks)\s+like(?:\s+in)?|in\s+the\s+(?:last|past)\s+(?:few|several|couple\s+of)\s+years)\b/gi;
 const pureFillerOnly = (text: string) => {
-  const words = wordsOf(text);
+  const words = wordsOf(text.replace(PURE_PHRASES, " "));
+  if (words.length === 0 && text.trim()) return true;
   return words.length > 0 && words.every((w) => PURE_FILLER.has(w));
 };
 /** A question about what data there is ("Do you have any data for NYC?", "does Olathe report NIBRS data?"): never an ask. */
@@ -729,7 +732,7 @@ function currentYearSpan(year: number, cur: CurrentBuild, toDate: boolean): [str
 }
 /** For tests: the ask-instead rule's checks and rewrites, which read no data. */
 export const askInsteadChecks = {
-  fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
+  fillerOnly: (t: string) => fillerOnly(t), pureFillerOnly: (t: string) => pureFillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
   fillerRewrite: (q: string) => fillerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
   /** The P74 question without the unread words, or null when it isn't offered. */
   stripped: (q: string) => { const l = readQuestion(q, 2026, "2026-09").ledger; return askInstead(l.question, l.parts.filter((p) => p.state === "not-interpreted"), 2026)?.question ?? null; },
@@ -1882,6 +1885,8 @@ function yearSpan(sp: { period: NPeriod; grain: string }, thisYear: number, firs
   if (p.form === "since") return [p.from, lastComplete];
   if (p.form === "last") return [lastComplete - p.n + 1, lastComplete];
   if (p.form === "lastyear") return [lastComplete, lastComplete];
+  // Years named one by one with none missing between them ("2020, 2021, 2022") are the range between the first and the last (Fairfax, QL-ct-fe39e34290).
+  if (p.form === "years" && p.list.length > 1 && p.list.every((y, i) => i === 0 || y === p.list[i - 1] + 1)) return [p.list[0], p.list[p.list.length - 1]];
   if (p.form === "none" && sp.grain === "year") return [firstYear, lastComplete];
   return null;
 }

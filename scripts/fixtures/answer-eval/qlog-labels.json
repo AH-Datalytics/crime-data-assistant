@@ -14420,14 +14420,13 @@
    "question": "show me the number of crimes in Washington, DC compared to Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "violent, property or both",
-     "which Baltimore",
-     "period"
-    ],
-    "about": "violent, property or both"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
@@ -31335,19 +31334,20 @@
    "question": "crime in Portland",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -87985,11 +87985,7 @@
    "previous": "denver coloradocrime data for the last three years by month",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
+    "source": "historical",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -92238,19 +92234,20 @@
    "question": "crime in Portland",
    "previous": "murder rate in Washington state since 2010",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -95624,19 +95621,20 @@
    "question": "crime in Portland since 2010",
    "previous": "clearance rate for murder in Houston since 1960",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {

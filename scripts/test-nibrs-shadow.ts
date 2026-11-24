@@ -3043,6 +3043,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       const o = shadowAnswer(q, live) as unknown as { kind: string; about?: string; explanation?: string };
       // The stub holds no rows, so the composite is the no-data decline for the place (with rows it answers by year; the Runner reads real data).
       assert.ok(o.kind === "decline" && /^No data is available for crime in Dallas, Texas\./.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 300)}`);    } }
+  // Engine 2.0 2026-11-24 (g449c): "more about", "look like in" and "in the last few years" beside a place and "crime" ask for nothing: the composite answers, as "Dallas crime" does, not the reader's decline.
+  { const fx = shadowAnswer("What was the violent crime rate in Fairfax County, VA, in 2020, 2021, 2022, 2023, 2024, and 2025?", { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps);
+    assert.ok(fx.kind === "historical" && fx.delivered.text[0] === "Fairfax County, Virginia Violent Crime Rate Per Year, 2020-2025", JSON.stringify(fx).slice(0, 300)); }
+  for (const t of ["more about", "look like in", "in the last few years"]) assert.ok(askInsteadChecks.pureFillerOnly(t), t);
+  assert.ok(!askInsteadChecks.pureFillerOnly("last few years") && !askInsteadChecks.pureFillerOnly("in the last 5 years"), "other period words stay unread");
+  for (const q of ["Tell me more about crime in Dallas", "What does crime look like in Dallas?", "tell me about Dallas crime in the last few years"]) {
+    const fr = askInsteadChecks.fillerRewrite(q);
+    assert.ok(fr && /dallas/i.test(fr.rest), `${q}: ${JSON.stringify(fr)}`);
+  }
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
   const nib =shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
