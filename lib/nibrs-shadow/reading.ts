@@ -258,6 +258,9 @@ const PHRASES: [RegExp, string][] = [
   // San Francisco's initials and short name (scorecard 2026-11-16: "SF aggravated assault per month", "What is SFPD rape clearance rate?").
   // "The annual number of murders" is "annual murders": a series by year (P06), not a question with no period.
   [/\b(annual)\s+number\s+of\b/gi, "$1"],
+  // "At an annual tempo" / "at a monthly pace" is the series by year / by month (the coordinator, 2026-11-24, QL-ct-497f978f17).
+  [/\bat\s+an?\s+(?:annual|yearly)\s+(?:tempo|pace|rhythm)\b/gi, "by year"],
+  [/\bat\s+a\s+monthly\s+(?:tempo|pace|rhythm)\b/gi, "by month"],
   [/\bsfpd\b/gi, "San Francisco Police Department"],
   [/\bsan\s+fran\b/gi, "San Francisco"],
   [/(?<![A-Za-z.])sf(?![A-Za-z.\d])/gi, "San Francisco"],
@@ -636,6 +639,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // ("Highlight major crime trends in the city of Philadelphia since 2022"). Not "major cities" (the large-city rule above).
   text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?highlight\s+(?:the\s+)?(?=[a-z])/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // Declines owner cause 2 (query log): "make a graph of murder rate in the US last 20 years" and "Please show my murder ... statistics in Atlanta"
+  // open with a request wrapper that adds no meaning; the chart words are read on their own further on. Only when a crime word follows.
+  text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?(?:make|create|build|draw)\s+(?:me\s+)?an?\s+(?=(?:(?:line\s+)?(?:graph|chart|plot)|time\s*series)\b[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property|crime))/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  text = text.replace(/^\s*(?:please\s+)?show\s+my\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?))/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "show me " }); return "show me "; });
   text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
