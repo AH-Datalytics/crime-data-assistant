@@ -3379,6 +3379,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(hour.delivered.text[0], "Texas Murder Offenses by Time of Day, 2024");
   assert.ok(hour.delivered.text.includes(SENTENCE));
   assert.ok(hour.delivered.text.some((t) => /^Morning is 6 AM to noon/.test(t)), "the time-of-day line stays");
+  // "offenses" asked outright: the unit is already offenses (no conversion), and the sentence is still said, by hour and by location.
+  for (const q of ["Texas murder offenses by hour of day in 2024", "Houston aggravated assault offenses by location type in 2024"]) {
+    const o = as(ask(q), "answer") as unknown as P280;
+    assert.ok(o.delivered.text.includes(SENTENCE), q + " " + JSON.stringify(o.delivered.text));
+  }
   for (const q of ["Rapes by location in Texas in 2024", "Simple assaults by location in Houston in 2024", "Rapes by time of day in Houston in 2024"])
     assert.ok((as(ask(q), "answer") as unknown as P280).delivered.text.includes(SENTENCE), q);
   // Property crimes and robbery were already offenses: no sentence.

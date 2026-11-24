@@ -2041,6 +2041,18 @@ function reconcileCityState(ledger: RequestLedger, deps: ShadowDeps): { ledger: 
   if (!out.length) return { ledger };
   return { ledger: withParts(ledger, [...parts.filter((x) => !drop.has(x)), ...out]) };
 }
+/** P280: a person crime already asked as offenses, broken down by location or hour of day, carries the same sentence as the converted ones. */
+function personOffensesByPlaceOrHour(plan: NibrsPlan): boolean {
+  const isPlaceOrHour = (d: string) => d === "offense.location_type" || d === "incident.hour";
+  const victimFilter = plan.filters.some((f) => (f.kind === "attribute" && /^(?:victim|offender|relationship)\./.test(f.dimension)) || (f.kind === "exists" && f.scope !== "offense" && f.scope !== "incident"));
+  return plan.measures.length > 0 && !victimFilter && plan.groupings.some((g) => isPlaceOrHour(g.dimension))
+    && plan.groupings.every((g) => isPlaceOrHour(g.dimension) || g.dimension.startsWith("time."))
+    && plan.measures.every((m) => {
+      const name = m.id.replace(/^offenses\./, "");
+      const codes = m.id.startsWith("offenses.") ? MEASURE_CODES[name] : undefined;
+      return !!codes && codes.every((c) => PERSON_CODES.has(c)) && !["violent_crime", "property_crime", "against_property"].includes(name);
+    });
+}
 function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const reconciled = reconcileCityState(ledgerIn, deps);
   if (reconciled.decline) return reconciled.decline;
@@ -3713,7 +3725,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
     ...(plan.defaults.some((d) => d.reason.startsWith("P166")) ? [`Counts are ${MEASURE_LABEL[plan.measures[0].id.split(".")[1]] ?? "crime"} offenses by weapon, not victims.`] : []),
     // P280 (Jeff 2026-11-23): a person crime by location or hour is counted by offense, and says so.
-    ...(plan.defaults.some((d) => d.reason.startsWith("P280")) ? [OFFENSES_NOT_VICTIMS_LINE] : []),
+    // Also when "offenses" was asked outright: the unit is already offenses, so no default was made, but the figure is the same.
+    ...(plan.defaults.some((d) => d.reason.startsWith("P280")) || personOffensesByPlaceOrHour(plan) ? [OFFENSES_NOT_VICTIMS_LINE] : []),
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),
