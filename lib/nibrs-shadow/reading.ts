@@ -145,9 +145,15 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
+// B1: the state named after a county police department ("Cook County police department in Illinois") is that county's state, not a second place.
+const STATE_ALT = Object.values(STATE_NAME_BY_CODE).sort((x, y) => y.length - x.length).join("|");
 const PHRASES: [RegExp, string][] = [
   // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
   [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
+  // B1: "Cook County police department in Illinois" is "Cook County, Illinois" (the county's police are the county's agency).
+  [new RegExp(String.raw`\b(County)\s+(?:Police\s+Department|Police\s+Dept\.?|Police)\s+(?:in|of)\s+(${STATE_ALT})(?=\s*(?:[,.?!;]|$|\d|\b(?:in|from|for|since|during|between|over|by|and|to|through|until|last|this|each|per)\b))`, "gi"), "$1, $2"],
+  // B1: Orleans Parish is the City of New Orleans; the figures are the New Orleans Police Department\'s (said in the readings).
+  [/\borleans\s+parish(?:,?\s*(?:louisiana|la)\b(?:\s+state\b)?)?/gi, "New Orleans"],
   // B1: "johnson county sheriff in ks": the state's code after "in" (not IN, OR, ME, HI or OK, which are words).
   [/\b(County\s+Sheriff(?:'?s)?(?:\s+(?:Office|Department))?)\s+in\s+(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|ID|IL|KS|KY|LA|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, "$1, $2"],
   [/,\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s+State\b/gi, ", $1"],

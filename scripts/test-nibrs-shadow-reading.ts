@@ -210,3 +210,13 @@ console.log("nibrs shadow reading: general wording forms read; boundaries keep t
 // All years by default (Jeff 2026-11-11): "going back as far as possible" is by year with no range.
 assert.equal(rq("indianapolis homicide counts going back as far as possible").text, "indianapolis homicide counts by year");
 assert.equal(rq("Carjackings in Houston by month for all years since 2020").text.replace(/\s+/g, " "), "Carjackings in Houston by month since 2020", "a grain and a range of its own: the phrase is dropped");
+
+// B1 place ids: a county police department with its state after "in" is "<County>, <State>"; Orleans Parish is New Orleans.
+assert.equal(rq("Murders reported by the Cook County police department in Illinois in 2022").text, "Murders reported by the Cook County, Illinois in 2022");
+assert.equal(rq("Murder rate for Fairfax County Police Department in Virginia from 2021 to 2025").text, "Murder rate for Fairfax County, Virginia from 2021 to 2025");
+assert.equal(rq("murders in Orleans Parish, Louisiana in 2022").text, "murders in New Orleans in 2022");
+assert.ok(rq("murders in Orleans Parish in 2022").readings.some((r) => r.from === "Orleans Parish" && r.to === "New Orleans"), "the reading says it");
+assert.equal(rq("murders in Orleans County, NY in 2022").text.includes("New Orleans"), false, "Orleans County stays itself");
+assert.equal(rq("murders reported by Fairfax County Police Department in Virginia Beach in 2022").text.includes("Fairfax County, Virginia"), false, "a longer place name is not a state");
+assert.equal(rq("King County Police Department in Washington DC").text.includes("King County, Washington"), false);
+assert.equal(rq("murders in Orleans Parish, Louisiana State in 2022").text, "murders in New Orleans in 2022");

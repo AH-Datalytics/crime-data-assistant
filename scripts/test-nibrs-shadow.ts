@@ -309,7 +309,9 @@ assert.equal(ori(at("city:Flint:MI", "Flint")), "MI2539800", "not Flint Township
 assert.equal(ori(at("ambiguous:Baldwin Borough", "Baldwin Borough")), "PA0020100");
 assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500");
 assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
-assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
+// B1 (Jeff 2026-11-24): Orleans Parish is the City of New Orleans; its figures are the New Orleans Police Department's, never Orleans County, New York.
+assert.equal(ori(at("ambiguous:Orleans Parish", "Orleans Parish")), "LANPD0000", "never Orleans County, New York");
+assert.equal(ori(at("county:Orleans Parish:LA", "Orleans Parish, Louisiana")), "LANPD0000");
 assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
 // No population floor (Jeff 2026-11-03): every city and county agency is in the index, so same-name towns ask a short
 // list, never dozens; a name with one clearly main city (twice the next) is that city; a city's name is a city (P16).
@@ -429,7 +431,7 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
   assert.deepEqual(county("murders in Tarrant County in 2024"), ["county:Tarrant County:"]);
   assert.deepEqual(county("number of homicides in richland county oh in 2025"), ["county:Richland County:OH"]);
   assert.deepEqual(county("Show me violent crime trends in Mecklenburg county in North Carolina between 2002 and 2024"), ["county:Mecklenburg County:NC"]);
-  assert.deepEqual(county("murders in Orleans Parish in 2024"), ["county:Orleans Parish:"]);
+  assert.deepEqual(county("murders in Orleans Parish in 2024"), ["city:New Orleans:LA"], "read as the city of New Orleans (B1)");
   assert.deepEqual(county("murders in each county in Texas in 2024").filter((v) => /^county/.test(v ?? "")), []);
   // Codex place review 01: "in" is Indiana only in capitals; "South King County" keeps its "South"; a sheriff's office
   // belongs to the county.
