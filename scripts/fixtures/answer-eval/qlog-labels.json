@@ -47722,7 +47722,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "a table with Murder, Rape, Robbery and Aggravated assault across and five weapon rows down (firearms merged, knife or cutting instrument, blunt object, personal weapons, other or none/unknown), the unit named in the title, and a sentence that a crime with two weapons counts in each row (P297)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -101136,7 +101136,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "a table with Murder, Rape, Robbery and Aggravated assault across and five weapon rows down (firearms merged, knife or cutting instrument, blunt object, personal weapons, other or none/unknown), the unit named in the title, and a sentence that a crime with two weapons counts in each row (P297)",
     "meaning": null,
     "values": {
      "status": "pending"
