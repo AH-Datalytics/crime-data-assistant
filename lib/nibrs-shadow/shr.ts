@@ -95,9 +95,11 @@ export type ShrQuestion = {
   measure: "murder" | "homicide" | "homicide_all" | "justifiable"; unit: "victims" | "offenders"; place: ShrPlace;
   /** Months inclusive ("1985-01".."2024-12"), already cut to 1985 and the release's latest month. */
   from: string; to: string; grain: "total" | "year" | "month";
-  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] } | null; share: boolean;
+  filters: ShrFilter[]; breakdown: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[]; rest?: boolean }[] } | null; share: boolean;
+  /** Categories asked as percentages by year or month ("% of white, black and other victims by year"): a column each, every share out of ALL the period's victims. */
+  pct?: true;
   /** P164 (Jeff 2026-11-19): a second breakdown of the same person ("race and sex of the victims"): the first down the side, this one across. Counts only; no share. */
-  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[] }[] };
+  breakdown2?: { dim: ShrDim; bins?: [number, number][]; groups?: { label: string; codes: string[]; rest?: boolean }[] };
   /** The first year asked when it was before 1985 (J1, option A): the answer says it starts in 1985. */
   askedFrom?: string;
   /** Several agencies (shrSeveral in answer.ts): `place` is the first, these the others. */
@@ -173,7 +175,7 @@ export const stateOfOri = (ori: string) => ORI_STATE[ori.slice(0, 2)] ?? ori.sli
  * place (an agency, a state or the nation), one murder measure counted by victims or offenders, counts (and each
  * category's share), by year or month, at most one breakdown; every filter a detail SHR records the same way.
  */
-export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: ShrBuild, opts: { compare?: boolean } = {}): ShrQuestion | { why: string } {
+export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: ShrBuild, opts: { compare?: boolean; other?: boolean; percent?: boolean } = {}): ShrQuestion | { why: string } {
   if (plan.measures.length !== 1) return { why: "several crimes" };
   const m = /^(victims|offenders|offenses)\.(murder|homicide_all|homicide|justifiable_homicide)$/.exec(plan.measures[0].id);
   if (!m) return { why: "not a homicide count" };
@@ -207,22 +209,43 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   // count records with both, which a record never has: SHR-A leaves the comparison alone (job SA1).
   // Counted per condition, whatever its group (Codex SHR-A review 02.2).
   const recordDims = conditions.flatMap((c) => (c && RECORD_DIMS.has(NIBRS_DIM[c.f.dimension]) ? [NIBRS_DIM[c.f.dimension]] : []));
-  // "Gun murders versus knife murders" (the question says compare, versus or vs): the two values are two categories of the
-  // one breakdown, never both on a record that has one weapon (Jeff 2026-11-15 order, item 2).
-  let weaponGroups: { label: string; codes: string[] }[] | null = null;
-  if (new Set(recordDims).size !== recordDims.length) {
-    const onlyWeapons = recordDims.length === 2 && recordDims.every((d) => d === "weapon") && conditions.length === 2 && conditions.every((c) => c && c.f.op === "in" && c.f.values && c.group !== undefined);
-    if (!(opts.compare && onlyWeapons && !breakdown)) return { why: "two values of one record detail compared" };
-    const sets = conditions.map((c) => codesOf("weapon", c!.f.values!));
-    if (sets.some((x) => !x) || sets[0]!.some((c) => sets[1]!.includes(c))) return { why: "a code Homicide Reports record differently" };
-    const label = (codes: string[]) => (codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => SHR_WEAPON[c] ?? c).join(" or "));
+  // "Female versus male victims", "gun murders versus knife murders" (the question says compare, versus or vs): the values are
+  // categories of ONE breakdown (a column each), never both conditions on one record or person, who has a single sex, race or
+  // weapon (Jeff 2026-11-15 order, item 2; the Coordinator 2026-11-23: female vs male victims counted 0 for every cell). The
+  // dimension must be the counted person's own (or a record detail), so the group test reads the person being counted.
+  let weaponGroups: { label: string; codes: string[]; rest?: boolean }[] | null = null;
+  let groupedDim: ShrDim | null = null;
+  const dimsOf = conditions.flatMap((c) => (c && c.f.op === "in" && c.f.values?.length && !/age$/.test(NIBRS_DIM[c.f.dimension] ?? "") ? [NIBRS_DIM[c.f.dimension]] : []));
+  const repeated = dimsOf.filter((d, i) => d && dimsOf.indexOf(d) !== i);
+  if (repeated.length) {
+    const dim = repeated[0] as ShrDim;
+    const same = conditions.filter((c) => c && NIBRS_DIM[c.f.dimension] === dim);
+    // A record's weapon, relationship or circumstance: only two weapons, the whole question (as before). A person's detail: the counted
+    // person's own (a victim's sex for victims, an offender's for offenders), however many values.
+    const ok = RECORD_DIMS.has(dim)
+      ? dim === "weapon" && same.length === 2 && conditions.length === 2 && same.every((c) => c!.group !== undefined)
+      : dim.startsWith(unit === "victims" ? "victim." : "offender.");
+    // Two or more values of one single-valued person attribute (sex, race, ethnicity) named together can never mean ANDed: categories, with or without "versus".
+    const single = /\.(sex|race|ethnicity)$/.test(dim);
+    if (!((opts.compare || single) && ok && !breakdown)) return { why: "two values of one record detail compared" };
+    const sets = same.map((c) => codesOf(dim, c!.f.values!));
+    if (sets.some((x) => !x) || sets.some((x, i) => sets.some((y, j) => i !== j && x!.some((c) => y!.includes(c))))) return { why: "a code Homicide Reports record differently" };
+    const labels = DIM_LABELS[dim] ?? {};
+    const label = (codes: string[]) => (dim === "weapon" && codes.length === 5 && ["11", "12", "13", "14", "15"].every((c) => codes.includes(c)) ? "Firearm" : codes.map((c) => labels[c] ?? c).join(" or "));
     weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
-    breakdown = { dim: "weapon", groups: weaponGroups };
+    // "white, black and other": the codes not named make an Other group (race only; Unknown stays out).
+    // A share is out of ALL victims: an Other group also covers whatever the named values leave (Unknown included) so the columns add to 100.
+    // A plain compare of a person attribute ("female vs male ... per year") also shows Unknown when the named values leave only Unknown, so each row adds up to the total (Jeff 2026-11-23).
+    if ((opts.other || opts.percent || single) && !RECORD_DIMS.has(dim)) { const used = weaponGroups.flatMap((g) => g.codes); const left = Object.keys(DIM_LABELS[dim] ?? {}).filter((c) => !used.includes(c)); const rest = left.filter((c) => labels[c] !== "Unknown"); const unk = left.filter((c) => labels[c] === "Unknown");
+      // Jeff 2026-11-23: Unknown is its own column (not folded into Other); it also gathers a blank code and any code outside the list.
+      if (rest.length && (opts.other || opts.percent)) weaponGroups.push({ label: "Other", codes: rest }); if (unk.length && (opts.other || opts.percent || !rest.length) && !sets.some((s) => s!.some((c) => unk.includes(c)))) weaponGroups.push({ label: "Unknown", codes: unk, rest: true }); }
+    groupedDim = dim;
+    breakdown = { dim, groups: weaponGroups };
   }
   const notes: string[] = [];
   for (const c of conditions) {
     if (!c) return { why: "a negated condition" };
-    if (weaponGroups && NIBRS_DIM[c.f.dimension] === "weapon") continue;
+    if (weaponGroups && groupedDim && NIBRS_DIM[c.f.dimension] === groupedDim) continue;
     const { f, group } = c;
     const dim = NIBRS_DIM[f.dimension];
     if (!dim) return { why: "a detail Homicide Reports don't record" };
@@ -263,7 +286,8 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   if (roll && (grain !== "month" || breakdown || stats.length !== 1)) return { why: "a rolling window of this form" };
   // A rate is for one year or by year: each year has its own population, so a total over several years is not one rate.
   if (rate && (roll || breakdown || grain === "month" || (grain === "total" && from.slice(0, 4) !== to.slice(0, 4)))) return { why: "a rate over several years without by year, by month or with a breakdown" };
-  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2, ...(rate ? { rate: true } : {}), ...(notes.length ? { notes } : {}), ...(roll ? { rolling: { months: roll.months } } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
+  const asPct = !!opts.percent && !!breakdown?.groups && stats.length === 1 && stats[0] === "count";
+  return { measure, unit, place, from, to, grain, filters, breakdown, share: stats.length === 2 || (asPct && grain === "total"), ...(asPct && grain !== "total" ? { pct: true as const } : {}), ...(rate ? { rate: true } : {}), ...(notes.length ? { notes } : {}), ...(roll ? { rolling: { months: roll.months } } : {}), ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}) };
 }
 
 /* ------------------------------------------------------------------ the answer */
@@ -292,7 +316,7 @@ function condition(f: ShrFilter, a: string): string {
 function categorySql(sq: ShrQuestion, a: string, which: 1 | 2 = 1): string {
   const b = (which === 1 ? sq.breakdown : sq.breakdown2)!;
   const col = RECORD_DIMS.has(b.dim) ? `r.${DIM_COLUMN[b.dim]}` : `CASE WHEN ${a}.in_record THEN ${a}.${DIM_COLUMN[b.dim]} END`;
-  if (b.groups) return `CASE ${b.groups.map((g, i) => `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`).join(" ")} END`;
+  if (b.groups) return `CASE ${b.groups.map((g, i) => (g.rest ? `ELSE '${i}'` : `WHEN ${col} IN (${g.codes.map(q).join(", ")}) THEN '${i}'`)).sort((x, y) => Number(x.startsWith("ELSE")) - Number(y.startsWith("ELSE"))).join(" ")} END`;
   if (!b.bins) return col;
   const ageCol = `CASE WHEN ${a}.in_record THEN ${a}.age END`;
   return `CASE ${b.bins.map(([lo, hi], i) => `WHEN ${ageCol} BETWEEN ${lo} AND ${hi} THEN '${i}'`).join(" ")} END`;
@@ -305,7 +329,7 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
   const theirs = sq.filters.filter((f) => !own.includes(f));
   const where = [`r.counted`, measureWhere(sq), placeWhere(sq.place), `r.data_year * 100 + r.offense_month BETWEEN ${ym(sq.from)} AND ${ym(sq.to)}`,
     ...own.map((f) => condition(f, "p")),
-    ...(sq.breakdown?.groups ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
+    ...(sq.breakdown?.groups && !sq.share && !sq.pct && !sq.breakdown.groups.some((g) => g.rest) ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
     // A detail of the other person: any one of the record's (an offender's sex for victims: "killed by women"); the
     // conditions of one group are that same person's (01.3).
     ...[...new Set(theirs.map((f, i) => f.group ?? `solo${i}`))].map((g) => {
@@ -395,6 +419,15 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
     for (const c2 of cats2) columns.push({ binding: { kind: "statistic", as: `count_${c2.code || "unknown"}` }, header: c2.label });
     for (const p of periods) for (const c of cats) rows.push([...(p.label ? [p.label] : []), c.label, ...cats2.map((c2) => valueOf2(p, c.code, c2.code))]);
+  } else if (sq.breakdown?.groups && timeCols.length && sq.pct) {
+    // Percentages: each category's share of ALL the period's victims, one column each.
+    for (const c of cats) columns.push({ binding: { kind: "statistic", as: `share_${c.code}` }, header: `${c.label} (%)` });
+    for (const p of periods) { const total = valueOf(p, null); rows.push([...(p.label ? [p.label] : []), ...cats.map((c) => { const v = valueOf(p, c.code); return v === null || !total ? null : Math.round((v * 1000) / total) / 10; })]); }
+  } else if (sq.breakdown?.groups && timeCols.length && !sq.share && sq.breakdown.dim !== "weapon") {
+    // A comparison of a person's detail ("female vs male murder victims per year"): the period down the side, a column for each side
+    // compared. A weapon comparison keeps its long form (Year, Weapon, count), as it was accepted before this change.
+    for (const c of cats) columns.push({ binding: { kind: "statistic", as: `count_${c.code}` }, header: c.label });
+    for (const p of periods) rows.push([...(p.label ? [p.label] : []), ...cats.map((c) => valueOf(p, c.code))]);
   } else if (sq.breakdown) {
     columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
     columns.push({ binding: { kind: "statistic", as: "count" }, header: ucFirst(unitWords) });

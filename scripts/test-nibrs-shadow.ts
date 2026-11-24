@@ -611,6 +611,57 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     }
     // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
     assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
+    // "X vs Y" on one attribute (sex, race, weapon) is two series of that attribute, one column each, never both values on one victim (every cell 0).
+    {
+      const vsql: string[] = [];
+      const vstub = (sql: string): unknown[][] => {
+        if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+        if (/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) { vsql.push(sql); return /AS k0/.test(sql) ? [[2000, "F", 3], [2000, "M", 9]] : [[12]]; }
+        return [];
+      };
+      const vdeps = { ...sdeps, execute: vstub } as ShadowDeps;
+      for (const [q, title] of [
+        ["female vs male murder victims per year from 2000 to 2020 nationally", "United States Murder Victims by Year and the Victims' Sex, 2000-2020"],
+        ["white vs black murder victims per year from 2000 to 2020 nationally", "United States Murder Victims by Year and the Victims' Race, 2000-2020"],
+        ["gun murders versus knife murders per year from 2000 to 2020 nationally", "United States Murder Victims by Year and Weapon, 2000-2020"],
+      ] as const) {
+        vsql.length = 0;
+        const o = as(shadowAnswer(q, vdeps), "shr");
+        assert.equal(o.delivered.text[0], title, q);
+        assert.ok(!/Where the Victim's \w+ Was \w+ Where/.test(o.delivered.text[0]), q);
+        // Sex (and ethnicity) leave only Unknown beside the named sides, so it is a column too and each row adds up to the year's total.
+        const want = /female vs male/.test(q) ? 4 : 3;
+        assert.equal(o.delivered.table.columns.length, want, `${q}: a Year column and one column for each side`);
+        if (want === 4) assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Year", "Female", "Male", "Unknown"], q);
+        assert.ok(o.delivered.table.columns[0].header === "Year" && o.delivered.table.rows.every((r) => r.length === want), q);
+        assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'/i.test(s)), `${q}: ${vsql[0]}`);
+      }
+      // Named together without "vs": still categories of one attribute, never ANDed (Coordinator 2026-11-23).
+      for (const [q, cols] of [
+        ["female and male murder victims per year from 2000 to 2020 nationally", ["Year", "Female", "Male", "Unknown"]],
+        ["% of white, black, and other homicide victims in philadelphia by year since 2010", ["Year", "Black (%)", "White (%)", "Other (%)", "Unknown (%)"]],
+      ] as const) {
+        vsql.length = 0;
+        const o = as(shadowAnswer(q, vdeps), "shr");
+        assert.deepEqual(o.delivered.table.columns.map((c) => c.header), [...cols], q);
+        assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'|race\s*=\s*'W'\s+AND[^;]*race\s*=\s*'B'/i.test(s)), q);
+        // A share is out of ALL victims: the SQL does not limit the people to the named groups.
+        if (/%/.test(q)) assert.ok(vsql.some((s) => /ELSE '3'/.test(s)), `${q}: Unknown gathers blank and unlisted codes`);
+        if (/%/.test(q)) assert.ok(!vsql.some((s) => /p\.\w*race\w* IN \('B', 'W'/.test(s) && /WHERE[^;]*p\.\w*race\w* IN \('B', 'W', /.test(s)), q);
+      }
+      // Non-zero cells: the group query returns the group index ('0' white... ) per year.
+      {
+        const nz = (sql: string): unknown[][] => /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) && /AS k1/.test(sql) ? [[2010, "0", 5], [2010, "1", 3], [2010, "2", 1], [2010, "3", 1]]
+          : /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) ? [[10]] : vstub(sql);
+        const o = as(shadowAnswer("% of white, black, and other murder victims per year from 2010 to 2011 nationally", { ...vdeps, execute: nz } as ShadowDeps), "shr");
+        const r = o.delivered.table.rows.find((x) => x[0] === "2010")!;
+        assert.deepEqual(r.slice(1), [50, 30, 10, 10], "shares of all victims, Unknown in its own column");
+        assert.equal(r.slice(1).reduce<number>((a, b) => a + Number(b), 0), 100, `shares add to 100: ${JSON.stringify(r)}`);
+        assert.ok(r.slice(1).every((v) => Number(v) > 0), JSON.stringify(r));
+      }
+      assert.equal(as(shadowAnswer("male vs female firearm murder victims per month since 2018 nationally", vdeps), "shr").delivered.text[0],
+        "United States Murder Victims With a Firearm by Month and the Victims' Sex, Jan 2018-Sep 2026");
+    }
     // P165 (Jeff 2026-11-19): the share of murders that involved a firearm is the murders by weapon with each share, and one sentence for the firearms together.
     const gstub = (sql: string): unknown[][] => {
       if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
