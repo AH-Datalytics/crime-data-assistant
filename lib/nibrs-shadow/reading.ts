@@ -502,8 +502,7 @@ function readComparison(text: string, currentYear: number, lastMonth?: string): 
 /** P61's consistent-reporters wording ("only agencies that reported every month"): read here, and removed by the
  * answer contract to give the all-agencies question. */
 /** "according to NIBRS": the source asked for in words (P01). */
-// P301: "NIBRS information of X" and "incident rates in X" also choose NIBRS (a source word with no crime named: P182 default, from NIBRS).
-export const NIBRS_WORDS = /,?\s*\b(?:(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)|(?:the\s+)?NIBRS\s+(?:information|data|figures|statistics|numbers)\s+(?:of|for|on|about)|incident(?=\s+(?:rates?|counts?|numbers?|trends?)\b))\b/i;
+export const NIBRS_WORDS = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
 export const SHR_WORDS = /,?\s*\b(?:(?:according\s+to|from|in|per|using|with)\s+)?(?:the\s+)?(?:FBI\s+)?(?:Supplementary\s+)?(?:Homicide\s+Reports?|SHR)\b/i;
 export const CONSISTENT_WORDS =/,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
 
