@@ -2337,7 +2337,11 @@ assert.deepEqual(txEvery.delivered.table.columns.map((c) => c.header), ["Carjack
 // The fixed set named with its whole span (Jeff 2026-11-01), never a bare "every month".
 assert.match(txEvery.delivered.text[0], /counting only the 3 Consistent Reporting Agencies that reported every month from January 2024 through December 2024\.$/);
 assert.deepEqual(first(ask("Carjackings in Texas in 2024, only agencies that reported every month")), [252], "the button's question, typed");
-assert.deepEqual(first(ask("Carjacking rate in Texas in 2024")), [6.7], "307 per 4,570,000 residents of the agencies counted");
+assert.deepEqual(first(ask("Carjacking rate in Texas in 2024")), [5.4], "P303: the rate leaves out SMALLVILLE (FBI population 0), so its crimes leave the numerator as well as the denominator");
+{
+  const txRate = as(ask("Carjacking rate in Texas in 2024"), "answer");
+  assert.ok(txRate.delivered.text.some((t) => /^The rate leaves out 1 agency with no FBI population\. It uses the combined population of the 3 agencies counted: 4,570,000/.test(t)), txRate.delivered.text.join(" / "));
+}
 assert.equal(as(ask("Robberies in Texas in 2024 according to NIBRS"), "answer").plan.source, "nibrs", "P01: the source asked for in words");
 // Scoring increment 5: the historical file's values with their column and row; a route verifies routing only; a state
 // sum's view, rows and disclaimer figures.
@@ -2379,7 +2383,11 @@ assert.deepEqual([first(txConflict), txConflict.stateSum!.years[0].conflicts, tx
 assert.ok(!txConflict.delivered.text.some((t) => /disagree/.test(t)), txConflict.delivered.text.join(" / "));
 CONFLICT = null;
 // 5. A missing population is never 0: no rate, and the share covered is a lower bound.
-assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /^No rate is given for North Carolina in 2024, because 1 of the agencies counted have no FBI population/);
+{
+  const ncRate = as(ask("Shoplifting rate in North Carolina in 2024"), "answer");
+  assert.ok(!/^No rate is given/.test(ncRate.delivered.text[0]), "P303: the rate is given over the agency with a population");
+  assert.ok(ncRate.delivered.text.some((t) => /^The rate leaves out 1 agency with no FBI population\. It uses the combined population of the 1 agency counted: 300,000/.test(t)), ncRate.delivered.text.join(" / "));
+}
 const nc = as(ask("Shoplifting in North Carolina in 2024, with the number of agencies reporting"), "answer");
 assert.match(String(nc.delivered.table.rows[0][2]), /^≥[\d.]+%$/, "a lower bound is marked in its cell");
 assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", FBI_MASTER_FILES, "Source: FBI NIBRS."]);
