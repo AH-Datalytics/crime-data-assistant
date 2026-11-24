@@ -3043,6 +3043,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       const o = shadowAnswer(q, live) as unknown as { kind: string; about?: string; explanation?: string };
       // The stub holds no rows, so the composite is the no-data decline for the place (with rows it answers by year; the Runner reads real data).
       assert.ok(o.kind === "decline" && /^No data is available for crime in Dallas, Texas\./.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 300)}`);    } }
+  // Engine 2.0 2026-11-24: the nation's property crime "by type" before NIBRS's years is Crime Index's three property offenses side by side by year
+  // (never the NIBRS clearance-type decline).
+  { const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+    const want: Record<string, string> = { "rates of property crime, by type, since 2000": "United States Property Crime Rate by Type Per Year, 2000-2025",
+      "property crime rates by type in the United States since 2000": "United States Property Crime Rate by Type Per Year, 2000-2025",
+      "property crime by type in the US by year since 2000": "United States Property Crime by Type Per Year, 2000-2025" };
+    for (const [q, title] of Object.entries(want)) {
+      const o = shadowAnswer(q, live) as unknown as { kind: string; delivered?: { text: string[]; table: { columns: { header: string }[] } } };
+      assert.ok(o.kind === "srs" && o.delivered?.text[0] === title && o.delivered.text.at(-1) === "Source: Crime Index.", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+      assert.equal(o.delivered?.table.columns.length, 4, q); } }
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
   const nib =shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));

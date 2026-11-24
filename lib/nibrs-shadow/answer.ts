@@ -62,7 +62,7 @@ import { answerStateSet } from "./state-set";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
-import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
+import { COMPOSITE_PARTS, composeCrimeOverTime, composeByType, PROPERTY_TYPES } from "./crime-over-time";
 import { buildScorecard, type ScorecardPlace } from "./scorecard";
 import { detectAgencyScorecardQuestion } from "../scorecard-format";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
@@ -3649,6 +3649,18 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // The same for any NIBRS-only figure no other source holds (labels R14, 2026-11-24: "drug offenses in Salem since 2000",
     // "carjacking rates in Atlanta for the past ten years"): answered from the first year, the earlier years named, when
     // Crime Index has no yearly figure for it (by year does not run).
+    // Property crime "by type" for the nation, before NIBRS's years (Engine 2.0 2026-11-24, Coordinator): Crime Index's three property offenses
+    // by year (burglary, larceny-theft, motor vehicle theft), never NIBRS's decline. The reader takes "by type" for a clearance type; it means the offense.
+    const typeAsked = ledger0.parts.find((p) => p.clause === 0 && p.concept === "breakdown" && p.value === "clearance-type");
+    if (deps.historical && !yearSet && plan.measures.length === 1 && plan.measures[0].id === "property_crime.ucr" && plan.geography.places.length === 1 && plan.geography.places[0].kind === "national"
+      && typeAsked && /^\s*by\s+(?:the\s+)?type\s*$/i.test(typeAsked.text) && !flags(ledger0).clearance && !flags(ledger0).nibrsAsked) {
+      const noType = withParts(ledger, ledger.parts.filter((p) => p !== typeAsked));
+      const base = ledger.parts.some((p) => p.clause === 0 && p.concept === "grain") ? noType : filled(noType, "grain", "year", "by year");
+      const rate = clause0("statistic").some((p) => /^(?:rate|per100k|percapita)$/.test(String(p.value ?? "")));
+      const parts = PROPERTY_TYPES.map((t) => fromLedger(filledAll(base, "measure", [[t.measure, t.words]]), deps, pins));
+      const merged = parts.every((o) => o.kind === "historical" || o.kind === "srs") ? composeByType(parts as never, rate) : null;
+      if (merged) return merged as ShadowOutcome;
+    }
     const arrestsOnly = plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
     const clipNote = (who: string) => {
       const missing = periodWords(period.from, `${String(Number(firstY) - 1)}-12`);
