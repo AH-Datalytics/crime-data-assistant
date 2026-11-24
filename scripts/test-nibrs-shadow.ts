@@ -206,6 +206,15 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
     assert.notEqual(ask(q).kind === "clarify" && (ask(q) as { about?: string }).about, "which Kings County", q);
   }
 }
+// Coordinator 2026-11-24 (ruling A, QL-nibrs-b2f415c823): one category over several years, not by year, is the category's table summed over the years.
+{
+  for (const [q, title] of [["DUI arrests by age nationally, 2023 - 2025", "United States DUI Arrests by Arrestee Age Group, 2023-2025"], ["burglary arrests by age in Texas, 2022 - 2024", "Texas Burglary Arrests by Arrestee Age Group, 2022-2024"]] as const) {
+    const a = as(ask(q), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[] } } };
+    assert.equal(a.delivered.text[0], title, q);
+    assert.ok(!a.delivered.table.columns.some((c) => /^(Year|Period)$/i.test(c.header)), "one table over the years, no year column");
+    assert.ok(a.delivered.text.includes("Includes all agencies."), q);
+  }
+}
 // P168 (Jeff 2026-11-19): offenders or arrests by age for the crimes of an incident with a weapon, for one agency; the answer says how a person is counted.
 {
   const byAge = as(ask("violent crimes involving a firearm in Houston in 2025 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
