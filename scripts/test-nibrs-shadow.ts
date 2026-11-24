@@ -669,7 +669,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       return /AS k0/.test(sql) ? [["12", 6], ["11", 2], ["20", 2]] : [[10]];
     };
     const gdeps = { ...sdeps, execute: gstub } as ShadowDeps;
-    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "what weapons were used in murders in Houston in 2023"]) {
+    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "Share of Murders committed with a firearm in Houston in 2023", "what weapons were used in murders in Houston in 2023"]) {
       const o = as(shadowAnswer(q, gdeps), "shr");
       assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder victims", "Share (%)"], q);
       assert.ok(/^Houston, Texas .* by Weapon, 2023$/.test(o.delivered.text[0]), o.delivered.text[0]);
@@ -1477,6 +1477,10 @@ assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").ki
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
 const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
 assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answerStatements], ["each_value", ["categories_overlap"]]);
+// Reader: "what weapons are most commonly used in X" and "by weapons" read as X by weapon; "value of items stolen in" reads as the value stolen in.
+for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
+  assert.equal(ask(q).kind, "answer", q);
+}
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
 {
   const q = "Where do most robberies occur - residences, streets, or commercial buildings?";
@@ -2313,7 +2317,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.notEqual(ask("Female murder offenders in Ohio in 2022").kind, "route");
   // Reader cluster 2: a change over a span ("changed since 2020", "over the past 5 years") is the series over it;
   // "trended"/"trending" read as "trend"; two named years stay a comparison.
-  for (const q of ["How has robbery changed in Denver since 2020?", "How have robberies in Denver trended since 2020?", "Is the Denver robbery rate trending up over the past 5 years?"]) {
+  for (const q of ["How has robbery changed in Denver since 2020?", "How have robberies in Denver trended since 2020?", "Is the Denver robbery rate trending up over the past 5 years?", "How has robbery changed in Denver?"]) {
     const o = ask(q);
     assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell|two named years|two years/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
   }
@@ -3015,6 +3019,38 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       assert.equal(po.delivered.text[po.delivered.text.length - 1], "Source: Crime Index.");
     }
   }
+  // Part I wording is consumed only by the crime-over-time composite, including its explicit offense unit.
+  for (const phrase of ["Part 1", "Part I", "Part one", "Part 1 UCR", "Part I UCR", "Part one UCR"]) {
+    const q = `Chart New Orleans ${phrase} offenses by month`;
+    const po = shadowAnswer(q, cdeps);
+    assert.equal(po.kind, "current", `${q}: ${JSON.stringify(po).slice(0, 300)}`);
+    if (po.kind === "current") {
+      assert.deepEqual(po.delivered.table.columns.map((c) => c.header), ["Month", "Violent crime", "Property crime", "Part I crime", "Murder", "Rape", "Robbery",
+        "Aggravated assault", "Burglary", "Larceny-theft", "Motor vehicle theft"], q);
+      assert.deepEqual(po.delivered.table.rows[0].slice(0, 4), ["2025-01", 11, 11, 22], q);
+      assert.match(po.delivered.text[0], /^New Orleans, Louisiana /);
+    }
+    assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.state === "not-interpreted" && p.text === phrase), "the reader itself is unchanged");
+  }
+  for (const q of ["New Orleans Part 2 UCR offenses by month", "New Orleans Part 1 UCR arrests by month",
+    "New Orleans Part 1 UCR victims by month", "New Orleans Part 1 UCR offenses in 2024", "New Orleans Part 1 UCR murders by month",
+    "New Orleans Part 1 UCR mysterious offenses by month"]) {
+    assert.equal(shadowAnswer(q, cdeps).kind, "decline", q);
+  }
+  const laCity = shadowAnswer("Los Angeles city murder per month", cdeps);
+  assert.equal(laCity.kind, "current", JSON.stringify(laCity).slice(0, 300));
+  if (laCity.kind === "current") {
+    assert.match(laCity.delivered.text[0], /^Los Angeles, California /);
+    assert.deepEqual(laCity.delivered.table, as(shadowAnswer("LAPD murder per month", cdeps), "current").delivered.table);
+  }
+  const laBare = as(shadowAnswer("Los Angeles murder per month", cdeps), "clarify");
+  assert.match(laBare.about, /Los Angeles/);
+  assert.ok(laBare.options.some((o) => /Sheriff|County/.test(o.label)), "bare Los Angeles still offers the county");
+  const cityDeps = { ...deps, execute: () => [["TXHPD0000", 2024, 11, 0.5, 2300000]],
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const houstonCity = as(shadowAnswer("Houston city murders in 2024", cityDeps), "historical");
+  assert.deepEqual(houstonCity.delivered.table, as(shadowAnswer("Houston murders in 2024", cityDeps), "historical").delivered.table);
+  assert.ok(houstonCity.delivered.table.rows.some((r) => r.includes(11)), "Houston's yearly count still answers");
   const poGap = shadowAnswer("Houston crime per month", cdeps);
   assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
     // Every column is blank that month: the line is said once, naming no column (Engine 2.0 2026-11-21).
@@ -3579,6 +3615,44 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A place, a rate or another grouping is not this ranking.
   assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
   assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
+}
+// P271: several crimes for one state or the nation: one table, a column for each crime, never added together.
+{
+  const two = as(ask("Shoplifting and carjackings in Texas in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Carjacking offenses", "Shoplifting offenses"], JSON.stringify(two.delivered.table.columns));
+  assert.equal(two.delivered.table.rows.length, 1, "one row, a column for each crime");
+  assert.deepEqual(two.delivered.contractProblems, []);
+  assert.equal(two.delivered.evidence.length, 2, "one evidence record per figure");
+  assert.equal(two.buttons, undefined, "no Consistent Reporting Agencies button across several crimes");
+  // Each crime is its own sum: the columns are never added into one total.
+  assert.equal(two.delivered.table.rows[0].length, 2);
+  // Combined stays declined.
+  as(ask("Shoplifting and carjackings combined in Texas in 2024"), "decline");
+  // By year, and as rates (the generic several-crimes guard must not stop a rate).
+  const byYear = as(ask("Shoplifting and carjackings in Texas by year 2022 to 2024"), "answer");
+  assert.equal(byYear.delivered.table.rows.length, 3, "a row for each year");
+  assert.deepEqual(byYear.delivered.contractProblems, []);
+  const rates = ask("Shoplifting and carjacking rates per 100,000 in Texas in 2024");
+  const rt = as(rates, "answer");
+  assert.deepEqual(rt.delivered.table.columns.map((c) => c.header), ["Carjacking offenses per 100,000", "Shoplifting offenses per 100,000"]);
+  assert.deepEqual(rt.delivered.evidence.map((e) => [e.row, e.statistic]), [[0, "carjacking_rate"], [0, "shoplifting_rate"]]);
+  // Every figure is the one the crime's own single-crime answer gives (a rate is never summed).
+  const oneCj = as(ask("Carjacking rate per 100,000 in Texas in 2024"), "answer"), oneSh = as(ask("Shoplifting rate per 100,000 in Texas in 2024"), "answer");
+  assert.deepEqual(rt.delivered.table.rows[0], [oneCj.delivered.table.rows[0][0], oneSh.delivered.table.rows[0][0]]);
+  const oneCj2 = as(ask("Carjackings in Texas in 2024"), "answer"), oneSh2 = as(ask("Shoplifting in Texas in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.rows[0], [oneCj2.delivered.table.rows[0][0], oneSh2.delivered.table.rows[0][0]]);
+  // Each evidence record names its own column's statistic, on a row that exists.
+  for (const o of [two, byYear, rt]) {
+    const stats = o.delivered.table.columns.flatMap((c) => (c.binding.kind === "statistic" ? [c.binding.as] : []));
+    assert.ok(o.delivered.evidence.every((e) => stats.includes(e.statistic) && e.row < o.delivered.table.rows.length));
+    assert.equal(o.delivered.evidence.length, stats.length * o.delivered.table.rows.length);
+  }
+  // Coverage is kept for each crime, in column order, and the lead says the figures are summed across the agencies that reported.
+  assert.equal(two.stateSums?.length, 2);
+  assert.ok(two.delivered.text.filter((t) => /summed over the agencies that reported/.test(t)).length === 2, "each crime's sentence is kept");
+  // A composite named together is not several crimes in columns: a real decline.
+  const drug = as(ask("Drug crimes and carjackings in Texas by year 2022 to 2024"), "decline");
+  assert.equal(drug.reason, "unsupported_capability");
 }
 // P270: several states, or a state and the nation, asked together: one table with a Place column, each place its own state sum, never added together.
 {
