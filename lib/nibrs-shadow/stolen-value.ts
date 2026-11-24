@@ -65,7 +65,7 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
     && ((w) => w.kind === "attribute" && w.dimension === "offense.offense" && w.values?.length === 1 && w.values[0] === "23C")(f.where[0]);
   const shop = plan.filters.some(isShop);
   // Only the stolen loss type (7) is answered; recovered, seized or damaged property has its own values and is not swapped for it.
-  const isStolenLoss = (f: NibrsPlan["filters"][number]) => f.kind === "attribute" && f.dimension === "property.loss_type" && f.values.length === 1 && String(f.values[0]) === "7";
+  const isStolenLoss = (f: NibrsPlan["filters"][number]) => f.kind === "attribute" && f.dimension === "property.loss_type" && f.values?.length === 1 && String(f.values[0]) === "7";
   const other = plan.filters.filter((f) => !(isShop(f) || isStolenLoss(f)));
   if (other.length) return decline(NOT_YET, "stolen value: a condition this answer does not apply");
   // One measure only: the value of the property. A second measure (motor vehicles, a count of crimes) is not answered by a single figure.
