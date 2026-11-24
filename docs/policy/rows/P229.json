@@ -1,0 +1,12 @@
+{
+  "id": "P229",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murder rate\", \"violent crime rate per capita\", \"robbery rate trend in NIBRS\", \"national murder rate by year\"",
+  "what the app does today": "A trend or per-capita question with no place and no period answers with every year available (P180, P181); a NIBRS national or state rate by year is declined.",
+  "proposed behavior": "For the NIBRS source, a trend or per-capita question (rate, per capita, per 100,000, trend, over time) with no place and no period, and not a ranking, answers as the United States by year from 2019 through the latest complete year, with the notes \"No place was named, so the United States is shown.\" and \"No years were given, so 2019 through LAST is shown.\" A NIBRS answer counts the Consistent Reporting Agencies only, says so, and has an All agencies button. A NIBRS national or state rate by year answers: each year's rate divides by the sum of the counted agencies' own NIBRS populations for that year (P184); no rate is given for a year when a counted agency has no population value or the combined population is 0; a series that counts every reporting agency says it includes agencies that reported only part of a year. P229 applies to the NIBRS source. Crime Index, Current and SHR national rate questions keep every year available: a national rate question with no place and no period (\"murder rate\", \"rape rate\", \"robbery rate\", \"per capita murder rate\") answers as the United States 1960 through the latest complete year, as a table and a chart (Jeff 2026-11-23).",
+  "exact default or choices offered": "Buttons: A state, A city or agency, Another year; for NIBRS also All agencies.",
+  "why": "Jeff 2026-11-22 (through the coordinator): a trend or per-capita question with no place and no period is the United States by year since 2019. Narrows P181's every-year default for these questions. Jeff 2026-11-23: a national rate question outside NIBRS shows the full 1960 series; the 2019 default exists because the NIBRS national statement is heavy.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator); built on capability/no-place-national",
+  "test cases": "Probed: \"murder rate\" outside NIBRS (Crime Index, United States 1960-2025, table and chart), \"robbery rate trend in NIBRS\" (Consistent Reporting Agencies, 2019-2025). The national monthly series for a rolling or year-to-date rule (P231) is a later step."
+}

@@ -108,7 +108,6 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   if (catDims.length && isRate) return decline("Rates by category aren't given for a state or the nation: there is no population for each group.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
   if (years.length > 1 && !yearG) return decline("This isn't available: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
-  if (isRate && yearG) return decline("This isn't available: a state or national rate by year.");
   const where = place.kind === "national" ? "the United States" : stateName((place as { code: string }).code);
   const Where = place.kind === "national" ? "United States" : where;
   // A share always with its one decimal ("89.0%").
@@ -272,15 +271,25 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         coverage: [covered(every ? y.every.share : y.share, noPop)],
         population: [noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" }] };
     }
-    lines.push(seriesTitle(when, what, "Year", Where));
+    lines.push(seriesTitle(when, isRate ? `${rateNoun(what)} rate` : what, "Year", Where));
     lines.push(every
       ? `Counts only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
       : "Summed over the agencies that reported each year.");
     lines.push(note(every), FBI_MASTER_FILES);
-    return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
+    // P229 (Jeff 2026-11-22): a rate by year divides each year's sum by that year's own populations of exactly the agencies counted (P184: an
+    // agency's own NIBRS population only; one with no population withholds that year's rate).
+    const noPopYear = (y: StateSumYear) => (every ? y.every.noPopulation : y.noPopulation);
+    const rateOf = (y: StateSumYear): number | null => noPopYear(y) ? null : rate({ value: every ? y.every.sum : y.sum, status: "VALUE" }, every ? y.every.population : y.population).value;
+    if (isRate) {
+      const lacking = byYear.filter((y) => rateOf(y) === null).map((y) => y.year);
+      if (lacking.length) lines.push(`No rate is given for ${lacking.join(", ")}: some agencies counted have no FBI population (or the population is 0).`);
+      if (!every && byYear.some((y) => y.partial > 0)) lines.push("Includes agencies that reported only part of a year.");
+      lines.push(`Each year's rate uses the combined population of ${every ? `the ${CRA}` : "the agencies counted"} that year (the FBI's populations).`);
+    }
+    return { lines, rows: byYear.map((y) => { const v = isRate ? rateOf(y) : (every ? y.every.sum : y.sum); return { key: String(y.year), value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }; }),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),
-      population: byYear.map(() => ({ value: null, status: "UNAVAILABLE" })) };
+      population: byYear.map((y) => noPopYear(y) ? { value: null, status: "UNAVAILABLE" } : { value: every ? y.every.population : y.population, status: "VALUE" }) };
   };
   // The plan names every column it shows (the answer contract): the agencies and the population covered only when the
   // question asks for the agencies reporting (P87, Jeff 2026-11-01: coverage columns on request; the figures are still

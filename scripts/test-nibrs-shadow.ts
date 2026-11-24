@@ -3224,6 +3224,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // No period: every year, said with its span; a ranking: the latest complete year.
   const years = applyDefaults("murders in Philadelphia", ask("which period", "murders in Philadelphia", [{ label: "Every year available", continuation: answerOf(["1960", "1961", "2025"]) }, { label: "Another year", entry: "which year" }]), live);
   assert.equal(text(years)[1], "No years were given, so every year in the data is shown: 1960 through 2025.");
+  // A clearance rate is a share, not a per-capita rate: no place and no period keeps the every-year default, not the since-2019 one (coordinator review of 403, 2026-11-23).
+  for (const q of ["Robbery clearance rate", "what is the clearance rate for rapes", "homicide clearance rates?"]) {
+    const o = applyDefaults(q, ask("which place", q, [{ label: "The United States", continuation: ask("which period", q, [{ label: "Every year available", continuation: answerOf(["1960", "1961", "2025"]) }]) }]), live);
+    assert.equal(o.kind, "srs", q);
+    assert.ok(text(o).includes("No years were given, so every year in the data is shown: 1960 through 2025."), `${q}: ${text(o).join(" | ")}`);
+    assert.ok(!text(o).some((t) => /2019/.test(t)), q);
+  }
   const ranking = applyDefaults("Top 10 cities for homicide rate", ask("which period", "Top 10 cities for homicide rate", [{ label: "The latest complete year (2025)", continuation: answerOf(["x"]) }, { label: "Another year", entry: "which year" }]), live);
   assert.equal(text(ranking)[1], "No year was given, so the latest complete year, 2025, is shown.");
   // No kind of crime: violent and property crime.
@@ -3398,6 +3405,29 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(/^In the United States in 2025, [\d.]+% of the murders reported were cleared by exceptional means/.test(noPlace.delivered.text[0]), noPlace.delivered.text[0]);
   assert.ok(noPlace.delivered.text.includes("No place was named, so the United States is shown."), noPlace.delivered.text.join(" | "));
   assert.ok((noPlace.buttons ?? []).some((b) => b.label === "A state"));
+  // P229 (Jeff 2026-11-22): a trend or per-capita question with no place and no period is the United States by year since 2019, said, with its buttons.
+  for (const q of ["robbery rate trend in NIBRS"]) {
+    const o = shadowAnswer(q, { ...deps, noDefaults: false, deferChars: 1 }) as unknown as Out & { buttons?: { label: string }[] };
+    assert.ok(/(?:by|per) Year/i.test(o.delivered.text[0]), `${q}: ${o.delivered.text.join(" | ")}`);
+    assert.ok(o.delivered.text.includes("No place was named, so the United States is shown."), `${q}: ${o.delivered.text.join(" | ")}`);
+    assert.ok(o.delivered.text.some((t) => /^No years were given, so 2019 through \d{4} is shown\.$/.test(t)), `${q}: ${o.delivered.text.join(" | ")}`);
+    for (const b of ["A state", "A city or agency", "Another year"]) assert.ok((o.buttons ?? []).some((x) => x.label === b), `${q}: button ${b} in ${(o.buttons ?? []).map((x) => x.label).join(",")}`);
+  }
+  // A source that offers "Every year available" (the Crime Index national rate) keeps that default, not since 2019 (Jeff 2026-11-23).
+  for (const q of ["murder rate", "show robbery rate", "what is per capita murder rate"]) {
+    const o = shadowAnswer(q, { ...deps, noDefaults: false, deferChars: 1 }) as unknown as Out;
+    const tx = o.delivered.text.join(" | ");
+    assert.ok(o.delivered.text.some((t) => /^No years were given, so every year in the data is shown: 1960 through \d{4}\.$/.test(t)), `${q}: ${tx}`);
+    assert.ok(!/2019/.test(tx), `${q}: ${tx}`);
+  }
+  // A named period is never replaced by the since-2019 default (coordinator review of 403, 2026-11-23).
+  for (const q of ["NIBRS robbery rate in 2023", "murder rate since 2021 in NIBRS", "NIBRS murder rate last year"]) {
+    const o = liveAsk(q) as unknown as Partial<Out>;
+    assert.ok(!(o.delivered?.text ?? []).some((t) => /No years were given, so 2019|by year from 2019/.test(t)), `${q}: ${(o.delivered?.text ?? []).join(" | ")}`);
+  }
+  // A national NIBRS rate by year: each year's rate divides that year's own populations; no rate where a counted agency has no population.
+  const rateYr = liveAsk("robbery rate trend in NIBRS in the United States by year from 2019 to 2024") as unknown as Out;
+  assert.ok(rateYr.delivered.table.rows.length >= 2 && rateYr.delivered.text.some((t) => /^Each year's rate uses the combined population/.test(t)), rateYr.delivered.text.join(" | "));
   // The national clearance share is exempt from the heavy-statement deferral (coordinator 2026-11-22), so a tiny limit still answers it.
   assert.equal(shadowAnswer("what share of murders were cleared by exception in 2025?", { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
   // 9aed2136c4 (Jeff 2026-11-22): "what percentage ... arrest vs exceptional nationally" with no year is the latest complete year, said, as shares of the clearance types.
