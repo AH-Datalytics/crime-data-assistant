@@ -194,6 +194,12 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// QL-nibrs-c74cec7689: "offender demographics for robbery by sex" is the robbery offenders by sex (it was declined as unread).
+for (const q of ["Compare offender demographics for robbery by sex nationally in 2024", "offender demographics for robbery by sex nationally in 2024"]) {
+  const o = as(ask(q), "answer");
+  assert.deepEqual(o.plan.groupings.map((g) => g.dimension), ["offender.sex"], q);
+  assert.equal(o.plan.measures[0].id, "offenders.robbery", q);
+}
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
@@ -243,6 +249,11 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
   for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
     assert.equal(ask(q).kind, "answer", q); // Coordinator 2026-11-24: the state and national gate is gone, the definition is unchanged
+  // Coordinator 2026-11-24: drug offenses in a state or the nation are one composite count (35A + 35B), alone, by year, and for several states.
+  for (const q of ["drug offenses in Texas in 2024", "Show me drug offense trends in Ohio from 2020 to 2024", "Compare drug offenses in Ohio and Pennsylvania since 2020", "drug possession in Texas in 2024"]) {
+    const dr = as(ask(q), "answer") as unknown as { plan: { measures: { id: string }[] } };
+    assert.deepEqual(dr.plan.measures.map((m) => m.id), ["offenses.drug_crimes"], q);
+  }
   // 3b: the incidents with at least one domestic violence victim (the same P82 victim membership, each incident once).
   const n1 = sqls.length;
   const inc = as(ask("How have domestic violence incidents trended in Houston since 2019"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
@@ -889,6 +900,15 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas Robbery Offenses With an Offender Under 18 Per Month, 2024");
   assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas Robbery Offenses Per Month, 2024", "no age: property victims stay counted by offense (P11)");
 }
+// Jeff 2026-11-24: "juvenile crime" with a place and no crime named is juvenile (under 18) arrests per year, noting arrests are not crimes,
+// with the consistent-reporters option beside it.
+for (const q of ["show me the trend of juvenile crime in Kansas since 2020", "juvenile crime in Kansas since 2020"]) {
+  const a = as(ask(q), "answer");
+  assert.equal(a.delivered.text[0], "Kansas Arrests of Arrestees Under 18 Per Year, Jan 2020-Sep 2026", q);
+  assert.equal(a.delivered.text[1], "Arrests do not equal crimes.", q);
+  assert.ok(a.buttons?.some((b) => /Consistent Reporting Agencies/.test(b.label)), q);
+}
+assert.equal(as(ask("juvenile arrests in Kansas since 2020"), "answer").delivered.text[1], "Summed over the agencies that reported each year.", "asking for arrests leaves the answer as it was");
 // Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
 {
   const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;

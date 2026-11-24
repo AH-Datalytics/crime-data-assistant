@@ -150,6 +150,9 @@ const STATE_ALT = Object.values(STATE_NAME_BY_CODE).sort((x, y) => y.length - x.
 const PHRASES: [RegExp, string][] = [
   // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
   [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
+  // D: "summarize current crime trends for Asheville" names no crime: it is the opener (P182 default), not Current Trends' monthly series.
+  // A crime named anywhere after it ("current crime trends for robberies in Asheville") keeps the Current Trends reading.
+  [/\bcurrent(?:ly)?\s+(crimes?\s+trends?)\b(?![^?]*\b(?:murder|homicide|robber|burglar|rape|assault|theft|larceny|arson|shooting|vehicle|violent|property)\w*)/gi, "$1"],
   // B1: "Cook County police department in Illinois" is "Cook County, Illinois" (the county's police are the county's agency).
   [new RegExp(String.raw`\b(County)\s+(?:Police\s+Department|Police\s+Dept\.?|Police)\s+(?:in|of)\s+(${STATE_ALT})(?=\s*(?:[,.?!;]|$|\d|\b(?:in|from|for|since|during|between|over|by|and|to|through|until|last|this|each|per)\b))`, "gi"), "$1, $2"],
   // B1: Orleans Parish is the City of New Orleans; the figures are the New Orleans Police Department\'s (said in the readings).
@@ -304,6 +307,8 @@ const PHRASES: [RegExp, string][] = [
   // is "homicides by circumstance". Never after "by" ("by victim race" is read by the people reader below).
   [/(?<!\bby\s+(?:the\s+)?)\b(victim|offender)s?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b(?!\s+(?:and|or|\/)\s+(?:race|sex|gender|ethnicity|age)\b)/gi, "$1s by $2"],
   [/\b(victim|offender)s?\s+(?:demographics|demographic\s+breakdown)\s+by\s+(race|sex|gender|ethnicity|age)\b/gi, "$1s by $2"],
+  // "offender demographics for robbery by sex" is "robbery offenders by sex" (QL-nibrs-c74cec7689: "demographics for" was unread).
+  [/\b(victim|offender|arrestee)s?\s+demographics\s+(?:for|of|in)\s+([a-z][a-z ]*?)(?=\s+(?:by|in|during|from|since|nationally|across)\b|\s*[?.!,]|\s*$)/gi, "$2 $1s"],
   [/\b(?:the\s+)?racial\s+(?:breakdown|makeup|composition|distribution)\s+of\s+((?:[a-z]+\s+){0,3}?(?:victims|offenders))\b/gi, "$1 by race"],
   [/\b(murder|homicide|killing)s?\s+circumstances?\b/gi, "$1s by circumstance"],
   // P162 (Jeff 2026-11-19): "what percentage of murder victims were female" is the victims by sex with each sex's share; the table
