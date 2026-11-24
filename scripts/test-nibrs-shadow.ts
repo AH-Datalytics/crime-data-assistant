@@ -201,6 +201,22 @@ for (const q of ["do for nyc", "i want for the District", "i want to see this fo
 for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q); // "Nopd" = Orleans Parish composite, answer:historical (QL-hist-2fccc68bd6, ruling 2026-11-24)
 // QL-nibrs-4bce7663f2, QL-nibrs-93270941d0 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" are not given the Crime Index composite; they ask which kind of crime.
 // (Asserted below, after the stub's data is loaded.)
+// Row 4 of the follow-up errors (coordinator 2026-11-24): "usa" and "u.s." in any case are the United States, and a state code in any case after
+// show/in/for/of is that state, as the capitalised forms already were. Words that are also codes (or, me, in, hi, ok, oh, id, la, de, ma, pa) stay words.
+{
+  const same = (a: string, b: string) => { const x = shadowAnswer(a, { ...deps, noDefaults: false }), y = shadowAnswer(b, { ...deps, noDefaults: false }); assert.equal(x.kind, y.kind, a); assert.notEqual(x.kind, "clarify", a); };
+  same("violent crime in the usa in 2025", "violent crime in the USA in 2025");
+  same("violent crime in usa in 2025", "violent crime in the USA in 2025");
+  same("violent crime in the u.s. in 2025", "violent crime in the USA in 2025");
+  same("violent crime in ca in 2025", "violent crime in CA in 2025");
+  same("show ca violent crime per year", "show California violent crime per year");
+  same("show CA violent crime per year", "show California violent crime per year");
+  same("show tx violent crime per year", "show Texas violent crime per year");
+  // Codex review: an opening command followed by in/for/of must leave the preposition for the place ("show me in CA ...").
+  same("show me in CA violent crime per year", "show me in California violent crime per year");
+  same("show me for tx violent crime per year", "show me for Texas violent crime per year");
+  for (const q of ["violent crime in or 2025", "violent crime in me 2025"]) assert.ok(!/Oregon|Maine/.test(JSON.stringify(shadowAnswer(q, { ...deps, noDefaults: false }))), q);
+}
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
 {
   sqls.length = 0;
@@ -3456,6 +3472,12 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // No kind of crime: violent and property crime.
   const crime = applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime" }, { label: "Both", continuation: answerOf(["2024"]) }]), live);
   assert.equal(text(crime)[1], "No kind of crime was named, so violent crime and property crime are shown.");
+  // A weapon named with no crime ("how many firearms crimes in the usa"): weapons are recorded for violent crime, so only that button runs and it is the default, said
+  // (QL-ct-cdad672651, gate on 493); with no weapon named a lone button stays an ask.
+  const gunCrime = applyDefaults("how many firearms crimes in the usa last year", ask("which kind of crime", "how many firearms crimes in the usa last year", [{ label: "Violent crime", continuation: { kind: "answer", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } as unknown as ShadowOutcome }]), live);
+  assert.equal(gunCrime.kind, "answer");
+  assert.equal(text(gunCrime)[1], "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).");
+  assert.equal(applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime", continuation: answerOf(["2024"]) }]), live).kind, "clarify");
   // Place, then period, then crime in one chain: three notes in that order.
   const chain = applyDefaults("crime trends", ask("which place", "crime trends", [{ label: "The United States", continuation: ask("which period", "crime trends", [{ label: "Every year available", continuation: ask("which kind of crime", "crime trends", [{ label: "Both", continuation: answerOf(["2023", "2024"]) }]) }]) }]), live);
   assert.equal(text(chain).length, 5, JSON.stringify(text(chain)));
