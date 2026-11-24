@@ -34,7 +34,7 @@ export const MEASURE_CODES: Record<string, string[]> = {
   person_crimes: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "36A", "36B", "100", "64A", "64B"],
   violent_crime: ["09A", "11A", "11B", "11C", "120", "13A"], property_crime: ["200", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240"],
   // NIBRS's assault offenses (coordinator 2026-11-06, a bare "assault" asked about): intimidation, and all three.
-  intimidation: ["13C"], assault_offenses: ["13A", "13B", "13C"],
+  intimidation: ["13C"], assault_offenses: ["13A", "13B", "13C"], kidnapping: ["100"],
   // Group B offenses (arrests only), 2026-11-11: each its own measure, as DUI is.
   disorderly_conduct: ["90C"], drunkenness: ["90E"], liquor_law: ["90G"], curfew_loitering: ["90B"], trespass: ["90J"],
   family_offense_nonviolent: ["90F"], peeping_tom: ["90H"], bad_checks: ["90A"], runaway: ["90I"], all_other_offenses: ["90Z"],
@@ -52,7 +52,7 @@ export const MEASURE_LABEL: Record<string, string> = {
   sex_offense: "sex offense", burglary: "burglary", theft_from_motor_vehicle: "theft from motor vehicle", motor_vehicle_theft: "motor vehicle theft",
   shoplifting: "shoplifting", theft: "theft", arson: "arson", drug_possession: "drug possession", dui: "DUI", violent_crime: "violent crime",
   property_crime: "property crime", domestic_violence: "domestic violence", hate_crime: "hate crime", carjacking: "carjacking",
-  motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", assault_offenses: "assault offense",
+  motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", kidnapping: "kidnapping", assault_offenses: "assault offense",
   disorderly_conduct: "disorderly conduct", drunkenness: "drunkenness", liquor_law: "liquor law violation", curfew_loitering: "curfew or loitering",
   trespass: "trespass of real property", family_offense_nonviolent: "nonviolent family offense", peeping_tom: "peeping tom", bad_checks: "bad checks",
   runaway: "runaway", all_other_offenses: "all other offenses", weapon_law: "weapon law violation",
