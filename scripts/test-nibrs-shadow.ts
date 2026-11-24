@@ -632,6 +632,18 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
         assert.ok(o.delivered.table.columns[0].header === "Year" && o.delivered.table.rows.every((r) => r.length === 3), q);
         assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'/i.test(s)), `${q}: ${vsql[0]}`);
       }
+      // Named together without "vs": still categories of one attribute, never ANDed (Coordinator 2026-11-23).
+      for (const [q, cols] of [
+        ["female and male murder victims per year from 2000 to 2020 nationally", ["Year", "Female", "Male"]],
+        ["% of white, black, and other homicide victims in philadelphia by year since 2010", ["Year", "Black (%)", "White (%)", "Other (%)"]],
+      ] as const) {
+        vsql.length = 0;
+        const o = as(shadowAnswer(q, vdeps), "shr");
+        assert.deepEqual(o.delivered.table.columns.map((c) => c.header), [...cols], q);
+        assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'|race\s*=\s*'W'\s+AND[^;]*race\s*=\s*'B'/i.test(s)), q);
+        // A share is out of ALL victims: the SQL does not limit the people to the named groups.
+        if (/%/.test(q)) assert.ok(!vsql.some((s) => /p\.\w*race\w* IN \('B', 'W'/.test(s) && /WHERE[^;]*p\.\w*race\w* IN \('B', 'W', /.test(s)), q);
+      }
       assert.equal(as(shadowAnswer("male vs female firearm murder victims per month since 2018 nationally", vdeps), "shr").delivered.text[0],
         "United States Murder Victims With a Firearm by Month and the Victims' Sex, Jan 2018-Sep 2026");
     }

@@ -1695,7 +1695,7 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
   const compare = ledger0.parts.some((p) => p.clause === 0 && p.concept === "versus") || /\bcompar/i.test(ledger0.question)
     // The reader rewrites a comparison's "vs" as "and"; the question as asked keeps it ("female vs male murder victims per year").
     || /\s(?:vs\.?|versus)\s/i.test(deps.asked ?? "");
-  const sq = shrQuestionOf(plan, period, deps.shr, { compare });
+  const sq = shrQuestionOf(plan, period, deps.shr, { compare, other: /\bother\b/i.test(deps.asked ?? ledger0.question), percent: /%|\bpercent|\bshare\b|\bproportion/i.test(deps.asked ?? "") });
   if ("why" in sq) return null;
   // P163 (Jeff 2026-11-19): justifiable homicides are shown for both kinds together; "police" in the question alone is the felons killed by
   // police (code 81), "civilians" or "private citizens" alone the felons killed by a private citizen (80). Both words ask for the two side by side.
