@@ -48,6 +48,14 @@
       "binned": null,
       "binnedHour": null
     },
+    "offense_weapon.weapon": {
+      "col": "w.weapon",
+      "multi": true,
+      "age": false,
+      "join": "LEFT JOIN READ(offense_weapon) w ON w.data_year = v.data_year AND w.ori = v.ori AND w.incident_num = v.incident_num AND w.offense_code = vo.connected_offense",
+      "binned": null,
+      "binnedHour": null
+    },
     "incident.hour": {
       "col": "ih.incident_hour",
       "multi": false,

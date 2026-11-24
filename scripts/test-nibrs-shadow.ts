@@ -685,7 +685,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       return [];
     };
     const rdeps = { ...sdeps, execute: rstub } as ShadowDeps;
-    for (const q of ["domestic murders in Houston in 2023", "domestic violence murders in Houston in 2023", "domestic homicides in Houston in 2023"]) {
+    // B31 (Jeff 2026-11-22): "domestic violence murders" is domestic violence (NIBRS, any offender), not the Homicide Reports route.
+    assert.notEqual(shadowAnswer("domestic violence murders in Houston in 2023", rdeps).kind, "shr");
+    for (const q of ["domestic murders in Houston in 2023", "domestic killings in Houston in 2023", "domestic homicides in Houston in 2023"]) {
       const o = as(shadowAnswer(q, rdeps), "shr");
       assert.ok(/where the victim was an intimate partner or a family member of the offender/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
       assert.ok(o.delivered.text.includes("Homicide Reports do not record a child of a boyfriend or girlfriend, a babysittee, a foster parent, a foster child or a cohabitant, so those relationships are not counted."), JSON.stringify(o.delivered.text));
@@ -864,7 +866,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("teen arrests for robbery in Houston in 2024 by month"), "Houston, Texas Robbery Arrests of Arrestees Aged 13 to 19 Per Month, 2024");
   assert.equal(title("juvenile arrests for robbery in Houston in 2024 by month"), "Houston, Texas Robbery Arrests of Arrestees Under 18 Per Month, 2024");
   assert.equal(title("juvenile robbery offenders in Houston in 2024 by month"), "Houston, Texas Robbery Offenders Under 18 Per Month, 2024");
-  assert.ok(/^Ohio had [\d,]+ robbery offenders aged 13 to 19 in 2024, summed over the agencies that reported\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
+  assert.ok(/^Ohio had [\d,]+ robbery offenders aged 13 to 19 in 2024\.$/.test(title("How many teen robbery offenders in Ohio in 2024?")));
   assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas Murder Victims Aged 13 to 19 Per Month, 2024");
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas Murder Victims Under 18 Per Month, 2024");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
@@ -2235,7 +2237,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const g = (q: string) => planOf(q).groupings.map((x) => `${x.dimension}${x.multiValue ? "*" : ""}${x.bins ? "[bins]" : ""}`);
   const f = (q: string) => JSON.stringify(planOf(q).filters);
   assert.deepEqual(g("Aggravated assaults in Memphis in 2024 by offender race"), ["offender.race*"]);
-  assert.deepEqual(g("Robberies in Detroit in 2024 by offender age"), ["offender.age*[bins]"]);
+  // B11 (Jeff 2026-11-22): counted as offenders, so the grouping is the offender's own (no overlapping categories).
+  assert.deepEqual(g("Robberies in Detroit in 2024 by offender age"), ["offender.age[bins]"]);
   assert.deepEqual(g("According to NIBRS, murder victims in Memphis in 2024 by the race of the offender who killed them"), ["victim_offender.offender_race*"]);
   assert.deepEqual(g("Arrests in Denver in 2023 by arrestee age"), ["arrestee.age[bins]"]);
   assert.match(f("Aggravated assaults by juveniles in Memphis in 2024"), /"scope":"incident","entity":"offender".*"offender.age","op":"between","values":\[1,17\]/);
@@ -2631,9 +2634,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
 // The nearest question that works, the breakdown kept (coordinator, 2026-11-01): victims by weapon as offenses by
 // weapon; "cleared" read into the crime's name asked as "that were cleared".
 {
-  const weapon = as(ask("Murder victims in Memphis in 2024 by weapon"), "decline");
-  assert.match(weapon.explanation, /^Weapons are recorded for each offense, not for each victim/);
-  assert.equal(weapon.alternative?.question, "Murder offenses in Memphis in 2024 by weapon");
+  // B10 (Jeff 2026-11-22): victims by weapon are answered by victim (no longer declined to offenses).
+  assert.equal((as(ask("Murder victims in Memphis in 2024 by weapon"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "victims.murder");
   const cleared = as(ask("Homicide victims cleared in Memphis 2024"), "decline");
   assert.equal(cleared.alternative?.question, "Homicide victims in Memphis 2024 that were cleared");
   assert.equal(as(ask("Aggravated assaults cleared in Memphis in 2024"), "decline").alternative?.question, "Aggravated assaults in Memphis in 2024 that were cleared");
@@ -3442,7 +3444,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // Houston 108 + Dallas 84 + Austin 60 + Smallville 60 = 312 units; arrest 54 + 42 + 30 + 30 = 156, each exceptional type 9 + 7 + 5 + 5 = 26; the rest 26; incidents one fewer per agency.
   assert.deepEqual([byName("Cleared by arrest")[1], byName("Cleared by arrest")[2], byName("Exceptional: prosecution declined")[1], byName("Exceptional: prosecution declined")[2], byName("Uncleared")[1]], [156, 152, 26, 22, 26]);
   assert.equal(tx.delivered.table.rows.reduce((s, r) => s + Number(r[1]), 0), 312, "the types add up to the units counted");
-  assert.ok(tx.delivered.text.some((t) => /Summed over the 4 agencies that reported/.test(t)), tx.delivered.text.join(" | "));
+  // B29 (Jeff 2026-11-22): a one-year state sum carries the one sentence, not a coverage line.
+  assert.ok(tx.delivered.text.includes("Includes all agencies.") && !tx.delivered.text.some((t) => /Summed over the/.test(t)), tx.delivered.text.join(" | "));
   // The nation is the same sum over every state (the runner timed it: 4.3 s); a state's clearance rate is answered (P172).
   const us = as(ask("murder clearance by type in the United States in 2025"), "answer");
   assert.ok(us.stateSum && us.delivered.table.rows.length >= 2, "the nation by clearance type");
@@ -3465,8 +3468,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 // P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
 {
   const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
-  assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
-  assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
+  // B10 (Jeff 2026-11-22): P166 retired; a weapon question is counted by victim.
+  assert.equal(byWeapon.plan.measures[0].id, "victims.aggravated_assault");
+  assert.ok(!byWeapon.delivered.text.some((t) => /not victims/.test(t)), JSON.stringify(byWeapon.delivered.text));
+  // B11 (Jeff 2026-11-22): an offender-age breakdown counts offenders and the title says so; a victim-age breakdown still counts crimes' victims.
+  const offAge = as(ask("Robberies in Detroit in 2024 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  assert.equal(offAge.plan.measures[0].id, "offenders.robbery");
+  assert.match(offAge.delivered.text[0], /Offenders/, offAge.delivered.text[0]);
+  assert.equal((as(ask("robbery victims by weapon in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } }).plan.measures[0].id, "victims.robbery");
+  // Jeff 2026-11-22: a misspelled place asks which one even when another clause is unread ("drop 2021").
+  const balt = ask("shoplifting in Clinton 2020 to present, drop 2021");
+  assert.equal(balt.kind, "clarify", JSON.stringify(balt).slice(0, 400));
+  assert.match(String((balt as { about?: string }).about), /^which Clinton/i);
   const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
   assert.equal(gunViolent.plan.measures[0].id, "victims.person_crimes");
   assert.ok(gunViolent.plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_weapon" && f.scope === "victim"));

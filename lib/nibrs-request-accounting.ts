@@ -133,7 +133,8 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "dv:intimate_partner", pattern: R(String.raw`\bintimate[-\s]partners?(?:\s+violence)?\b|\bipv\b`) },
   { concept: "filter", value: () => "dv:family", pattern: R(String.raw`\bfamily\s+violence\b|\bby\s+(?:family|household)\s+members?\b`) },
   // P169 (Jeff 2026-11-19): "domestic homicides" / "domestic murders" are the murders whose victim was an intimate partner or a family or household member.
-  { concept: "filter", value: () => "dv:domestic", pattern: R(String.raw`\bdomestic(?:\s+violence)?(?=\s+(?:homicides?|murders?|killings?)\b)`) },
+  // B31 (Jeff 2026-11-22): only "domestic" directly before homicide/murder/killing routes to Homicide Reports; "domestic violence murders" stays "domestic violence" (NIBRS, any offender).
+  { concept: "filter", value: () => "dv:domestic", pattern: R(String.raw`\bdomestic(?=\s+(?:homicides?|murders?|killings?)\b)`) },
   // bias motivations
   { concept: "filter", value: () => "bias:21", pattern: R(String.raw`\banti[-\s]?(?:jewish|semitic)\b|\bantisemitic\b`) },
   { concept: "filter", value: () => "bias:12", pattern: R(String.raw`\banti[-\s]?black\b`) },
