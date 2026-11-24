@@ -285,11 +285,12 @@ function groupTotal(row: Record<string, number | null>, group: "violent" | "prop
   return total;
 }
 
+import { roundHalfAway1 } from "./round-half-away";
 function changePct(current: number | null, previous: number | null): number | null {
   // NULL or non-positive prior is UNKNOWN, not zero: "no change" and "cannot know"
   // are different claims, and a fake 0.0% is the worse of the two errors.
   if (current == null || previous == null || previous <= 0) return null;
-  return round1((current - previous) * 100 / previous);
+  return roundHalfAway1((current - previous) * 100 / previous);
 }
 
 function buildAggregateScorecard(
