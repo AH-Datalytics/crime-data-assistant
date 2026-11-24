@@ -296,6 +296,8 @@ export function ageFilterBins(lo: number, hi: number): string[] | null {
  */
 export function cubeUnits(a: CubeAsk): { sql: string } | null {
   if (a.conditioned) return null;
+  // Victims by weapon (Jeff 2026-11-24, P297) read the raw rows: the cube holds no victim-by-weapon cell.
+  if (a.attribute?.dimension === "offense_weapon.weapon") return null;
   const unit = a.kind === "offenders" ? "offender" : a.kind === "victims" ? "victim" : "arrestee";
   // Which cube, which rows.
   let cube: { root: string; years: number[] };
