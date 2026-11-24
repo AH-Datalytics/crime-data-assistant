@@ -3905,5 +3905,6 @@ console.log("nibrs shadow: answers, clarifications and declines follow the slice
   // Known edge (Coordinator 2026-11-24): "can I see the trends data library" has no crime question in it; it reads as the bare form does (a clarify), never an answer or a guess.
   const lib = shadowAnswer("can I see the trends data library", deps);
   assert.equal(lib.kind, "clarify", "the trends data library ask clarifies");
-  assert.equal(shown("can I see the trends data library"), shown("see the trends data library"), "the opener changes nothing");
+  assert.equal((lib as any).about, "which place", "it asks which place");
+  assert.deepEqual((lib as any).options, (shadowAnswer("see the trends data library", deps) as any).options, "the opener changes nothing");
 }
