@@ -145,9 +145,18 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
+// B1: the state named after a county police department ("Cook County police department in Illinois") is that county's state, not a second place.
+const STATE_ALT = Object.values(STATE_NAME_BY_CODE).sort((x, y) => y.length - x.length).join("|");
 const PHRASES: [RegExp, string][] = [
   // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
   [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
+  // D: "summarize current crime trends for Asheville" names no crime: it is the opener (P182 default), not Current Trends' monthly series.
+  // A crime named anywhere after it ("current crime trends for robberies in Asheville") keeps the Current Trends reading.
+  [/\bcurrent(?:ly)?\s+(crimes?\s+trends?)\b(?![^?]*\b(?:murder|homicide|robber|burglar|rape|assault|theft|larceny|arson|shooting|vehicle|violent|property)\w*)/gi, "$1"],
+  // B1: "Cook County police department in Illinois" is "Cook County, Illinois" (the county's police are the county's agency).
+  [new RegExp(String.raw`\b(County)\s+(?:Police\s+Department|Police\s+Dept\.?|Police)\s+(?:in|of)\s+(${STATE_ALT})(?=\s*(?:[,.?!;]|$|\d|\b(?:in|from|for|since|during|between|over|by|and|to|through|until|last|this|each|per)\b))`, "gi"), "$1, $2"],
+  // B1: Orleans Parish is the City of New Orleans; the figures are the New Orleans Police Department\'s (said in the readings).
+  [/\borleans\s+parish(?:,?\s*(?:louisiana|la)\b(?:\s+state\b)?)?/gi, "New Orleans"],
   // B1: "johnson county sheriff in ks": the state's code after "in" (not IN, OR, ME, HI or OK, which are words).
   [/\b(County\s+Sheriff(?:'?s)?(?:\s+(?:Office|Department))?)\s+in\s+(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|ID|IL|KS|KY|LA|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, "$1, $2"],
   [/,\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s+State\b/gi, ", $1"],
@@ -191,6 +200,11 @@ const PHRASES: [RegExp, string][] = [
   [/(\brank\w*\b[^.?!]*?)\bin\s+terms\s+of\b/gi, "$1by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
+  // C1 crime vocabulary: "willful murder" is the legal name of the murder the data counts; "show data on X" is "show me X".
+  [/\bwillful\s+murders?\b/gi, "murders"],
+  // "Willful homicide" is the UCR name for murder and non-negligent manslaughter (09A), not the broader "homicide" (which adds negligent manslaughter).
+  [/\bwillful\s+homicides?\b/gi, "murders"],
+  [/^\s*show\s+(?:me\s+)?(?:the\s+)?data\s+(?:on|for|about)\s+/i, "show me "],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
   // A victim breakdown asked as its categories: "victims ... were male or female" -> "victims ... by sex". Only victims,
   // and only "were": "committed by men and women" is about offenders and is left alone (Codex increment-1 review).
@@ -268,8 +282,13 @@ const PHRASES: [RegExp, string][] = [
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
   // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
   // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
-  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|were\s+committed\s+(?:with|using)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|(?:were\s+)?committed\s+(?:with|using|via)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?|knife|knives)\b([^?.]*)/gi, "share of $1 by weapon$2"],
   [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  // "what weapons do people use in robberies in Texas", "what weapons are most commonly used in ..." and "by weapons" are the same by-weapon question.
+  [/\bwhat\s+(?:types?\s+of\s+)?weapons?\s+(?:do\s+(?:people|offenders|criminals|suspects)\s+use|are\s+(?:most\s+)?(?:commonly\s+|often\s+)?used)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  [/\bby\s+weapons\b/gi, "by weapon"],
+  // "the value of items stolen in burglaries" is the value stolen in burglaries.
+  [/\bvalue\s+of\s+(?:all\s+)?(?:the\s+)?(?:items|property|goods)\s+(?:stolen|taken)\s+(?:in|via|from)\b/gi, "value stolen in"],
   [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
   [/\s+analysis\s+for\s+/gi, " in "],
   // P191: "for the entire US", "across the whole country" are the nation ("nationwide").
@@ -288,6 +307,8 @@ const PHRASES: [RegExp, string][] = [
   // is "homicides by circumstance". Never after "by" ("by victim race" is read by the people reader below).
   [/(?<!\bby\s+(?:the\s+)?)\b(victim|offender)s?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b(?!\s+(?:and|or|\/)\s+(?:race|sex|gender|ethnicity|age)\b)/gi, "$1s by $2"],
   [/\b(victim|offender)s?\s+(?:demographics|demographic\s+breakdown)\s+by\s+(race|sex|gender|ethnicity|age)\b/gi, "$1s by $2"],
+  // "offender demographics for robbery by sex" is "robbery offenders by sex" (QL-nibrs-c74cec7689: "demographics for" was unread).
+  [/\b(victim|offender|arrestee)s?\s+demographics\s+(?:for|of|in)\s+([a-z][a-z ]*?)(?=\s+(?:by|in|during|from|since|nationally|across)\b|\s*[?.!,]|\s*$)/gi, "$2 $1s"],
   [/\b(?:the\s+)?racial\s+(?:breakdown|makeup|composition|distribution)\s+of\s+((?:[a-z]+\s+){0,3}?(?:victims|offenders))\b/gi, "$1 by race"],
   [/\b(murder|homicide|killing)s?\s+circumstances?\b/gi, "$1s by circumstance"],
   // P162 (Jeff 2026-11-19): "what percentage of murder victims were female" is the victims by sex with each sex's share; the table
@@ -349,7 +370,7 @@ function oneSlip(a: string, b: string): boolean {
 /** The words of the state names, which a short misspelling is never read as. */
 const STATE_WORDS = new Set(Object.values(STATE_NAME_BY_CODE).flatMap((n) => n.toLowerCase().split(/\s+/)));
 /** English words one slip from a crime word that the common-word list lacks. */
-const REAL_WORDS = new Set(["violet", "sates", "cites", "crimp", "crimps", "counts", "country", "assets"]);
+const REAL_WORDS = new Set(["violet", "sates", "cites", "crimp", "crimps", "counts", "country", "assets", "sample", "samples"]);
 /** The one vocabulary word a misspelled word is a single slip from, or null (none, two, or a short word). */
 export function nearestWord(word: string): string | null {
   const w = word.toLowerCase();
@@ -364,6 +385,50 @@ export function nearestWord(word: string): string | null {
   return at.length === 1 ? at[0] : null;
 }
 
+/** Words of asking a typo may be read as (H2): the question's own verbs and linking words, never a place or a crime. */
+const ASK_WORDS = ["show", "list", "calculate", "since", "you", "see", "through", "between"];
+/** Damerau distance (one slip is one dropped, added, changed or swapped letter). */
+function slips(a: string, b: string): number {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+/**
+ * A word that is no English word, one slip (two for seven letters or more) from exactly one crime word or asking word ("ctime", "ypu",
+ * "swhow", "sincce", "tecas" beside a Texas already named). A state is a target only when the question already names it.
+ */
+export function fuzzyWord(word: string, text: string): string | null {
+  const w = word.toLowerCase();
+  if (w.length < 4 || isCommonEnglishWord(w) || VOCAB.includes(w) || ASK_WORDS.includes(w) || REAL_WORDS.has(w) || /^aggr[ae]vates$/.test(w) || /ed$/.test(w)) return null;
+  const named = text.toLowerCase();
+  const pool = [...ASK_WORDS, ...VOCAB.filter((v) => !STATE_WORDS.has(v) || new RegExp(`\\b${v}\\b`).test(named))];
+  let best = 99, at: string[] = [];
+  for (const v of pool) {
+    const d = slips(w, v);
+    if (d > (w.length >= 7 && v.length >= 7 ? 2 : 1) || (w.length === 3 && v.length !== 3)) continue;
+    if (d < best) { best = d; at = [v]; } else if (d === best && !at.includes(v)) at.push(v);
+  }
+  return at.length === 1 ? at[0] : null;
+}
+/** Stray characters inside words and the "100.000" separator ("calcul;ate", "100.000"; never a year) and two fixed slips ("aggravates assaults", "can I seen"). */
+function cleanSlips(text: string, readings: Reading[]): string {
+  const fix = (re: RegExp, to: (m: string, ...g: string[]) => string) => {
+    text = text.replace(re, (m, ...g) => { const t = to(m, ...(g as string[])); if (t !== m) readings.push({ kind: "spelling", from: m, to: t }); return t; });
+  };
+  // Digits are never repaired: a year with a stray character in it ("1`980") is asked about, not read as 1980 (garbledYear in answer.ts).
+  fix(/\b[A-Za-z]+(?:;(?=[A-Za-z])[A-Za-z]*)+\b/g, (m) => m.replace(/;/g, ""));
+  fix(/\bper\s+100\.000\b/gi, (m) => m.replace("100.000", "100,000"));
+  fix(/\bback\s+to\s+((?:19|20)\d\d)\b/gi, (_m, y) => `since ${y}`);
+  // "aggravates assaults" is the crime misspelled; "what aggravates assault" is the verb and stays (Codex spelling review 01).
+  fix(/(?<!\b(?:what|that|which|who|it)\s+)\baggravates(?=\s+assaults?\b)/gi, () => "aggravated");
+  fix(/\b(?:ypu|yuo)\b/gi, () => "you");
+  fix(/\b(can|could|may)(\s+(?:i|we))\s+seen\b/gi, (_m, a, b) => `${a}${b} see`);
+  return text;
+}
 /** The words of a county-wide request ("countywide", "the whole county", "all agencies in X County"): read as a flag, declined with an offer (P70). */
 export const COUNTYWIDE_RE = /\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:(?:across|for|from|in|of)\s+)?all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\s+(?:[\w.'-]+\s+){1,3}county\b))/i;
 
@@ -579,6 +644,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // city's own police department, named by the city).
   const dropWord = (re: RegExp, to: string) => { text = text.replace(re, (m, ...g) => { const t = to.replace(/\$(\d)/g, (_x, n) => String(g[Number(n) - 1] ?? "")); readings.push({ kind: "phrase", from: m.trim(), to: t.trim() }); return t; }); };
   dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
+  // "antisemitic incidents" / "anti-Asian incidents" are hate crimes (Jeff 2026-11-24, antisemitic incidents in New York since 2015).
+  dropWord(/\b(anti[-\s]?[a-z]+|antisemitic)\s+incidents?\b/gi, "$1 hate crimes");
+  // Jeff 2026-11-24 (P291): "per day" / "daily" answers by month, with a note that per day is not available.
+  // P293 (Jeff 2026-11-24): a bare "juvenile crime trend" (no place, no victims, offenders or arrests named) is the nation's juvenile arrests by year.
+  dropWord(/\b(juveniles?|minors?)\s+crime\s+(?:trends?|levels?|numbers?|statistics?)(?![^?]*\b(?:in|for|of|at|victims?|offenders?|arrest\w*|by)\b)/gi, "$1 arrests in the United States by year");
+  dropWord(/\b(?:per\s+day|each\s+day|by\s+(?:the\s+)?day|day[-\s]by[-\s]day|daily)\b/gi, "by month");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
@@ -624,6 +695,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   }
   {
     const TREND = String.raw`(?:going\s+up\s+or\s+down|going\s+up|going\s+down|gone\s+up|gone\s+down|up\s+or\s+down|dropping|rising|falling|increasing|getting\s+worse|getting\s+better|up|down)`;
+    // Jeff 2026-11-24: "What is the hate crime trend in Texas? Is it getting worse?" asks the trend; the second sentence adds only the direction
+    // (said by the answer), so it is set aside here.
+    dropWord(new RegExp(String.raw`(?<=\btrends?\b[^?]*\?)\s*(?:is|are|has|have)\s+(?:it|this|that|they)\s+(?:been\s+)?${TREND}\s*\?*\s*$`, "i"), "");
     const t1 = new RegExp(String.raw`^(\s*)(?:is|are|has|have|was|were)\s+(.+?)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const t2 = t1 ? null : new RegExp(String.raw`^(.*?\S)\s+(?:are|is|have|has)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const [lead, x, w, rest]: string[] = t1 ? [t1[1], t1[2], t1[3], t1[4] ?? ""] : t2 ? [t2[1], "", t2[2], t2[3] ?? ""] : ["", "", "", ""];
@@ -669,6 +743,17 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     text = t;
     break;
   }
+  // A state said again at the end of a question that already named a city with it ("DWI in El Paso, Texas per month over time Texas"):
+  // the second one is the same place, not another (an agency with a state is not "a state beside other places").
+  // Only when nothing between them joins or compares (a "versus Texas" or "and West Virginia" is a real second place), and the last one is not the end of a longer state name.
+  for (const sn of Object.values(STATE_NAME_BY_CODE)) {
+    const rx = new RegExp(String.raw`,\s*${sn}\b((?:(?!\b(?:vs\.?|versus|and|or|to|than|against|compared|with|plus)\b)[^,])*?)\s+(?<!\b(?:west|north|south|new)\s)${sn}\s*[?.!]?\s*$`, "i");
+    // The same guard on the replacement: "Virginia West Virginia" keeps its last word (West Virginia is the second state's name).
+    if (rx.test(text)) { text = text.replace(new RegExp(String.raw`\s+(?<!\b(?:west|north|south|new)\s)${sn}\s*([?.!]?)\s*$`, "i"), "$1"); break; }
+  }
+  // "rifle" beside another weapon is the weapon, not Rifle, Colorado ("handgun vs rifle murders in Texas"): the plural reads as the weapon.
+  // Not when Colorado follows ("handgun to Rifle Colorado"), which names the city.
+  text = text.replace(/\b(handguns?|shotguns?|knives|knife|firearms?)(\s+(?:vs\.?|versus|and|or|to)\s+)rifle\b(?!\s*,|\s+colorado\b)/gi, "$1$2rifles");
   // "... and the national rate / average / total": the United States, only where a rate, if asked, is named before it
   // ("the national rate" may be the question's only rate word, and then it is left as written: Codex comparison review
   // 01.1). Applied here, not in PHRASES, whose replacement sees only the matched words.
@@ -702,12 +787,15 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     return to;
   });
   // Misspellings: only words the accounting could not read.
+  text = cleanSlips(text, readings);
   const first = accountNibrsRequest(text);
   const unread = first.parts.filter((p) => p.state === "not-interpreted").flatMap((p) => p.text.match(/[A-Za-z]+/g) ?? []);
   for (const w of unread) {
-    const to = nearestWord(w);
+    const to = nearestWord(w) ?? fuzzyWord(w, text);
     if (!to) continue;
     readings.push({ kind: "spelling", from: w, to });
+    // A state named twice ("El Paso, Texas tecas"): the repeat is a slip of the one named, so it is dropped, not said again.
+    if (STATE_WORDS.has(to) && new RegExp(`\\b${to}\\b`, "i").test(text)) { text = text.replace(new RegExp(`\\s*\\b${w}\\b`), ""); continue; }
     text = text.replace(new RegExp(`\\b${w}\\b`), w[0] === w[0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to);
   }
   // Flags read only the question's own clause (a trailing "explain" clause is the accounting's clause 1).

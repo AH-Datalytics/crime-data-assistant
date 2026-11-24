@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 
 const deps: ShadowDeps = {
   places: loadPlaceIndex(),
@@ -14,7 +15,6 @@ const deps: ShadowDeps = {
   execute: () => [],
 };
 const CLARIFY: [string, string][] = [
-  ["ct-32f3dc9a09", "Tell me more about crime in Arlington, VA"],
   ["ct-d20e00174a", "What major crime trends are we seeing in Baltimore, Maryland?"],
   ["ct-20633e56af", "What are the top nationwide crime trends ?"],
   ["shr-cfb68f38b1", "tell me what's going on in allentown"],
@@ -44,4 +44,35 @@ run("Part I in Roman numerals clarifies (Codex 15661f03)", () => assert.equal(sh
 run("a time line of a named crime reads like the plain question (Codex 15661f03)", () => { const a = shadowAnswer("Show a time line of robberies in Denver from 2020 to 2024.", deps) as unknown as { kind: string; explanation?: string }; const b = shadowAnswer("Show robberies in Denver from 2020 to 2024.", deps) as unknown as { kind: string; explanation?: string }; assert.equal(a.kind, b.kind); assert.equal(a.explanation, b.explanation); });
 for (const q of ["Tell me more about use of force in Texas", "tell me what's going on with unweighted data in Denver", "Does NIBRS have use of force data for murders in Texas in 2024?", "How many murder agencies in PA are NIBRS compliant?", "Tell me more about unweighted murder data", "Why does murder data only go back to 1958?", "Tell me more about the use of force dataset", "Does use of force data include police officers?"])
   run(`unavailable-data ask is a plain decline, not a clarify or an example: ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available."); });
+// Jeff 2026-11-24 (P288, P289, P291).
+run("misdemeanor arrests decline with the NIBRS note (P288)", () => { const o = shadowAnswer("What are the trends in misdemeanor arrests nationally since 1991?", deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor."); });
+run("national overall and violent rates by month decline (P289)", () => { const o = shadowAnswer("Can I see national overall and violent crime rates monthly from 2016 to present", deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available."); });
+for (const q of ["Carjackings per day in Houston, 2019 to 2025", "daily robberies in Denver in 2024"])
+  run(`per day is read as by month and says so (P291): ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "answer"); assert.ok(o.delivered?.text.includes("Per day is not available, so monthly figures are shown."), JSON.stringify(o.delivered?.text)); });
+run("a national crime rate by month with the place after the rate declines (P289)", () => { const o = shadowAnswer("violent crime rates in the United States by month", deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available."); });
+run("Monthly rate with the monthly word first and the place after declines (P289)", () => { const o = shadowAnswer("Monthly violent crime rates in the United States", deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available."); });
+run("which agencies report is the coverage sentence (P292)", () => { const o = shadowAnswer("which agencies report monthly in Pennsylvania?", deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "coverage"); assert.equal(o.delivered?.text[0], "Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included."); });
+// P293: the reading itself is checked (this file's stub has no national agencies, so the answer step cannot run here: the nation resolves in test-nibrs-shadow's stub and live).
+// The rewrite must be applied, the note must be the one the answer carries, and the ask must not clarify.
+const juvenile = (q: string) => {
+  const r = readQuestion(q, 2026, "2026-10");
+  assert.ok(r.readings.some((x) => x.kind === "phrase" && /^juveniles?\s+arrests\s+in\s+the\s+united\s+states\s+by\s+year$/i.test(x.to)), JSON.stringify(r.readings));
+  const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } };
+  // A delivered answer with the arrests note (here the nation has no agencies in the stub, so the answer step may decline: the reading above is the check there).
+  assert.notEqual(o.kind, "clarify", JSON.stringify(o));
+  if (o.kind === "answer") assert.ok((o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text));
+};
+run("juvenile crime rates are not rewritten to arrest counts, so no arrests note (P293)", () => {
+  const r = readQuestion("juvenile crime rates 2005 to 2025", 2026, "2026-10");
+  assert.ok(!r.readings.some((x) => x.kind === "phrase" && /arrests\s+in\s+the\s+united\s+states/i.test(x.to)), JSON.stringify(r.readings));
+  const o = shadowAnswer("juvenile crime rates 2005 to 2025", deps) as unknown as { kind: string; explanation?: string; delivered?: { text: string[] } };
+  // The outcome itself: not rewritten to arrests (no arrests note, no arrests title, no arrests wording in a decline).
+  assert.ok(!(o.delivered?.text ?? []).some((t) => /Arrests do not equal crimes|Arrests of Arrestees/.test(t)), JSON.stringify(o.delivered?.text));
+  // The actual outcome: the rates decline (population figures by age), not an arrests answer.
+  assert.equal(o.kind, "decline", JSON.stringify(o));
+  assert.match(o.explanation ?? "", /^A rate for a group of people needs population figures/, JSON.stringify(o));
+});
+for (const q of ["which country do you cover", "which cities are represented in Pennsylvania?", "What agencies match Dallas County in Texas? Show me the agencies table entries."])
+  run(`coverage question gets the one coverage sentence (P292): ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "coverage"); assert.equal(o.delivered?.text[0], "Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included."); });
+run("a juvenile crime trend reads as the nation's juvenile arrests per year (P293)", () => juvenile("show me juvenile crime trend 2005 to 2025"));
 if (failed) { console.log(`${failed} failed`); process.exit(1); }

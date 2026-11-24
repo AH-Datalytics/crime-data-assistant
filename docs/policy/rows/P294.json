@@ -1,0 +1,12 @@
+{
+  "id": "P294",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "A percent change that lands exactly on a half of a tenth, such as 1,600 to 1,500 (-6.25%) or 1,600 to 1,700 (+6.25%).",
+  "what the app does today": "A drop landing on a half rounded up (toward zero): -6.25 showed -6.2 while +6.25 showed +6.3.",
+  "proposed behavior": "A percent change that lands exactly on a half rounds away from zero for both signs: -6.25 shows -6.3 and +6.25 shows +6.3. This applies to every percent-change path (scorecard change column, current trends change, agency and historical scorecards, year-over-year comparison).",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-round-half-away.ts; QL-hist-e2efc277f8, QL-hist-e7f9136187."
+}

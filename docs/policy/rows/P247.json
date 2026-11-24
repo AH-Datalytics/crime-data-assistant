@@ -2,11 +2,11 @@
  "id": "P247",
  "topic": "Already decided",
  "decision needed": "None: already decided",
- "situation (example wording)": "\"Tell me more about crime in Arlington, VA\", \"tell me what's going on in allentown\", \"show me a time line of portland Oregon\", \"What are the top nationwide crime trends ?\", \"How many crime incidents have happened in Chicago since 2025?\"; and \"Does NIBRS data have information on use of force?\", \"does this data use the hierarchy rule\".",
- "what the app does today": "Only these chatty openers ask what to show (a crime, a place, the years): \"tell me more about\", \"what's going on in\", \"time line of\", \"major/top crime trends\" with no year, \"how many crime incidents ... since YEAR\". They override P182 for those openers only. P182's violent-plus-property default stays for \"crime in <place>\", a bare place name, \"crime trends in <place>\" and \"Washington DC crime trend\". A question about data the release does not hold gets the plain decline \"That data is not available.\"",
+ "situation (example wording)": "\"tell me what's going on in allentown\", \"show me a time line of portland Oregon\", \"What are the top nationwide crime trends ?\", \"How many crime incidents have happened in Chicago since 2025?\"; and \"Does NIBRS data have information on use of force?\", \"does this data use the hierarchy rule\".",
+ "what the app does today": "Only these chatty openers ask what to show (a crime, a place, the years): \"tell me more about\", \"what's going on in\", \"time line of\", \"major/top crime trends\" with no year, \"how many crime incidents ... since YEAR\". They override P182 for those openers only. Exception (Jeff card, 2026-11-24): when only a place is named with \"crime\" (\"tell me more about crime in DC\", \"what does crime look like in Pierce County\"), the opener yields to P148 and the violent-plus-property composite is answered. P182's violent-plus-property default stays for \"crime in <place>\", a bare place name, \"crime trends in <place>\" and \"Washington DC crime trend\". A question about data the release does not hold gets the plain decline \"That data is not available.\"",
  "proposed behavior": "Same as today.",
  "exact default or choices offered": "Clarify buttons: Name a crime, Name a place, Name the years. Decline text: That data is not available.",
  "why": "Jeff, 2026-11-23, Option 1 (declines owner Group 1 and Group 2): the opener rule overrides P182 only for the listed openers.",
  "status": "Built in the open-ended clarify and data-absent decline change; 13 labels updated.",
- "test cases": "scripts/test-nibrs-shadow-open-ended.ts (8 clarify, 5 decline, 3 neighbors)."
+ "test cases": "scripts/test-nibrs-shadow-open-ended.ts (7 clarify, 5 decline, 3 neighbors); the yield to P148 is in scripts/test-nibrs-shadow.ts (P148 block)."
 }

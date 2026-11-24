@@ -142,6 +142,7 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "bias:14", pattern: R(String.raw`\banti[-\s]?asian\b`) },
   { concept: "filter", value: () => "bias:24", pattern: R(String.raw`\banti[-\s]?(?:islamic|muslim)\b`) },
   { concept: "filter", value: () => "bias:41", pattern: R(String.raw`\banti[-\s]?gay\b`) },
+  { concept: "filter", value: () => "bias:lgbtq", pattern: R(String.raw`\banti[-\s]?(?:lgbtq?\+?|lgbt|glbt|lgbtqia\+?)(?![a-z])|\banti[-\s]?lesbian,?\s*gay,?\s*bisexual,?\s*(?:and\s+)?transgender\b`) },
   // property loss
   { concept: "filter", value: () => "loss:7", pattern: R(String.raw`\bstolen\b`) },
   { concept: "filter", value: () => "loss:5", pattern: R(String.raw`\brecovered\b`) },
@@ -193,6 +194,8 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
   { concept: "breakdown", value: () => "drug", pattern: R(String.raw`\bby\s+drug\s+(?:type|category)\b`) },
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\bby\s+bias(?:\s+motivation)?\b`) },
+  // Jeff 2026-11-24: "most common bias" (or motivation) is the table of every bias, largest first, with a sentence naming the top one.
+  { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\b(?:the\s+)?(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)(?:\s*\/\s*(?:bias(?:es)?|motivations?)|\s+motivations?)?\b|\bwhat\s+(?:bias(?:es)?|motivations?)\b`) },
   // "and sex" right after another breakdown is a second breakdown (declined by the types: one breakdown only).
   { concept: "breakdown", value: () => "sex", pattern: R(String.raw`\band\s+(?:sex|gender)\b`), when: (m, q) => /\bby\s+\w+(?:\s+\w+)?\s*$/i.test(q.slice(0, m.index)) },
 ];
@@ -205,7 +208,7 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "property_value", pattern: R(String.raw`\bproperty\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
   { concept: "measure", value: () => "carjacking", pattern: R(String.raw`\bcarjack(?:ing|ings|ed)?\b`) },
   { concept: "measure", value: () => "domestic_violence", pattern: R(String.raw`\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b|\bdomestic\b`) },
-  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b`) },
+  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b|(?<=\b(?:anti[-\s]?[a-z]+|antisemitic)\s)incidents?\b|\b(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
   // Group B offenses (arrests only), 2026-11-11.
   { concept: "measure", value: () => "disorderly_conduct", pattern: R(String.raw`\bdisorderly\s+conduct\b|\bdisorderly\b`) },
@@ -345,6 +348,8 @@ const RULES: Rule[] = [
   // ---- periods (the accepted Historical forms) ----
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `years:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(?:for|in)\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
+  // Three or more years named one by one ("in 2020, 2021, and 2022"): the same separate-years period, every year kept.
+  { concept: "period", value: (m) => `years:${m[0].match(/(?:19|20)\d{2}/g)!.join(":")}`, pattern: R(String.raw`\b(?:for|in)\s+${YEAR}(?:\s*,\s*${YEAR})+\s*,?\s*(?:and|or)\s+${YEAR}\b`) },
   { concept: "period", value: (m) => `between:${m[1]}:${m[2]}`, pattern: R(String.raw`\bbetween\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
   // Reader cluster 3 (2026-11-05): a year to the latest the source has, in the query log's words ("2018 to present",
   // "from 2014 to today", "to the most recent data", "through the most recent month", "to most current"): since that year.
@@ -483,6 +488,20 @@ function recordCounties(ledger: RequestLedger): void {
 }
 
 /**
+ * Virginia counties named without the word "County" and with the state ("Arlington, VA", "Loudoun, Virginia"): the county, not
+ * the same-named city of another state the geo resolver prefers (Arlington, Texas) with the state left unread (Engine 2.0 2026-11-24).
+ * Only counties with no city of the name in Virginia; "Fairfax, VA" and "Richmond, VA" stay with the city rule.
+ */
+function recordShortVirginiaCounties(ledger: RequestLedger): void {
+  const re = /\b(Arlington|Loudoun|Prince\s+William|Henrico|Chesterfield)\s*,\s*(?:VA|Virginia)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(ledger.question))) {
+    const name = m[1].replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    ledger.record({ concept: "place", value: `county:${name} County:VA`, span: [m.index, m.index + m[0].length], rule: "place:county" });
+  }
+}
+
+/**
  * A season before a year ("Spring 2024", "summer of 2023") is never a place: "Spring" had answered Spring Township,
  * Pennsylvania (coordinator 2026-11-05). The reader has no season periods, so the word is named as not understood.
  */
@@ -516,7 +535,7 @@ const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of
  * a leading "OK", "(just) do it" (a follow-up's verb), a complaint about the last answer ("this is not even close"),
  * and "broken down" right before "by" (read as "by").
  */
-const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
+const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /^\s*summari[sz]e\b/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
 function recordNibrsPhraseFiller(ledger: RequestLedger): void {
   // "Where do most robberies occur - residences, streets, or commercial buildings?": the verb and the list of example places never restrict.
   const whereMost = WHERE_MOST_ONCE.test(ledger.question) ? [new RegExp(String.raw`\b(?:occur|occurs|happen|happens|take\s+place|committed)\b`, "i"), /\s[-–—:]\s*[a-z][a-z,\s]*?(?=\s*\??\s*$)/i] : [];
@@ -613,6 +632,7 @@ function buildNibrsLedger(question: string): RequestLedger {
   // The county rule first: it reads any state after "Sheriff's Office" (Codex place review 02).
   recordSeasons(ledger);
   recordCounties(ledger);
+  recordShortVirginiaCounties(ledger);
   recordCountySheriffs(ledger);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm) => ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });

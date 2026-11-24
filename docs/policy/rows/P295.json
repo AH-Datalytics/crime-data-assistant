@@ -1,0 +1,12 @@
+{
+  "id": "P295",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"share of murders where victim was black, 2015 - 2025, in Washington, D.C.\", \"What percentage of murder victims in Houston were black from 2020 to 2022?\"",
+  "what the app does today": "Declined (\"this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share\").",
+  "proposed behavior": "The share of murder (or homicide) victims of one race is a table from Homicide Reports, a row for each year of the period: the year, all the murder victims, the victims of that race, and that race's share of all that year's victims. The share is shown as in P162, a column headed \"Share (%)\" to one decimal. Title: the place, \"Share of Murder Victims Who Were <Race>\", the period written \"2015 to 2025\". A single year is the same table with one row.",
+  "exact default or choices offered": "Columns: Year | Murder victims | Black victims | Share (%). Title: \"Washington, D.C. Share of Murder Victims Who Were Black, 2015 to 2025\".",
+  "why": "Jeff 2026-11-24 (through the coordinator), QL-shr-bcdb4c61db; follows P162's share column.",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P295\")."
+}

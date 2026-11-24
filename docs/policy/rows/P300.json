@@ -1,0 +1,12 @@
+{
+  "id": "P300",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"In 2025\", \"Yearly counts\", \"all\" or \"NIBRS\" typed alone, with no place and no crime named.",
+  "what the app does today": "After the place-only composite (P148) widened, a bare fragment with no place was answered with the violent and property composite by year.",
+  "proposed behavior": "A bare fragment with no place and no Part I mention keeps its clarification. The composite default (P181 every-year grain) applies only when a place or Part I is named.",
+  "exact default or choices offered": "None.",
+  "why": "Open-ended asks clarify (existing ruling); coordinator 2026-11-24 after the 462 gate showed 43 new wrong answers.",
+  "status": "Decided 2026-11-24 (coordinator ruling)",
+  "test cases": "scripts/test-nibrs-shadow.ts: bare fragments In 2025, Yearly counts, all, NIBRS clarify."
+}

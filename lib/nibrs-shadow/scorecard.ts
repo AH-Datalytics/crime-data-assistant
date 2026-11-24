@@ -35,6 +35,7 @@ const PARTS = ROWS.filter((r) => !("section" in r));
 const VIOLENT_PARTS = ["murder", "rape", "robbery", "assault"], PROPERTY_PARTS = ["burglary", "theft", "motor"];
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
+import { roundHalfAway1 } from "../round-half-away";
 const round1 = (x: number) => Math.round(x * 10) / 10;
 const num = (v: unknown): number | null => (v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v));
 const pq = (root: string, file: string) => `read_parquet(${q(`${root}/${file}.parquet`)})`;
@@ -48,7 +49,7 @@ type Execute = (sql: string) => unknown[][];
 
 /** A change that is unknown (blank), never 0.0%: no prior count, or a prior of zero. */
 const changePct = (current: number | null, previous: number | null): number | null =>
-  current === null || previous === null || previous <= 0 ? null : round1(((current - previous) * 100) / previous);
+  current === null || previous === null || previous <= 0 ? null : roundHalfAway1(((current - previous) * 100) / previous);
 
 function table(year: number, rows: { label: string; offenses: number | null; change: number | null; rate: number | null; clearance: number | null }[], clearance: boolean): ResultTable {
   const stat = (as: string, header: string) => ({ binding: { kind: "statistic" as const, as }, header });

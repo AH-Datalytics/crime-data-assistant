@@ -1,0 +1,12 @@
+{
+  "id": "P293",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"show me juvenile crime trend 2005 to 2025\"",
+  "what the app does today": "The question asked whether juvenile victims or juvenile offenders were meant.",
+  "proposed behavior": "A juvenile crime trend with no place, victims, offenders or arrests named is read as United States juvenile (under 18) arrests per year, with the note \"Arrests do not equal crimes.\" and no sentence about the trend going up or down. Years before NIBRS starts get the P285 note.",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow-open-ended.ts (P293); QL-hist-babc70b9e2."
+}
