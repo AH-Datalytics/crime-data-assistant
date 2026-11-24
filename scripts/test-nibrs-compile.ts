@@ -176,7 +176,11 @@ assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS s
 const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
 assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));
 assert.ok(arrests.sql.includes("coalesce(a.multiple_arrestee_indicator, '') <> 'M'"), "P68: an M segment (the same apprehension on another incident) is not counted");
-assert.deepEqual(arrests.scanYears, t.builtYears);
+// An arrest is counted by its arrest date wherever it is filed (arrests dated 2020 sit in the 2017 and 2018 files): every built year is read, and the year before the first built year only when the span reaches back to it.
+assert.deepEqual(arrests.scanYears, [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]);
+const allYears = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+assert.deepEqual(ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), { kind: "absolute" as const, from: "2021-01", to: "2025-12" }, { ...t, arrestYears: allYears })).scanYears, allYears.slice(1));
+assert.deepEqual(ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), { kind: "absolute" as const, from: "2017-01", to: "2025-12" }, { ...t, arrestYears: allYears })).scanYears, allYears);
 assert.deepEqual(arrests.statements, ["arrests_counted_once"]);
 assert.match(refuse(plan("arrests.shoplifting", "arrest")), /arrest date/);
 assert.match(refuse(plan("arrests.dui", "arrest", [], [], "arrest_date")), /Group B/);
