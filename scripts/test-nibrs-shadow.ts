@@ -651,7 +651,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
         const o = as(shadowAnswer("% of white, black, and other murder victims per year from 2010 to 2011 nationally", { ...vdeps, execute: nz } as ShadowDeps), "shr");
         const r = o.delivered.table.rows.find((x) => x[0] === "2010")!;
         assert.deepEqual(r.slice(1), [60, 30, 10], "shares of all victims");
-        assert.equal(r.slice(1).reduce((a, b) => a + Number(b), 0), 100, `shares add to 100: ${JSON.stringify(r)}`);
+        assert.equal(r.slice(1).reduce<number>((a, b) => a + Number(b), 0), 100, `shares add to 100: ${JSON.stringify(r)}`);
         assert.ok(r.slice(1).every((v) => Number(v) > 0), JSON.stringify(r));
       }
       assert.equal(as(shadowAnswer("male vs female firearm murder victims per month since 2018 nationally", vdeps), "shr").delivered.text[0],
