@@ -391,12 +391,12 @@ export function fuzzyWord(word: string, text: string): string | null {
   }
   return at.length === 1 ? at[0] : null;
 }
-/** Stray characters inside words and numbers ("1`980", "calcul;ate", "100.000") and two fixed slips ("aggravates assaults", "can I seen"). */
+/** Stray characters inside words and the "100.000" separator ("calcul;ate", "100.000"; never a year) and two fixed slips ("aggravates assaults", "can I seen"). */
 function cleanSlips(text: string, readings: Reading[]): string {
   const fix = (re: RegExp, to: (m: string, ...g: string[]) => string) => {
     text = text.replace(re, (m, ...g) => { const t = to(m, ...(g as string[])); if (t !== m) readings.push({ kind: "spelling", from: m, to: t }); return t; });
   };
-  fix(/\b\d+(?:[`';](?=\d)\d*)+/g, (m) => m.replace(/[`';]/g, ""));
+  // Digits are never repaired: a year with a stray character in it ("1`980") is asked about, not read as 1980 (garbledYear in answer.ts).
   fix(/\b[A-Za-z]+(?:;(?=[A-Za-z])[A-Za-z]*)+\b/g, (m) => m.replace(/;/g, ""));
   fix(/\bper\s+100\.000\b/gi, (m) => m.replace("100.000", "100,000"));
   fix(/\bback\s+to\s+((?:19|20)\d\d)\b/gi, (_m, y) => `since ${y}`);

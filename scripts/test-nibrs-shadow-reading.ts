@@ -212,7 +212,8 @@ assert.equal(rq("indianapolis homicide counts going back as far as possible").te
 assert.equal(rq("Carjackings in Houston by month for all years since 2020").text.replace(/\s+/g, " "), "Carjackings in Houston by month since 2020", "a grain and a range of its own: the phrase is dropped");
 
 // H2 typos (bad-declines): stray characters, one changed letter in a word that is no English word, and slips in asking words.
-assert.equal(read("SWhow me murders in new orleans back to 1`980").text, "Show me murders in new orleans since 1980");
+// A garbled year is never repaired into a year (QL-hist-7c5f94c559): the word slip is fixed, the digits stay for the ask.
+assert.equal(read("SWhow me murders in new orleans back to 1`980").text, "Show me murders in new orleans back to 1`980");
 assert.equal(read("Can you calcul;ate the national murder rate by year?").text, "Can you calculate the national murder rate by year?");
 assert.equal(read("vilont ctime rate in NH since 2000").text, "violent crime rate in NH since 2000");
 assert.equal(read("Can ypu list Chicago murders in 2024").text, "Can you list Chicago murders in 2024");

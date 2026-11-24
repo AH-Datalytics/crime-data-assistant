@@ -986,6 +986,8 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     for (const t of ["VA", "Saint Augustine", "carjackings", "tecas", "aggregating both county"]) assert.ok(!fillerOnly(t), t);
     for (const t of ["since 20210", "to 202", "back to 1`980", "in2p2t"]) assert.ok(garbledYear(t), t);
     for (const t of ["since 2021", "to 2025", "in 1995", "hi", "202 robberies"]) assert.ok(!garbledYear(t), t);
+    // QL-hist-7c5f94c559: a year with a stray character is asked about, never repaired into 1980 and answered.
+    assert.equal(ask("SWhow me murders in new orleans back to 1`980").kind, "clarify", "garbled year is asked");
     const ANSWERS = new Set(["answer", "srs", "historical", "current"]);
     for (const q of ["Toledo crime scorecard", "Minneapolis scorecard", "is crime up in milwaukee", "What does crime look like in pierce county?", "Tell me more about crime in Pittsburgh"]) {
       const o = ask(q);
