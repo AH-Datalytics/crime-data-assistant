@@ -1,0 +1,12 @@
+{
+ "id": "P271",
+ "topic": "Several crimes for one state or the nation",
+ "decision needed": "None: follows the single-crime state answer",
+ "situation (example wording)": "Carjackings and shoplifting in Texas in 2024",
+ "what the app does today": "Declined: a state or national sum of several crimes.",
+ "proposed behavior": "One table for one state or the nation, with a column for each crime. Each crime is its own state sum with its own coverage and evidence; crimes are never added together, and rates are never summed. Only counts or rates, with no grouping except year. The Consistent Reporting Agencies button and combined totals stay declined, as do breakdowns, changes and rankings. Anything declined by a single-crime state sum stays declined.",
+ "exact default or choices offered": "A separate column for each crime beside the same Year column when asked by year, otherwise a single row.",
+ "why": "The Coordinator, 2026-11-23: PR 2, several crimes for a state or the nation; Jeff's goal is 100% of the logged labels.",
+ "status": "Built on branch nibrs-engine/state-multi-crime; waits on the Runner's full gate and a Claude counting review. No change to compile.ts.",
+ "test cases": "scripts/test-nibrs-shadow.ts (P271 block): shoplifting and carjackings in Texas in 2024 give one row with separate Carjacking offenses and Shoplifting offenses columns, two evidence records, no contract problems and no Consistent Reporting Agencies button; a combined total declines."
+}
