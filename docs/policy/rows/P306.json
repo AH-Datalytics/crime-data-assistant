@@ -1,0 +1,12 @@
+{
+  "id": "P306",
+  "topic": "Typical dollar value or loss",
+  "decision needed": "None: decided",
+  "situation (example wording)": "\"what is the typical dollar value of shoplifting offenses in california\", \"typical dollar loss for shoplifting\", \"typical dollar value of theft offenses\".",
+  "what the app does today": "The reader declined \"typical\" as a word it did not understand.",
+  "proposed behavior": "The app asks \"Do you mean the average or the median?\" with two buttons, Average and Median. Each button runs the same question with \"typical\" replaced by that word. The app does not choose one itself. Whether the average or median stolen property value can be answered is a separate capability (stolen property value is being built); until then the chosen question gets whatever answer or decline that capability has.",
+  "exact default or choices offered": "Question: \"Do you mean the average or the median?\" Buttons: \"Average\", \"Median\".",
+  "why": "Jeff 2026-11-24 (coordinator card, Q3 yes). \"Typical\" does not say which summary is meant.",
+  "status": "Decided 2026-11-24 (Jeff, by coordinator card)",
+  "test cases": "scripts/test-nibrs-shadow.ts: P306 block (three typical value or loss questions; typical without a value is untouched)."
+}

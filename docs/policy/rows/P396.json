@@ -1,0 +1,12 @@
+{
+  "id": "P396",
+  "topic": "Years and periods",
+  "decision needed": "None: decided by Jeff",
+  "situation (example wording)": "\"What was the change in the national murder rate in 2025?\" or \"Percent change in robberies in Denver in 2025\": a change asked for with one year and no second year.",
+  "what the app does today": "Before this: the reader declined, because a change needs two periods.",
+  "proposed behavior": "Read as the year before to that year (2024 to 2025) and answer the two-year change. The answer says so: \"Change in 2025\" is read as 2024 to 2025. Two years given are read as asked.",
+  "exact default or choices offered": "Prior year to the named year, said in the answer text.",
+  "why": "Jeff 2026-11-24 (relayed by the coordinator): yes, read it as the prior year to that year.",
+  "status": "Decided 2026-11-24 (Jeff, approved)",
+  "test cases": "scripts/test-nibrs-shadow.ts: Change in shoplifting in Detroit in 2023 reads as 2022 to 2023 with the note; two-year and no-change asks untouched."
+}
