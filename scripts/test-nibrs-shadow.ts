@@ -1627,6 +1627,12 @@ for (const q of ["What weapons are most commonly used in aggravated assaults in 
   assert.match(text(pct), /percentiles are of the records with a value/);
   // The median of a crime's value per incident is not a stolen-property value: it is declined, never answered as a count.
   assert.notEqual(ask("robberies in Fort Worth, Texas in 2025 and their median value per incident").kind, "answer");
+  // Other loss types are not swapped for the stolen value; two measures are not answered by one figure (Codex review).
+  assert.notEqual(ask("What was the total value of recovered property in Philadelphia in 2024?").kind, "answer", "recovered property is not stolen property");
+  assert.notEqual(ask("What was the total value of stolen property and motor vehicles in Philadelphia in 2024?").kind, "answer", "two measures");
+  // The year grain is the plan's (a range is shown by year, P181); a single year is one figure, never grouped.
+  const range = as(ask("What was the average value of stolen property in Philadelphia from 2023 to 2024?"), "answer");
+  assert.match(range.delivered.table.columns[0].header, /Year/, "the plan's year grain is kept for a range");
 }
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
 {

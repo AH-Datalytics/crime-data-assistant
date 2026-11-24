@@ -64,8 +64,14 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
   const isShop = (f: NibrsPlan["filters"][number]) => f.kind === "exists" && f.entity === "offense" && f.where.length === 1
     && f.where[0].kind === "attribute" && f.where[0].dimension === "offense.offense" && f.where[0].values.length === 1 && f.where[0].values[0] === "23C";
   const shop = plan.filters.some(isShop);
-  const other = plan.filters.filter((f) => !(isShop(f) || (f.kind === "attribute" && f.dimension === "property.loss_type")));
+  // Only the stolen loss type (7) is answered; recovered, seized or damaged property has its own values and is not swapped for it.
+  const isStolenLoss = (f: NibrsPlan["filters"][number]) => f.kind === "attribute" && f.dimension === "property.loss_type" && f.values.length === 1 && String(f.values[0]) === "7";
+  const other = plan.filters.filter((f) => !(isShop(f) || isStolenLoss(f)));
   if (other.length) return decline(NOT_YET, "stolen value: a condition this answer does not apply");
+  // One measure only: the value of the property. A second measure (motor vehicles, a count of crimes) is not answered by a single figure.
+  // (The average's own record count, property_value_segments, is the one companion measure.)
+  if (plan.measures.some((m) => m.id !== "property.property_value" && m.id !== "property.property_value_segments"))
+    return decline("This isn't available: the value of stolen property together with another count. Ask for them one at a time.");
 
   const where = place.kind === "agency" ? place.label : place.kind === "state" ? stateName(place.code) : "the United States";
   const when = periodWords(`${years[0]}-01`, `${years[years.length - 1]}-12`);
@@ -74,7 +80,9 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
   const offenseParts = years.map((y) => `${q(`${deps.target.root}/offense/data_year=${y}/data.parquet`)}`);
   const scope = place.kind === "national" ? "TRUE" : place.kind === "agency" ? `p.ori = ${q(place.ori)}` : `p.ori IN (SELECT ori FROM read_parquet(${q(`${deps.target.root}/agency/data.parquet`)}) WHERE state = ${q(place.code)})`;
   const shopCond = shop ? ` AND EXISTS (SELECT 1 FROM read_parquet([${offenseParts.join(", ")}], hive_partitioning = true) o WHERE o.data_year = p.data_year AND o.ori = p.ori AND o.incident_num = p.incident_num AND o.offense_code = '23C')` : "";
-  const sql = `WITH v AS (SELECT p.data_year AS y, p.property_description AS d, try_cast(p.value AS BIGINT) AS v
+  // A range with no yearly breakdown asked for is one figure over the whole period, not one per year.
+  const byYear =plan.groupings.some((g) => g.dimension.startsWith("time.")) && !byType;
+  const sql = `WITH v AS (SELECT ${byYear || years.length === 1 ? "p.data_year" : String(years[0])} AS y, p.property_description AS d, try_cast(p.value AS BIGINT) AS v
       FROM read_parquet([${parts.join(", ")}], hive_partitioning = true) p
       WHERE p.loss_type = '7' AND ${scope}${shopCond})
     SELECT y, ${byType ? "d" : "NULL"} AS d, CAST(count(*) AS BIGINT) AS records, CAST(coalesce(sum(v), 0) AS BIGINT) AS total,
@@ -90,7 +98,7 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
     p: [7, 8, 9, 10].map((i) => (r[i] === null || r[i] === undefined ? null : Number(r[i]))) }));
   if (!rows.length) return decline(`No property was recorded as stolen ${shop ? "in shoplifting incidents " : ""}for ${where} in ${when}.`);
 
-  const grouping = byType ? { dimension: "property.description", header: "Property type" } : years.length > 1 ? { dimension: "time.year", header: "Year" } : null;
+  const grouping = byType ? { dimension: "property.description", header: "Property type" } : byYear && years.length > 1 ? { dimension: "time.year", header: "Year" } : null;
   const label = (r: R) => (byType ? (PROPERTY_NAMES[r.d ?? ""] ?? `Code ${r.d}`) : String(r.y));
   const stat = main === "average_value" ? { as: "average", header: "Average Value ($)" } : main === "median_value" ? { as: "median", header: "Median Value ($)" } : { as: "total", header: "Total Value ($)" };
   const val = (r: R) => (main === "average_value" ? r.average : main === "median_value" ? r.median : r.total);
