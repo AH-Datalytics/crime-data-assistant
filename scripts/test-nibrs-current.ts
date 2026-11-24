@@ -83,6 +83,33 @@ assert.equal(currentRate(88, 100000, 0), null);
   // A state or the nation whose windows start before the published sample does not get a rate.
   const early = answerCurrentRolling({ measure: "murder", places: [{ kind: "group", states: null, label: "The United States" }], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, fake);
   assert.equal(early.kind, "current-decline");
+  // Codex 454 finding 1: a sample agency with a count and no population leaves BOTH the count and the population (the read says so in its
+  // SQL), and the answer names it; the rate is the remaining agencies' count over their population.
+  {
+    const sqls: string[] = [];
+    const grp = (sql: string): unknown[][] => (sqls.push(sql), [["2025-01", 10, 4, 100_000, 0, 1], ["2025-02", 10, 4, 100_000, 0, 0], ["2025-03", 10, 4, 100_000, 0, 0]]);
+    const nation = { kind: "group" as const, states: null, label: "The United States" };
+    const g = answerCurrentRolling({ measure: "murder", places: [nation], from: "2025-03", to: "2025-03", window: 3, statistic: "rate" }, bld, grp);
+    assert.ok(sqls[0].includes("sum(murder_total) FILTER (WHERE population > 0)") && sqls[0].includes("sum(population) FILTER (WHERE population > 0)"), "no population: out of the count and the population");
+    assert.ok(g.kind === "current" && g.delivered.table.rows[0][1] === 30, JSON.stringify(g));
+    assert.ok(g.kind === "current" && g.delivered.text.some((t) => t.includes("no population in a month are left out of both the count and the population")), "named");
+    // Every agency without a population: no rate, never a count over nothing.
+    const none = answerCurrentRolling({ measure: "murder", places: [nation], from: "2025-03", to: "2025-03", window: 3, statistic: "rate" }, bld,
+      () => [["2025-01", null, 0, null, 0, 4], ["2025-02", null, 0, null, 0, 4], ["2025-03", null, 0, null, 0, 4]]);
+    assert.ok(none.kind === "current" && none.delivered.table.rows[0][1] === null);
+  }
+  // Codex 454 finding 2 (P281): a count month missing before the first month shown is named, with the windows it blanks.
+  {
+    const b3 = { root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-12", finalFirstMonth: "2017-01" };
+    const all = months("2025-02", "2026-12").filter((m) => m !== "2025-12").map((m) => [m, 5] as [string, number]);
+    const place = { kind: "agency" as const, ori: "X", label: "Xville", name: "Xville", state: "TX" };
+    const r = answerCurrentRolling({ measure: "murder", places: [place], from: "2026-01", to: "2026-12", window: 12 }, b3, (sql) => (sql.includes("UNION ALL") ? all : []));
+    assert.ok(r.kind === "current");
+    if (r.kind === "current") {
+      assert.ok(r.delivered.table.rows.slice(0, 11).every((x) => x[1] === null) && r.delivered.table.rows[11][1] === 60, "Jan-Nov 2026 blank, Dec 2026 holds 12 months");
+      assert.ok(r.delivered.text.some((t) => t.includes("December 2025") && t.includes("before the first month shown") && t.includes("first 11 12-month windows are blank")), r.delivered.text.join(" | "));
+    }
+  }
 }
 assert.equal(currentRate(null, 100000, 8), null);
 assert.equal(currentRate(5, 0, 8), null);

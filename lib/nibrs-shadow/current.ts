@@ -92,19 +92,24 @@ export function agencyMonths(b: CurrentBuild, ori: string, measure: string, from
   return out;
 }
 
-export type GroupMonth = { value: number | null; agencies: number; population: number; blank: number };
+export type GroupMonth = { value: number | null; agencies: number; population: number; blank: number; noPop?: number };
 /**
  * A group's monthly consistent sums (P91): `states` null for the nation. Months before current_crime's first are not
- * given (decision A: no cohort rule yet); the caller declines them.
+ * given (decision A: no cohort rule yet); the caller declines them. `forRate`: a sample agency with no population in the month
+ * leaves BOTH the count and the population (Jeff's rolling-rate ruling, P281), and is counted in `noPop`.
  */
-export function groupMonths(b: CurrentBuild, states: string[] | null, measure: string, from: Month, to: Month, execute: (sql: string) => unknown[][]): Map<Month, GroupMonth> {
+export function groupMonths(b: CurrentBuild, states: string[] | null, measure: string, from: Month, to: Month, execute: (sql: string) => unknown[][], forRate = false): Map<Month, GroupMonth> {
   const col = CURRENT_MEASURE[measure];
   const key = "printf('%04d-%02d', year, month)";
-  const sql = `SELECT ${key} AS ym, sum(${col}_total), count(*), sum(population), count(*) FILTER (WHERE ${col}_total IS NULL)
+  const has = "population > 0";
+  const sel = forRate
+    ? `sum(${col}_total) FILTER (WHERE ${has}), count(*) FILTER (WHERE ${has}), sum(population) FILTER (WHERE ${has}), count(*) FILTER (WHERE ${has} AND ${col}_total IS NULL), count(*) FILTER (WHERE population IS NULL OR population <= 0)`
+    : `sum(${col}_total), count(*), sum(population), count(*) FILTER (WHERE ${col}_total IS NULL)`;
+  const sql = `SELECT ${key} AS ym, ${sel}
     FROM read_parquet('${b.root}/current_crime.parquet') WHERE sample${states ? ` AND state IN (${states.map(q).join(", ")})` : ""}
     AND ${key} BETWEEN ${q(from)} AND ${q(to)} GROUP BY 1`;
   const out = new Map<Month, GroupMonth>();
-  for (const [ym, v, n, pop, blank] of execute(sql)) out.set(String(ym), { value: num(v), agencies: Number(n), population: Number(pop ?? 0), blank: Number(blank) });
+  for (const [ym, v, n, pop, blank, noPop] of execute(sql)) out.set(String(ym), { value: num(v), agencies: Number(n), population: Number(pop ?? 0), blank: Number(blank), ...(forRate ? { noPop: Number(noPop ?? 0) } : {}) });
   return out;
 }
 
@@ -608,6 +613,7 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     let values: Map<Month, number | null>;
     let cov: { agencies: number; population: number; from: Month } | null = null;
     let pops = new Map<Month, number | null>();
+    const groupNoPop = new Map<Month, number>();
     if (p.kind === "agency") {
       values = agencyMonths(b, p.ori, cq.measure, need, to, execute);
       if (asRate) pops = agencyMonthPopulations(b, p.ori, span, execute);
@@ -615,8 +621,10 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
       if (need >= b.firstMonth) {
         // The windows' whole lookback is inside the published sample's life (2025-01 on): the published Consistent Reporting Agencies
         // (the `sample` flag), so the figure matches crimeindex.org (Jeff 2026-11-19).
-        const g = groupMonths(b, p.states, cq.measure, need, to, execute);
-        // A rate needs the count and the population over the same agencies: a month where a sample agency has no figure is blank.
+        const g = groupMonths(b, p.states, cq.measure, need, to, execute, asRate);
+        // A rate needs the count and the population over the same agencies: a sample agency with no population in a month leaves both
+        // the count and the population (groupMonths forRate); a month where a remaining agency has no figure is blank.
+        for (const [m, x] of g) if (asRate && (x.noPop ?? 0) > 0) groupNoPop.set(m, x.noPop!);
         values = new Map(span.map((m) => [m, asRate && (g.get(m)?.blank ?? 0) > 0 ? null : g.get(m)?.value ?? null]));
         if (asRate) pops = new Map(span.map((m) => [m, (g.get(m)?.population ?? 0) > 0 ? g.get(m)!.population : null]));
         const last = g.get(to);
@@ -635,11 +643,14 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
       const ps = i < w - 1 ? [] : span.slice(i - w + 1, i + 1).map((m) => pops.get(m) ?? null);
       return c === null || ps.length < w || ps.some((x) => x === null) ? null : currentRate(c, (ps as number[]).reduce((s, x) => s + x, 0) / w, w);
     }) : counts;
-    // Only the blank months inside the rows shown: the months before the first row belong to its window and are not listed.
+    // The blank months inside the rows shown, and (P281) those before the first row: they sit in its window, so they are named too, with
+    // how many of the windows shown they blank.
     const blanks = span.filter((m, i) => raw[i] === null && m >= cq.from);
+    const preBlanks = span.filter((m, i) => raw[i] === null && m < cq.from);
+    const preWindows = preBlanks.length ? span.filter((m, i) => m >= cq.from && raw.slice(Math.max(0, i - w + 1), i + 1).some((v, k) => v === null && span[Math.max(0, i - w + 1) + k] < cq.from)).length : 0;
     // The months whose missing population blanks a shown window whose count is known (the month itself, not the window's last month).
     const noPop = asRate ? span.filter((m, j) => pops.get(m) == null && span.some((e, i) => i >= j && i <= j + w - 1 && i >= w - 1 && e >= cq.from && counts[i] !== null)) : [];
-    return { p, rolled, blanks, cov, noPop };
+    return { p, rolled, blanks, preBlanks, preWindows, cov, noPop, groupNoPop };
   });
   const shown = span.map((m, i) => ({ m, i })).filter((x) => x.m >= cq.from);
   const several = per.length > 1;
@@ -653,6 +664,8 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
   const rows = per.flatMap((x) => shown.map(({ m, i }) => [...(several ? [x.p.kind === "agency" ? x.p.name : x.p.label] : []), m, x.rolled[i]] as (string | number | null)[]));
   const gapLines = per.flatMap((x) => (x.blanks.length ? [`No figure is available for ${runs(x.blanks)}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.blanks.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
   const popLines = per.flatMap((x) => (x.noPop.length ? [`No population is available for ${runs(x.noPop)}${several ? ` for ${x.p.label}` : ""}: every ${w}-month window containing ${x.noPop.length > 1 ? "one of those months" : "that month"} is shown blank, not zero.`] : []));
+  const preLines = per.flatMap((x) => (x.preBlanks.length ? [`No figure is available for ${runs(x.preBlanks)}${several ? ` for ${x.p.label}` : ""}, before the first month shown: the first ${x.preWindows} ${w}-month window${x.preWindows === 1 ? " is" : "s are"} blank, not zero.`] : []));
+  const dropLines = per.flatMap((x) => (x.groupNoPop.size ? [`Agencies with no population in a month are left out of both the count and the population for ${runs([...x.groupNoPop.keys()])}${several ? ` for ${x.p.label}` : ""}: ${[...x.groupNoPop.values()].reduce((s, n) => Math.max(s, n), 0)} at most in a month.`] : []));
   const rateLine = asRate ? [`Each rate is the ${w}-month count per 100,000 of the population averaged over those months, not scaled to a full year.`] : [];
   const cohortLine = per.flatMap((x) => (x.cov ? [cohortSentence(x.cov.agencies, x.cov.population, x.cov.from, to)] : []));
   const period = { from: cq.from, to };
@@ -664,6 +677,6 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     kind: "current", period, coverage: [], read: { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release },
     question: { measure: cq.measure, place: first, agencies: several && first.kind === "agency" ? cq.places.slice(1).filter((p): p is Extract<CurrentPlace, { kind: "agency" }> => p.kind === "agency") : undefined, from: cq.from, to, form: "months", statistic: asRate ? "rate" : "count" },
     meaning: { source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: several ? ["agency", "month"] : ["month"], statistic: asRate ? "rate" : "count" },
-    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), asRate ? `Rolling ${w}-Month ${ucFirst(SINGULAR[col])} Rate` : `Rolling ${w}-Month ${ucFirst(words)}`, "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.outside ? [cq.outside] : []), ...rateLine, ...cohortLine, ...gapLines, ...popLines, "Source: Crime Index."] },
+    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), asRate ? `Rolling ${w}-Month ${ucFirst(SINGULAR[col])} Rate` : `Rolling ${w}-Month ${ucFirst(words)}`, "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.outside ? [cq.outside] : []), ...rateLine, ...cohortLine, ...preLines, ...gapLines, ...dropLines, ...popLines, "Source: Crime Index."] },
   };
 }
