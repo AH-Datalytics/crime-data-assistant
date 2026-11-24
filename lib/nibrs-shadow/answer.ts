@@ -1193,10 +1193,12 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
     if (days.length === 1) {
       const d = days[0]; const month = d[1] ?? d[3]; const year = d[2] ?? d[4];
       const o = shadowAnswer(question.replace(d[0], `in ${month} ${year}`), depsIn);
-      // Only a monthly answer says the month is shown; any other outcome (coverage by year, a decline, a question back) goes on as asked.
+      // Only an answer says the month is shown. Every other outcome of the month form (a question back, coverage, a decline for the place or crime) is
+      // returned as it is: the day changes nothing there, and the original wording would only be declined by the reader for "on May 24,".
+      // A reader decline of the month form is the one exception: the original goes on, so the reader names what it did not understand.
       const dl = (o as { delivered?: { text: string[] } }).delivered;
       if (o.kind === "answer" && dl) { dl.text.splice(1, 0, "A single day is not available, so the month is shown."); return o; }
-      if (o.kind === "clarify") return o; // the place (or other thing) is asked about first; the day changes nothing there
+      if (!(o.kind === "decline" && o.reason === "reader")) return o;
     }
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.

@@ -1936,6 +1936,20 @@ assert.ok(chg.delivered.text.includes("Detroit had 84 shoplifting offenses in 20
 // QL-nibrs-9c8479e4d9: a bare "Richmond" is still clarified first; the day does not skip that.
 { const day = ask("MURDERS IN RICHMOND ON MAY 24, 2025"), month = ask("MURDERS IN RICHMOND IN MAY 2025");
   assert.equal(month.kind, "clarify"); assert.equal(day.kind, "clarify"); assert.equal((day as { about?: string }).about, (month as { about?: string }).about); }
+// A day whose month form is not an answer (here a month the release does not hold) gets that same outcome, never the reader's "I didn't understand on May 14,".
+for (const q of ["Shoplifting in Detroit on May 14, 2027", "murders in Richmond, VA on May 24, 2027"]) {
+  const day = ask(q) as { kind: string; reason?: string }, month = ask(q.replace(/on May \d+, 2027/, "in May 2027")) as { kind: string; reason?: string };
+  assert.deepEqual([day.kind, day.reason], [month.kind, month.reason], `${q}: ${JSON.stringify(day).slice(0, 300)}`);
+  assert.notEqual(day.reason, "reader", q);
+}
+// Richmond, VA / Richmond, Virginia (the state names the place, so no ask): the day reads as the month, with the note, like "in May 2025".
+for (const q of ["murders in Richmond, VA on May 24, 2025", "MURDERS IN RICHMOND, VIRGINIA ON MAY 24, 2025", "murders in Richmond VA on May 24, 2025"]) {
+  const month = ask(q.replace(/on May 24, 2025/i, "in May 2025")), day = ask(q);
+  assert.equal(month.kind, "answer", `${q}: month form ${JSON.stringify(month).slice(0, 300)}`);
+  const d = as(day, "answer");
+  assert.deepEqual(d.delivered.table.rows, (month as { delivered: { table: { rows: unknown } } }).delivered.table.rows, q);
+  assert.equal(d.delivered.text[1], "A single day is not available, so the month is shown.", q);
+}
 assert.ok(!as(ask("Shoplifting in Detroit in May 2023"), "answer").delivered.text.some((x) => /single day/.test(x)));
 assert.ok(!JSON.stringify(ask("Shoplifting in Detroit from May 2023 to June 2023")).includes("single day"));
 assert.ok(!JSON.stringify(ask("Shoplifting in Detroit on May 14, 2023 and May 20, 2023")).includes("single day is not available, so the month")); // two days: left to the reader
