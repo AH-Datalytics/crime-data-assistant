@@ -985,7 +985,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         defaultDepth++;
         try {
           const o = /\bvictims?\b/i.test(q) ? shadowAnswer(q.replace(/\bvictims?\b/i, (m) => `homicide ${m}`), deps) : shadowAnswer(`${q} homicides`, deps);
-          if (o.kind === "shr") { option = { label: "Homicide", continuation: o }; note = "No kind of crime was named, so homicide (murder and nonnegligent manslaughter) is shown from Homicide Reports."; }
+          if (o.kind === "shr") { option = { label: "Homicide", continuation: o }; note = "No kind of crime was named, so homicide is shown from Homicide Reports."; }
         } finally { defaultDepth--; }
       }
     }

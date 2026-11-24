@@ -3393,7 +3393,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const tx = (o: ShadowOutcome) => (o as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
   const partner = shadowAnswer("female intimate partner firearm victims per year in texas", d2);
   assert.equal(partner.kind, "shr", JSON.stringify(partner).slice(0, 300));
-  assert.ok(tx(partner).includes("No kind of crime was named, so homicide (murder and nonnegligent manslaughter) is shown from Homicide Reports."), JSON.stringify(tx(partner)));
+  assert.ok(tx(partner).includes("No kind of crime was named, so homicide is shown from Homicide Reports."), JSON.stringify(tx(partner)));
   const sex = shadowAnswer("homicides in texas from 2020 to 2021 by sex", d2);
   assert.equal(sex.kind, "shr", JSON.stringify(sex).slice(0, 300));
   assert.ok(tx(sex).includes("No victim or offender was named, so the victims' sex is shown."), JSON.stringify(tx(sex)));
