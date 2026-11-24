@@ -650,9 +650,13 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
  */
 const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will wanna gimme lemme tell give show see get let us plot chart graph draw " +
   "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
-  "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
+  "what's whats how is are was hi hey hello just also kind sort some " +
+  // A request's own opening (G2 step c): "I'm interested in the", "I'd like to", "I want", "I need".
+  "m d im id interested like want wanted need looking in").split(/\s+/));
+/** A greeting then one name ("Hi Jeff can you get me"): the name is filler only straight after the greeting and before a request word (so "Hi Denver" stays a place). */
+const GREETING_NAME = /^\s*(?:hi|hey|hello|hiya)[\s,]+(?!(?:can|could|would|please|i|i'm|what|how|show|give|tell)\b)[a-z]+\b(?=[\s,]+(?:can|could|would|please|i|i'm|i'd|id|want|need|like|give|show|get|tell)\b)/i;
 const pureFillerOnly = (text: string) => {
-  const words = wordsOf(text);
+  const words = wordsOf(GREETING_NAME.test(text) ? text.replace(GREETING_NAME, "hi ") : text);
   return words.length > 0 && words.every((w) => PURE_FILLER.has(w));
 };
 /** A question about what data there is ("Do you have any data for NYC?", "does Olathe report NIBRS data?"): never an ask. */
@@ -708,7 +712,7 @@ const cut = (text: string, parts: Part[]) => {
  */
 function fillerRewrite(question: string, ledger: RequestLedger): { rest: string; left: string[] } | null {
   const unread = ledger.parts.filter((p) => p.state === "not-interpreted");
-  if (!unread.length || !unread.every((p) => fillerOnly(p.text)) || !sameText(question, ledger.question, ledger)) return null;
+  if (!unread.length || !unread.every((p) => fillerOnly(p.text) || pureFillerOnly(p.text)) || !sameText(question, ledger.question, ledger)) return null;
   // Something of the question was read: a place or a crime (a bare "crime" counts).
   if (!ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure"))) return null;
   return { rest: cut(ledger.question, unread), left: unread.filter((p) => meaningful(p.text)).map((p) => p.text.trim()) };
@@ -729,7 +733,7 @@ function currentYearSpan(year: number, cur: CurrentBuild, toDate: boolean): [str
 }
 /** For tests: the ask-instead rule's checks and rewrites, which read no data. */
 export const askInsteadChecks = {
-  fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
+  fillerOnly: (t: string) => fillerOnly(t), pureFillerOnly: (t: string) => pureFillerOnly(t), garbledYear: (t: string) => garbledYear(t), covers: (q: string) => COVERAGE_QUESTION.test(q),
   fillerRewrite: (q: string) => fillerRewrite(q, readQuestion(q, 2026, "2026-09").ledger),
   /** The P74 question without the unread words, or null when it isn't offered. */
   stripped: (q: string) => { const l = readQuestion(q, 2026, "2026-09").ledger; return askInstead(l.question, l.parts.filter((p) => p.state === "not-interpreted"), 2026)?.question ?? null; },

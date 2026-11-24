@@ -959,6 +959,17 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
     assert.equal(fillerRewrite("Tell me more about crime in Arlington, VA"), null);
     assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");
+    // G2 step c: a greeting, a name straight after it and a request's own opening are pure filler, so the rest is answered.
+    const { pureFillerOnly } = askInsteadChecks;
+    for (const t of ["Hi Jeff can you get me", "Hey I'm interested in the", "hello, please give me", "I'd like"]) assert.ok(pureFillerOnly(t), t);
+    // Never a place, a crime or a time: those stay unread and keep the ask.
+    for (const t of ["Hi Denver", "Hi can you get me Denver", "interested in Denver", "I want robbery"]) assert.ok(!pureFillerOnly(t), t);
+
+    // End to end: the opening is dropped and the rest answers exactly as the plain question does.
+    const plainArrests = ask("Number of arrests in Detroit by year from 2020 through 2023");
+    assert.equal(plainArrests.kind, "answer");
+    for (const t of ["Hi Jeff can you get me the number of arrests in Detroit by year from 2020 through 2023", "Hey I'm interested in the number of arrests in Detroit by year from 2020 through 2023"]) assert.equal(ask(t).kind, "answer", t);
+
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");
