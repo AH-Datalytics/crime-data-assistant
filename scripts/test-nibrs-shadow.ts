@@ -3043,6 +3043,14 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       const o = shadowAnswer(q, live) as unknown as { kind: string; about?: string; explanation?: string };
       // The stub holds no rows, so the composite is the no-data decline for the place (with rows it answers by year; the Runner reads real data).
       assert.ok(o.kind === "decline" && /^No data is available for crime in Dallas, Texas\./.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 300)}`);    } }
+  // Engine 2.0 2026-11-24: "the city of X" after an opener that already owns "the".
+  { const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+    // "the city of X" after an opener that owns "the" ("Show me the", "What is the"): the place was dropped for overlapping it, and the ask was "which place".
+    const want: Record<string, string> = { "Show me the city of charlotte murder rate from beginning of data until present": "Charlotte, North Carolina Murder Rate Per Year, 1930-2025",
+      "What is the City of Atlanta's number of murders since 1970": "Atlanta, Georgia Murders Per Year, 1970-2025" };
+    for (const [q, title] of Object.entries(want)) {
+      const o = shadowAnswer(q, live) as any;
+      assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
   // Engine 2.0 2026-11-24: the nation's property crime "by type" before NIBRS's years is Crime Index's three property offenses side by side by year
   // (never the NIBRS clearance-type decline).
   { const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
