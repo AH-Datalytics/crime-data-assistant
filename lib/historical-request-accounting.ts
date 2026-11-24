@@ -415,7 +415,7 @@ export function recordPlaces(ledger: RequestLedger): void {
   }
   // Bare state codes in a place position ("in TX"); in any case after in/for/of or an opening "show", except the codes that are also words.
   const CODES = Object.values(STATE_NAME_TO_ABBR as Record<string, string>).filter((c) => c !== "US");
-  const codeRe = new RegExp(String.raw`(?:\b(?:in|for|of)|^\s*(?:show|chart|graph|plot|list|get|give)(?:\s+me)?)\s+(${CODES.join("|")})\b`, "gi");
+  const codeRe = new RegExp(String.raw`(?:\b(?:in|for|of)|^\s*(?:show|chart|graph|plot|list|get|give)(?:\s+me)?(?!\s+(?:in|for|of)\s))\s+(${CODES.join("|")})\b`, "gi");
   while ((m = codeRe.exec(q))) {
     const code = m[1].toUpperCase();
     // A code that is also a word counts only as before: capitals after in/for/of.

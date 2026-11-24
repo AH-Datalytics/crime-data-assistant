@@ -212,6 +212,9 @@ for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(sh
   same("show ca violent crime per year", "show California violent crime per year");
   same("show CA violent crime per year", "show California violent crime per year");
   same("show tx violent crime per year", "show Texas violent crime per year");
+  // Codex review: an opening command followed by in/for/of must leave the preposition for the place ("show me in CA ...").
+  same("show me in CA violent crime per year", "show me in California violent crime per year");
+  same("show me for tx violent crime per year", "show me for Texas violent crime per year");
   for (const q of ["violent crime in or 2025", "violent crime in me 2025"]) assert.ok(!/Oregon|Maine/.test(JSON.stringify(shadowAnswer(q, { ...deps, noDefaults: false }))), q);
 }
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
