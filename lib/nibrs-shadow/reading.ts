@@ -747,8 +747,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // the second one is the same place, not another (an agency with a state is not "a state beside other places").
   // Only when nothing between them joins or compares (a "versus Texas" or "and West Virginia" is a real second place), and the last one is not the end of a longer state name.
   for (const sn of Object.values(STATE_NAME_BY_CODE)) {
-    const rx = new RegExp(String.raw`,\s*${sn}\b((?:(?!\b(?:vs\.?|versus|and|or|to|than|against|compared|with|plus)\b)[^,])*?)(?<!\b(?:west|north|south|new)\s)\s+${sn}\s*[?.!]?\s*$`, "i");
-    if (rx.test(text)) { text = text.replace(new RegExp(String.raw`\s+${sn}\s*([?.!]?)\s*$`, "i"), "$1"); break; }
+    const rx = new RegExp(String.raw`,\s*${sn}\b((?:(?!\b(?:vs\.?|versus|and|or|to|than|against|compared|with|plus)\b)[^,])*?)\s+(?<!\b(?:west|north|south|new)\s)${sn}\s*[?.!]?\s*$`, "i");
+    // The same guard on the replacement: "Virginia West Virginia" keeps its last word (West Virginia is the second state's name).
+    if (rx.test(text)) { text = text.replace(new RegExp(String.raw`\s+(?<!\b(?:west|north|south|new)\s)${sn}\s*([?.!]?)\s*$`, "i"), "$1"); break; }
   }
   // "rifle" beside another weapon is the weapon, not Rifle, Colorado ("handgun vs rifle murders in Texas"): the plural reads as the weapon.
   // Not when Colorado follows ("handgun to Rifle Colorado"), which names the city.

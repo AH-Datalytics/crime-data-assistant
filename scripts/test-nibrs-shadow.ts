@@ -909,6 +909,15 @@ for (const q of ["show me the trend of juvenile crime in Kansas since 2020", "ju
   assert.ok(a.buttons?.some((b) => /Consistent Reporting Agencies/.test(b.label)), q);
 }
 assert.equal(as(ask("juvenile arrests in Kansas since 2020"), "answer").delivered.text[1], "Summed over the agencies that reported each year.", "asking for arrests leaves the answer as it was");
+// Codex 472: "Virginia West Virginia" keeps its final state (West Virginia is a second state, not Virginia said again).
+assert.match(readQuestion("Murders in Richmond, Virginia West Virginia", 2026, "2026-10").text, /West Virginia\s*$/);
+// Codex 472: a named offense (arson) or a rates ask is not the generic juvenile-arrests rewrite.
+for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile crime in Kansas"]) {
+  const o = ask(q);
+  const text = o.kind === "answer" ? o.delivered.text : [];
+  assert.ok(!text.includes("Arrests do not equal crimes."), `${q}: ${JSON.stringify(text)}`);
+  assert.ok(!text.some((t: string) => /^Kansas Arrests of Arrestees Under 18/.test(t)), q);
+}
 // Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
 {
   const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;
@@ -1667,6 +1676,7 @@ for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrest
 {
   const j = as(shadowAnswer("show me juvenile crime trend 2005 to 2025", { ...deps, noDefaults: false }), "answer");
   assert.ok(j.delivered.text.includes("Arrests do not equal crimes."), JSON.stringify(j.delivered.text));
+  assert.match(j.delivered.text[0], /^United States Arrests of Arrestees Under 18 Per Year/, JSON.stringify(j.delivered.text));
 }
 const charged =as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 // Jeff 2026-11-11, all years by default: by year / per month / a trend with no range is every year the source has, said.

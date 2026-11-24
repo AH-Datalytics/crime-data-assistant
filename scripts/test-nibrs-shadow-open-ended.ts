@@ -59,14 +59,19 @@ const juvenile = (q: string) => {
   const r = readQuestion(q, 2026, "2026-10");
   assert.ok(r.readings.some((x) => x.kind === "phrase" && /^juveniles?\s+arrests\s+in\s+the\s+united\s+states\s+by\s+year$/i.test(x.to)), JSON.stringify(r.readings));
   const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } };
+  // A delivered answer with the arrests note (here the nation has no agencies in the stub, so the answer step may decline: the reading above is the check there).
   assert.notEqual(o.kind, "clarify", JSON.stringify(o));
   if (o.kind === "answer") assert.ok((o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text));
 };
 run("juvenile crime rates are not rewritten to arrest counts, so no arrests note (P293)", () => {
   const r = readQuestion("juvenile crime rates 2005 to 2025", 2026, "2026-10");
   assert.ok(!r.readings.some((x) => x.kind === "phrase" && /arrests\s+in\s+the\s+united\s+states/i.test(x.to)), JSON.stringify(r.readings));
-  const o = shadowAnswer("juvenile crime rates 2005 to 2025", deps) as unknown as { delivered?: { text: string[] } };
-  assert.ok(!(o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text));
+  const o = shadowAnswer("juvenile crime rates 2005 to 2025", deps) as unknown as { kind: string; explanation?: string; delivered?: { text: string[] } };
+  // The outcome itself: not rewritten to arrests (no arrests note, no arrests title, no arrests wording in a decline).
+  assert.ok(!(o.delivered?.text ?? []).some((t) => /Arrests do not equal crimes|Arrests of Arrestees/.test(t)), JSON.stringify(o.delivered?.text));
+  // The actual outcome: the rates decline (population figures by age), not an arrests answer.
+  assert.equal(o.kind, "decline", JSON.stringify(o));
+  assert.match(o.explanation ?? "", /^A rate for a group of people needs population figures/, JSON.stringify(o));
 });
 for (const q of ["which country do you cover", "which cities are represented in Pennsylvania?", "What agencies match Dallas County in Texas? Show me the agencies table entries."])
   run(`coverage question gets the one coverage sentence (P292): ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "coverage"); assert.equal(o.delivered?.text[0], "Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included."); });
