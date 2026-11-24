@@ -655,7 +655,7 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
  * asked about: the rest of the question was read in full. Never a place, crime, time or comparison word.
  */
 const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will wanna gimme lemme tell give show see get let us plot chart graph draw " +
-  "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
+  "display make list provide pull find calculate compute report reports data info information stats statistics numbers figures any have has do does what " +
   "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
 const pureFillerOnly = (text: string) => {
   const words = wordsOf(text);
