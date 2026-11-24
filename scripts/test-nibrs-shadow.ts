@@ -230,7 +230,7 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   assert.ok(arr.delivered.text.includes("Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders."), JSON.stringify(arr.delivered.text));
   assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
   for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
-    assert.equal(ask(q).kind, "decline", q);
+    assert.equal(ask(q).kind, "answer", q); // Coordinator 2026-11-24: the state and national gate is gone, the definition is unchanged
   // 3b: the incidents with at least one domestic violence victim (the same P82 victim membership, each incident once).
   const n1 = sqls.length;
   const inc = as(ask("How have domestic violence incidents trended in Houston since 2019"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
