@@ -201,6 +201,19 @@ for (const q of ["do for nyc", "i want for the District", "i want to see this fo
 for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q);
 // QL-nibrs-4bce7663f2, QL-nibrs-93270941d0 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" are not given the Crime Index composite; they ask which kind of crime.
 // (Asserted below, after the stub's data is loaded.)
+// Row 4 of the follow-up errors (coordinator 2026-11-24): "usa" and "u.s." in any case are the United States, and a state code in any case after
+// show/in/for/of is that state, as the capitalised forms already were. Words that are also codes (or, me, in, hi, ok, oh, id, la, de, ma, pa) stay words.
+{
+  const same = (a: string, b: string) => { const x = shadowAnswer(a, { ...deps, noDefaults: false }), y = shadowAnswer(b, { ...deps, noDefaults: false }); assert.equal(x.kind, y.kind, a); assert.notEqual(x.kind, "clarify", a); };
+  same("violent crime in the usa in 2025", "violent crime in the USA in 2025");
+  same("violent crime in usa in 2025", "violent crime in the USA in 2025");
+  same("violent crime in the u.s. in 2025", "violent crime in the USA in 2025");
+  same("violent crime in ca in 2025", "violent crime in CA in 2025");
+  same("show ca violent crime per year", "show California violent crime per year");
+  same("show CA violent crime per year", "show California violent crime per year");
+  same("show tx violent crime per year", "show Texas violent crime per year");
+  for (const q of ["violent crime in or 2025", "violent crime in me 2025"]) assert.ok(!/Oregon|Maine/.test(JSON.stringify(shadowAnswer(q, { ...deps, noDefaults: false }))), q);
+}
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
 {
   const w = as(ask("what weapon types were used in violent crimes in pennsylvania in 2025"), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
