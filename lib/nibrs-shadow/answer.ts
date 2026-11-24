@@ -95,6 +95,8 @@ export type ShadowDeps = {
   shareAsked?: boolean;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
+  /** The places already chosen from a button, by the place's own words (lower case): the same-months years ask each year's question without asking the place again (P22). */
+  placePins?: Map<string, Candidate>;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
   noDefaults?: boolean;
   /** Set while a follow-up is answered from a rewrite or as its own question: the words the user typed and the previous question, which the
@@ -1980,7 +1982,7 @@ const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "Jul
  * every figure the engine's own answer for that year (so its sources, limits and blanks apply), titled with the months. Never the whole
  * year in place of the months, and never a clarify whose buttons would forget the months.
  */
-function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome {
+function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome | null {
   const NO = () => decline("unsupported_capability", "I can't answer this combination. Try a simpler version, for example one crime in one place for one year.");
   const n = Number(String(part.value).slice(7));
   if (!(n >= 1 && n <= 12)) return NO();
@@ -2002,7 +2004,8 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   for (let y = years[0]; y <= years[1]; y++) {
     const o = shadowAnswer(sub(y), deps);
     // The first year's ask or decline stands for the question (a place asked, a limit): never buttons that forget the months.
-    if (y === years[0] && o.kind === "clarify") return NO();
+    // A place to choose (several agencies of that name) is the ordinary place question; its buttons keep the months. Any other ask is declined.
+    if (y === years[0] && o.kind === "clarify") return /^which /.test(o.about) ? null : NO();
     results.push({ y, o });
   }
   // The year's figure: the sum of its months (the engine's own month rows), blank when any month is not known (never a partial sum as the
@@ -2138,7 +2141,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // The same months of each year (Q1): answered by its own function, or declined; the months are never dropped.
   // With no place named, the place is asked first as before (its buttons run the whole question, months and all, and come back here).
   const sameMonths = clause0("months-through");
-  if (sameMonths.length && clause0("place").length) return answerSameMonths(ledger0, sameMonths[0], deps);
+  if (sameMonths.length && clause0("place").length) {
+    // A place pinned from a button is carried into each year's question by its words. A place that must still be asked goes on to the
+    // ordinary place question, whose buttons come back here with the place chosen and the months kept.
+    const byWords = new Map(deps.placePins ?? []);
+    for (const p of clause0("place")) { const c = pins.get(p.span[0]); if (c) byWords.set(p.text.trim().toLowerCase(), c); }
+    const r = answerSameMonths(ledger0, sameMonths[0], byWords.size ? { ...deps, placePins: byWords } : deps);
+    if (r) return r;
+  }
 
   // "By state" (Jeff 2026-11-16, Q2): the 50 states from Crime Index for one Part I crime. One year is the table State | figure (the
   // ranking of all 50); years named, or a trend with none, is the long table State | Year | figure, no chart. No year and no trend asks the
@@ -2268,7 +2278,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const city = ledger0.parts.find((c) => c.clause === 0 && c.concept === "entity" && c.value === "city" && /^city$/i.test(c.text.trim())
       && c.span[0] >= p.span[1] && /^\s*$/.test(ledger0.question.slice(p.span[1], c.span[0])) && /^(city|ambiguous):/.test(p.value!));
-    const pin = pins.get(p.span[0]);
+    const pin = pins.get(p.span[0]) ?? deps.placePins?.get(p.text.trim().toLowerCase());
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, city ? `${p.text} city` : p.text, inList);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }

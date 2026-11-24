@@ -533,6 +533,18 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
 // Year | figure, each year counting the same months, titled with them; never the whole year in place of the months.
 {
   type Del = { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[]; chart: unknown } };
+  // A place with two agencies asks which, and each button keeps the months and the place chosen (QL same-months clarify): never "can't answer".
+  {
+    const la = ask("Murders through July in Los Angeles in 2024");
+    assert.equal(la.kind, "clarify", "Los Angeles asks which agency");
+    const opts = (la as unknown as { options: { label: string; continuation?: ShadowOutcome }[] }).options;
+    assert.ok(opts.length >= 2);
+    for (const o of opts) {
+      assert.notEqual(o.continuation?.kind, "clarify", `${o.label} is not asked again`);
+      assert.notEqual(o.continuation?.kind, "decline", `${o.label} answers`);
+      assert.ok(JSON.stringify((o.continuation as unknown as { delivered?: unknown }).delivered ?? "").includes("January through July"), `${o.label} keeps the months`);
+    }
+  }
   const one = as(ask("Murders through April in Houston in 2024"), "answer") as unknown as Del;
   assert.equal(one.delivered.text[0], "Houston, Texas Murder Victims January Through April Per Year, 2024");
   assert.deepEqual(one.delivered.table.columns.map((c) => c.header), ["Year", "Murder victims"]);
