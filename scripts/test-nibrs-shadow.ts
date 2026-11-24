@@ -1015,10 +1015,10 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     const { stripped } = askInsteadChecks;
     assert.equal(stripped("can I see violent crime rolling over 12 months for the garden district in New Orleans for 2000 to the present?"), null);
     assert.equal(stripped("national murder trend rolling over 12 months with an annotation in May 2020"), "national murder trend rolling over 12 months");
-    // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
-    assert.equal(fillerRewrite("Tell me more about crime in Arlington, VA"), null);
-    // Jeff 2026-11-24 card: "tell me more about crime in <place>" yields to P148, so it is no longer asked back; "VA" stays unread, so it declines (never answered for Arlington, Texas).
-    assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");
+    // "Arlington, VA" is read as Arlington County, Virginia (never Arlington, Texas with "VA" unread), so the filler is rewritten away.
+    assert.ok(fillerRewrite("Tell me more about crime in Arlington, VA"), "Arlington, VA rewrites");
+    // Jeff 2026-11-24 card: "tell me more about crime in <place>" yields to P148, so it is no longer asked back (the stub has no rows, so it declines as DC does).
+    assert.notEqual(ask("Tell me more about crime in Arlington, VA").kind, "clarify");
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");

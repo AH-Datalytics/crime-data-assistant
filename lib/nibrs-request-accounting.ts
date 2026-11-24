@@ -485,6 +485,20 @@ function recordCounties(ledger: RequestLedger): void {
 }
 
 /**
+ * Virginia counties named without the word "County" and with the state ("Arlington, VA", "Loudoun, Virginia"): the county, not
+ * the same-named city of another state the geo resolver prefers (Arlington, Texas) with the state left unread (Engine 2.0 2026-11-24).
+ * Only counties with no city of the name in Virginia; "Fairfax, VA" and "Richmond, VA" stay with the city rule.
+ */
+function recordShortVirginiaCounties(ledger: RequestLedger): void {
+  const re = /\b(Arlington|Loudoun|Prince\s+William|Henrico|Chesterfield)\s*,\s*(?:VA|Virginia)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(ledger.question))) {
+    const name = m[1].replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    ledger.record({ concept: "place", value: `county:${name} County:VA`, span: [m.index, m.index + m[0].length], rule: "place:county" });
+  }
+}
+
+/**
  * A season before a year ("Spring 2024", "summer of 2023") is never a place: "Spring" had answered Spring Township,
  * Pennsylvania (coordinator 2026-11-05). The reader has no season periods, so the word is named as not understood.
  */
@@ -615,6 +629,7 @@ function buildNibrsLedger(question: string): RequestLedger {
   // The county rule first: it reads any state after "Sheriff's Office" (Codex place review 02).
   recordSeasons(ledger);
   recordCounties(ledger);
+  recordShortVirginiaCounties(ledger);
   recordCountySheriffs(ledger);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm) => ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });
