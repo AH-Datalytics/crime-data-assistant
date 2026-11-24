@@ -1,0 +1,12 @@
+{
+  "id": "P280",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Murders by hour of day in Texas in 2024\", \"aggravated assaults by location in Houston in 2024\", \"rapes by time of day in Houston\"",
+  "what the app does today": "By hour: counted victims with no note. By location: declined (\"v0 cannot group victim by offense.location_type\").",
+  "proposed behavior": "A crime against a person (murder, rape, aggravated assault, simple assault and the other person crimes) grouped only by location or by hour of day is counted by offense, and the title says so (\"Texas Murder Offenses by Time of Day, 2024\"). The notes add: \"These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.\" Shares are of all offenses, including the Unknown location row. A weapon breakdown stays victims (P166). Robbery, burglary and property crimes stay offenses with no sentence. A victim, offender or relationship filter or grouping keeps the victim unit.",
+  "exact default or choices offered": "The offense count, with the one sentence.",
+  "why": "Jeff 2026-11-23 (\"Offenses with a note\", through the coordinator): NIBRS keeps location and hour by offense, so answer in offense counts and say so.",
+  "status": "Decided 2026-11-23 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P280\")."
+}

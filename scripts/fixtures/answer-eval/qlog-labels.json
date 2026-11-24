@@ -4303,16 +4303,20 @@
    "question": "Tell me more about crime in Arlington, VA",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": "historical",
-    "about": "the whole question"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P247-open-ended",
+    "rule": "P148",
     "drafted_by": "declines-owner",
     "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
+    "notes": "Was an ask (P247-open-ended, Jeff 2026-11-23). Jeff's 2026-11-24 card: a place plus 'crime' answers P148's composite, same as DC and Pierce. Arlington, VA is one place; engine still declines on 'VA' (state suffix unread), a known miss to fix next."
    }
   },
   {
@@ -45961,7 +45965,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "offense counts by location or time of day, with the sentence: These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -45969,10 +45973,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P280",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
    }
   },
   {
@@ -61423,7 +61427,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "offense counts by location or time of day, with the sentence: These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -61431,10 +61435,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P280",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
    }
   },
   {
@@ -67167,7 +67171,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "offense counts by location or time of day, with the sentence: These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -67175,10 +67179,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P280",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
    }
   },
   {
@@ -104101,7 +104105,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "offense counts by location or time of day, with the sentence: These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -104109,10 +104113,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P280",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
+    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
    }
   },
   {
@@ -106007,7 +106011,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the earlier question, changed as asked",
+    "answer": "offense counts by location or time of day, with the sentence: These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -106015,10 +106019,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
+    "rule": "P280",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. a follow-up to an answerable question"
    }
   },
   {

@@ -329,5 +329,39 @@ function answerHateBreakdown(hq: HateQuestion, build: HateBuild, execute: (sql: 
   };
 }
 
+/** The name a place goes by in a table's Place column. */
+export const hatePlaceLabel = (p: HatePlace): string => (p.kind === "agency" ? p.label : p.kind === "state" ? stateName(p.code) : "United States");
+/**
+ * Several places asked together ("anti-Black hate crimes in New York versus Texas in 2024"): each place is answered on its own (the same
+ * question with that one place) and the answers are put in one table with a Place column. Places are never added together; an incident
+ * is counted once, in its own place. The lines are the first place's (the caveat, the years, the latest month), and the title names every place.
+ */
+export function combineHatePlaces(hqs: HateQuestion[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
+  const each = hqs.map((q) => answerHate(q, build, execute));
+  const bad = each.find((a): a is HateDecline => a.kind === "hate-decline");
+  if (bad) return bad;
+  const answers = each as HateAnswer[];
+  const first = answers[0];
+  const labels = hqs.map((q) => hatePlaceLabel(q.place));
+  const placeCol: ResultTable["columns"][number] = { binding: { kind: "grouping", dimension: "geo.place" }, header: "Place" };
+  const columns = [placeCol, ...first.delivered.table.columns];
+  const rows = answers.flatMap((a, i) => a.delivered.table.rows.map((r) => [labels[i], ...r]));
+  // Each place's own sentence leads (its own figures); a line every place shares is said once, a line only some places have is said with its place.
+  const head = answers.map((a) => a.delivered.text[0]).join(" ");
+  const tail = answers.map((a) => a.delivered.text.slice(1).filter((t) => t !== HATE_SOURCE));
+  // A count of incidents left out is that place's own, so it always names its place; any other line every place shares is said once.
+  const own = (t: string) => /not counted/.test(t) || !tail.every((o) => o.includes(t));
+  const lines: string[] = [];
+  tail.forEach((ts, i) => ts.forEach((t) => {
+    const line = own(t) ? `${labels[i]}: ${t}` : t;
+    if (!lines.includes(line)) lines.push(line);
+  }));
+  return {
+    ...first,
+    meaning: { ...first.meaning, places: hqs.map((q) => q.place), groupings: ["place", ...first.meaning.groupings] },
+    delivered: { table: { columns, rows }, text: [head, ...lines, HATE_SOURCE] },
+  };
+}
+
 /** The postal state of an ORI, for a place named by agency (kept for callers that need it). */
 export const hateStateOfOri = (ori: string) => ORI_STATE[ori.slice(0, 2)] ?? ori.slice(0, 2);

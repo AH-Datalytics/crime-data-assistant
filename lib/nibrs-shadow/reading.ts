@@ -146,6 +146,8 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
 const PHRASES: [RegExp, string][] = [
+  // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
+  [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
   // B1: "johnson county sheriff in ks": the state's code after "in" (not IN, OR, ME, HI or OK, which are words).
   [/\b(County\s+Sheriff(?:'?s)?(?:\s+(?:Office|Department))?)\s+in\s+(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|ID|IL|KS|KY|LA|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, "$1, $2"],
   [/,\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s+State\b/gi, ", $1"],
@@ -189,6 +191,11 @@ const PHRASES: [RegExp, string][] = [
   [/(\brank\w*\b[^.?!]*?)\bin\s+terms\s+of\b/gi, "$1by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
+  // C1 crime vocabulary: "willful murder" is the legal name of the murder the data counts; "show data on X" is "show me X".
+  [/\bwillful\s+murders?\b/gi, "murders"],
+  // "Willful homicide" is the UCR name for murder and non-negligent manslaughter (09A), not the broader "homicide" (which adds negligent manslaughter).
+  [/\bwillful\s+homicides?\b/gi, "murders"],
+  [/^\s*show\s+(?:me\s+)?(?:the\s+)?data\s+(?:on|for|about)\s+/i, "show me "],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
   // A victim breakdown asked as its categories: "victims ... were male or female" -> "victims ... by sex". Only victims,
   // and only "were": "committed by men and women" is about offenders and is left alone (Codex increment-1 review).
@@ -266,8 +273,13 @@ const PHRASES: [RegExp, string][] = [
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
   // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
   // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
-  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|were\s+committed\s+(?:with|using)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|(?:were\s+)?committed\s+(?:with|using|via)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?|knife|knives)\b([^?.]*)/gi, "share of $1 by weapon$2"],
   [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  // "what weapons do people use in robberies in Texas", "what weapons are most commonly used in ..." and "by weapons" are the same by-weapon question.
+  [/\bwhat\s+(?:types?\s+of\s+)?weapons?\s+(?:do\s+(?:people|offenders|criminals|suspects)\s+use|are\s+(?:most\s+)?(?:commonly\s+|often\s+)?used)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  [/\bby\s+weapons\b/gi, "by weapon"],
+  // "the value of items stolen in burglaries" is the value stolen in burglaries.
+  [/\bvalue\s+of\s+(?:all\s+)?(?:the\s+)?(?:items|property|goods)\s+(?:stolen|taken)\s+(?:in|via|from)\b/gi, "value stolen in"],
   [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
   [/\s+analysis\s+for\s+/gi, " in "],
   // P191: "for the entire US", "across the whole country" are the nation ("nationwide").

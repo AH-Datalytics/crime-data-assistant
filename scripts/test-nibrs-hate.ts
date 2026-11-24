@@ -144,4 +144,39 @@ assert.notEqual(rate.kind, "answer", "a rate is not built");
   assert.ok(school.delivered.text.includes(SCHOOL_LINE) && school.delivered.text.includes("4 hate crimes in 2024 have no confirmed location and are not counted."), school.delivered.text.join(" / "));
   assert.equal(as(ask("hate crimes at schools by year nationally"), "hate").delivered.table.columns[1].header, "Hate crimes at schools");
 }
+// B3 (Jeff): several places asked together are each answered on their own and set side by side in a Place column; never added together.
+{
+  const before = sqls.length;
+  const two = as(ask("How many anti-Black hate crimes occurred in Texas versus Florida in 2024?"), "hate");
+  assert.equal(two.delivered.table.columns[0].header, "Place");
+  assert.deepEqual(two.delivered.table.rows.map((r) => r[0]), ["Texas", "Florida"]);
+  assert.equal(sqls.length - before, 2, "one query per place, no summing");
+  assert.ok(/'TX'/.test(sqls[before]) && /'FL'/.test(sqls[before + 1]), sqls.slice(before).join(" / "));
+  assert.equal(two.delivered.text[two.delivered.text.length - 1], "Source: FBI Hate Crime Statistics.");
+  // By year: a Place column ahead of the Year column, one block of years per place.
+  const yr = as(ask("anti-Black hate crimes in Texas and Florida by year from 2022 to 2024"), "hate");
+  assert.deepEqual(yr.delivered.table.columns.slice(0, 2).map((c) => c.header), ["Place", "Year"]);
+  assert.equal(yr.delivered.table.rows.length, 6);
+  // New York is asked about first (the state or the city); either choice still answers both places.
+  const ny = ask("hate crimes in New York and Texas in 2024");
+  assert.equal(ny.kind, "clarify");
+  for (const o of (ny as Extract<ShadowOutcome, { kind: "clarify" }>).options) {
+    const c = o.continuation as Extract<ShadowOutcome, { kind: "hate" }>;
+    assert.equal(c.kind, "hate");
+    assert.equal(c.delivered.table.rows.length, 2, "both places answered after the choice");
+  }
+  // The same place twice is not two places (declined); more than six places is declined.
+  assert.equal(ask("anti-Black hate crimes in Texas and Texas in 2024").kind, "decline", "one place named twice is not a comparison");
+  assert.equal(ask("hate crimes in Texas, Florida, Ohio, Iowa, Utah, Maine and Idaho in 2024").kind, "decline");
+}
+// Codex review of B3: a mixed list keeps every place; each place's own figures lead; place-specific lines name their place.
+{
+  const mixed = as(ask("hate crimes in Texas, Chicago and Boston in 2024"), "hate");
+  assert.equal(mixed.delivered.table.rows.length, 3, JSON.stringify(mixed.delivered.table.rows));
+  assert.equal(mixed.delivered.table.rows[0][0], "Texas");
+  const two = as(ask("anti-Islamic and anti-Jewish hate crimes in Texas and Florida in 2024"), "hate");
+  assert.ok(two.delivered.text[0].includes("Texas") && two.delivered.text[0].includes("Florida"), two.delivered.text[0]);
+  const sch = as(ask("hate crimes at schools in Texas and Florida in 2024"), "hate");
+  assert.ok(sch.delivered.text.filter((t) => /not counted/.test(t)).every((t) => /^(Texas|Florida): /.test(t)), sch.delivered.text.join(" / "));
+}
 console.log("nibrs hate: hate crime questions are answered from the hate crime data only, with its caveat and its latest-date rule");
