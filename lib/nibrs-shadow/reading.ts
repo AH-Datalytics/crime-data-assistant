@@ -307,6 +307,8 @@ const PHRASES: [RegExp, string][] = [
   // is "homicides by circumstance". Never after "by" ("by victim race" is read by the people reader below).
   [/(?<!\bby\s+(?:the\s+)?)\b(victim|offender)s?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b(?!\s+(?:and|or|\/)\s+(?:race|sex|gender|ethnicity|age)\b)/gi, "$1s by $2"],
   [/\b(victim|offender)s?\s+(?:demographics|demographic\s+breakdown)\s+by\s+(race|sex|gender|ethnicity|age)\b/gi, "$1s by $2"],
+  // "offender demographics for robbery by sex" is "robbery offenders by sex" (QL-nibrs-c74cec7689: "demographics for" was unread).
+  [/\b(victim|offender|arrestee)s?\s+demographics\s+(?:for|of|in)\s+([a-z][a-z ]*?)(?=\s+(?:by|in|during|from|since|nationally|across)\b|\s*[?.!,]|\s*$)/gi, "$2 $1s"],
   [/\b(?:the\s+)?racial\s+(?:breakdown|makeup|composition|distribution)\s+of\s+((?:[a-z]+\s+){0,3}?(?:victims|offenders))\b/gi, "$1 by race"],
   [/\b(murder|homicide|killing)s?\s+circumstances?\b/gi, "$1s by circumstance"],
   // P162 (Jeff 2026-11-19): "what percentage of murder victims were female" is the victims by sex with each sex's share; the table

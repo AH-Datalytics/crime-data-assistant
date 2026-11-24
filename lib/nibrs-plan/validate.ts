@@ -361,7 +361,7 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
         // A cleared-offense measure applies its offense ("rape clearances": offenses.rape_cleared), but only when the
         // question asks about clearances; otherwise it would answer a subset of what was asked.
         const last = parts[parts.length - 1];
-        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v || (v === "violent_crime" && last === "person_crimes") || (v === "property_crime" && last === "against_property") ? null : `the measure at ${path} is not "${v}"`;
+        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v || (v === "violent_crime" && last === "person_crimes") || (v === "property_crime" && last === "against_property") || (v === "drug_possession" && last === "drug_crimes") ? null : `the measure at ${path} is not "${v}"`;
       }
     case "unit":
       if (!/^measures\[\d+\]\.unit$/.test(path)) return "a unit binds to measures[i].unit";

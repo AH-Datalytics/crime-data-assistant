@@ -1045,6 +1045,9 @@ function peakMeasure(question: string): string | null {
   return hit.length === 1 ? hit[0][1] : null;
 }
 
+const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
+/** Jeff 2026-11-24: "juvenile crime" with no crime, victim or offender named is juvenile arrests (NIBRS, under 18) per year, the answer saying arrests are not crimes. */
+const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?))/i;
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
 function kingsCountyAsk(question: string): ShadowOutcome | null {
@@ -1052,6 +1055,34 @@ function kingsCountyAsk(question: string): ShadowOutcome | null {
   if (!m) return null;
   const withState = (state: string) => question.slice(0, m.index) + m[0] + ", " + state + question.slice(m.index + m[0].length);
   return { kind: "clarify", about: "which Kings County", question: "Which Kings County: New York or California?", options: [{ label: "Kings County, New York", question: withState("New York") }, { label: "Kings County, California", question: withState("California") }] };
+}
+/** P295 (Jeff 2026-11-24, QL-shr-bcdb4c61db): "share of murders where the victim was black" is a table by year: all the murder victims, those of that race, and the share. */
+const RACE_WORDS = String.raw`(black|white|asian|african[-\s]american|american\s+indian|native\s+american|alaska\s+native|pacific\s+islander|native\s+hawaiian)`;
+const SHARE_OF_RACE = new RegExp(String.raw`\b(?:what\s+|how\s+much\s+)?(?:share|percent(?:age)?|proportion)\s+of\s+(murder|homicide)s?(?:\s+where\s+(?:the\s+)?victims?\s+(?:was|were|is|are)\s+|\s+victims(?:\s+in\s+([a-z.' ,-]+?))?\s+(?:was|were|are|is)\s+)${RACE_WORDS}\b`, "i");
+const RACE_LABEL = (w: string) => /black|african/i.test(w) ? "Black" : /^white/i.test(w) ? "White" : /asian/i.test(w) ? "Asian" : /hawaiian|pacific/i.test(w) ? "Native Hawaiian or Pacific Islander" : "American Indian or Alaska Native";
+function shareOfRaceByYear(question: string, depsIn: ShadowDeps): ShadowOutcome | null {
+  const m = SHARE_OF_RACE.exec(question);
+  if (!m) return null;
+  const crime = m[1].toLowerCase();
+  const label = RACE_LABEL(m[3]);
+  const o = shadowAnswer(question.replace(m[0], `${crime} victims by race by year${m[2] ? ` in ${m[2].trim()}` : ""}`), depsIn);
+  const t = (o.kind === "shr" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+  if (o.kind !== "shr" || !t || t.columns.length !== 4 || t.columns[1].header !== "Victim's race" || !t.rows.length) return o;
+  const years = [...new Set(t.rows.map((r) => String(r[0])))];
+  const rows = years.map((y) => {
+    const mine = t.rows.filter((r) => String(r[0]) === y);
+    const total = mine.reduce((s, r) => s + (typeof r[2] === "number" ? r[2] : 0), 0);
+    const n = mine.filter((r) => r[1] === label).reduce((s, r) => s + (typeof r[2] === "number" ? r[2] : 0), 0);
+    return [y, total, n, total ? Math.round((n * 1000) / total) / 10 : null] as (string | number | null)[];
+  });
+  const noun = crime === "murder" ? "Murder" : "Homicide";
+  const columns = [t.columns[0], { binding: { kind: "statistic" as const, as: "count" }, header: `${noun} victims` }, { binding: { kind: "statistic" as const, as: "count_race" }, header: `${label} victims` }, { binding: { kind: "statistic" as const, as: "share" }, header: "Share (%)" }];
+  const first = o.delivered.text[0];
+  const tm = first.match(/^(.*?) (?:Murder|Homicide) Victims by Year and the Victims' Race, (.*)$/);
+  const title = tm ? `${tm[1]} Share of ${noun} Victims Who Were ${label}, ${tm[2].replace(/(\d{4})-(\d{4})/, "$1 to $2")}` : first;
+  const evidence = rows.flatMap((r, ri) => [1, 2, 3].map((ci) => ({ row: ri, statistic: (columns[ci].binding as { as: string }).as, status: typeof r[ci] === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+  o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...o.delivered.text.slice(1)] } as typeof o.delivered;
+  return o;
 }
 /** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
 const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
@@ -1073,7 +1104,19 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
     }
     return o;
   }
+  { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?)\b/i.test(question)) {
+    let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
+    // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
+    if (/\btrends?\s+(?:of|in)\b/i.test(q)) q = q.replace(/\b(?:the\s+)?trends?\s+(?:of|in)\s+/i, "").replace(/\s*\?*\s*$/, /\b(?:per|by)\s+(?:year|month)\b/i.test(q) ? "" : " per year");
+    const o = shadowAnswer(q, depsIn);
+    if (o.kind === "answer" && !o.delivered.text.includes(ARRESTS_NOT_CRIMES)) {
+      o.delivered.text.splice(1, 0, ARRESTS_NOT_CRIMES);
+      // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
+    }
+    return o;
+  }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
@@ -3372,10 +3415,17 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   let combined: Combined | null = null;
   // D19: "drug crimes" are drug/narcotic plus drug equipment violations: both measures, and their total. Today's reader
   // reads them as drug possession alone ("drug possession" itself stays one measure).
-  const drugPart = clause0("measure").find((p) => p.value === "drug_possession" && !/possess/i.test(p.text));
+  const drugAny = clause0("measure").find((p) => p.value === "drug_possession");
+  const drugPart = drugAny && !/possess/i.test(drugAny.text) ? drugAny : undefined;
   // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
   if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "This isn't available: drug crimes (drug and narcotic offenses plus drug equipment violations) beside other crimes.");
-  if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+  const drugStatePlace = plan.geography.places[0]?.kind === "state" || plan.geography.places[0]?.kind === "national";
+  // Jeff 2026-11-24: for a state or the nation, "drug possession" counts both 35A and 35B too (agencies keep "drug possession" as one measure).
+  if (drugAny && drugStatePlace && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+    // Coordinator 2026-11-24: a state or national sum counts the one composite measure (35A + 35B), so it is a single column.
+    plan.measures[0] = { ...plan.measures[0], id: "offenses.drug_crimes" };
+    combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  } else if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
