@@ -3397,6 +3397,12 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // No kind of crime: violent and property crime.
   const crime = applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime" }, { label: "Both", continuation: answerOf(["2024"]) }]), live);
   assert.equal(text(crime)[1], "No kind of crime was named, so violent crime and property crime are shown.");
+  // A weapon named with no crime ("how many firearms crimes in the usa"): weapons are recorded for violent crime, so only that button runs and it is the default, said
+  // (QL-ct-cdad672651, gate on 493); with no weapon named a lone button stays an ask.
+  const gunCrime = applyDefaults("how many firearms crimes in the usa last year", ask("which kind of crime", "how many firearms crimes in the usa last year", [{ label: "Violent crime", continuation: { kind: "answer", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } as unknown as ShadowOutcome }]), live);
+  assert.equal(gunCrime.kind, "answer");
+  assert.equal(text(gunCrime)[1], "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).");
+  assert.equal(applyDefaults("crime in Texas in 2024", ask("which kind of crime", "crime in Texas in 2024", [{ label: "Violent crime", continuation: answerOf(["2024"]) }]), live).kind, "clarify");
   // Place, then period, then crime in one chain: three notes in that order.
   const chain = applyDefaults("crime trends", ask("which place", "crime trends", [{ label: "The United States", continuation: ask("which period", "crime trends", [{ label: "Every year available", continuation: ask("which kind of crime", "crime trends", [{ label: "Both", continuation: answerOf(["2023", "2024"]) }]) }]) }]), live);
   assert.equal(text(chain).length, 5, JSON.stringify(text(chain)));

@@ -915,6 +915,7 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
 /** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
 /** A clearance question (P182's exception): a clearance rate, offenses cleared, clearances by type, cleared by arrest or exception. */
 const CLEARANCE_WORDS = /\bclear(?:ance|ances|ed|ing)?\b/i;
+const WEAPON_WORDS = /\b(?:firearms?|guns?|handguns?|rifles?|shotguns?|knife|knives|weapons?)\b/i;
 /**
  * QL-nibrs-9aed2136c4 (Jeff 2026-11-22): "What percentage of murders are cleared by arrest vs exceptional" is asked for shares of the clearance types.
  * Narrow on purpose: a percentage word, a clearance word, and both "arrest" and "exceptional". Only such a question defaults a missing year to the
@@ -975,6 +976,12 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
+      // A weapon named with no crime ("how many firearms crimes in the usa"): weapons are recorded for violent crime, so only that button runs; it is the default, said.
+      const violentOnly = c.options.length === 1 && /^Violent crime$/.test(c.options[0].label);
+      if (!option && violentOnly && WEAPON_WORDS.test(question) && !CLEARANCE_WORDS.test(question)) {
+        option = c.options[0];
+        note = "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).";
+      }
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
