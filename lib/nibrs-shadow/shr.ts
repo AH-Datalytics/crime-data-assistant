@@ -420,8 +420,9 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     // Percentages: each category's share of ALL the period's victims, one column each.
     for (const c of cats) columns.push({ binding: { kind: "statistic", as: `share_${c.code}` }, header: `${c.label} (%)` });
     for (const p of periods) { const total = valueOf(p, null); rows.push([...(p.label ? [p.label] : []), ...cats.map((c) => { const v = valueOf(p, c.code); return v === null || !total ? null : Math.round((v * 1000) / total) / 10; })]); }
-  } else if (sq.breakdown?.groups && timeCols.length && !sq.share) {
-    // A comparison ("female vs male murder victims per year"): the period down the side, a column for each side compared.
+  } else if (sq.breakdown?.groups && timeCols.length && !sq.share && sq.breakdown.dim !== "weapon") {
+    // A comparison of a person's detail ("female vs male murder victims per year"): the period down the side, a column for each side
+    // compared. A weapon comparison keeps its long form (Year, Weapon, count), as it was accepted before this change.
     for (const c of cats) columns.push({ binding: { kind: "statistic", as: `count_${c.code}` }, header: c.label });
     for (const p of periods) rows.push([...(p.label ? [p.label] : []), ...cats.map((c) => valueOf(p, c.code))]);
   } else if (sq.breakdown) {
