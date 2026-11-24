@@ -216,3 +216,12 @@ assert.equal(rq("show me willful murders in salem oregon since 1991").text, "sho
 assert.equal(rq("willful homicides in Salem Oregon in 2024").text, "murders in Salem Oregon in 2024", "willful homicide is murder (09A), never negligent manslaughter (Codex 447 P1)");
 assert.equal(rq("show data on robberies in new orleans").text, "show me robberies in new orleans");
 assert.equal(rq("the data on robberies in new orleans").text, "the data on robberies in new orleans", "only a leading 'show data on' is the opener");
+
+// D (QL-shr-04141126f2): "Summarize current crime trends for Asheville, NC" names no crime: it reads as the opener "crime trends" (P182 default), not Current Trends' monthly series.
+{
+  const a = rq("Summarize current crime trends for Asheville, NC"), b = rq("Summarize crime trends for Asheville, NC");
+  assert.equal(a.ledger.parts.some((x) => x.concept === "recent"), false, "no recent part when no crime is named");
+  assert.deepEqual(a.ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], "Summarize is filler");
+  assert.equal(a.text, b.text);
+  assert.equal(rq("current murder trends in Asheville, NC").ledger.parts.some((x) => x.concept === "recent"), true, "a named crime keeps the Current Trends reading");
+}
