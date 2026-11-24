@@ -3384,6 +3384,25 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   }
   assert.ok(seen.some((q) => /homicide_type IN \('A', 'B'\)/.test(q)) && !seen.some((q) => /circumstance NOT IN \('80', '81'\)/.test(q)), "justifiable homicides are counted");
 }
+// E (Jeff 2026-11-24, QL-shr-dbbf8f8032 and QL-shr-37ceb1420f): Homicide Reports with a victim-sex, relationship or weapon word and no crime named
+// is homicide, said (P182's note, extended); a homicide question naming sex with no offender word is the victims' sex, said; both words still ask.
+{
+  const hs = (sql: string): unknown[][] => (/count\(DISTINCT agency_key\)/.test(sql) ? [[2020, 12, ["ori9:X"]], [2021, 12, ["ori9:X"]]] : /AS k1/.test(sql) ? [[2020, "Female", 5], [2021, "Male", 2]] : /shr_victim/.test(sql) ? [[2020, 5], [2021, 2]] : []);
+  const d2 = { ...deps, noDefaults: false, execute: hs, shr: { root: "/shr", release: "shr-test", latestMonth: "2026-09", crosswalk: "cw" },
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const tx = (o: ShadowOutcome) => (o as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
+  const partner = shadowAnswer("female intimate partner firearm victims per year in texas", d2);
+  assert.equal(partner.kind, "shr", JSON.stringify(partner).slice(0, 300));
+  assert.ok(tx(partner).includes("No kind of crime was named, so homicide (murder and nonnegligent manslaughter) is shown from Homicide Reports."), JSON.stringify(tx(partner)));
+  const sex = shadowAnswer("homicides in texas from 2020 to 2021 by sex", d2);
+  assert.equal(sex.kind, "shr", JSON.stringify(sex).slice(0, 300));
+  assert.ok(tx(sex).includes("No victim or offender was named, so the victims' sex is shown."), JSON.stringify(tx(sex)));
+  // Both words: still asked. No weapon, sex or relationship word: the old ask.
+  const both = shadowAnswer("homicides in texas from 2020 to 2021 by victim sex and offender sex", d2);
+  assert.ok(!tx(both).some((t) => /the victims' sex is shown/.test(t)), JSON.stringify(both).slice(0, 300));
+  const plain = shadowAnswer("crime in texas per year", d2);
+  assert.ok(!(plain.kind === "shr"), "a question with no homicide word stays out of Homicide Reports");
+}
 // Never a button that leads to a decline, at any depth (Jeff 2026-11-14, no note when hidden): every path through an ask's
 // options ends in an answer, an entry or another source, never a decline or a route. The fixture's data is thin, so many
 // choices that run on the real build decline here; they are the ones that must not be shown.

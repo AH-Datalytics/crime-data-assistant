@@ -927,6 +927,9 @@ const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bsho
 const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:cities|agencies|places|states|counties|departments)\b|^\s*(?:compare[ds]?|comparison)\s+(?:it\s+|that\s+|this\s+)?(?:to|with|against)\b|^\s*(?:vs\.?|versus)\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
+/** E: a victim sex, a victim-offender relationship or a weapon, beside a word for the victims (or a relationship alone): a Homicide Reports question that names no crime. */
+const SHR_NO_CRIME = /\b(?:(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b[^.?]*\b(?:victims?|killed|deaths?|dead)\b|\b(?:victims?|killed|deaths?|dead)\b[^.?]*\b(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b)|\b(?:intimate|partners?|spouses?|boyfriends?|girlfriends?|wife|husband|relationships?)\b/i;
+const OFFENDER_WORD = /\b(?:offenders?|perpetrators?|suspects?|killers?|attackers?)\b/i;
 let defaultDepth = 0;
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
@@ -976,6 +979,15 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+      // E (Jeff 2026-11-24): a victim-sex, relationship or weapon word with no crime named is a homicide question, answered from Homicide Reports.
+      if (deps.shr && !CLEARANCE_WORDS.test(question) && SHR_NO_CRIME.test(question)) {
+        const q = c.question.replace(/[?.!\s]+$/, "");
+        defaultDepth++;
+        try {
+          const o = /\bvictims?\b/i.test(q) ? shadowAnswer(q.replace(/\bvictims?\b/i, (m) => `homicide ${m}`), deps) : shadowAnswer(`${q} homicides`, deps);
+          if (o.kind === "shr") { option = { label: "Homicide", continuation: o }; note = "No kind of crime was named, so homicide (murder and nonnegligent manslaughter) is shown from Homicide Reports."; }
+        } finally { defaultDepth--; }
+      }
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     if (!byStateRows) notes.push(note);
@@ -2423,6 +2435,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       ? fromLedger(Object.assign(withParts(ledger0, ledger0.parts.filter((p) => p !== part)), { people: { ...ppl0, ask: null, by: { who: "offender" as const, attr, paired: false } } }), deps, pins)
       : victims;
     if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    // E (Jeff 2026-11-24): a homicide question naming sex with no offender word is the victims' sex, said. Both a victim and an offender word still ask.
+    const vShown = attr === "sex" && victims.kind === "clarify" ? applyDefaults(ledger0.question, victims, deps) : victims;
+    if (attr === "sex" && vShown.kind === "shr" && !OFFENDER_WORD.test(ledger0.question) && !deps.noDefaults && !deps.checkingOffer) {
+      const note = "No victim or offender was named, so the victims' sex is shown.";
+      const t = vShown.delivered.text;
+      return { ...vShown, delivered: { ...vShown.delivered, text: [t[0], note, ...t.slice(1)] }, buttons: [...((vShown as { buttons?: ShadowOption[] }).buttons ?? []), { label: "Offenders' sex", continuation: offenders }] } as ShadowOutcome;
+    }
     // "Violent crime" by age: Jeff's words, "Offender" and "Victim" (2026-11-15; this question only).
     if (attr === "age" && /\bviolent\s+crimes?\b/i.test(ledger0.question))
       return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
