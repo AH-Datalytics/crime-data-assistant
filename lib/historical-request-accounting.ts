@@ -386,7 +386,8 @@ export function recordPlaces(ledger: RequestLedger): void {
     let start = mention.start + lead;
     let end = mention.end + lead;
     const before = CITY_OF.exec(q.slice(0, start));
-    if (before) start = before.index;
+    // "Show me the city of Charlotte": the opener already owns "the", so the place starts at "city" (an overlapping span is dropped).
+    if (before) start = ledger.overlaps([before.index, start]) ? before.index + before[0].search(/\bcity\b/i) : before.index;
     const after = AGENCY_NOUN.exec(q.slice(end));
     if (after) end += after[0].length;
     // Complete-turn fix (2026-10-23): a city-or-county name followed by the agency's own noun names that agency: "San

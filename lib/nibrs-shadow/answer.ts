@@ -95,6 +95,8 @@ export type ShadowDeps = {
   shareAsked?: boolean;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
+  /** The places already chosen from a button, by the place's own words (lower case): the same-months years ask each year's question without asking the place again (P22). */
+  placePins?: Map<string, Candidate>;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
   noDefaults?: boolean;
   /** Set while a follow-up is answered from a rewrite or as its own question: the words the user typed and the previous question, which the
@@ -655,7 +657,7 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
  * asked about: the rest of the question was read in full. Never a place, crime, time or comparison word.
  */
 const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will wanna gimme lemme tell give show see get let us plot chart graph draw " +
-  "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
+  "display make list provide pull find calculate compute report reports data info information stats statistics numbers figures any have has do does what " +
   "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
 const pureFillerOnly = (text: string) => {
   const words = wordsOf(text);
@@ -1046,7 +1048,35 @@ function peakMeasure(question: string): string | null {
 const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 /** Jeff 2026-11-24: "juvenile crime" with no crime, victim or offender named is juvenile arrests (NIBRS, under 18) per year, the answer saying arrests are not crimes. */
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?))/i;
+/** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
+const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+function kingsCountyAsk(question: string): ShadowOutcome | null {
+  const m = KINGS_COUNTY.exec(question);
+  if (!m) return null;
+  const withState = (state: string) => question.slice(0, m.index) + m[0] + ", " + state + question.slice(m.index + m[0].length);
+  return { kind: "clarify", about: "which Kings County", question: "Which Kings County: New York or California?", options: [{ label: "Kings County, New York", question: withState("New York") }, { label: "Kings County, California", question: withState("California") }] };
+}
+/** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
+const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  if (VIOLENT_ARRESTS_BY_TYPE.test(question)) {
+    const o = shadowAnswer(question.replace(VIOLENT_ARRESTS_BY_TYPE, "arrests for murder, rape, robbery and aggravated assault by year"), depsIn);
+    const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "answer" && t && t.columns.length === 5 && t.rows.length > 1) {
+      const names = ["Murder", "Rape", "Robbery", "Aggravated assault"];
+      const stat = t.columns[1].binding;
+      const columns = [{ binding: { kind: "grouping" as const, dimension: "offense.category" }, header: "Offense type" }, ...t.rows.map((r) => ({ binding: stat, header: String(r[0]) }))];
+      const rows = names.map((n, i) => [n, ...t.rows.map((r) => r[i + 1])]);
+      const first = o.delivered.text[0];
+      const m = first.match(/^(.*?) Murder Arrests Per Year, (.*)$/);
+      const rest = o.delivered.text.filter((x) => !/^.* (?:Murder|Rape|Robbery|Aggravated Assault) Arrests Per Year, /.test(x));
+      const title = m ? `${m[1]} Violent Crime Arrests by Offense Type Per Year, ${m[2]}` : first;
+      const evidence = rows.flatMap((r, ri) => r.slice(1).map((v) => ({ row: ri, statistic: (t.columns[ri + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+      o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest] } as typeof o.delivered;
+    }
+    return o;
+  }
+  { const kc = kingsCountyAsk(question); if (kc) return kc; }
   if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?)\b/i.test(question)) {
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
@@ -1054,8 +1084,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
     const o = shadowAnswer(q, depsIn);
     if (o.kind === "answer" && !o.delivered.text.includes(ARRESTS_NOT_CRIMES)) {
       o.delivered.text.splice(1, 0, ARRESTS_NOT_CRIMES);
-      // The title says people, not "arrests of arrestees" (Coordinator 2026-11-24); the period keeps its partial-year ending.
-      o.delivered.text[0] = o.delivered.text[0].replace("Arrests of Arrestees Under 18", "Arrests of People Under 18");
+      // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
     }
     return o;
   }
@@ -1727,14 +1756,14 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
     if (places.length < 2 || places.length > 6) return null;
     const hqs: HateQuestion[] = [];
     for (const p of places) {
-      const one = hateQuestionOf({ ...plan, geography: { ...plan.geography, places: [p] }, groupings: plan.groupings.filter((g) => g.dimension !== "geo.place") }, period, deps.hate);
+      const one = hateQuestionOf({ ...plan, geography: { ...plan.geography, places: [p] }, groupings: plan.groupings.filter((g) => g.dimension !== "geo.place") }, period, deps.hate, allYears);
       if ("why" in one) return null;
       hqs.push(one);
     }
     const multi = combineHatePlaces(hqs, deps.hate, deps.execute);
     return multi.kind === "hate" ? multi : decline("outside_release_coverage", multi.explanation);
   }
-  const hq0 = hateQuestionOf(plan, period, deps.hate);
+  const hq0 = hateQuestionOf(plan, period, deps.hate, allYears);
   // Several biases: the columns in the order the question names them (the plan's filters are in code order).
   const at = (code: string) => ledger0.parts.find((p) => p.clause === 0 && p.concept === "filter" && p.value === `bias:${code}`)?.span?.[0] ?? Infinity;
   const hq = !("why" in hq0) && hq0.biases ? { ...hq0, biases: [...hq0.biases].sort((a, b) => at(a.code) - at(b.code)) } : hq0;
@@ -1986,7 +2015,7 @@ const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "Jul
  * every figure the engine's own answer for that year (so its sources, limits and blanks apply), titled with the months. Never the whole
  * year in place of the months, and never a clarify whose buttons would forget the months.
  */
-function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome {
+function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome | null {
   const NO = () => decline("unsupported_capability", "I can't answer this combination. Try a simpler version, for example one crime in one place for one year.");
   const n = Number(String(part.value).slice(7));
   if (!(n >= 1 && n <= 12)) return NO();
@@ -2008,7 +2037,8 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   for (let y = years[0]; y <= years[1]; y++) {
     const o = shadowAnswer(sub(y), deps);
     // The first year's ask or decline stands for the question (a place asked, a limit): never buttons that forget the months.
-    if (y === years[0] && o.kind === "clarify") return NO();
+    // A place to choose (several agencies of that name) is the ordinary place question; its buttons keep the months. Any other ask is declined.
+    if (y === years[0] && o.kind === "clarify") return /^which /.test(o.about) ? null : NO();
     results.push({ y, o });
   }
   // The year's figure: the sum of its months (the engine's own month rows), blank when any month is not known (never a partial sum as the
@@ -2144,7 +2174,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // The same months of each year (Q1): answered by its own function, or declined; the months are never dropped.
   // With no place named, the place is asked first as before (its buttons run the whole question, months and all, and come back here).
   const sameMonths = clause0("months-through");
-  if (sameMonths.length && clause0("place").length) return answerSameMonths(ledger0, sameMonths[0], deps);
+  if (sameMonths.length && clause0("place").length) {
+    // A place pinned from a button is carried into each year's question by its words. A place that must still be asked goes on to the
+    // ordinary place question, whose buttons come back here with the place chosen and the months kept.
+    const byWords = new Map(deps.placePins ?? []);
+    for (const p of clause0("place")) { const c = pins.get(p.span[0]); if (c) byWords.set(p.text.trim().toLowerCase(), c); }
+    const r = answerSameMonths(ledger0, sameMonths[0], byWords.size ? { ...deps, placePins: byWords } : deps);
+    if (r) return r;
+  }
 
   // "By state" (Jeff 2026-11-16, Q2): the 50 states from Crime Index for one Part I crime. One year is the table State | figure (the
   // ranking of all 50); years named, or a trend with none, is the long table State | Year | figure, no chart. No year and no trend asks the
@@ -2274,7 +2311,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const city = ledger0.parts.find((c) => c.clause === 0 && c.concept === "entity" && c.value === "city" && /^city$/i.test(c.text.trim())
       && c.span[0] >= p.span[1] && /^\s*$/.test(ledger0.question.slice(p.span[1], c.span[0])) && /^(city|ambiguous):/.test(p.value!));
-    const pin = pins.get(p.span[0]);
+    const pin = pins.get(p.span[0]) ?? deps.placePins?.get(p.text.trim().toLowerCase());
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, city ? `${p.text} city` : p.text, inList);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
