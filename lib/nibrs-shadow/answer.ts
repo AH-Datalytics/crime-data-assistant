@@ -176,6 +176,9 @@ function keeps(t: string, asked: string, year: number, except: (typeof CONDITION
 /** A plain example of a question that works, for a decline with no button (Jeff's rule: every decline a next step). */
 export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
 /** Asks outside the data (Historical step one, cause 7), first match wins: [words, only when no crime is named, the limit said plainly]. */
+/** Asks about how the data is built or what it holds that no table answers (Jeff 2026-11-23): one plain sentence, whatever crime is named. */
+const DATA_ABSENT = /\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i;
+const DATA_ABSENT_TEXT = "That data is not available.";
 const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bon\s+a\s+map\b|\bmaps?\s+of\b/i, false, "Maps aren't available here; answers come as tables and charts."],
   [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here."],
@@ -184,6 +187,8 @@ const OUTSIDE: [RegExp, boolean, string][] = [
   // Item 11: population on its own is answered for agencies, states and the nation, by year; anything more is said.
   [/\bpopulations?\b/i, true, "Population is answered on its own for an agency, a state or the nation, a year or by year, as Crime Index publishes it; this question asks for more than that."],
   [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; ask for one crime in one place at a time."],
+  // Jeff 2026-11-23 (declines owner, Group 2): how the data is built, or what it holds that no table answers, gets one plain sentence.
+  [DATA_ABSENT, false, DATA_ABSENT_TEXT],
 ];
 
 /**
@@ -295,7 +300,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   }
   // No question that runs keeps both: an example that works for what the question did name (its place, else its crime),
   // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
-  if (/\bfor example\b/i.test(o.explanation)) return o;
+  if (/\bfor example\b/i.test(o.explanation) || o.explanation === DATA_ABSENT_TEXT) return o;
   const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
   const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current" || r.kind === "shr" || r.kind === "hate" || r.kind === "coverage"; };
   const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
@@ -1001,6 +1006,23 @@ function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps):
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
   return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
 }
+/**
+ * Jeff 2026-11-23 (declines owner, Group 1): an open-ended ask names no kind of crime or measure to count, so it asks what to show
+ * instead of choosing for the user. Only these wordings; P182's violent-plus-property default stays for "crime in X" asks.
+ * "tell me more about", "what's going on in", "a time line of", "major/top crime trends" with no year, "how many crime incidents
+ * ... since YEAR", "is X's murder rate ... considered high", "what Part 1 data do you have".
+ */
+const OPEN_ENDED_ANY = /\btell\s+me\s+more\s+about\b|\bwhat(?:(?:'|’)?s|\s+is)\s+(?:going\s+on|happening)\s+in\b|\btime\s*line\s+of\b/i;
+const OPEN_ENDED_ALWAYS = /\bconsidered\s+high\b|\bpart\s+(?:1|i)\s+data\s+do\s+you\s+have\b/i;
+const OPEN_ENDED_NO_YEAR = /\b(?:major|top)\s+(?:nationwide\s+)?crime\s+trends\b/i;
+const OPEN_ENDED_SINCE = /\bhow\s+many\s+crime\s+incidents\b[^?]*\bsince\s+(?:19|20)\d\d\b/i;
+export function isOpenEnded(question: string, year = 2026): boolean {
+  // Only when no crime or measure is named (Codex 434: "time line of robberies in Denver ..." is a plain question) and not a chart edit.
+  if (isChartEdit(question)) return false;
+  if (OPEN_ENDED_ALWAYS.test(question)) return true;
+  if (readQuestion(question, year).ledger.parts.some((p) => p.concept === "measure" && p.state === "recognized" && p.value !== "unspecified")) return false;
+  return OPEN_ENDED_ANY.test(question) || OPEN_ENDED_SINCE.test(question) || (OPEN_ENDED_NO_YEAR.test(question) && !/\b(?:19|20)\d\d\b/.test(question));
+}
 /** "When was violent crime the highest?" / "peak year for murder": the nation's peak year of a Crime Index rate, no place named. */
 const PEAK_ASK = /\b(?:when\s+(?:was|were|did|has|have)\b.*\b(?:highest|worst|peak(?:ed)?|most)\b|(?:what|which)\s+year\b.*\b(?:highest|worst|peak|most)\b|peak\s+year\b)/i;
 const PEAK_MEASURE: [RegExp, string][] = [
@@ -1021,6 +1043,10 @@ function peakMeasure(question: string): string | null {
 }
 
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
+  if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
+  if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
+    return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
   // "Where do most robberies occur" asks for the nation-wide split by location: the statement is long, but it is what was asked, so it runs (as for a share) rather than waiting behind a button.
   const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) || WHERE_MOST_ONCE.test(question) } : depsIn;
