@@ -1,0 +1,12 @@
+{
+  "id": "P202",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Maricopa County crimes against persons 2020-2025\", \"crimes against property in Tarrant County\", \"offenses against society in Texas\", \"person crimes in Houston in 2024\"",
+  "what the app does today": "Declined with \"I didn't understand 'persons in'\": \"against\" was read as a comparison.",
+  "proposed behavior": "\"Crimes (or offenses) against persons, people, the person\", \"person crimes\" are NIBRS's crimes against persons; \"crimes (or offenses) against property\" are crimes against property; \"crimes (or offenses) against society\" and \"society crimes\" are crimes against society, each for a place, total or over time. \"Against\" inside these phrases is not a comparison. \"Violent crime\" and \"property crime\" keep their Part I meanings (P182); \"property offenses\" is unchanged. Persons are counted by victim, property and society by offense (the FBI's convention), as the engine's plan sets them.",
+  "exact default or choices offered": "The NIBRS answer for the category.",
+  "why": "Coordinator 2026-11-22 (Engine's plan fields): labels QL-nibrs-5e21cfbc08 (Maricopa County) and QL-nibrs-9e3fd1095c (Tarrant County) expect a NIBRS answer.",
+  "status": "Decided 2026-11-22 (through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P202\")."
+}

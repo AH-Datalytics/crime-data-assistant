@@ -224,6 +224,11 @@ const MEASURES: Rule[] = [
   // P32: "sexual assaults" is asked about like "sex offenses" (which sex offenses), never read as aggravated assault.
   // Not "sexual assault kits" or "sex offender registrations" (Codex P32 review 01.2): those aren't offenses.
   { concept: "measure", value: () => "sex_offense", pattern: R(String.raw`\b(?:all\s+)?(?:forcible\s+)?sex(?:ual)?\s+(?:offenses?|crimes?|assaults?)\b(?!\s+(?:kits?|evidence|exams?|nurses?|forensic|registr\w*|backlogs?))`) },
+  // NIBRS's crime-against categories (coordinator 2026-11-22, Engine's plan fields): "crimes against persons / property / society" and the
+  // short forms. "against" is part of the phrase, not a comparison. "Violent crime" and "property crime" stay the Part I measures (P182).
+  { concept: "measure", value: () => "person_crimes", pattern: R(String.raw`\b(?:crimes?|offenses?)\s+against\s+(?:the\s+)?(?:persons?|people)\b|\bperson\s+(?:crimes?|offenses?)\b`) },
+  { concept: "measure", value: () => "against_property", pattern: R(String.raw`\b(?:crimes?|offenses?)\s+against\s+(?:the\s+)?property\b`) },
+  { concept: "measure", value: () => "against_society", pattern: R(String.raw`\b(?:crimes?|offenses?)\s+against\s+(?:the\s+)?society\b|\bsociety\s+(?:crimes?|offenses?)\b`) },
   { concept: "measure", value: () => "violent_crime", pattern: R(String.raw`\b(?:total\s+)?violent(?:\s+(?:crimes?|offenses?))?\b`) },
   { concept: "measure", value: () => "property_crime", pattern: R(String.raw`\b(?:total\s+)?property(?:\s+(?:crimes?|offenses?))\b`) },
   { concept: "measure", value: () => "all_crime", pattern: R(String.raw`\b(?:total|all|overall)\s+(?:crimes?|offenses?)\b`) },
@@ -400,7 +405,7 @@ const RULES: Rule[] = [
   { concept: "rank", value: () => "rank:", pattern: R(String.raw`\bstands?\s+(?:on|in|for)\b`) },
   // ---- change and comparison ----
   { concept: "change", value: (m) => `change:${changeDirection(m[0])}`, pattern: R(String.raw`\b(?:percent(?:age)?\s+change|%\s*change|difference(?=\s+between\b)|change[sd]?|changing|increase[sd]?|increasing|decrease[sd]?|decreasing|rise|rose|risen|rising|fall(?:en)?|fell|falling|drop(?:ped|s)?|declin(?:e|ed|es|ing)|grew|grow(?:n|th)?|went\s+(?:up|down))\b`) },
-  { concept: "versus", value: () => "versus", pattern: R(String.raw`\b(?:vs\.?|versus|compared\s+(?:to|with)|against)(?=\s|$)`) },
+  { concept: "versus", value: () => "versus", pattern: R(String.raw`\b(?:vs\.?|versus|compared\s+(?:to|with)|against(?!\s+(?:the\s+)?(?:persons?|people|property|society)\b))(?=\s|$)`) },
   { concept: "compare", state: "context", pattern: R(String.raw`\bcompar(?:e[ds]?|ing|ison)\b|\bside\s+by\s+side\b`) },
   // ---- lists and grain ----
   { concept: "list", value: (m) => `list:${listKey(m[1])}`, pattern: R(String.raw`\b(?:broken\s+down\s+by|by|per|for\s+each|for\s+every|each|every|across)\s+(state|count(?:y|ies)|cit(?:y|ies)|agenc(?:y|ies)|departments?)(?:\s+and\s+(?:by\s+)?year)?\b`) },
@@ -413,7 +418,7 @@ const RULES: Rule[] = [
   { concept: "unit", value: () => "incidents", pattern: R(String.raw`\bincidents?\b`) },
   // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread); so are
   // "drug offenses" ("drug offenses in Ohio" had left "drug" unread: bad-decline audit, 2026-11-06).
-  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\b(?:sex(?:ual)?|drug|narcotics?|assault)\s)\boffen[cs]es\b`) },
+  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\b(?:sex(?:ual)?|drug|narcotics?|assault)\s)\boffen[cs]es\b(?!\s+against\s+(?:the\s+)?(?:persons?|people|property|society)\b)`) },
   ...MEASURES,
   { concept: "measure", value: () => "unspecified", pattern: R(String.raw`\bcrimes?\b|\boffen[cs]es?\b|\bcases\b`) },
   // ---- combine ----
