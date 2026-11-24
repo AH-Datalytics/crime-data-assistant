@@ -10,7 +10,7 @@
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan } from "../nibrs-plan/compile";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_LINE, deliverTable, fmt, periodWords } from "./deliver";
+import { DOMESTIC_VIOLENCE_LINE, deliverTable, fmt, periodWords } from "./deliver";
 import { stateName } from "./places";
 import { agencyHeaderSql, universeStates } from "./state-sum";
 import { NOT_YET } from "./wording";
@@ -48,8 +48,8 @@ export function answerDvShare(plan: NibrsPlan, period: { from: string; to: strin
   if (!denominator) return decline(`No share is given: no aggravated assault incidents were reported in ${when}.`);
   const value = Math.round((1000 * part) / denominator) / 10;
   const lines = [`In ${where} in ${when}, ${value}% of the aggravated assault incidents had a domestic violence victim, summed over the ${fmt(agencies.size)} agencies with aggravated assault incidents.`,
-    "This is the share of incidents, not of victims: an incident counts once when at least one of its victims is a domestic violence victim.",
-    DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, "Includes all agencies."];
+    "This is the share of incidents, not of victims: an incident counts once when its aggravated assault victim had a domestic violence relationship.",
+    DOMESTIC_VIOLENCE_LINE, "Includes all agencies."];
   const plan2: NibrsPlan = { ...plan, statistics: [...plan.statistics, { kind: "count", as: "denominator", measure: plan.measures[0].as }, { kind: "count", as: "dv_incidents", measure: plan.measures[1].as }] };
   const delivered = deliverTable(plan2, null, { as: "share", header: "Aggravated assault incidents with a domestic violence victim (%)" }, [{ key: null, value, status: "VALUE" }], lines, statements, deps.release.id, readings,
     [{ as: "denominator", header: "Aggravated assault incidents", cells: [{ value: denominator, status: "VALUE" }] },
