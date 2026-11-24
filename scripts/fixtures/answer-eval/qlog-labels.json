@@ -80314,10 +80314,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "rule": "P290",
+    "drafted_by": "capability-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): a table by year, Year | Murder victims | Black victims | Share (%); source Homicide Reports (P162's share column)"
    }
   },
   {
