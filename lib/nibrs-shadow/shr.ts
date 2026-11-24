@@ -235,9 +235,10 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
     weaponGroups = sets.map((codes) => ({ label: label(codes!), codes: codes! }));
     // "white, black and other": the codes not named make an Other group (race only; Unknown stays out).
     // A share is out of ALL victims: an Other group also covers whatever the named values leave (Unknown included) so the columns add to 100.
-    if ((opts.other || opts.percent) && !RECORD_DIMS.has(dim)) { const used = weaponGroups.flatMap((g) => g.codes); const left = Object.keys(DIM_LABELS[dim] ?? {}).filter((c) => !used.includes(c)); const rest = left.filter((c) => labels[c] !== "Unknown"); const unk = left.filter((c) => labels[c] === "Unknown");
+    // A plain compare of a person attribute ("female vs male ... per year") also shows Unknown when the named values leave only Unknown, so each row adds up to the total (Jeff 2026-11-23).
+    if ((opts.other || opts.percent || single) && !RECORD_DIMS.has(dim)) { const used = weaponGroups.flatMap((g) => g.codes); const left = Object.keys(DIM_LABELS[dim] ?? {}).filter((c) => !used.includes(c)); const rest = left.filter((c) => labels[c] !== "Unknown"); const unk = left.filter((c) => labels[c] === "Unknown");
       // Jeff 2026-11-23: Unknown is its own column (not folded into Other); it also gathers a blank code and any code outside the list.
-      if (rest.length) weaponGroups.push({ label: "Other", codes: rest }); if (unk.length && !sets.some((s) => s!.some((c) => unk.includes(c)))) weaponGroups.push({ label: "Unknown", codes: unk, rest: true }); }
+      if (rest.length && (opts.other || opts.percent)) weaponGroups.push({ label: "Other", codes: rest }); if (unk.length && (opts.other || opts.percent || !rest.length) && !sets.some((s) => s!.some((c) => unk.includes(c)))) weaponGroups.push({ label: "Unknown", codes: unk, rest: true }); }
     groupedDim = dim;
     breakdown = { dim, groups: weaponGroups };
   }
@@ -328,7 +329,7 @@ export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
   const theirs = sq.filters.filter((f) => !own.includes(f));
   const where = [`r.counted`, measureWhere(sq), placeWhere(sq.place), `r.data_year * 100 + r.offense_month BETWEEN ${ym(sq.from)} AND ${ym(sq.to)}`,
     ...own.map((f) => condition(f, "p")),
-    ...(sq.breakdown?.groups && !sq.share && !sq.pct ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
+    ...(sq.breakdown?.groups && !sq.share && !sq.pct && !sq.breakdown.groups.some((g) => g.rest) ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
     // A detail of the other person: any one of the record's (an offender's sex for victims: "killed by women"); the
     // conditions of one group are that same person's (01.3).
     ...[...new Set(theirs.map((f, i) => f.group ?? `solo${i}`))].map((g) => {

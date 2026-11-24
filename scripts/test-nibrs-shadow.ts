@@ -628,13 +628,16 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
         const o = as(shadowAnswer(q, vdeps), "shr");
         assert.equal(o.delivered.text[0], title, q);
         assert.ok(!/Where the Victim's \w+ Was \w+ Where/.test(o.delivered.text[0]), q);
-        assert.equal(o.delivered.table.columns.length, 3, `${q}: a Year column and one column for each side`);
-        assert.ok(o.delivered.table.columns[0].header === "Year" && o.delivered.table.rows.every((r) => r.length === 3), q);
+        // Sex (and ethnicity) leave only Unknown beside the named sides, so it is a column too and each row adds up to the year's total.
+        const want = /female vs male/.test(q) ? 4 : 3;
+        assert.equal(o.delivered.table.columns.length, want, `${q}: a Year column and one column for each side`);
+        if (want === 4) assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Year", "Female", "Male", "Unknown"], q);
+        assert.ok(o.delivered.table.columns[0].header === "Year" && o.delivered.table.rows.every((r) => r.length === want), q);
         assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'/i.test(s)), `${q}: ${vsql[0]}`);
       }
       // Named together without "vs": still categories of one attribute, never ANDed (Coordinator 2026-11-23).
       for (const [q, cols] of [
-        ["female and male murder victims per year from 2000 to 2020 nationally", ["Year", "Female", "Male"]],
+        ["female and male murder victims per year from 2000 to 2020 nationally", ["Year", "Female", "Male", "Unknown"]],
         ["% of white, black, and other homicide victims in philadelphia by year since 2010", ["Year", "Black (%)", "White (%)", "Other (%)", "Unknown (%)"]],
       ] as const) {
         vsql.length = 0;
