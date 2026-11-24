@@ -194,6 +194,8 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P300: a bare fragment with no place and no crime keeps its clarification even with the defaults on (the P148 composite needs a place or Part I).
+for (const q of ["In 2025", "Yearly counts", "all", "NIBRS", "Show me by month"]) as(shadowAnswer(q, { ...deps, noDefaults: false }), "clarify");
 // QL-nibrs-58d3c67ab3 (ruling B, P299): "Have carjackings decreased ... past two years" is a yes or no with the counts, and the by-year table stays.
 {
   const o = as(ask("Have carjackings decreased in Rhode Island in the past two years?"), "answer");

@@ -2436,7 +2436,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
-    if (onlyCrimeOverTime && ((ms.length === 0 && (hasPartI || clause0("place").length >= 1)) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
+    // P300: a place filled by a default button ("The United States") is not a typed place; a bare fragment keeps its clarification.
+    const typedPlace = clause0("place").some((p) => p.rule !== "shadow:button");
+    if (onlyCrimeOverTime && ((ms.length === 0 && (hasPartI || clause0("place").length >= 1)) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && (hasPartI || typedPlace || deps.noDefaults) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
       && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
       // No grain named (a bare place, "crime in Memphis over the last 10 years", "crime trends in X"): P181 every-year default, by year (the
       // Crime Index), said with P182 kind-of-crime default, instead of asking which kind of crime (Engine 2.0 2026-11-24, wrong clarifies).
