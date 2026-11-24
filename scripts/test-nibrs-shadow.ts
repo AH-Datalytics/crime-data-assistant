@@ -194,6 +194,18 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
+{
+  for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
+    const c = as(ask(q), "clarify");
+    assert.equal(c.question, "Which Kings County: New York or California?");
+    assert.deepEqual(c.options.map((o) => o.label), ["Kings County, New York", "Kings County, California"]);
+    assert.ok(c.options.every((o) => /Kings County, (New York|California)/.test(o.question ?? "")), "each button is the question with its state");
+  }
+  for (const q of ["murders in Kings County, California in 2024 according to NIBRS", "murders in Kings County, NY in 2024 according to NIBRS"]) {
+    assert.notEqual(ask(q).kind === "clarify" && (ask(q) as { about?: string }).about, "which Kings County", q);
+  }
+}
 // P168 (Jeff 2026-11-19): offenders or arrests by age for the crimes of an incident with a weapon, for one agency; the answer says how a person is counted.
 {
   const byAge = as(ask("violent crimes involving a firearm in Houston in 2025 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
