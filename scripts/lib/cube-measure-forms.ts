@@ -10,7 +10,7 @@ export const MEASURE_NOUNS: Record<string, string[]> = {
   rape: ["rapes"], robbery: ["robberies"], aggravated_assault: ["aggravated assaults"], simple_assault: ["simple assaults"], sex_offense: ["sex offenses"],
   burglary: ["burglaries"], theft_from_motor_vehicle: ["thefts from motor vehicles"], motor_vehicle_theft: ["motor vehicle thefts"], shoplifting: ["shoplifting offenses", "shoplifting"],
   theft: ["thefts", "larceny"], arson: ["arsons"], drug_possession: ["drug possession offenses"], dui: ["DUIs"], violent_crime: ["violent crimes"], property_crime: ["property crimes"],
-  intimidation: ["intimidation offenses"], assault_offenses: ["assault offenses"], disorderly_conduct: ["disorderly conduct offenses"], drunkenness: ["drunkenness offenses"],
+  intimidation: ["intimidation offenses"], kidnapping: ["kidnapping offenses"], assault_offenses: ["assault offenses"], disorderly_conduct: ["disorderly conduct offenses"], drunkenness: ["drunkenness offenses"],
   liquor_law: ["liquor law violations"], curfew_loitering: ["curfew and loitering offenses"], trespass: ["trespass offenses"], family_offense_nonviolent: ["nonviolent family offenses"],
   peeping_tom: ["peeping tom offenses"], bad_checks: ["bad check offenses"], runaway: ["runaways"], all_other_offenses: ["all other offenses"], weapon_law: ["weapon law violations"],
   drug_equipment: ["drug equipment violations"], drug_crimes: ["drug crimes"], all_crime: ["crimes"],

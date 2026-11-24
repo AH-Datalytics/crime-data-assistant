@@ -235,6 +235,7 @@ const MEASURES: Rule[] = [
   // offenses" are the three together; "intimidation" is its own.
   { concept: "measure", value: () => "assault_offenses", pattern: R(String.raw`\ball\s+assaults?\b|\bassault\s+offen[cs]es\b`) },
   { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
+  { concept: "measure", value: () => "kidnapping", pattern: R(String.raw`\bkidnap(?:ping|pings|ped)?s?\b`) },
   { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))(?![\s-]+(?:rifles?|weapons?|guns?|pistols?|style|offen[cs]es)\b)`) },
   { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
