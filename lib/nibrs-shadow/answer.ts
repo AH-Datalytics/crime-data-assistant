@@ -659,6 +659,7 @@ const PURE_FILLER = new Set(("a an the my me i we you your our please can could 
   "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
 // "More about", "look like in", "in the last few years" on a place-only question (P148): the phrases ask for nothing beyond the composite.
 const PURE_PHRASES = /\b(?:more\s+about|(?:look|looks)\s+like(?:\s+in)?|in\s+the\s+(?:last|past)\s+(?:few|several|couple\s+of)\s+years)\b/gi;
+const FEW_YEARS_WINDOW = /\b(?:last|past)\s+(?:few|several|couple\s+of)\s+years\b/i;
 const pureFillerOnly = (text: string) => {
   const words = wordsOf(text.replace(PURE_PHRASES, " "));
   if (words.length === 0 && text.trim()) return true;
@@ -761,7 +762,9 @@ function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): S
   const fr = fillerRewrite(question, ledger);
   const again = fr ? answerAsked(fr.rest, { ...deps, rewritten: true }) : null;
   // Only pure filler left unread: the rest was read in full, so its answer is the question's (Jeff 2026-11-11).
-  if (fr && again && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(again.kind)) return again;
+  // "in the last few years" beside a named crime is a window, not filler: dropping it would answer every year (Codex 449).
+  const windowDropped = unread.some((p) => FEW_YEARS_WINDOW.test(p.text)) && ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && p.concept === "measure" && p.value !== "unspecified" && p.value !== "all_crime");
+  if (fr && again && !windowDropped && unread.every((p) => pureFillerOnly(p.text)) && ["answer", "historical", "srs", "current", "shr", "hate", "coverage"].includes(again.kind)) return again;
   if (!fr || again?.kind !== "clarify") return null;
   // Words with a meaning of their own left out ("up in", "average"): said, so a button's answer is never taken for
   // the change or the average asked (Codex review 01.2). Whether this ask is itself a partial answer under the rule above is
@@ -2322,7 +2325,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
-    if (onlyCrimeOverTime && ((ms.length === 0 && hasPartI) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
+    if (onlyCrimeOverTime && ((ms.length === 0 && (hasPartI || clause0("place").length >= 1)) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
       && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
       // No grain named (a bare place, "crime in Memphis over the last 10 years", "crime trends in X"): P181 every-year default, by year (the
       // Crime Index), said with P182 kind-of-crime default, instead of asking which kind of crime (Engine 2.0 2026-11-24, wrong clarifies).
@@ -2827,7 +2830,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const murderish = ["murder", "homicide", "homicide_all"].includes(sp.measures[0]);
     if (span && (form === "months" || form === "total") && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && murderish && deps.shr) {
       const hrFirst = span[0] > `${SHR_FIRST_YEAR}-01` ? span[0] : `${SHR_FIRST_YEAR}-01`;
-      const hrEnd = span[1] >= cur.lastMonth || span[1] > deps.shr.latestMonth ? deps.shr.latestMonth : span[1];
+      // Never past the asked end: a span ending at Current Trends' latest month must not count Homicide Reports' later months (Codex 449).
+      const hrEnd = span[1] > deps.shr.latestMonth ? deps.shr.latestMonth : span[1];
       if (hrEnd >= hrFirst) {
         const out = fromLedger(Object.assign(filled(ledger, "period", `monthrange:${hrFirst}:${hrEnd}`, `from ${monthName(hrFirst)}`), { skipCurrent: true }), deps, pins);
         if (out.kind === "shr") return out;
@@ -3757,7 +3761,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // Any other NIBRS-only figure no other source holds: answered from the first year, the earlier years named, instead of a
     // button (labels R14, 2026-11-24). Only when Crime Index has no yearly figure for it.
     // A by-year run that is itself NIBRS (kind "answer", clipped the same way) is no other source.
-    if (covered?.kind === "answer" && !yearSet) {
+    // Not for a monthly question about one agency, rates included: P285 leaves its span choices (Codex 449).
+    const monthlyOneAgency = !!onePlace && onePlace.kind === "agency" && plan.groupings.some((g) => g.dimension === "time.month");
+    if (covered?.kind === "answer" && !yearSet && !monthlyOneAgency) {
       const by = byYearInstead(ledger, deps, pins);
       if (!by || by.continuation?.kind === "answer") return clipNote("These figures");
     }

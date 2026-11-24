@@ -2779,6 +2779,14 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // 2026-11-24: a NIBRS-only figure no other source holds is answered from the first year, the earlier years named.
   const clip = as(ask("Shoplifting in Memphis per year from 2012 to 2020"), "answer");
   assert.equal(clip.delivered.text[1], "These figures come from NIBRS, which starts in 2017, so 2012 to 2016 aren't included.", JSON.stringify(clip.delivered.text));
+  // Codex 449: monthly for one agency keeps the span choices when it is a rate too, never clipped to 2017.
+  const monthlyRate = ask("Shoplifting rates in Memphis by month from 2012 to 2020");
+  assert.ok(!(monthlyRate.kind === "answer" && monthlyRate.delivered.text.some((t) => /come from NIBRS, which starts in/.test(t))), JSON.stringify(monthlyRate).slice(0, 300));
+  // Codex 449: a window beside a named crime is never dropped to every year.
+  const fewYears = ask("Murders in Dallas in the last few years");
+  assert.ok(!(fewYears.kind === "answer" && "delivered" in fewYears && fewYears.delivered.text.some((t) => /every year/i.test(t))), JSON.stringify(fewYears).slice(0, 300));
+  // Codex 449: a bare place is the P148 composite, not an ask for the kind of crime.
+  assert.ok(!(ask("Dallas").kind === "clarify" && (ask("Dallas") as { about?: string }).about === "which kind of crime"), "bare Dallas asks which kind of crime");
   assert.equal(readQuestion("Chicago robberies after 2010", 2026, "2026-09").ledger.parts.find((p) => p.concept === "period")?.value, "since:2011", "after 2010 starts with 2011");
   // Coordinator counting review 2026-11-24: a measure Crime Index holds yearly keeps the Crime Index offer; it is never clipped to NIBRS.
   for (const q of ["Robberies in Memphis per year from 2012 to 2020", "aggravated assaults in Memphis from 2010 to 2020"]) {
