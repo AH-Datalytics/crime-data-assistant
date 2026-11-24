@@ -93,7 +93,8 @@ if (range.kind === "clarify") {
   assert.match(range.buttons[0].note ?? "", /ask the whole question again/);
 }
 const forecast = toPreview(shadowAnswer("Will shoplifting rise in Denver next year?", deps));
-assert.ok(forecast.kind === "decline" && forecast.buttons.length === 1 && forecast.buttons[0].kind === "not-built");
+// R14: shoplifting has no Crime Index series, so the last 10 years run from the build's first year (earlier years named) instead of being not-built.
+assert.ok(forecast.kind === "decline" && forecast.buttons.length === 1 && forecast.buttons[0].kind === "continuation");
 
 // Requests: a question is never shortened; one over the limit, an empty one or a malformed path is refused before the engine.
 assert.deepEqual(parseRequest({ question: "  Shoplifting in Memphis in 2024 " }), { question: "Shoplifting in Memphis in 2024", path: [] });
