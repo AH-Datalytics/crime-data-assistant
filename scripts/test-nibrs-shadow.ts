@@ -751,6 +751,14 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       assert.ok(o.delivered.table.columns.some((c) => c.header === "Victim's race" || c.header === "Offender's race"), `${q}: ${JSON.stringify(o.delivered.table.columns)}`);
       assert.ok(["White", "Black"].includes(String(o.delivered.table.rows[0][0])) && !o.delivered.text.some((t) => /No years were given/.test(t)), `${q}: ${JSON.stringify(o.delivered.table.rows[0])}`);
     }
+    // P295 (Jeff 2026-11-24): the share of murder victims of one race is a table by year: all victims, that race's victims, the share.
+    for (const q of ["share of murders where victim was black, 2015 - 2025, in Washington, D.C.", "What percentage of murder victims in Washington, D.C. were black from 2015 to 2025?"]) {
+      const o = as(shadowAnswer(q, ddeps), "shr");
+      assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Year", "Murder victims", "Black victims", "Share (%)"], `${q}: ${JSON.stringify(o.delivered.table.columns)}`);
+      assert.equal(o.delivered.table.rows.length, 11, q);
+      assert.deepEqual(o.delivered.table.rows[0], ["2015", 10, 6, 60], q);
+      assert.equal(o.delivered.text[0], "Washington, D.C. Share of Murder Victims Who Were Black, 2015 to 2025", q);
+    }
     const circ = as(shadowAnswer("Break down homicide circumstances in Houston in 2023", ddeps), "shr");
     assert.ok(circ.delivered.table.columns.some((c) => c.header === "Circumstance"), JSON.stringify(circ.delivered.table.columns));
     const every = as(shadowAnswer("Houston murder victim race", ddeps), "shr");
