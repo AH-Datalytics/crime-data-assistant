@@ -644,6 +644,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // city's own police department, named by the city).
   const dropWord = (re: RegExp, to: string) => { text = text.replace(re, (m, ...g) => { const t = to.replace(/\$(\d)/g, (_x, n) => String(g[Number(n) - 1] ?? "")); readings.push({ kind: "phrase", from: m.trim(), to: t.trim() }); return t; }); };
   dropWord(/\b(?:the\s+)?statewide\s+(?=[a-z])/gi, "");
+  // "antisemitic incidents" / "anti-Asian incidents" are hate crimes (Jeff 2026-11-24, antisemitic incidents in New York since 2015).
+  dropWord(/\b(anti[-\s]?[a-z]+|antisemitic)\s+incidents?\b/gi, "$1 hate crimes");
+  // Jeff 2026-11-24 (P291): "per day" / "daily" answers by month, with a note that per day is not available.
+  // P293 (Jeff 2026-11-24): a bare "juvenile crime trend" (no place, no victims, offenders or arrests named) is the nation's juvenile arrests by year.
+  dropWord(/\b(juveniles?|minors?)\s+crime\s+(?:trends?|levels?|numbers?|statistics?)(?![^?]*\b(?:in|for|of|at|victims?|offenders?|arrest\w*|by)\b)/gi, "$1 arrests in the United States by year");
+  dropWord(/\b(?:per\s+day|each\s+day|by\s+(?:the\s+)?day|day[-\s]by[-\s]day|daily)\b/gi, "by month");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
   // P193: "in these cities: Chicago, IL, Houston, TX" names the places in the list, so the words before the list say nothing more (applied here,
@@ -689,6 +695,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   }
   {
     const TREND = String.raw`(?:going\s+up\s+or\s+down|going\s+up|going\s+down|gone\s+up|gone\s+down|up\s+or\s+down|dropping|rising|falling|increasing|getting\s+worse|getting\s+better|up|down)`;
+    // Jeff 2026-11-24: "What is the hate crime trend in Texas? Is it getting worse?" asks the trend; the second sentence adds only the direction
+    // (said by the answer), so it is set aside here.
+    dropWord(new RegExp(String.raw`(?<=\btrends?\b[^?]*\?)\s*(?:is|are|has|have)\s+(?:it|this|that|they)\s+(?:been\s+)?${TREND}\s*\?*\s*$`, "i"), "");
     const t1 = new RegExp(String.raw`^(\s*)(?:is|are|has|have|was|were)\s+(.+?)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const t2 = t1 ? null : new RegExp(String.raw`^(.*?\S)\s+(?:are|is|have|has)\s+(?:been\s+)?(${TREND})\b(?!\s+(?:to|from|by|\d))(.*)$`, "i").exec(text);
     const [lead, x, w, rest]: string[] = t1 ? [t1[1], t1[2], t1[3], t1[4] ?? ""] : t2 ? [t2[1], "", t2[2], t2[3] ?? ""] : ["", "", "", ""];
@@ -738,8 +747,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // the second one is the same place, not another (an agency with a state is not "a state beside other places").
   // Only when nothing between them joins or compares (a "versus Texas" or "and West Virginia" is a real second place), and the last one is not the end of a longer state name.
   for (const sn of Object.values(STATE_NAME_BY_CODE)) {
-    const rx = new RegExp(String.raw`,\s*${sn}\b((?:(?!\b(?:vs\.?|versus|and|or|to|than|against|compared|with|plus)\b)[^,])*?)(?<!\b(?:west|north|south|new)\s)\s+${sn}\s*[?.!]?\s*$`, "i");
-    if (rx.test(text)) { text = text.replace(new RegExp(String.raw`\s+${sn}\s*([?.!]?)\s*$`, "i"), "$1"); break; }
+    const rx = new RegExp(String.raw`,\s*${sn}\b((?:(?!\b(?:vs\.?|versus|and|or|to|than|against|compared|with|plus)\b)[^,])*?)\s+(?<!\b(?:west|north|south|new)\s)${sn}\s*[?.!]?\s*$`, "i");
+    // The same guard on the replacement: "Virginia West Virginia" keeps its last word (West Virginia is the second state's name).
+    if (rx.test(text)) { text = text.replace(new RegExp(String.raw`\s+(?<!\b(?:west|north|south|new)\s)${sn}\s*([?.!]?)\s*$`, "i"), "$1"); break; }
   }
   // "rifle" beside another weapon is the weapon, not Rifle, Colorado ("handgun vs rifle murders in Texas"): the plural reads as the weapon.
   // Not when Colorado follows ("handgun to Rifle Colorado"), which names the city.

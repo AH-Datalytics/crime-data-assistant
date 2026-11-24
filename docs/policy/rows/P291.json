@@ -1,0 +1,12 @@
+{
+  "id": "P291",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Carjackings per day in Houston, 2019 to 2025\", \"daily robberies in Denver in 2024\"",
+  "what the app does today": "The question declined: NIBRS has no daily figures in its summary tables.",
+  "proposed behavior": "A \"per day\", \"daily\" or \"by day\" question answers the monthly figures over the period asked, with the note \"Per day is not available, so monthly figures are shown.\"",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (per day); QL-nibrs-682c6353b0."
+}

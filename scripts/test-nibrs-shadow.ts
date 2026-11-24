@@ -194,6 +194,21 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
+{
+  const w = as(ask("what weapon types were used in violent crimes in pennsylvania in 2025"), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
+  assert.deepEqual(w.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder", "Rape", "Robbery", "Aggravated assault"]);
+  assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["Firearm (handgun, rifle, shotgun, other or unknown firearm)", "Knife or cutting instrument", "Blunt object", "Personal weapons (hands, fists, feet)", "Other or none/unknown"]);
+  assert.equal(w.delivered.text[0], "Pennsylvania Weapon Types Used in Violent Crimes, Victims, 2025");
+  assert.ok(w.delivered.text.some((t) => /counted in each weapon's row/.test(t)), JSON.stringify(w.delivered.text));
+}
+// QL-nibrs-58d3c67ab3 (ruling B, P299): "Have carjackings decreased ... past two years" is a yes or no with the counts, and the by-year table stays.
+{
+  const o = as(ask("Have carjackings decreased in Rhode Island in the past two years?"), "answer");
+  assert.match(o.delivered.text[0], /^Rhode Island Carjacking Offenses Per Year, 2024-2025$/);
+  assert.ok(o.delivered.text.some((t) => /^(Yes|No)\. Carjacking offenses (were|rose|fell)/.test(t) && /2024/.test(t) && /2025/.test(t)), JSON.stringify(o.delivered.text));
+  assert.equal((o.delivered.table as { rows: unknown[] }).rows.length, 2);
+}
 // Wrong clarifies, Fairfax (QL-ct-fe39e34290): three or more years named one by one are separate years, as two are ("2019 and 2021"), not "which period".
 {
   const list = as(ask("Murders in Houston according to NIBRS in 2019, 2020, 2021, and 2023"), "answer") as unknown as { plan: { period: { kind: string; years: number[] } } };
@@ -925,6 +940,15 @@ for (const q of ["show me the trend of juvenile crime in Kansas since 2020", "ju
   assert.ok(a.buttons?.some((b) => /Consistent Reporting Agencies/.test(b.label)), q);
 }
 assert.equal(as(ask("juvenile arrests in Kansas since 2020"), "answer").delivered.text[1], "Summed over the agencies that reported each year.", "asking for arrests leaves the answer as it was");
+// Codex 472: "Virginia West Virginia" keeps its final state (West Virginia is a second state, not Virginia said again).
+assert.match(readQuestion("Murders in Richmond, Virginia West Virginia", 2026, "2026-10").text, /West Virginia\s*$/);
+// Codex 472: a named offense (arson) or a rates ask is not the generic juvenile-arrests rewrite.
+for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile crime in Kansas"]) {
+  const o = ask(q);
+  const text = o.kind === "answer" ? o.delivered.text : [];
+  assert.ok(!text.includes("Arrests do not equal crimes."), `${q}: ${JSON.stringify(text)}`);
+  assert.ok(!text.some((t: string) => /^Kansas Arrests of Arrestees Under 18/.test(t)), q);
+}
 // Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
 {
   const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;
@@ -1680,7 +1704,13 @@ for (const q of ["show me nationwide arrests by age by year for 2021 to 2025 for
 }
 for (const q of ["nationwide arrests by age in 2024", "show me nationwide arrests for violent crimes by age by year for 2017 to 2025", "show me nationwide juvenile arrests 2017 to 2025", "arrests by sex by year in Texas from 2021 to 2025"])
   as(ask(q), "answer");
-const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
+// P293: a bare juvenile crime trend is the nation's juvenile arrests by year, with the arrests note (here the nation resolves).
+{
+  const j = as(shadowAnswer("show me juvenile crime trend 2005 to 2025", { ...deps, noDefaults: false }), "answer");
+  assert.ok(j.delivered.text.includes("Arrests do not equal crimes."), JSON.stringify(j.delivered.text));
+  assert.match(j.delivered.text[0], /^United States Arrests of Arrestees Under 18 Per Year/, JSON.stringify(j.delivered.text));
+}
+const charged =as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
 // Jeff 2026-11-11, all years by default: by year / per month / a trend with no range is every year the source has, said.
 const perYear = as(ask("Carjackings per year in houston"), "answer");
 assert.equal(perYear.delivered.text[1], "No years were given, so every year in the data is shown: 2017 through 2025.");
@@ -2856,6 +2886,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // 2026-11-24: a NIBRS-only figure no other source holds is answered from the first year, the earlier years named.
   const clip = as(ask("Shoplifting in Memphis per year from 2012 to 2020"), "answer");
   assert.equal(clip.delivered.text[1], "These figures come from NIBRS, which starts in 2017, so 2012 to 2016 aren't included.", JSON.stringify(clip.delivered.text));
+  // 2026-11-24 (labels R14, DUI route): a national DUI trend to "today" is by year from 2017, the earlier years named.
+  for (const q of ["Show me the national trend in DWI/DUI from 2000 to today", "national trend in DWI/DUI from 2000 to today", "Show me the national DUI/DWI trend from 2000 to today"]) {
+    const dui = as(ask(q), "answer");
+    assert.equal(dui.delivered.text[0], "United States DUI Arrests Per Year, Jan 2017-Sep 2026", JSON.stringify(dui.delivered.text));
+    assert.equal(dui.delivered.text[1], "Arrests here come from NIBRS, which starts in 2017, so 2000 to 2016 aren't included.", JSON.stringify(dui.delivered.text));
+  }
   // Codex 449: monthly for one agency keeps the span choices when it is a rate too, never clipped to 2017.
   const monthlyRate = ask("Shoplifting rates in Memphis by month from 2012 to 2020");
   assert.ok(!(monthlyRate.kind === "answer" && monthlyRate.delivered.text.some((t) => /come from NIBRS, which starts in/.test(t))), JSON.stringify(monthlyRate).slice(0, 300));
