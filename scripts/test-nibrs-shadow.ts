@@ -3023,8 +3023,15 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
     // Every column is blank that month: the line is said once, naming no column (Engine 2.0 2026-11-21).
     && poGap.delivered.text.includes("No figure is available for August 2026: shown blank, not zero."), JSON.stringify(poGap.kind === "current" ? [poGap.delivered.text, poGap.delivered.table.rows.at(-1)] : poGap).slice(0, 900));
+  // Engine 2.0 2026-11-24 (wrong clarifies): "crime in a place" with no kind of crime and no grain runs the composite by year, with the P182 and P181 notes, instead of asking
+  // which kind of crime. The tests of the asks themselves (noDefaults) and the scorecard keep the ask.
+  { const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+    for (const q of ["Dallas crime", "crime trends in Dallas"]) {
+      const o = shadowAnswer(q, live) as unknown as { kind: string; about?: string; explanation?: string };
+      // The stub holds no rows, so the composite is the no-data decline for the place (with rows it answers by year; the Runner reads real data).
+      assert.ok(o.kind === "decline" && /^No data is available for crime in Dallas, Texas\./.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 300)}`);    } }
   // Named, NIBRS keeps the table; an agency with no reports at all is declined and Crime Index offered.
-  const nib = shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
+  const nib =shadowAnswer("Dallas vs Houston murders per month in 2024 according to NIBRS", cdeps);
   assert.equal(nib.kind, "answer", JSON.stringify(nib).slice(0, 200));
   const none = { ...deps, execute: (sql: string) => stub(sql).map((r) => (typeof r[r.length - 1] === "string" && /^(VALUE|UNKNOWN|REPORTED_ZERO|EVIDENCE_CONFLICT)$/.test(String(r[r.length - 1])) ? [...r.slice(0, -2), null, "UNKNOWN"] : r)) } as unknown as ShadowDeps;
   const dec = shadowAnswer("Dallas murders per month in 2024 according to NIBRS", none);

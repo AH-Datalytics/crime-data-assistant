@@ -2256,12 +2256,24 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
-    if (onlyCrimeOverTime && ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && grains.length === 1 && (grains[0] === "month" || grains[0] === "year")
+    if (onlyCrimeOverTime && ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime") && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) &&!ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted") : grains[0] === "month" || grains[0] === "year")
       && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
-      const parts = COMPOSITE_PARTS.map((p) => fromLedger(filledAll(ledger, "measure", [[p.measure, p.words]]), deps, pins));
+      // No grain named (a bare place, "crime in Memphis over the last 10 years", "crime trends in X"): P181 every-year default, by year (the
+      // Crime Index), said with P182 kind-of-crime default, instead of asking which kind of crime (Engine 2.0 2026-11-24, wrong clarifies).
+      const noGrain = grains.length === 0;
+      const base = noGrain ? filled(ledger, "grain", "year", "by year") : ledger;
+      const parts = COMPOSITE_PARTS.map((p) => fromLedger(filledAll(base, "measure", [[p.measure, p.words]]), deps, pins));
       const rate = clause0("statistic").some((p) => /^(?:rate|per100k|percapita)$/.test(String(p.value ?? "")));
       const merged = parts.every((o) => o.kind === "current" || o.kind === "historical" || o.kind === "srs") ? composeCrimeOverTime(parts as never, rate) : null;
       if (merged && merged.kind === "none") return decline("outside_release_coverage", `No data is available for crime in ${merged.label}.`);
+      if (merged && noGrain && merged.kind === "historical") {
+        const m = merged as unknown as { delivered: { text: string[]; table: { rows: unknown[][] } } };
+        const rows = m.delivered.table.rows, first = String(rows[0]?.[0] ?? ""), last = String(rows[rows.length - 1]?.[0] ?? "");
+        const hasPeriod = clause0("period").length > 0;
+        const say = ["No kind of crime was named, so violent crime and property crime are shown.",
+          ...(hasPeriod || first === last || !/^\d{4}/.test(first) ? [] : [`No years were given, so every year in the data is shown: ${first.slice(0, 4)} through ${last.slice(0, 4)}.`])];
+        return { ...m, delivered: { ...m.delivered, text: [m.delivered.text[0], ...say, ...m.delivered.text.slice(1)] } } as unknown as ShadowOutcome;
+      }
       if (merged) return merged as ShadowOutcome;
       // Violent and property crime both answered with every cell blank (an agency Current Trends lists with no figures), the
       // composite not built because an offense's answer is a decline: no data, as P148 said, not the ask of the kind.
