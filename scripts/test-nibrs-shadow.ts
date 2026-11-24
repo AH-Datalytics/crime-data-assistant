@@ -8,6 +8,7 @@ import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { applyDefaults, askInsteadChecks, heavyNationalSentence, HEAVY_STATEMENT, isDeferred, listedNicknames, shadowAnswer, shadowFollowUp, statementChars, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { shadowSql } from "../lib/nibrs-plan/cube";
 import { toPreview } from "../lib/nibrs-shadow/preview";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
@@ -20,7 +21,7 @@ import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
 import { presentationOf, sentencesOf, unsaid } from "../lib/nibrs-shadow/presentation";
 import { ANSWER_STATEMENTS } from "../lib/nibrs-plan/result";
 import { chartOptionsOf, NOTE_TEXT } from "../lib/answer-contract/contract";
-import { answerSrsSeveral } from "../lib/nibrs-shadow/srs";
+import { answerSrsPeak, answerSrsSeveral } from "../lib/nibrs-shadow/srs";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
@@ -610,6 +611,57 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     }
     // The same detail twice, or a detail of the other person, stays declined as a second breakdown.
     assert.notEqual(shadowAnswer("Houston murder victims by race and race in 2023", wdeps).kind, "shr");
+    // "X vs Y" on one attribute (sex, race, weapon) is two series of that attribute, one column each, never both values on one victim (every cell 0).
+    {
+      const vsql: string[] = [];
+      const vstub = (sql: string): unknown[][] => {
+        if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
+        if (/FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql)) { vsql.push(sql); return /AS k0/.test(sql) ? [[2000, "F", 3], [2000, "M", 9]] : [[12]]; }
+        return [];
+      };
+      const vdeps = { ...sdeps, execute: vstub } as ShadowDeps;
+      for (const [q, title] of [
+        ["female vs male murder victims per year from 2000 to 2020 nationally", "United States Murder Victims by Year and the Victims' Sex, 2000-2020"],
+        ["white vs black murder victims per year from 2000 to 2020 nationally", "United States Murder Victims by Year and the Victims' Race, 2000-2020"],
+        ["gun murders versus knife murders per year from 2000 to 2020 nationally", "United States Murder Victims by Year and Weapon, 2000-2020"],
+      ] as const) {
+        vsql.length = 0;
+        const o = as(shadowAnswer(q, vdeps), "shr");
+        assert.equal(o.delivered.text[0], title, q);
+        assert.ok(!/Where the Victim's \w+ Was \w+ Where/.test(o.delivered.text[0]), q);
+        // Sex (and ethnicity) leave only Unknown beside the named sides, so it is a column too and each row adds up to the year's total.
+        const want = /female vs male/.test(q) ? 4 : 3;
+        assert.equal(o.delivered.table.columns.length, want, `${q}: a Year column and one column for each side`);
+        if (want === 4) assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Year", "Female", "Male", "Unknown"], q);
+        assert.ok(o.delivered.table.columns[0].header === "Year" && o.delivered.table.rows.every((r) => r.length === want), q);
+        assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'/i.test(s)), `${q}: ${vsql[0]}`);
+      }
+      // Named together without "vs": still categories of one attribute, never ANDed (Coordinator 2026-11-23).
+      for (const [q, cols] of [
+        ["female and male murder victims per year from 2000 to 2020 nationally", ["Year", "Female", "Male", "Unknown"]],
+        ["% of white, black, and other homicide victims in philadelphia by year since 2010", ["Year", "Black (%)", "White (%)", "Other (%)", "Unknown (%)"]],
+      ] as const) {
+        vsql.length = 0;
+        const o = as(shadowAnswer(q, vdeps), "shr");
+        assert.deepEqual(o.delivered.table.columns.map((c) => c.header), [...cols], q);
+        assert.ok(vsql.length > 0 && !vsql.some((s) => /sex\s*=\s*'F'\s+AND[^;]*sex\s*=\s*'M'|race\s*=\s*'W'\s+AND[^;]*race\s*=\s*'B'/i.test(s)), q);
+        // A share is out of ALL victims: the SQL does not limit the people to the named groups.
+        if (/%/.test(q)) assert.ok(vsql.some((s) => /ELSE '3'/.test(s)), `${q}: Unknown gathers blank and unlisted codes`);
+        if (/%/.test(q)) assert.ok(!vsql.some((s) => /p\.\w*race\w* IN \('B', 'W'/.test(s) && /WHERE[^;]*p\.\w*race\w* IN \('B', 'W', /.test(s)), q);
+      }
+      // Non-zero cells: the group query returns the group index ('0' white... ) per year.
+      {
+        const nz = (sql: string): unknown[][] => /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) && /AS k1/.test(sql) ? [[2010, "0", 5], [2010, "1", 3], [2010, "2", 1], [2010, "3", 1]]
+          : /FROM read_parquet\('\/shr\/canonical\/shr_victim/.test(sql) ? [[10]] : vstub(sql);
+        const o = as(shadowAnswer("% of white, black, and other murder victims per year from 2010 to 2011 nationally", { ...vdeps, execute: nz } as ShadowDeps), "shr");
+        const r = o.delivered.table.rows.find((x) => x[0] === "2010")!;
+        assert.deepEqual(r.slice(1), [50, 30, 10, 10], "shares of all victims, Unknown in its own column");
+        assert.equal(r.slice(1).reduce<number>((a, b) => a + Number(b), 0), 100, `shares add to 100: ${JSON.stringify(r)}`);
+        assert.ok(r.slice(1).every((v) => Number(v) > 0), JSON.stringify(r));
+      }
+      assert.equal(as(shadowAnswer("male vs female firearm murder victims per month since 2018 nationally", vdeps), "shr").delivered.text[0],
+        "United States Murder Victims With a Firearm by Month and the Victims' Sex, Jan 2018-Sep 2026");
+    }
     // P165 (Jeff 2026-11-19): the share of murders that involved a firearm is the murders by weapon with each share, and one sentence for the firearms together.
     const gstub = (sql: string): unknown[][] => {
       if (/count\(DISTINCT agency_key\)/.test(sql)) { const [, a, b] = /data_year BETWEEN (\d{4}) AND (\d{4})/.exec(sql)!; return range(Number(a), Number(b)).map((y) => [y, 1, ["ori9:TXHPD0000"]]); }
@@ -1042,6 +1094,10 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === v), q);
   assert.deepEqual(MEASURE_CODES.assault_offenses, ["13A", "13B", "13C"]);
   assert.deepEqual(MEASURE_CODES.intimidation, ["13C"]);
+  // Kidnapping is a measure of its own (NIBRS 100): "kidnappings by location" is read, not a reader decline.
+  assert.deepEqual(MEASURE_CODES.kidnapping, ["100"]);
+  for (const q of ["kidnapping in Houston in 2024", "kidnappings in Houston in 2024", "kidnapping by hour of day in Houston in 2024", "kidnappings by location in Houston in 2024"])
+    assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "kidnapping"), q);
   // Codex ties/P75 review 01: "assault offenses" is all three, never "offenses" read as the unit; a weapon is not a crime;
   // the user's own words survive the rewrite ("during an argument" keeps its circumstance).
   assert.ok(readQuestion("assault offenses in Houston in 2024", 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault_offenses"));
@@ -1421,6 +1477,62 @@ assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").ki
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
 const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
 assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answerStatements], ["each_value", ["categories_overlap"]]);
+// Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
+{
+  const q = "Where do most robberies occur - residences, streets, or commercial buildings?";
+  const o: any = shadowAnswer(q, { ...deps, noDefaults: false });
+  assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
+  assert.deepEqual(o.plan.filters, [], "no location is grouped or picked: every location type is a row");
+  // The stub has no national location grid, so row counts and the sum-to-total check are the Runner's, on real data.
+  assert.equal(o.plan.groupings.length, 1, "one grouping, no row limit");
+  assert.equal(o.plan.groupings[0].dimension, "offense.location_type");
+  assert.equal(o.plan.measures[0].id, "offenses.robbery");
+  assert.deepEqual(o.delivered.table.columns.map((c: { header: string }) => c.header), ["Location type", "Robbery offenses", "Share of all robbery offenses (%)"]);
+  assert.deepEqual(o.delivered.text.slice(0, 3), ["United States Robbery Offenses by Location Type, 2025", "No place was named, so the United States is shown.", "No year was given, so the latest complete year, 2025, is shown."]);
+}
+// Capability (loc-peak): the verb "occur" is accounted by the where-most filler (a real word boundary), so the question is answered, not declined.
+{
+  const o: any = shadowAnswer("Where do most burglaries occur?", { ...deps, noDefaults: false });
+  assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
+  assert.equal(o.plan.groupings[0].dimension, "offense.location_type");
+  assert.equal(o.plan.measures[0].id, "offenses.burglary");
+  assert.deepEqual(o.plan.filters, []);
+  const fill = (accountNibrsRequest("Where do most burglaries occur?") as any).parts.filter((x: any) => x.rule === "nibrs-phrase-filler").map((x: any) => x.text);
+  assert.ok(fill.includes("occur"), "the where-most filler regex matched the verb: " + JSON.stringify(fill));
+}
+// Capability (loc-peak): the peak year of the national violent crime rate, its count beside it.
+{
+  const pk: any = shadowAnswer("When was violent crime the highest?", { ...deps, historical: { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 }, noDefaults: false });
+  assert.equal(pk.kind, "srs", "peak year answered");
+  assert.deepEqual(pk.delivered.table.rows, [["1991", 758.2, 1911767]], "peak year 1991 with its count");
+  assert.match(pk.delivered.text[1], /highest in 1991, at 758\.2 per 100,000, with 1,911,767 violent crimes/);
+  assert.match(pk.delivered.text[2], /published national series/);
+}
+// A peak question that carries a place or a qualifier is not the national peak: it falls through to the old route.
+{
+  const hd = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
+  for (const q of ["When was robbery highest in texas?", "when was robbery highest in chicago", "What year was the peak for intimate partner homicides?", "When were firearm homicides the highest?", "When was murder the highest among victims under 18?", "Peak year for homicide reports"]) {
+    let r: any = {};
+    try { r = shadowAnswer(q, { ...deps, historical: hd, noDefaults: false }); } catch { /* the old route reached the stub's SQL: not the national peak */ }
+    assert.ok(!(r.kind === "srs" && /Peak Year/.test(String(r.delivered?.text?.[0]))), "not the national peak: " + q);
+  }
+  const p: any = shadowAnswer("What was the peak year for homicide in the US?", { ...deps, historical: hd, noDefaults: false });
+  assert.equal(p.kind, "srs", "plain homicide, nation named, is the national murder peak");
+}
+// The latest year blank: the blank year cannot win, the last published year still can.
+{
+  const row = (year: string, rate: string, total: string) => ({ type: "nation", year, uid: "n_" + year, violent_capita: rate, violent_total: total } as any);
+  const t: any = answerSrsPeak("violent_crime", [row("2023", "400", "5"), row("2024", "450", "6"), row("2025", "", "")]);
+  assert.deepEqual(t.delivered.table.rows, [["2024", 450, 6]]);
+}
+// A tie names every tied year; a blank rate cannot win.
+{
+  const row = (year: string, rate: string, total: string) => ({ type: "nation", year, uid: "n_" + year, violent_capita: rate, violent_total: total } as any);
+  const t: any = answerSrsPeak("violent_crime", [row("1990", "700", "1"), row("1991", "758.2", "2"), row("1992", "758.2", "3"), row("1993", "", "9999")]);
+  assert.equal(t.kind, "srs");
+  assert.deepEqual(t.delivered.table.rows.map((r: any) => r[0]), ["1991", "1992"], "tie lists both years");
+  assert.match(t.delivered.text[1], /highest in 1991 and 1992, at 758\.2 per 100,000\./);
+}
 const cjLoc = as(ask("Carjackings in Detroit by location type in 2023"), "answer");
 assert.deepEqual([cjLoc.plan.measures[0].id, cjLoc.plan.groupings[0].multiValue], ["offenses.carjacking", undefined]);
 // P29/P49: "by men and women" -> the crimes by their offenders' sexes; one sex alone is still declined; "against" is victims.
@@ -3431,5 +3543,28 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // A place, a rate or another grouping is not this ranking.
   assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
   assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
+}
+// P270: several states, or a state and the nation, asked together: one table with a Place column, each place its own state sum, never added together.
+{
+  const two = as(ask("Carjackings in Texas and Ohio in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Place", "Carjacking offenses"], JSON.stringify(two.delivered.table.columns));
+  assert.deepEqual(two.delivered.table.rows, [["Texas", 307], ["Ohio", 120]], "each place its own sum, never added: " + JSON.stringify(two.delivered.table.rows));
+  assert.deepEqual(two.delivered.contractProblems, []);
+  assert.equal(two.delivered.evidence.length, 2, "one evidence record per figure");
+  assert.equal(two.buttons, undefined, "no Consistent Reporting Agencies button across several places");
+  as(ask("Carjackings in Texas, Texas and Ohio in 2024"), "decline"); // a place named twice is refused by the plan's validation, as before
+  const nat = as(ask("Carjackings in Texas and the United States in 2024"), "answer");
+  assert.deepEqual(nat.delivered.table.rows.map((r) => r[0]), ["Texas", "United States"]);
+  // Each place's figure is the one its own single-state answer gives, and each place keeps its own coverage record.
+  const oneTx = as(ask("Carjackings in Texas in 2024"), "answer"), oneOh = as(ask("Carjackings in Ohio in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.rows, [["Texas", oneTx.delivered.table.rows[0][0]], ["Ohio", oneOh.delivered.table.rows[0][0]]]);
+  assert.equal(two.stateSums?.length, 2);
+  assert.ok(two.delivered.text.some((t) => /summed over the agencies that reported/.test(t)));
+  assert.deepEqual(two.delivered.evidence.map((e) => [e.row, e.statistic]), [[0, "carjacking_count"], [1, "carjacking_count"]]);
+  // A Part I crime for several states keeps the older Historical path (it is taken before this one); this path is for the crimes that path does not read.
+  assert.equal(shadowAnswer("Robberies in Texas and Ohio in 2024", deps).kind, "srs");
+  // An agency beside a state is still declined; so are a clearance share or Homicide Reports details for several places.
+  as(ask("Carjackings in Houston and Texas in 2024"), "decline");
+  as(ask("Share of murders cleared in Texas and Ohio in 2024"), "decline");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

@@ -10196,23 +10196,16 @@
    "question": "how many people arrested are cited and released  vs jail",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "data-absent",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "reviewed_by": "jeff-2026-11-23",
+    "notes": "Jeff 2026-11-23: NIBRS records arrest type (on-view, summoned, taken into custody) but not jail or release, so this gets the plain decline."
    }
   },
   {
