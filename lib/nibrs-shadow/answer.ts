@@ -1061,6 +1061,23 @@ function peakMeasure(question: string): string | null {
   return hit.length === 1 ? hit[0][1] : null;
 }
 
+/** Puerto Rico is declined (Jeff 2026-11-24): "That data is not available." */
+const PUERTO_RICO = /\bpuerto\s+ric(?:o|an)\b/i;
+/**
+ * "The southwest" is not a Census region (Jeff 2026-11-24: regions are the Census Northeast, Midwest, South and West): asked whether the four
+ * states or a Census region is meant, each button a complete question.
+ */
+const SOUTHWEST = /\b(?:in\s+)?the\s+south[\s-]?west(?:ern)?(?:\s+(?:region|u\.?s\.?|united\s+states|states))?(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)/i;
+function southwestAsk(question: string): ShadowOutcome | null {
+  const m = SOUTHWEST.exec(question);
+  if (!m) return null;
+  const withPlace = (place: string) => `${question.slice(0, m.index)}in ${place}${question.slice(m.index + m[0].length)}`;
+  return { kind: "clarify", about: "which southwest", question: "Do you mean Texas, Oklahoma, New Mexico and Arizona, or the Census South or West?", options: [
+    { label: "Texas, Oklahoma, New Mexico and Arizona", question: withPlace("Texas, Oklahoma, New Mexico and Arizona") },
+    { label: "The Census South", question: withPlace("the South") },
+    { label: "The Census West", question: withPlace("the West") }] };
+}
+
 const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 /** Jeff 2026-11-24: "juvenile crime" with no crime, victim or offender named is juvenile arrests (NIBRS, under 18) per year, the answer saying arrests are not crimes. */
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
@@ -1175,6 +1192,9 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  { const sw = southwestAsk(question); if (sw) return sw; }
+  // Puerto Rico (Jeff 2026-11-24): no data held for it, said in one plain sentence.
+  if (PUERTO_RICO.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?|arsons?)\b/i.test(question) && !/\brates?\b/i.test(question)) { // a rates ask is never rewritten to arrests (P293)
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
@@ -1595,6 +1615,8 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // P38: a follow-up in gang words ("only gang-related", "what about gangs?") is declined as a first question would be,
   // with no follow-up reading offered (Codex review 19.2, 19.3).
   if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
+  // Puerto Rico (Jeff 2026-11-24) is declined as a first question is, never asked what it changes.
+  if (PUERTO_RICO.test(followUp) && !pointsBack(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
   // P157: a request to change a chart (a marker, a line, axes) is declined with the one chart sentence, not asked about the last question.
   if (isChartEdit(followUp)) return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
   // The same question sent again (follow-ups #5, coordinator 2026-11-21: 77 real turns) is a first question: the same answer or ask as before,

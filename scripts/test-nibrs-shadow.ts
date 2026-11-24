@@ -2671,9 +2671,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(det.kind !== "clarify" || !/could not be placed/.test(det.about), "never 'could not be placed' for a question of its own");
   // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is a question of its own
   // ("Puerto Rico Crime" asked what it changes); when its first-turn result would be a decline, the question back stays.
-  const own = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime", deps);
+  // Puerto Rico itself is now declined as a first question (Jeff 2026-11-24), so the shape is checked with another place.
+  const own = shadowFollowUp("robberies in Memphis in 2024", "Mars Crime", deps);
   assert.equal(own.rewriteKind, "new");
-  assert.deepEqual({ ...own, rewrite: undefined, rewriteKind: undefined }, { ...ask("Puerto Rico Crime"), rewrite: undefined, rewriteKind: undefined });
+  const pr = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime", deps);
+  assert.equal(pr.rewriteKind, "new");
+  assert.equal((pr as any).explanation, "That data is not available.");
   const kept = shadowFollowUp("conviction rates for murders in Houston", "how many offenders were sentenced to prison", deps);
   assert.equal(kept.rewriteKind, "ask", "a first-turn decline keeps the question about the last turn");
   const pointing = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime again", deps);
@@ -3848,4 +3851,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const [q, title] of Object.entries(want)) {
     const o = shadowAnswer(q, live) as any;
     assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
+// Jeff 2026-11-24: Puerto Rico is declined; "the southwest" is not a Census region, so it asks which is meant; the Census regions answer as before.
+{ const live = { ...deps, execute: () => [], noDefaults: false } as unknown as ShadowDeps;
+  for (const q of ["Puerto Rico Crime", "murders in Puerto Rico in 2024", "How many arrests by Puerto Rico are Taken Into Custody", "I'd like to know how many arrests for Puerto Rico resulted in Taken Into Custody data element"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind === "decline" && o.explanation === "That data is not available.", `${q}: ${JSON.stringify(o).slice(0, 300)}`); }
+  const sw = shadowAnswer("murders in the southwest in 2024", live) as any;
+  assert.equal(sw.kind, "clarify");
+  assert.equal(sw.question, "Do you mean Texas, Oklahoma, New Mexico and Arizona, or the Census South or West?");
+  assert.deepEqual(sw.options.map((o: any) => o.question), ["murders in Texas, Oklahoma, New Mexico and Arizona in 2024", "murders in the South in 2024", "murders in the West in 2024"]);
+  for (const q of ["murders in the northeast in 2024", "crime in the south", "murders in Southwest Harbor, Maine in 2024"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.about !== "which southwest", `${q}: ${JSON.stringify(o).slice(0, 200)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
