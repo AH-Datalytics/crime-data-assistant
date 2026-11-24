@@ -1045,6 +1045,9 @@ function peakMeasure(question: string): string | null {
   return hit.length === 1 ? hit[0][1] : null;
 }
 
+const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
+/** Jeff 2026-11-24: "juvenile crime" with no crime, victim or offender named is juvenile arrests (NIBRS, under 18) per year, the answer saying arrests are not crimes. */
+const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?))/i;
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
 function kingsCountyAsk(question: string): ShadowOutcome | null {
@@ -1053,8 +1056,38 @@ function kingsCountyAsk(question: string): ShadowOutcome | null {
   const withState = (state: string) => question.slice(0, m.index) + m[0] + ", " + state + question.slice(m.index + m[0].length);
   return { kind: "clarify", about: "which Kings County", question: "Which Kings County: New York or California?", options: [{ label: "Kings County, New York", question: withState("New York") }, { label: "Kings County, California", question: withState("California") }] };
 }
+/** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
+const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  if (VIOLENT_ARRESTS_BY_TYPE.test(question)) {
+    const o = shadowAnswer(question.replace(VIOLENT_ARRESTS_BY_TYPE, "arrests for murder, rape, robbery and aggravated assault by year"), depsIn);
+    const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "answer" && t && t.columns.length === 5 && t.rows.length > 1) {
+      const names = ["Murder", "Rape", "Robbery", "Aggravated assault"];
+      const stat = t.columns[1].binding;
+      const columns = [{ binding: { kind: "grouping" as const, dimension: "offense.category" }, header: "Offense type" }, ...t.rows.map((r) => ({ binding: stat, header: String(r[0]) }))];
+      const rows = names.map((n, i) => [n, ...t.rows.map((r) => r[i + 1])]);
+      const first = o.delivered.text[0];
+      const m = first.match(/^(.*?) Murder Arrests Per Year, (.*)$/);
+      const rest = o.delivered.text.filter((x) => !/^.* (?:Murder|Rape|Robbery|Aggravated Assault) Arrests Per Year, /.test(x));
+      const title = m ? `${m[1]} Violent Crime Arrests by Offense Type Per Year, ${m[2]}` : first;
+      const evidence = rows.flatMap((r, ri) => r.slice(1).map((v) => ({ row: ri, statistic: (t.columns[ri + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+      o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest] } as typeof o.delivered;
+    }
+    return o;
+  }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?)\b/i.test(question)) {
+    let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
+    // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
+    if (/\btrends?\s+(?:of|in)\b/i.test(q)) q = q.replace(/\b(?:the\s+)?trends?\s+(?:of|in)\s+/i, "").replace(/\s*\?*\s*$/, /\b(?:per|by)\s+(?:year|month)\b/i.test(q) ? "" : " per year");
+    const o = shadowAnswer(q, depsIn);
+    if (o.kind === "answer" && !o.delivered.text.includes(ARRESTS_NOT_CRIMES)) {
+      o.delivered.text.splice(1, 0, ARRESTS_NOT_CRIMES);
+      // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
+    }
+    return o;
+  }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
@@ -3353,10 +3386,17 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   let combined: Combined | null = null;
   // D19: "drug crimes" are drug/narcotic plus drug equipment violations: both measures, and their total. Today's reader
   // reads them as drug possession alone ("drug possession" itself stays one measure).
-  const drugPart = clause0("measure").find((p) => p.value === "drug_possession" && !/possess/i.test(p.text));
+  const drugAny = clause0("measure").find((p) => p.value === "drug_possession");
+  const drugPart = drugAny && !/possess/i.test(drugAny.text) ? drugAny : undefined;
   // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
   if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "This isn't available: drug crimes (drug and narcotic offenses plus drug equipment violations) beside other crimes.");
-  if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+  const drugStatePlace = plan.geography.places[0]?.kind === "state" || plan.geography.places[0]?.kind === "national";
+  // Jeff 2026-11-24: for a state or the nation, "drug possession" counts both 35A and 35B too (agencies keep "drug possession" as one measure).
+  if (drugAny && drugStatePlace && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+    // Coordinator 2026-11-24: a state or national sum counts the one composite measure (35A + 35B), so it is a single column.
+    plan.measures[0] = { ...plan.measures[0], id: "offenses.drug_crimes" };
+    combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  } else if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
