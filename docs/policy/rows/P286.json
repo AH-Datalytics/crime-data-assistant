@@ -1,0 +1,12 @@
+{
+  "id": "P286",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"rates of property crime, by type, since 2000\", \"property crime by type since 2017\", \"property crime by type in 2019\"",
+  "what the app does today": "A national question about the standard (Part I) crimes that the Crime Index figures can answer is the Crime Index's, from any year, including 2017 on, when NIBRS also has the years.",
+  "proposed behavior": "National property crime \"by type\" (counts or rates, any whole years) is answered from the Crime Index figures, by year, with burglary, larceny-theft and motor vehicle theft as the columns, titled like \"United States Property Crime Rate by Type Per Year, 2000-2025\". \"By type\" here means the offense, not a clearance type. Detail only NIBRS records (an offender's or victim's age, sex or race, a weapon, a location, a relationship, a clearance) stays NIBRS's and is not routed here.",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (card, through the coordinator): \"national questions that can be answered by historical should be! Rates of property crime by type since 2000 (or even 2017) should be a crime index historical answer.\"",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator); built in PR 462",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P286\")."
+}

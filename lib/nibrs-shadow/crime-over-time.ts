@@ -76,6 +76,35 @@ function seriesOf(a: PartAnswer): Series | null {
   return { kind: a.kind, periodCol, placeCol, places, cells: map };
 }
 
+/** Property crime by type: its three offenses, each a Crime Index offense column (COMPOSITE_PARTS' last three). */
+export const PROPERTY_TYPES = COMPOSITE_PARTS.slice(6);
+
+/**
+ * Property crime "by type" from the three offenses' own answers (PROPERTY_TYPES order): burglary, larceny-theft and motor vehicle
+ * theft side by side by year, no sum column. Null when they are not series of one source at one grain, or the title is not the
+ * burglary answer's (the question then keeps the path it has).
+ */
+export function composeByType(answers: PartAnswer[], rate: boolean): PartAnswer | null {
+  if (answers.length !== PROPERTY_TYPES.length) return null;
+  const series = answers.map(seriesOf);
+  if (series.some((s) => !s)) return null;
+  const all = series as Series[], first = all[0];
+  const grain = first.periodCol.binding.kind === "grouping" ? first.periodCol.binding.dimension : "";
+  if (first.places.length !== 1 || !all.every((s) => s.kind === first.kind && s.periodCol.binding.kind === "grouping" && s.periodCol.binding.dimension === grain
+    && s.places.length === 1 && s.places[0] === first.places[0])) return null;
+  const periods = [...new Set(all.flatMap((s) => [...s.cells.keys()].map((k) => k.split("\u0000")[1])))].sort();
+  const rows = periods.map((period) => [period, ...all.map((s) => s.cells.get(key(first.places[0], period)) ?? null)]);
+  const columns: Column[] = [first.periodCol, ...PROPERTY_TYPES.map((x) => ({ binding: { kind: "statistic" as const, as: x.as }, header: rate ? `${x.header} per 100,000` : x.header }))];
+  const title0 = answers[0].delivered.text[0] ?? "";
+  const title = title0.replace(/\bBurglar(?:y|ies)( Rates?)?/i, (_m, r: string | undefined) => `Property Crime${r ? " Rate" : ""} by Type`);
+  if (title === title0) return null;
+  const notes: string[] = [];
+  for (const a of answers) for (const t of a.delivered.text.slice(1)) if (t !== SOURCE && !notes.includes(t)) notes.push(t);
+  const base = answers[0];
+  return { ...base, meaning: { ...base.meaning, measures: answers.flatMap((a) => a.meaning.measures) },
+    delivered: { ...base.delivered, table: { columns, rows }, text: [title, ...notes, SOURCE] } };
+}
+
 /**
  * The composite of the nine answers (in COMPOSITE_PARTS order), or null when they are not series of one source for the
  * same places at the same grain; `{ kind: "none" }` when every cell is blank. `rate`: the answers are rates (no Part I).

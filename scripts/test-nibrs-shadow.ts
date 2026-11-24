@@ -3156,6 +3156,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       const o = shadowAnswer(q, live) as unknown as { kind: string; about?: string; explanation?: string };
       // The stub holds no rows, so the composite is the no-data decline for the place (with rows it answers by year; the Runner reads real data).
       assert.ok(o.kind === "decline" && /^No data is available for crime in Dallas, Texas\./.test(o.explanation ?? ""), `${q}: ${JSON.stringify(o).slice(0, 300)}`);    } }
+  // Engine 2.0 2026-11-24: the nation's property crime "by type" before NIBRS's years is Crime Index's three property offenses side by side by year
+  // (never the NIBRS clearance-type decline).
+  { const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+    const want: Record<string, string> = { "rates of property crime, by type, since 2000": "United States Property Crime Rate by Type Per Year, 2000-2025",
+      "property crime rates by type in the United States since 2000": "United States Property Crime Rate by Type Per Year, 2000-2025",
+      "property crime by type in the US by year since 2000": "United States Property Crime by Type Per Year, 2000-2025",
+      // P286 (Jeff 2026-11-24): 2017 on too, where NIBRS also has the years.
+      "rates of property crime, by type, since 2017": "United States Property Crime Rate by Type Per Year, 2017-2025",
+      "property crime by type in 2019": "United States Property Crime by Type Per Year, 2019" };
+    for (const [q, title] of Object.entries(want)) {
+      const o = shadowAnswer(q, live) as unknown as { kind: string; delivered?: { text: string[]; table: { columns: { header: string }[] } } };
+      assert.ok(o.kind === "srs" && o.delivered?.text[0] === title && o.delivered.text.at(-1) === "Source: Crime Index.", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+      assert.equal(o.delivered?.table.columns.length, 4, q); } }
   // Engine 2.0 2026-11-24 (g449c): "more about", "look like in" and "in the last few years" beside a place and "crime" ask for nothing: the composite answers, as "Dallas crime" does, not the reader's decline.
   { const fx = shadowAnswer("What was the violent crime rate in Fairfax County, VA, in 2020, 2021, 2022, 2023, 2024, and 2025?", { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps);
     assert.ok(fx.kind === "historical" && fx.delivered.text[0] === "Fairfax County, Virginia Violent Crime Rate Per Year, 2020-2025", JSON.stringify(fx).slice(0, 300)); }
