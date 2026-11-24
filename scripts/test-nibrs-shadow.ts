@@ -1925,6 +1925,8 @@ for (const q of ["Change in shoplifting in Detroit in 2023", "What was the perce
 assert.ok(!as(ask("Change in shoplifting in Detroit from 2022 to 2023"), "answer").delivered.text.some((t) => /is read as 2022 to 2023/.test(t)));
 assert.equal(ask("Shoplifting in Detroit in 2023").kind, "answer"); // no "change": untouched
 for (const q of ["Change in shoplifting in Detroit in 2023 compared with 2021", "What was the change in shoplifting in Detroit? Show robberies in 2023."]) assert.ok(!JSON.stringify(ask(q)).includes("is read as 2022 to 2023") && !JSON.stringify(ask(q)).includes("from 2022 to 2023"), q);
+// Cause 12 (Jeff 2026-11-24): "per 1,000 people" and "on 1000 persons" keep the fixed per-100,000 decline.
+for (const q of ["Shoplifting rate per 1,000 people in Detroit in 2023", "Shoplifting rate on 1000 persons in Detroit in 2023"]) { const d = ask(q); assert.equal(d.kind, "decline", q); assert.ok(JSON.stringify(d).includes("Rates are given per 100,000"), q); }
 // P54: no comparison year -> the year before; D17: no change from a year with a month unknown, the month named (D04).
 const goUp = as(ask("Did shoplifting go up in Detroit in 2024?"), "answer");
 assert.deepEqual(goUp.delivered.table.rows, [[84, null, null, null]]);
