@@ -3513,7 +3513,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   type Out = { kind: string; delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } };
   for (const q of ["what share of aggravated assaults in Texas are domestic violence according to NIBRS in 2025", "what share of aggravated assaults in Texas were domestic violence incidents according to NIBRS in 2025"]) {
     const o = as(ask(q), "answer") as unknown as Out;
-    assert.ok(/^In Texas in 2025, [\d.]+% of the aggravated assault incidents had a domestic violence victim, summed over the \d+ agencies that reported\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
+    assert.ok(/^In Texas in 2025, [\d.]+% of the aggravated assault incidents had a domestic violence victim, summed over the \d+ agencies with aggravated assault incidents\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
     assert.ok(o.delivered.text.includes("This is the share of incidents, not of victims: an incident counts once when at least one of its victims is a domestic violence victim."), o.delivered.text.join(" | "));
     assert.deepEqual(o.delivered.table.columns.map((c) => c.header).slice(1), ["Aggravated assault incidents", "With a domestic violence victim"], JSON.stringify(o.delivered.table.columns));
   }

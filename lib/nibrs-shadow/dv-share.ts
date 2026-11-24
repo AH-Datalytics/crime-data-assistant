@@ -44,10 +44,10 @@ export function answerDvShare(plan: NibrsPlan, period: { from: string; to: strin
   const [pop, dv] = sums;
   let denominator = 0, part = 0;
   const agencies = new Set<string>();
-  for (const [k, n] of pop) if (dv.has(k)) { denominator += n; part += dv.get(k)!; agencies.add(k.split("|")[0]); }
+  for (const [k, n] of pop) if (dv.has(k)) { denominator += n; part += dv.get(k)!; if (n > 0) agencies.add(k.split("|")[0]); }
   if (!denominator) return decline(`No share is given: no aggravated assault incidents were reported in ${when}.`);
   const value = Math.round((1000 * part) / denominator) / 10;
-  const lines = [`In ${where} in ${when}, ${value}% of the aggravated assault incidents had a domestic violence victim, summed over the ${fmt(agencies.size)} agencies that reported.`,
+  const lines = [`In ${where} in ${when}, ${value}% of the aggravated assault incidents had a domestic violence victim, summed over the ${fmt(agencies.size)} agencies with aggravated assault incidents.`,
     "This is the share of incidents, not of victims: an incident counts once when at least one of its victims is a domestic violence victim.",
     DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, "Includes all agencies."];
   const plan2: NibrsPlan = { ...plan, statistics: [...plan.statistics, { kind: "count", as: "denominator", measure: plan.measures[0].as }, { kind: "count", as: "dv_incidents", measure: plan.measures[1].as }] };
