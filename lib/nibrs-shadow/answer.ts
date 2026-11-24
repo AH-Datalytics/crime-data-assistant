@@ -1118,6 +1118,8 @@ const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone
 const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
 /** P396: "(percent) change in <measure> in 2025" with one year and no second year. */
 const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
+/** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
+const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
   const ud = UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
@@ -1195,6 +1197,19 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       const o = shadowAnswer(question.replace(one[0], `${one[1]} from ${y - 1} to ${y}`), depsIn);
       const dl = (o as { delivered?: { text: string[] } }).delivered; if (dl && o.kind !== "decline" && o.kind !== "clarify") dl.text.splice(1, 0, `"Change in ${y}" is read as ${y - 1} to ${y}.`);
       return o;
+    }
+  }
+  // P304 (Jeff 2026-11-24): one calendar day ("on May 24, 2025") is answered for its month, and the answer says so.
+  { const days = [...question.matchAll(SINGLE_DAY_G)];
+    if (days.length === 1) {
+      const d = days[0]; const month = d[1] ?? d[3]; const year = d[2] ?? d[4];
+      const o = shadowAnswer(question.replace(d[0], `in ${month} ${year}`), depsIn);
+      // Only an answer says the month is shown. Every other outcome of the month form (a question back, coverage, a decline for the place or crime) is
+      // returned as it is: the day changes nothing there, and the original wording would only be declined by the reader for "on May 24,".
+      // A reader decline of the month form is the one exception: the original goes on, so the reader names what it did not understand.
+      const dl = (o as { delivered?: { text: string[] } }).delivered;
+      if (o.kind === "answer" && dl) { dl.text.splice(1, 0, "A single day is not available, so the month is shown."); return o; }
+      if (!(o.kind === "decline" && o.reason === "reader")) return o;
     }
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
@@ -2481,10 +2496,26 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
+    // P301 (Jeff 2026-11-24, "clarify odd openers"): with no crime word and no Part I, only a bare place answers (an opener "show me" is fine);
+    // unread-looking words ("do for nyc", "this for denver", "Is this in X", "dallas's rate") clarify. An ambiguous place ("portland") asks which one first.
+    const bareOnly = clause0("measure").length > 0 || hasPartI || ledger0.parts.every((p) => p.clause !== 0 || (p.concept !== "filler" && p.concept !== "possessive" && p.concept !== "statistic"
+      && (p.concept !== "opener" || /^(?:show|tell|give)\s+me(?:\s+about)?$/i.test(p.text.trim()))));
+    // Ambiguous as first read and not settled by a chosen place (pins), so picking "which Portland" does not ask again.
+    const ambiguousPart = ledger0.parts.find((p) => p.clause === 0 && p.concept === "place" && String(p.value ?? "").startsWith("ambiguous:")
+      && !(pins.get(p.span[0]) ?? deps.placePins?.get(p.text.trim().toLowerCase())));
+    // The reader's "ambiguous:" name is resolved to one agency by resolvePlace (no ask), so the which-one ask is built here from the city agencies of that name.
+    const sameName = ambiguousPart ? (deps.places.byName.get(String(ambiguousPart.value).slice("ambiguous:".length).trim().toLowerCase()) ?? [])
+      .filter((a) => a.kind === "city").filter((a, i, all) => all.findIndex((b) => b.state === a.state) === i).sort((x, y) => y.population - x.population).slice(0, 6) : [];
+    const ambiguousPlace = !!ambiguousPart && sameName.length >= 2;
     // P300: a place filled by a default button ("The United States") is not a typed place; a bare fragment keeps its clarification.
     const typedPlace = clause0("place").some((p) => p.rule !== "shadow:button");
     if (onlyCrimeOverTime && ((ms.length === 0 && (hasPartI || clause0("place").length >= 1)) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && (hasPartI || typedPlace || deps.noDefaults) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
-      && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
+      && clause0("place").length >= 1 && bareOnly && !/\bNIBRS\b|\bincidents?\b/i.test(ledger0.question) && !f0.comparison && !f0.combined && !f0.nibrsAsked &&!f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
+      if (ambiguousPlace) {
+        const cands: Candidate[] = sameName.map((a): Candidate => ({ kind: "agency", agency: a }));
+        const options: ShadowOption[] = cands.map((c) => ({ label: candidateLabel(c, cands, deps.places), continuation: fromLedger(ledger0, deps, new Map(pins).set(ambiguousPart!.span[0], c)) }));
+        return { kind: "clarify", about: `which ${sameName[0].name}`, question: ledger0.question, options };
+      }
       // No grain named (a bare place, "crime in Memphis over the last 10 years", "crime trends in X"): P181 every-year default, by year (the
       // Crime Index), said with P182 kind-of-crime default, instead of asking which kind of crime (Engine 2.0 2026-11-24, wrong clarifies).
       const noGrain = grains.length === 0;
