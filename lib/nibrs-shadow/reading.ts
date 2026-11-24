@@ -365,7 +365,7 @@ function oneSlip(a: string, b: string): boolean {
 /** The words of the state names, which a short misspelling is never read as. */
 const STATE_WORDS = new Set(Object.values(STATE_NAME_BY_CODE).flatMap((n) => n.toLowerCase().split(/\s+/)));
 /** English words one slip from a crime word that the common-word list lacks. */
-const REAL_WORDS = new Set(["violet", "sates", "cites", "crimp", "crimps", "counts", "country", "assets"]);
+const REAL_WORDS = new Set(["violet", "sates", "cites", "crimp", "crimps", "counts", "country", "assets", "sample", "samples"]);
 /** The one vocabulary word a misspelled word is a single slip from, or null (none, two, or a short word). */
 export function nearestWord(word: string): string | null {
   const w = word.toLowerCase();
@@ -380,6 +380,50 @@ export function nearestWord(word: string): string | null {
   return at.length === 1 ? at[0] : null;
 }
 
+/** Words of asking a typo may be read as (H2): the question's own verbs and linking words, never a place or a crime. */
+const ASK_WORDS = ["show", "list", "calculate", "since", "you", "see", "through", "between"];
+/** Damerau distance (one slip is one dropped, added, changed or swapped letter). */
+function slips(a: string, b: string): number {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+/**
+ * A word that is no English word, one slip (two for seven letters or more) from exactly one crime word or asking word ("ctime", "ypu",
+ * "swhow", "sincce", "tecas" beside a Texas already named). A state is a target only when the question already names it.
+ */
+export function fuzzyWord(word: string, text: string): string | null {
+  const w = word.toLowerCase();
+  if (w.length < 4 || isCommonEnglishWord(w) || VOCAB.includes(w) || ASK_WORDS.includes(w) || REAL_WORDS.has(w) || /^aggr[ae]vates$/.test(w) || /ed$/.test(w)) return null;
+  const named = text.toLowerCase();
+  const pool = [...ASK_WORDS, ...VOCAB.filter((v) => !STATE_WORDS.has(v) || new RegExp(`\\b${v}\\b`).test(named))];
+  let best = 99, at: string[] = [];
+  for (const v of pool) {
+    const d = slips(w, v);
+    if (d > (w.length >= 7 && v.length >= 7 ? 2 : 1) || (w.length === 3 && v.length !== 3)) continue;
+    if (d < best) { best = d; at = [v]; } else if (d === best && !at.includes(v)) at.push(v);
+  }
+  return at.length === 1 ? at[0] : null;
+}
+/** Stray characters inside words and the "100.000" separator ("calcul;ate", "100.000"; never a year) and two fixed slips ("aggravates assaults", "can I seen"). */
+function cleanSlips(text: string, readings: Reading[]): string {
+  const fix = (re: RegExp, to: (m: string, ...g: string[]) => string) => {
+    text = text.replace(re, (m, ...g) => { const t = to(m, ...(g as string[])); if (t !== m) readings.push({ kind: "spelling", from: m, to: t }); return t; });
+  };
+  // Digits are never repaired: a year with a stray character in it ("1`980") is asked about, not read as 1980 (garbledYear in answer.ts).
+  fix(/\b[A-Za-z]+(?:;(?=[A-Za-z])[A-Za-z]*)+\b/g, (m) => m.replace(/;/g, ""));
+  fix(/\bper\s+100\.000\b/gi, (m) => m.replace("100.000", "100,000"));
+  fix(/\bback\s+to\s+((?:19|20)\d\d)\b/gi, (_m, y) => `since ${y}`);
+  // "aggravates assaults" is the crime misspelled; "what aggravates assault" is the verb and stays (Codex spelling review 01).
+  fix(/(?<!\b(?:what|that|which|who|it)\s+)\baggravates(?=\s+assaults?\b)/gi, () => "aggravated");
+  fix(/\b(?:ypu|yuo)\b/gi, () => "you");
+  fix(/\b(can|could|may)(\s+(?:i|we))\s+seen\b/gi, (_m, a, b) => `${a}${b} see`);
+  return text;
+}
 /** The words of a county-wide request ("countywide", "the whole county", "all agencies in X County"): read as a flag, declined with an offer (P70). */
 export const COUNTYWIDE_RE = /\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:(?:across|for|from|in|of)\s+)?all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\s+(?:[\w.'-]+\s+){1,3}county\b))/i;
 
@@ -728,12 +772,15 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     return to;
   });
   // Misspellings: only words the accounting could not read.
+  text = cleanSlips(text, readings);
   const first = accountNibrsRequest(text);
   const unread = first.parts.filter((p) => p.state === "not-interpreted").flatMap((p) => p.text.match(/[A-Za-z]+/g) ?? []);
   for (const w of unread) {
-    const to = nearestWord(w);
+    const to = nearestWord(w) ?? fuzzyWord(w, text);
     if (!to) continue;
     readings.push({ kind: "spelling", from: w, to });
+    // A state named twice ("El Paso, Texas tecas"): the repeat is a slip of the one named, so it is dropped, not said again.
+    if (STATE_WORDS.has(to) && new RegExp(`\\b${to}\\b`, "i").test(text)) { text = text.replace(new RegExp(`\\s*\\b${w}\\b`), ""); continue; }
     text = text.replace(new RegExp(`\\b${w}\\b`), w[0] === w[0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to);
   }
   // Flags read only the question's own clause (a trailing "explain" clause is the accounting's clause 1).
