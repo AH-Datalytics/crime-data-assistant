@@ -194,6 +194,13 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// QL-nibrs-58d3c67ab3 (ruling B, P299): "Have carjackings decreased ... past two years" is a yes or no with the counts, and the by-year table stays.
+{
+  const o = as(ask("Have carjackings decreased in Rhode Island in the past two years?"), "answer");
+  assert.match(o.delivered.text[0], /^Rhode Island Carjacking Offenses Per Year, 2024-2025$/);
+  assert.ok(o.delivered.text.some((t) => /^(Yes|No)\. Carjacking offenses (were|rose|fell)/.test(t) && /2024/.test(t) && /2025/.test(t)), JSON.stringify(o.delivered.text));
+  assert.equal((o.delivered.table as { rows: unknown[] }).rows.length, 2);
+}
 // QL-nibrs-c74cec7689: "offender demographics for robbery by sex" is the robbery offenders by sex (it was declined as unread).
 for (const q of ["Compare offender demographics for robbery by sex nationally in 2024", "offender demographics for robbery by sex nationally in 2024"]) {
   const o = as(ask(q), "answer");

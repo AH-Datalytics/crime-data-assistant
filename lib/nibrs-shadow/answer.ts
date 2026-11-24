@@ -1086,7 +1086,28 @@ function shareOfRaceByYear(question: string, depsIn: ShadowDeps): ShadowOutcome 
 }
 /** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
 const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
+/** Coordinator 2026-11-24, ruling B (QL-nibrs-58d3c67ab3): "Have carjackings decreased in Rhode Island in the past two years?" is answered yes or no from the
+ *  full calendar years (a part-year 2026 is not one), with the counts: "Yes. Carjackings fell from X in 2024 to Y in 2025." The by-year table stays under it. */
+const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
+const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const ud = UP_DOWN_YES_NO.exec(question);
+  if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
+    const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
+    const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "answer" && t && t.columns.length === 2 && t.rows.length >= 2 && t.rows.every((r) => typeof r[1] === "number" && /^\d{4}$/.test(String(r[0])))) {
+      const first = t.rows[0], last = t.rows[t.rows.length - 1];
+      const a = first[1] as number, b = last[1] as number;
+      const wantUp = /^(?:increased|gone\s+up|risen)$/i.test(ud[2].replace(/\s+/g, " "));
+      const noun = t.columns[1].header;
+      const sentence = a === b
+        ? `No. ${noun} were ${a.toLocaleString("en-US")} in ${first[0]} and ${b.toLocaleString("en-US")} in ${last[0]}.`
+        : `${(b > a) === wantUp ? "Yes" : "No"}. ${noun} ${b > a ? "rose" : "fell"} from ${a.toLocaleString("en-US")} in ${first[0]} to ${b.toLocaleString("en-US")} in ${last[0]}.`;
+      o.delivered = { ...o.delivered, text: [o.delivered.text[0], sentence, ...o.delivered.text.slice(1)] } as typeof o.delivered;
+      return o;
+    }
+    return o;
+  }
   if (VIOLENT_ARRESTS_BY_TYPE.test(question)) {
     const o = shadowAnswer(question.replace(VIOLENT_ARRESTS_BY_TYPE, "arrests for murder, rape, robbery and aggravated assault by year"), depsIn);
     const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
