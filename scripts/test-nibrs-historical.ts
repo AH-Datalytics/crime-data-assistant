@@ -256,6 +256,17 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = withBuild(q);
     assert.ok(o.kind === "historical" && o.question.beside?.length, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
+  // Owner rule (Jeff 2026-11-23): an agency beside the nation with no period starts at 1960; beside a state, or with a stated period, it is unchanged.
+  for (const q of ["violent crime in memphis, nashville and nationwide", "how Memphis murder rate compares to the national average", "show murder rates in Memphis and nationwide side-by-side", "compare Memphis vs national level in terms of motor vehicle theft"]) {
+    const o0: any = withBuild(q);
+    const o: any = o0.kind === "clarify" ? o0.options.find((x: any) => x.label === "Every year available").continuation : o0;
+    assert.ok(o.kind === "historical" && o.question.from === 1960 && o.question.to === 2025, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  for (const [q, from, to] of [["Memphis vs Tennessee murder rate", 1930, 2025], ["Memphis vs national murder rate from 1950 to 1970", 1950, 1970]] as const) {
+    const o0: any = withBuild(q);
+    const o: any = o0.kind === "clarify" ? o0.options.find((x: any) => x.label === "Every year available").continuation : o0;
+    assert.ok(o.kind === "historical" && o.question.from === from && o.question.to === to, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
   for (const q of ["Murders in Memphis and Tennessee combined in 2023", "Murder count in Memphis and the murder rate in Tennessee in 2023", "Murder clearance rate in Memphis and the US in 2023", "Murders in Memphis and Tennessee in March 2023"])
     assert.notEqual(withBuild(q).kind, "historical", q);
   // Codex beside review 01.1: a statistic said of some places only is never applied to all (351 victims, not 57).
