@@ -285,6 +285,8 @@ function groupTotal(row: Record<string, number | null>, group: "violent" | "prop
   return total;
 }
 
+import { roundHalfAway1 } from "./round-half-away";
+
 /**
  * A group's rate is its summed count over the population, rounded once. Never a sum of the
  * components' already-rounded rates: 193.6 + 1144.1 + 197.0 = 1534.7, but the published
@@ -301,7 +303,7 @@ function changePct(current: number | null, previous: number | null): number | nu
   // NULL or non-positive prior is UNKNOWN, not zero: "no change" and "cannot know"
   // are different claims, and a fake 0.0% is the worse of the two errors.
   if (current == null || previous == null || previous <= 0) return null;
-  return round1((current - previous) * 100 / previous);
+  return roundHalfAway1((current - previous) * 100 / previous);
 }
 
 function buildAggregateScorecard(

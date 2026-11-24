@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { resolveGeoPlaces } from "./geo-place-resolver";
+import { roundHalfAway1 } from "./round-half-away";
 import { consolidatedDisplayName, historicalAgencyTarget, consolidatedRtciAgency } from "./agency-consolidations";
 import { detectAgencyScorecardQuestion } from "./scorecard-format";
 import { evaluateAgencyYearFromDb, describeFindings } from "./agency-reliability";
@@ -269,7 +270,7 @@ export function buildAgencyScorecard(
       rate_per_100k: count == null ? null : Math.round((count * 100000 / population) * 10) / 10,
       clearance_rate: clearance,
       offense_change_pct: count != null && previousCount != null && previousCount > 0
-        ? Math.round(((count - previousCount) * 100 / previousCount) * 10) / 10
+        ? roundHalfAway1((count - previousCount) * 100 / previousCount)
         : null,
       ...(isSection ? { section: true } : {}),
     });
