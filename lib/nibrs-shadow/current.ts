@@ -196,10 +196,11 @@ export function rollingMonths(to: Month, n = 12): Month[] {
 }
 /** The same month a year earlier. */
 export const yearEarlier = (m: Month) => `${Number(m.slice(0, 4)) - 1}-${m.slice(5)}`;
+import { roundHalfAway1 } from "../round-half-away";
 /** Percent change from two complete values, one decimal; null when either is unknown or the earlier is zero (P55). */
 export function change(earlier: number | null, later: number | null): number | null {
   if (earlier === null || later === null || earlier === 0) return null;
-  return Math.round(((later - earlier) * 1000) / earlier) / 10;
+  return roundHalfAway1(((later - earlier) * 100) / earlier);
 }
 /** Decision B (P58, P59): count per 100,000, one decimal; null for one month, an unknown count or no population. */
 export function currentRate(count: number | null, population: number | null, monthsCovered: number): number | null {

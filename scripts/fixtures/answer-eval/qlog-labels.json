@@ -4303,16 +4303,20 @@
    "question": "Tell me more about crime in Arlington, VA",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": "historical",
-    "about": "the whole question"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P247-open-ended",
+    "rule": "P148",
     "drafted_by": "declines-owner",
     "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
+    "notes": "Was an ask (P247-open-ended, Jeff 2026-11-23). Jeff's 2026-11-24 card: a place plus 'crime' answers P148's composite, same as DC and Pierce. Arlington, VA is read as Arlington County, Virginia (short Virginia county names with the state, 2026-11-24)."
    }
   },
   {
@@ -6760,16 +6764,20 @@
    "question": "Tell me more about crime in District of Columbia",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": "historical",
-    "about": "the whole question"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P247-open-ended",
+    "rule": "P148",
     "drafted_by": "declines-owner",
     "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 1, Option 1): 'tell me more about' is a listed chatty opener, so it asks what to show instead of taking the P182 default; same as QL-ct-32f3dc9a09 (Arlington, VA). Was P180-P182 answer."
+    "notes": "Was an ask (P247-open-ended, Jeff 2026-11-23). The question names a place and 'crime', so P148 (Jeff 2026-11-24) answers with the violent plus property composite by year; per Coordinator g449c result, 2026-11-24."
    }
   },
   {
@@ -10278,19 +10286,20 @@
    "question": "show me the trend of juvenile crime in Kansas since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "NIBRS arrests of arrestees under 18 in Kansas per year, 2020 to the latest year, titled \"Kansas Arrests of Arrestees Under 18 Per Year\", noting that arrests do not equal crimes, with the Consistent Reporting Agencies option beside it",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P285-juvenile-crime",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: \"juvenile crime\" asked with a state or place and no crime named routes to NIBRS juvenile (under 18) arrests per year, with the note \"Arrests do not equal crimes.\" and the consistent-reporting-agencies option alongside."
    }
   },
   {
@@ -14420,14 +14429,13 @@
    "question": "show me the number of crimes in Washington, DC compared to Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "violent, property or both",
-     "which Baltimore",
-     "period"
-    ],
-    "about": "violent, property or both"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
@@ -31335,19 +31343,20 @@
    "question": "crime in Portland",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -80314,10 +80323,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "rule": "P295",
+    "drafted_by": "capability-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): a table by year, Year | Murder victims | Black victims | Share (%); source Homicide Reports (P162's share column)"
    }
   },
   {
@@ -87985,11 +87994,7 @@
    "previous": "denver coloradocrime data for the last three years by month",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
+    "source": "historical",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -92238,19 +92243,20 @@
    "question": "crime in Portland",
    "previous": "murder rate in Washington state since 2010",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -95624,19 +95630,20 @@
    "question": "crime in Portland since 2010",
    "previous": "clearance rate for murder in Houston since 1960",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
