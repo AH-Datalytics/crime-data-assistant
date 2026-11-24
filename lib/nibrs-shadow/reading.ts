@@ -150,6 +150,9 @@ const STATE_ALT = Object.values(STATE_NAME_BY_CODE).sort((x, y) => y.length - x.
 const PHRASES: [RegExp, string][] = [
   // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
   [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
+  // D: "summarize current crime trends for Asheville" names no crime: it is the opener (P182 default), not Current Trends' monthly series.
+  // A crime named anywhere after it ("current crime trends for robberies in Asheville") keeps the Current Trends reading.
+  [/\bcurrent(?:ly)?\s+(crimes?\s+trends?)\b(?![^?]*\b(?:murder|homicide|robber|burglar|rape|assault|theft|larceny|arson|shooting|vehicle|violent|property)\w*)/gi, "$1"],
   // B1: "Cook County police department in Illinois" is "Cook County, Illinois" (the county's police are the county's agency).
   [new RegExp(String.raw`\b(County)\s+(?:Police\s+Department|Police\s+Dept\.?|Police)\s+(?:in|of)\s+(${STATE_ALT})(?=\s*(?:[,.?!;]|$|\d|\b(?:in|from|for|since|during|between|over|by|and|to|through|until|last|this|each|per)\b))`, "gi"), "$1, $2"],
   // B1: Orleans Parish is the City of New Orleans; the figures are the New Orleans Police Department\'s (said in the readings).
