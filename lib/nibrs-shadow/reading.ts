@@ -189,6 +189,9 @@ const PHRASES: [RegExp, string][] = [
   [/(\brank\w*\b[^.?!]*?)\bin\s+terms\s+of\b/gi, "$1by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
+  // C1 crime vocabulary: "willful murder" is the legal name of the murder the data counts; "show data on X" is "show me X".
+  [/\bwillful\s+(murders?|homicides?)\b/gi, "$1"],
+  [/^\s*show\s+(?:me\s+)?(?:the\s+)?data\s+(?:on|for|about)\s+/i, "show me "],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
   // A victim breakdown asked as its categories: "victims ... were male or female" -> "victims ... by sex". Only victims,
   // and only "were": "committed by men and women" is about offenders and is left alone (Codex increment-1 review).
