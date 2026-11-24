@@ -2190,19 +2190,15 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): a bare juvenile crime trend is the nation's juvenile arrests by year; relabeled from clarify victims or offenders."
    }
   },
   {
@@ -5906,20 +5902,16 @@
    "question": "Chico California -- 2005-2024. Violent and Property cirme totals an drates per 1,000. I want columns of Year, Population, Violent Crimes, Violent crimes rate per 100,000, property crimes, property crimes rate per 1000, total part 1 crimes, total rate per 1000.",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Rates are given per 100,000 only; asking per 100 or per 1,000 people is declined."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -14447,19 +14439,16 @@
    "question": "Is this covering just the LAPD or other nearby jurisdictions?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -23310,20 +23299,16 @@
    "question": "Show murder, population, and murder_rate for Texas from 1993 to 1997 from historical_state_national",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -23520,20 +23505,16 @@
    "question": "Violent crime counts per 100 people in Chesterfield Missouri since 1960",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Rates are given per 100,000 only; asking per 100 or per 1,000 people is declined."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -25789,20 +25770,16 @@
    "question": "list burglaries in Chicago 2019 then tell me the schema and column names behind that answer",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -26615,19 +26592,15 @@
    "question": "Nopd",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "answer",
+    "source": "historical"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "P301",
+    "drafted_by": "rules-v2",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P301 (Jeff 2026-11-24): NOPD is a place, and a bare place answers the violent and property composite; relabeled from clarify the whole question (R08)."
    }
   },
   {
@@ -26924,20 +26897,16 @@
    "question": "new orleans ori",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "An ORI lookup needs no crime or period."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -27381,20 +27350,16 @@
    "question": "nypd's ori",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "An ORI lookup needs no crime or period."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -33733,20 +33698,16 @@
    "question": "What agencies have the name Los Angeles in the historical_agency table?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R07>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -37896,20 +37857,16 @@
    "question": "Police department reporting, Orleans Parish and Jefferson Parish",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Orleans Parish is the City of New Orleans; figures are New Orleans Police Department."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -41541,20 +41498,16 @@
    "question": "Does Chicago police department undercount homicides compared to what they publish on their violence reduction dashboard or annual police reports?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The specific external reports and period needed for comparison are absent."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -43301,20 +43254,16 @@
    "question": "What agencies have the name New York in the historical_agency table?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R07>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -46768,19 +46717,15 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): a bare juvenile crime trend is the nation's juvenile arrests by year; relabeled from clarify victims or offenders."
    }
   },
   {
@@ -52134,23 +52079,19 @@
    "question": "NIBRS information of City of Miami",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P301",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): 'NIBRS information of City of Miami' keeps asking which kind of crime; relabeled from answer:nibrs to clarify."
    }
   },
   {
@@ -60502,20 +60443,19 @@
    "question": "What are incident rates in California over time?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "rule": "P301",
+    "drafted_by": "rules-v2",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): 'incident rates in California over time' keeps asking which kind of crime; relabeled from answer:nibrs to clarify."
    }
   },
   {
@@ -68147,20 +68087,16 @@
    "question": "can I see homicides rate on 1000 persons in chicago from 1950 until today",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Rates are given per 100,000 only; asking per 100 or per 1,000 people is declined."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -68824,19 +68760,16 @@
    "question": "Is this actually alameda county?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -74500,20 +74433,16 @@
    "question": "Don’t you know how many people live in Tulsa?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks whether population data is available."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -75138,20 +75067,16 @@
    "question": "Was there a problem with this request? It shows me national murder trend right now",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The missing request is needed to judge whether the displayed answer is wrong."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -76003,19 +75928,16 @@
    "question": "THis is a chart of new york city murder rates.  Interesting but not what I asked for",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {

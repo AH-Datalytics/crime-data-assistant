@@ -2470,10 +2470,26 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
+    // P301 (Jeff 2026-11-24, "clarify odd openers"): with no crime word and no Part I, only a bare place answers (an opener "show me" is fine);
+    // unread-looking words ("do for nyc", "this for denver", "Is this in X", "dallas's rate") clarify. An ambiguous place ("portland") asks which one first.
+    const bareOnly = clause0("measure").length > 0 || hasPartI || ledger0.parts.every((p) => p.clause !== 0 || (p.concept !== "filler" && p.concept !== "possessive" && p.concept !== "statistic"
+      && (p.concept !== "opener" || /^(?:show|tell|give)\s+me(?:\s+about)?$/i.test(p.text.trim()))));
+    // Ambiguous as first read and not settled by a chosen place (pins), so picking "which Portland" does not ask again.
+    const ambiguousPart = ledger0.parts.find((p) => p.clause === 0 && p.concept === "place" && String(p.value ?? "").startsWith("ambiguous:")
+      && !(pins.get(p.span[0]) ?? deps.placePins?.get(p.text.trim().toLowerCase())));
+    // The reader's "ambiguous:" name is resolved to one agency by resolvePlace (no ask), so the which-one ask is built here from the city agencies of that name.
+    const sameName = ambiguousPart ? (deps.places.byName.get(String(ambiguousPart.value).slice("ambiguous:".length).trim().toLowerCase()) ?? [])
+      .filter((a) => a.kind === "city").filter((a, i, all) => all.findIndex((b) => b.state === a.state) === i).sort((x, y) => y.population - x.population).slice(0, 6) : [];
+    const ambiguousPlace = !!ambiguousPart && sameName.length >= 2;
     // P300: a place filled by a default button ("The United States") is not a typed place; a bare fragment keeps its clarification.
     const typedPlace = clause0("place").some((p) => p.rule !== "shadow:button");
     if (onlyCrimeOverTime && ((ms.length === 0 && (hasPartI || clause0("place").length >= 1)) || (ms.length === 1 && (ms[0].value === "unspecified" || ms[0].value === "all_crime"))) && (hasPartI || typedPlace || deps.noDefaults) && grains.length <= 1 && (grains.length === 0 ? !deps.noDefaults && !/\bscore\s*cards?\b|\breport\s+cards?\b/i.test(deps.asked ?? ledger0.question) && !ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted" && !partI(p)) : grains[0] === "month" || grains[0] === "year")
-      && clause0("place").length >= 1 && !f0.comparison && !f0.combined && !f0.nibrsAsked && !f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
+      && clause0("place").length >= 1 && bareOnly && !/\bNIBRS\b|\bincidents?\b/i.test(ledger0.question) && !f0.comparison && !f0.combined && !f0.nibrsAsked &&!f0.shrAsked && !f0.consistent && !f0.people && !f0.clearance && !f0.region) {
+      if (ambiguousPlace) {
+        const cands: Candidate[] = sameName.map((a): Candidate => ({ kind: "agency", agency: a }));
+        const options: ShadowOption[] = cands.map((c) => ({ label: candidateLabel(c, cands, deps.places), continuation: fromLedger(ledger0, deps, new Map(pins).set(ambiguousPart!.span[0], c)) }));
+        return { kind: "clarify", about: `which ${sameName[0].name}`, question: ledger0.question, options };
+      }
       // No grain named (a bare place, "crime in Memphis over the last 10 years", "crime trends in X"): P181 every-year default, by year (the
       // Crime Index), said with P182 kind-of-crime default, instead of asking which kind of crime (Engine 2.0 2026-11-24, wrong clarifies).
       const noGrain = grains.length === 0;
