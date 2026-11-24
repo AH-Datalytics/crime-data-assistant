@@ -198,6 +198,11 @@ const SENT = "We don't track non-fatal shootings. You can choose firearm murders
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
 // P300: a bare fragment with no place and no crime keeps its clarification even with the defaults on (the P148 composite needs a place or Part I).
 for (const q of ["In 2025", "Yearly counts", "all", "NIBRS", "Show me by month"]) as(shadowAnswer(q, { ...deps, noDefaults: false }), "clarify");
+// P301 (Jeff 2026-11-24, "clarify odd openers"): odd openers around a place clarify; a bare place answers; NIBRS or incident wording skips the composite.
+for (const q of ["do for nyc", "i want for the District", "i want to see this for denver", "can you show me dallas's rate", "Is this in California?", "show me portland", "NIBRS information of Texas", "incident rates in Texas over time"]) assert.ok(["clarify", "decline"].includes(shadowAnswer(q, { ...deps, noDefaults: false }).kind), q);
+for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q);
+// QL-nibrs-4bce7663f2, QL-nibrs-93270941d0 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" are not given the Crime Index composite; they ask which kind of crime.
+// (Asserted below, after the stub's data is loaded.)
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
 {
   const w = as(ask("what weapon types were used in violent crimes in pennsylvania in 2025"), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
@@ -978,6 +983,8 @@ for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile 
   assert.equal(title("murders against teens in Houston in 2024 by month"), "Houston, Texas Murder Victims Aged 13 to 19 Per Month, 2024");
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas Murder Victims Under 18 Per Month, 2024");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
+  // P301 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" ask which kind of crime (QL-nibrs-4bce7663f2, QL-nibrs-93270941d0).
+  for (const q of ["NIBRS information of Texas", "What are incident rates in Texas over time?"]) assert.equal(as(ask(q), "clarify").about, "which kind of crime", q);
   // The age word plural, and after the crime (Coordinator 2026-11-16): the same meaning as the singular.
   for (const [q, want] of [
     ["teenagers arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/], ["teens arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/],
