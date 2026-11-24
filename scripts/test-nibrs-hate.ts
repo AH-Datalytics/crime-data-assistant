@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { hateBuildAt, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
+import { hateBuildAt, modernFromNote, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 // A release folder as the export writes it: the latest incident date is mid-October 2026, so the last complete month is September 2026.
@@ -90,6 +90,8 @@ assert.notEqual(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013")
 // 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
 const asian = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
 assert.ok(asian.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asian.delivered.text.join(" | "));
+assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");
+assert.match(modernFromNote({ year: 2015, biases: [{ name: "Anti-Arab", year: 2015 }, { name: "Anti-Jehovah's Witness", year: 2015 }] }), /shown from 2015, when the bias category took its current meaning/);
 assert.notEqual(ask("anti-Asian hate crimes in Texas from 2010 to 2024").kind, "hate", "an explicit range before 2013 is not answered");
 const asianNy = ask("Compare anti-Asian hate crimes in California and New York by year");
 assert.equal(asianNy.kind, "clarify", "which New York is asked, as it is for anti-Jewish");

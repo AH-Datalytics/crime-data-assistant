@@ -79,7 +79,7 @@ export type HateQuestion = {
   /** H4 (Jeff 2026-11-21): incidents with any offense at a school; incidents whose location is not confirmed are not counted (said). */
   location?: "school";
   /** The first year asked when it was before the data start (the answer says so). */ askedFrom?: string;
-  /** A bias whose current meaning begins after the data start: the every-year span starts there, and the answer says so. */ modernFrom?: { year: number; names: string[] };
+  /** A bias whose current meaning begins after the data start: the every-year span starts there, and the answer says so. */ modernFrom?: { year: number; biases: { name: string; year: number }[] };
   /** Said when the span asked reached past the last complete month. */ cutAt?: string;
   /** No range was named for a series: every year the data have is shown, and the answer says so. */ allYears?: boolean;
 };
@@ -98,6 +98,11 @@ const ORI_STATE: Record<string, string> = { NB: "NE", GM: "GU" };
  * (an agency, a state or the nation), the hate crime count (any unit: it is always incidents), optionally one named bias,
  * as a total, by year or month, or as a rolling window of months; no rate, share, change or breakdown yet.
  */
+export function modernFromNote(m: { year: number; biases: { name: string; year: number }[] }): string {
+  const same = m.biases.every((b) => b.year === m.year);
+  if (same) return `${m.biases.map((b) => b.name).join(" and ")} is shown from ${m.year}, when the bias category took its current meaning.`;
+  return `${m.biases.map((b) => `${b.name} took its current meaning in ${b.year}`).join(" and ")}, so the years are shown from ${m.year}.`;
+}
 export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: HateBuild, allYears = false): HateQuestion | { why: string } {
   if (plan.measures.length !== 1 || !/\.hate_crime$/.test(plan.measures[0].id)) return { why: "not a hate crime count" };
   const stats = plan.statistics.map((s) => s.kind);
@@ -146,7 +151,7 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   let modernFrom: HateQuestion["modernFrom"];
   if (allYears && !roll.length) {
     const late = all.filter((b) => MODERN_FROM[b.code] && Number(from.slice(0, 4)) < MODERN_FROM[b.code]);
-    if (late.length) { const year = Math.max(...late.map((b) => MODERN_FROM[b.code])); from = `${year}-01`; modernFrom = { year, names: late.map((b) => b.name) }; }
+    if (late.length) { const year = Math.max(...late.map((b) => MODERN_FROM[b.code])); from = `${year}-01`; modernFrom = { year, biases: late.map((b) => ({ name: b.name, year: MODERN_FROM[b.code] })) }; }
   }
   const grain = roll.length ? "rolling" : time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   const window = roll.length ? (roll[0] as { months: number }).months : undefined;
@@ -242,7 +247,7 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
   }
   text.push(HATE_REPORTING_CAVEAT);
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${fromY} through ${toY}.`);
-  if (hq.modernFrom) text.push(`${hq.modernFrom.names.join(" and ")} is shown from ${hq.modernFrom.year}, when the bias category took its current meaning.`);
+  if (hq.modernFrom) text.push(`${modernFromNote(hq.modernFrom)}`);
   if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(hq.askedFrom), HATE_FIRST_YEAR - 1)}.`);
   // The data's last complete month ends the answer when it is not a December: the year (or span) asked may reach past it.
   if (hq.to === build.latestMonth && build.latestDate.slice(0, 7) > hq.to) {
@@ -325,7 +330,7 @@ function answerHateBreakdown(hq: HateQuestion, build: HateBuild, execute: (sql: 
   const overlap = yearly ? `${each}, so a year's rows can add to more than its hate crimes.` : `${each}, so the rows add to more than ${fmt(total!)} hate crimes.`;
   const text = [seriesTitle(span, what, yearly ? `Year and ${name}` : name, where), HATE_REPORTING_CAVEAT, overlap];
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${hq.from.slice(0, 4)} through ${hq.to.slice(0, 4)}.`);
-  if (hq.modernFrom) text.push(`${hq.modernFrom.names.join(" and ")} is shown from ${hq.modernFrom.year}, when the bias category took its current meaning.`);
+  if (hq.modernFrom) text.push(`${modernFromNote(hq.modernFrom)}`);
   if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(hq.askedFrom), HATE_FIRST_YEAR - 1)}.`);
   text.push(HATE_SOURCE);
   const period = { from: hq.from, to: hq.to };
