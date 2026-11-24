@@ -615,8 +615,15 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
       readings.push({ kind: "phrase", from: m.trim(), to: "a Census region" });
       return " in the United States";
     });
+  // "Robbery trends in midwest cities": no ranking word, so the region's own figures answer it, said ("not only its cities").
+  if (region && !/\b(?:which|what|top|most|least|highest|lowest|largest|biggest|rank\w*|list|number\s+of)\b/i.test(text)) {
+    text = text.replace(/\bin the United States\s+cities\b/i, () => {
+      readings.push({ kind: "phrase", from: "cities", to: "the whole region, not only its cities" });
+      return "in the United States";
+    });
+  }
   let last12 = false;
-  const L12 = /\b(?:over|in|during|for)\s+the\s+(?:last|past|previous)\s+(?:12|twelve)\s+months\b/i;
+  const L12 =/\b(?:over|in|during|for)\s+the\s+(?:last|past|previous)\s+(?:12|twelve)\s+months\b/i;
   if (lastMonth && L12.test(text)) {
     const k = Number(lastMonth.slice(0, 4)) * 12 + Number(lastMonth.slice(5, 7)) - 1 - 11;
     const first = `${MONTH_NAMES[k % 12][0].toUpperCase()}${MONTH_NAMES[k % 12].slice(1)} ${Math.floor(k / 12)}`;
