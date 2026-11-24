@@ -1061,11 +1061,31 @@ function peakMeasure(question: string): string | null {
   return hit.length === 1 ? hit[0][1] : null;
 }
 
+/** Puerto Rico is declined (Jeff 2026-11-24): "That data is not available." */
+const PUERTO_RICO = /\bpuerto\s+ric(?:o|an)\b/i;
+/**
+ * "The southwest" is not a Census region (Jeff 2026-11-24: regions are the Census Northeast, Midwest, South and West): asked whether the four
+ * states or a Census region is meant, each button a complete question.
+ */
+const SOUTHWEST = /\b(?:in\s+)?the\s+south[\s-]?west(?:ern)?(?:\s+(?:region|u\.?s\.?|united\s+states|states))?(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)/i;
+function southwestAsk(question: string): ShadowOutcome | null {
+  const m = SOUTHWEST.exec(question);
+  if (!m) return null;
+  const withPlace = (place: string) => `${question.slice(0, m.index)}in ${place}${question.slice(m.index + m[0].length)}`;
+  return { kind: "clarify", about: "which southwest", question: "Do you mean Texas, Oklahoma, New Mexico and Arizona, or the Census South or West?", options: [
+    { label: "Texas, Oklahoma, New Mexico and Arizona", question: withPlace("Texas, Oklahoma, New Mexico and Arizona") },
+    { label: "The Census South", question: withPlace("the South") },
+    { label: "The Census West", question: withPlace("the West") }] };
+}
+
 const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 /** Jeff 2026-11-24: "juvenile crime" with no crime, victim or offender named is juvenile arrests (NIBRS, under 18) per year, the answer saying arrests are not crimes. */
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+/** P305: peers named by wording ("similar cities", "peer cities", "3 agencies of similar size", "to other cities"). "Other large cities" is a different ask. */
+const PEER_CITIES = /\b(?:(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+)?(?:other\s+)?(?:(?:similar(?:ly)?(?:[-\s]?sized?|\s+situated)?|comparable|peer)\s+(?:cities|city|counties|agencies|departments|places)|(?:cities|counties|agencies|departments|places)\s+of\s+(?:a\s+)?(?:similar|comparable|the\s+same)\s+size)\b|\b(?:to|versus|vs\.?|against|with|than)\s+(?:the\s+)?other\s+(?:cities|counties|agencies|departments|places)\b/i;
+const PEER_ASK = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
 function kingsCountyAsk(question: string): ShadowOutcome | null {
   const m = KINGS_COUNTY.exec(question);
   if (!m) return null;
@@ -1152,7 +1172,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       const m = first.match(/^(.*?) Murder Victims by Weapon, (.*)$/);
       const title = m ? `${m[1]} Weapon Types Used in Violent Crimes, Victims, ${m[2]}` : first;
       const rest = answers[0].delivered.text.slice(1).filter((x) => !/^A crime that falls in several/.test(x) && !/^Counts are /.test(x) && !/^Property crimes are counted by offense/.test(x));
-      const note = "Counts are victims; a victim of an offense with two weapons is counted in each weapon's row, so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
+      const note = "Counts are victims; a victim is counted once in each weapon row that applies (two firearms count once; a firearm and a knife count in both rows), so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
       const evidence = rows.flatMap((r, ri) => r.slice(1).map((v, ci) => ({ row: ri, statistic: (columns[ci + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
       const o = answers[0];
       return { ...o, delivered: { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest, note] } as typeof o.delivered };
@@ -1177,6 +1197,27 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  { const sw = southwestAsk(question); if (sw) return sw; }
+  // Puerto Rico (Jeff 2026-11-24): no data held for it, said in one plain sentence.
+  if (PUERTO_RICO.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
+  // P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
+  // A place that has to be told apart (Richmond, Baltimore) is still asked first: the peer wording rides on each of its buttons.
+  { const pm = PEER_CITIES.exec(question);
+    if (pm) {
+      const stripped = question.replace(pm[0], " ").replace(/\s+(?:and|or|vs\.?|versus|against|compar\w*(?:\s+(?:it|them))?(?:\s+(?:to|with|against))?)\s*(?=[,?.]|$)/i, "").replace(/\s{2,}/g, " ");
+      const first = shadowAnswer(stripped, depsIn);
+      const peerText = pm[0].replace(/^(?:to|versus|vs\.?|against|with|than)\s+/i, "");
+      if (first.kind === "clarify" && /^which [A-Z]/.test(first.about) && first.options.every((o) => typeof o.question === "string" || typeof o.continuation === "object")) {
+        const placeName = first.about.slice("which ".length).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return { ...first, options: first.options.map((o) => {
+          const { continuation: _c, ...rest } = o;
+          const base = typeof o.question === "string" ? o.question : stripped.replace(new RegExp(placeName, "i"), o.label);
+          return { ...rest, question: `${base} compared to ${peerText}` };
+        }) };
+      }
+      return { kind: "clarify", about: "which cities", question: PEER_ASK, options: [{ label: "Name the cities", entry: "which cities" }] };
+    }
+  }
   if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?|arsons?)\b/i.test(question) && !/\brates?\b/i.test(question)) { // a rates ask is never rewritten to arrests (P293)
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
@@ -1610,6 +1651,8 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // P38: a follow-up in gang words ("only gang-related", "what about gangs?") is declined as a first question would be,
   // with no follow-up reading offered (Codex review 19.2, 19.3).
   if (GANG.test(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
+  // Puerto Rico (Jeff 2026-11-24) is declined as a first question is, never asked what it changes.
+  if (PUERTO_RICO.test(followUp) && !pointsBack(followUp)) return { ...shadowAnswer(followUp, deps), rewrite: followUp, rewriteKind: "new" };
   // P157: a request to change a chart (a marker, a line, axes) is declined with the one chart sentence, not asked about the last question.
   if (isChartEdit(followUp)) return { ...decline("unsupported_capability", CHART_MARKER_SENTENCE), rewrite: followUp, rewriteKind: "new" } as FollowUpOutcome;
   // The same question sent again (follow-ups #5, coordinator 2026-11-21: 77 real turns) is a first question: the same answer or ask as before,
@@ -2685,6 +2728,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(ledger0.question);
     const nationDefault = deps.noDefaults ? null : withDefault(nationOption, byStateRows ? "" : "No place was named, so the United States is shown.", byStateRows ? [] : placeButtons, "place");
     if (nationDefault) return nationDefault;
+    // The nation's answer is another source's (Homicide Reports details): routed there, as with the United States named, never a place asked.
+    // Only for a question naming a race or ethnicity: every other no-place question keeps its place ask (Runner gate 2026-11-24).
+    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && /\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)) return nationOption.continuation;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.
     if (!isDeferred(nationOption) && nationOption.continuation?.kind === "decline" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "peer"))

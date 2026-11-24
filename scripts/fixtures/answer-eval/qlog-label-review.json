@@ -8514,14 +8514,12 @@
 },
 "QL-hist-4e941731ee": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-24",
+"why": "Puerto Rico (Jeff 2026-11-24): decline with \"That data is not available.\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"source": null,
+"reason": "That data is not available."
 }
 },
 "QL-hist-4eb651d666": {
@@ -26604,14 +26602,12 @@
 },
 "QL-hist-24d624e941": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-24",
+"why": "Puerto Rico (Jeff 2026-11-24): decline with \"That data is not available.\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"source": null,
+"reason": "That data is not available."
 }
 },
 "QL-hist-252a02a869": {
@@ -26793,15 +26789,12 @@
 },
 "QL-hist-4e94124d62": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-24",
+"why": "Puerto Rico (Jeff 2026-11-24): decline with \"That data is not available.\"",
 "expected": {
-"outcome": "answer",
-"source": "historical",
-"source_any": [
-"historical",
-"nibrs"
-]
+"outcome": "decline",
+"source": null,
+"reason": "That data is not available."
 }
 },
 "QL-hist-4f40674023": {
@@ -29421,14 +29414,12 @@
 },
 "QL-nibrs-f50b9896c4": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-24",
+"why": "Puerto Rico (Jeff 2026-11-24): decline with \"That data is not available.\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"source": null,
+"reason": "That data is not available."
 }
 },
 "QL-nibrs-f537a0e392": {

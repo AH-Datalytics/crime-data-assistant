@@ -198,16 +198,20 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
 for (const q of ["In 2025", "Yearly counts", "all", "NIBRS", "Show me by month"]) as(shadowAnswer(q, { ...deps, noDefaults: false }), "clarify");
 // P301 (Jeff 2026-11-24, "clarify odd openers"): odd openers around a place clarify; a bare place answers; NIBRS or incident wording skips the composite.
 for (const q of ["do for nyc", "i want for the District", "i want to see this for denver", "can you show me dallas's rate", "Is this in California?", "show me portland", "NIBRS information of Texas", "incident rates in Texas over time"]) assert.ok(["clarify", "decline"].includes(shadowAnswer(q, { ...deps, noDefaults: false }).kind), q);
-for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q);
+for (const q of ["Nopd", "show me Memphis", "Memphis crime"]) assert.notEqual(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "clarify", q); // "Nopd" = Orleans Parish composite, answer:historical (QL-hist-2fccc68bd6, ruling 2026-11-24)
 // QL-nibrs-4bce7663f2, QL-nibrs-93270941d0 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" are not given the Crime Index composite; they ask which kind of crime.
 // (Asserted below, after the stub's data is loaded.)
 // P297 (Jeff 2026-11-24): the weapon types used in violent crimes: five weapon rows (firearms merged), the four crimes across, the unit in the title.
 {
+  sqls.length = 0;
   const w = as(ask("what weapon types were used in violent crimes in pennsylvania in 2025"), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
   assert.deepEqual(w.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder", "Rape", "Robbery", "Aggravated assault"]);
   assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["Firearm (handgun, rifle, shotgun, other or unknown firearm)", "Knife or cutting instrument", "Blunt object", "Personal weapons (hands, fists, feet)", "Other or none/unknown"]);
   assert.equal(w.delivered.text[0], "Pennsylvania Weapon Types Used in Violent Crimes, Victims, 2025");
-  assert.ok(w.delivered.text.some((t) => /counted in each weapon's row/.test(t)), JSON.stringify(w.delivered.text));
+  assert.ok(w.delivered.text.some((t) => /counted once in each weapon row that applies/.test(t)), JSON.stringify(w.delivered.text));
+  // Distinct victims per weapon GROUP (Coordinator 2026-11-24, Pennsylvania double count): the unit query groups by the group, so its DISTINCT counts a victim once per group.
+  const wsql = sqls.filter((s) => /offense_weapon/.test(s) && /AS g0/.test(s));
+  assert.ok(wsql.length >= 4 && wsql.every((s) => /CASE WHEN w\.weapon IN \('11', '12', '13', '14', '15'\) THEN '11' WHEN w\.weapon = '20' THEN '20'/.test(s) && /SELECT DISTINCT/.test(s)), wsql[0]);
 }
 // QL-nibrs-58d3c67ab3 (ruling B, P299): "Have carjackings decreased ... past two years" is a yes or no with the counts, and the by-year table stays.
 {
@@ -228,6 +232,26 @@ for (const q of ["Compare offender demographics for robbery by sex nationally in
   const o = as(ask(q), "answer");
   assert.deepEqual(o.plan.groupings.map((g) => g.dimension), ["offender.sex"], q);
   assert.equal(o.plan.measures[0].id, "offenders.robbery", q);
+}
+// P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
+const PEER_ASK_TEXT = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
+{
+  for (const q of ["Compare trend in Iowa City Iowa aggravated assault rate to similarly situated cities",
+    "how does baltimore's violent crime rate compare to the national rate, or to other cities?",
+    "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
+    "Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size",
+    "murders in Denver compared to other cities in 2024", "murders in Denver versus peer cities in 2024"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" && o.about === "which cities" && o.question === PEER_ASK_TEXT, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    assert.deepEqual(o.options.map((x) => [x.label, x.entry]), [["Name the cities", "which cities"]], q); // the app never offers a peer group of its own
+  }
+  // A place that must be told apart is asked first (the Richmond lesson), and each button keeps the peer wording so the peers are still asked after it.
+  const rich = as(ask("MURDERS IN RICHMOND IN MAY 2025 compared to similar cities"), "clarify"), plain = as(ask("MURDERS IN RICHMOND IN MAY 2025"), "clarify");
+  assert.equal(rich.about, plain.about);
+  assert.ok(rich.options.every((o) => !o.question || /compared to similar cities/.test(o.question)), JSON.stringify(rich.options.map((o) => o.question)));
+  // Other comparisons and sets are untouched: no peer ask.
+  for (const q of ["los angeles homicide rate in 2025 vs. other large cities", "Compare assault rates in Seattle vs other major cities", "murders in Denver and Portland in 2024"])
+    assert.notEqual((ask(q) as { about?: string }).about, "which cities", q);
 }
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
@@ -982,7 +1006,7 @@ for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile 
   assert.equal(title("murders against juveniles in Houston in 2024 by month"), "Houston, Texas Murder Victims Under 18 Per Month, 2024");
   assert.equal(as(ask("teen offenders in Ohio in 2024"), "clarify").about, "which kind of crime");
   // P301 (Jeff 2026-11-24): "NIBRS information of X" and "incident rates in X" ask which kind of crime (QL-nibrs-4bce7663f2, QL-nibrs-93270941d0).
-  for (const q of ["NIBRS information of Texas", "What are incident rates in Texas over time?"]) assert.equal(as(ask(q), "clarify").about, "which kind of crime", q);
+  for (const q of ["NIBRS information of Texas", "What are incident rates in Texas over time?", "What are incident rates in California over time?"]) assert.equal(as(ask(q), "clarify").about, "which kind of crime", q);
   // The age word plural, and after the crime (Coordinator 2026-11-16): the same meaning as the singular.
   for (const [q, want] of [
     ["teenagers arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/], ["teens arrested for robbery in Ohio in 2024", /robbery arrests of arrestees aged 13 to 19 in 2024/],
@@ -1132,20 +1156,20 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     // The reader's rewritten text is never read again: "Midwest" would become the United States (Codex 01.1).
     assert.equal(fillerRewrite("crime in the Midwest scorecard in 2024"), null);
     assert.equal(ask("crime in the Midwest scorecard in 2024").kind, "decline");
-    // Peers (Jeff 2026-11-21: no partial answers): never the place alone; the reader's decline, which asks for the agencies to compare.
+    // Peers (Jeff 2026-11-21: no partial answers; P305, Jeff 2026-11-24): never the place alone; the cities to compare with are asked.
     for (const q of ["Crime trends in Philadelphia compared to similar cities", "i want to know how crime in nashville compares to peer cities"]) {
       const o = ask(q);
-      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+      assert.ok(o.kind === "clarify" && o.about === "which cities" && o.question === PEER_ASK_TEXT, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
     }
     for (const q of ["Do you have any data for NYC?", "Do we have data for the United States?", "does Olathe KS report NIBRS data?"]) assert.ok(covers(q), q);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.
     // Both crime and place missing: the place is asked first (Jeff 2026-11-14); a place named asks the crime.
     assert.equal((ask("national crime scorecard") as { about?: string }).about, "which kind of crime");
-    // Peers with no place named are declined for the peers, never asked for a place first (P187, no partial answers).
+    // Peers with no place named ask for the cities to compare with, never for a place first (P187, no partial answers; P305).
     for (const q of ["Crime trends compared to similar cities", "murders compared to peer cities"]) {
       const o = ask(q);
-      assert.ok(o.kind === "decline" && /Name the agencies to compare instead/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+      assert.ok(o.kind === "clarify" && o.about === "which cities" && o.question === PEER_ASK_TEXT, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
     }
     // The shootings ask never leaves out an average (Codex 01.2).
     assert.notEqual((ask("shootings in Chicago in 2025 average") as { about?: string }).about, SENT);
@@ -1156,8 +1180,8 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
       const o = ask(q);
       assert.ok(o.kind === "clarify" && o.about === "which years" && o.options.length === 1 && !!o.options[0].entry, q);
     }
-    // A named crime with peers keeps its decline (the ask is only for the crime type).
-    assert.notEqual(ask("robberies in Philadelphia compared to similar cities in 2024").kind, "clarify");
+    // A named crime with peers asks for the cities to compare with (P305), not for the crime type.
+    assert.equal((ask("robberies in Philadelphia compared to similar cities in 2024") as { about?: string }).about, "which cities");
     // Rankings PR A (coordinator 2026-11-11; job S4): a set never turns a capability decline into a place ask, and the
     // reader's unread words alone don't stop the place being asked as before.
     assert.equal(ask("Chart domestic violence calls over time in the four largest cities in the country").kind, "decline");
@@ -2313,7 +2337,11 @@ assert.deepEqual(txEvery.delivered.table.columns.map((c) => c.header), ["Carjack
 // The fixed set named with its whole span (Jeff 2026-11-01), never a bare "every month".
 assert.match(txEvery.delivered.text[0], /counting only the 3 Consistent Reporting Agencies that reported every month from January 2024 through December 2024\.$/);
 assert.deepEqual(first(ask("Carjackings in Texas in 2024, only agencies that reported every month")), [252], "the button's question, typed");
-assert.deepEqual(first(ask("Carjacking rate in Texas in 2024")), [6.7], "307 per 4,570,000 residents of the agencies counted");
+assert.deepEqual(first(ask("Carjacking rate in Texas in 2024")), [5.4], "P303: the rate leaves out SMALLVILLE (FBI population 0), so its crimes leave the numerator as well as the denominator");
+{
+  const txRate = as(ask("Carjacking rate in Texas in 2024"), "answer");
+  assert.ok(txRate.delivered.text.some((t) => /^The rate leaves out 1 agency with no FBI population\. It uses the combined population of the 3 agencies counted: 4,570,000/.test(t)), txRate.delivered.text.join(" / "));
+}
 assert.equal(as(ask("Robberies in Texas in 2024 according to NIBRS"), "answer").plan.source, "nibrs", "P01: the source asked for in words");
 // Scoring increment 5: the historical file's values with their column and row; a route verifies routing only; a state
 // sum's view, rows and disclaimer figures.
@@ -2355,7 +2383,11 @@ assert.deepEqual([first(txConflict), txConflict.stateSum!.years[0].conflicts, tx
 assert.ok(!txConflict.delivered.text.some((t) => /disagree/.test(t)), txConflict.delivered.text.join(" / "));
 CONFLICT = null;
 // 5. A missing population is never 0: no rate, and the share covered is a lower bound.
-assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /^No rate is given for North Carolina in 2024, because 1 of the agencies counted have no FBI population/);
+{
+  const ncRate = as(ask("Shoplifting rate in North Carolina in 2024"), "answer");
+  assert.ok(!/^No rate is given/.test(ncRate.delivered.text[0]), "P303: the rate is given over the agency with a population");
+  assert.ok(ncRate.delivered.text.some((t) => /^The rate leaves out 1 agency with no FBI population\. It uses the combined population of the 1 agency counted: 300,000/.test(t)), ncRate.delivered.text.join(" / "));
+}
 const nc = as(ask("Shoplifting in North Carolina in 2024, with the number of agencies reporting"), "answer");
 assert.match(String(nc.delivered.table.rows[0][2]), /^≥[\d.]+%$/, "a lower bound is marked in its cell");
 assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", FBI_MASTER_FILES, "Source: FBI NIBRS."]);
@@ -2701,9 +2733,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(det.kind !== "clarify" || !/could not be placed/.test(det.about), "never 'could not be placed' for a question of its own");
   // PR1 (follow-up failures, Jeff 2026-11-19): a turn the rules find no edit in, that points back at nothing, is a question of its own
   // ("Puerto Rico Crime" asked what it changes); when its first-turn result would be a decline, the question back stays.
-  const own = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime", deps);
+  // Puerto Rico itself is now declined as a first question (Jeff 2026-11-24), so the shape is checked with another place.
+  const own = shadowFollowUp("robberies in Memphis in 2024", "Mars Crime", deps);
   assert.equal(own.rewriteKind, "new");
-  assert.deepEqual({ ...own, rewrite: undefined, rewriteKind: undefined }, { ...ask("Puerto Rico Crime"), rewrite: undefined, rewriteKind: undefined });
+  const pr = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime", deps);
+  assert.equal(pr.rewriteKind, "new");
+  assert.equal((pr as any).explanation, "That data is not available.");
   const kept = shadowFollowUp("conviction rates for murders in Houston", "how many offenders were sentenced to prison", deps);
   assert.equal(kept.rewriteKind, "ask", "a first-turn decline keeps the question about the last turn");
   const pointing = shadowFollowUp("robberies in Memphis in 2024", "Puerto Rico Crime again", deps);
@@ -3889,4 +3924,33 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const [q, title] of Object.entries(want)) {
     const o = shadowAnswer(q, live) as any;
     assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
+// Jeff 2026-11-24: Puerto Rico is declined; "the southwest" is not a Census region, so it asks which is meant; the Census regions answer as before.
+{ const live = { ...deps, execute: () => [], noDefaults: false } as unknown as ShadowDeps;
+  for (const q of ["Puerto Rico Crime", "murders in Puerto Rico in 2024", "How many arrests by Puerto Rico are Taken Into Custody", "I'd like to know how many arrests for Puerto Rico resulted in Taken Into Custody data element"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind === "decline" && o.explanation === "That data is not available.", `${q}: ${JSON.stringify(o).slice(0, 300)}`); }
+  const sw = shadowAnswer("murders in the southwest in 2024", live) as any;
+  assert.equal(sw.kind, "clarify");
+  assert.equal(sw.question, "Do you mean Texas, Oklahoma, New Mexico and Arizona, or the Census South or West?");
+  assert.deepEqual(sw.options.map((o: any) => o.question), ["murders in Texas, Oklahoma, New Mexico and Arizona in 2024", "murders in the South in 2024", "murders in the West in 2024"]);
+  for (const q of ["murders in the northeast in 2024", "crime in the south", "murders in Southwest Harbor, Maine in 2024"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.about !== "which southwest", `${q}: ${JSON.stringify(o).slice(0, 200)}`); } }
+// QL-ct-ad0277beb7: "people murdered ... that are of Hispanic or Latino descent" is Hispanic murder victims (one ethnicity, never "or" choices); with no
+// place named the nation's answer is Homicide Reports', routed, never a "which place" ask.
+{ const live = { ...deps, execute: () => [], noDefaults: false } as unknown as ShadowDeps;
+  for (const q of ["How many people were murdered in the last five years that are of Hispanic or Latino descent",
+    "How many people were murdered in the last five years in the United States that are of Hispanic descent",
+    "How many Hispanic people were murdered in the last five years", "How many people were murdered in the last five years that are Black",
+    "How many people were murdered in the last five years that are Hispanic in Texas", "How many Hispanic or Latino people were murdered in Texas in 2024"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 300)}`); }
+  // Bare places and fragments with no race named keep their ask (the Runner's gate ids).
+  for (const q of ["do for nyc", "i want for the District", "Nopd", "i want to see this for denver", "can you show me dallas's rate", "Is this in California?", "show me portland", "Show me juvenile crime trends"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind !== "route", `${q}: ${JSON.stringify(o).slice(0, 200)}`); }
+  // Two different groups are never collapsed to the first (Codex review): "Black or Hispanic" keeps both words.
+  for (const q of ["How many Black or Hispanic people were murdered in Texas in 2024", "How many people were murdered in Texas in 2024 who were Black and Hispanic"]) {
+    const t = readQuestion(q, 2026, "2026-09").text;
+    assert.ok(/hispanic/i.test(t) && /black/i.test(t), `${q}: ${t.slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
