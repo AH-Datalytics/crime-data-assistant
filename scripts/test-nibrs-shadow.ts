@@ -740,7 +740,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       assert.ok(o.delivered.table.columns.some((c) => c.header === "Victim's race" || c.header === "Offender's race"), `${q}: ${JSON.stringify(o.delivered.table.columns)}`);
       assert.ok(["White", "Black"].includes(String(o.delivered.table.rows[0][0])) && !o.delivered.text.some((t) => /No years were given/.test(t)), `${q}: ${JSON.stringify(o.delivered.table.rows[0])}`);
     }
-    // P290 (Jeff 2026-11-24): the share of murder victims of one race is a table by year: all victims, that race's victims, the share.
+    // P295 (Jeff 2026-11-24): the share of murder victims of one race is a table by year: all victims, that race's victims, the share.
     for (const q of ["share of murders where victim was black, 2015 - 2025, in Washington, D.C.", "What percentage of murder victims in Washington, D.C. were black from 2015 to 2025?"]) {
       const o = as(shadowAnswer(q, ddeps), "shr");
       assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Year", "Murder victims", "Black victims", "Share (%)"], `${q}: ${JSON.stringify(o.delivered.table.columns)}`);
@@ -888,6 +888,18 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.ok(/^Ohio had 120 robbery victims under 18 in 2024/.test(title("How many juvenile robbery victims in Ohio in 2024?")));
   assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas Robbery Offenses With an Offender Under 18 Per Month, 2024");
   assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas Robbery Offenses Per Month, 2024", "no age: property victims stay counted by offense (P11)");
+}
+// Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
+{
+  const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;
+  assert.equal(o.kind, "answer");
+  assert.equal(o.delivered.text[0], "United States Violent Crime Arrests by Offense Type Per Year, Jan 2018-Sep 2026");
+  const t = o.delivered.table;
+  assert.deepEqual(t.rows.map((r: unknown[]) => r[0]), ["Murder", "Rape", "Robbery", "Aggravated assault"]);
+  assert.equal(t.columns[0].header, "Offense type");
+  assert.equal(t.columns[1].header, "2018");
+  assert.equal(t.columns.length, t.rows[0].length);
+  assert.ok(!o.delivered.text.some((x: string) => /^United States Murder Arrests/.test(x)), "one title, not one per crime");
 }
 // P120 on every side (Jeff 2026-11-16, Coordinator): teen and teenage are 13 to 19 for victims, offenders and arrestees, the range said;
 // juvenile, minor, child and kid stay under 18 (P107).

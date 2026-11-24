@@ -43594,7 +43594,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "arrests for murder, rape, robbery and aggravated assault, offense type down the side, a column for each year since 2018; title United States Violent Crime Arrests by Offense Type Per Year",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -43602,10 +43602,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "violent-arrests-by-offense-type",
+    "drafted_by": "capability-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "violent crime = murder, rape, robbery, aggravated assault; usual reported-agencies notes"
    }
   },
   {
@@ -80314,7 +80314,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "P290",
+    "rule": "P295",
     "drafted_by": "capability-2026-11-24",
     "reviewed_by": "jeff-2026-11-24",
     "notes": "Jeff 2026-11-24 (through the coordinator): a table by year, Year | Murder victims | Black victims | Share (%); source Homicide Reports (P162's share column)"

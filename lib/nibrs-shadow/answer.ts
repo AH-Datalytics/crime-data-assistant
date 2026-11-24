@@ -1053,7 +1053,7 @@ function kingsCountyAsk(question: string): ShadowOutcome | null {
   const withState = (state: string) => question.slice(0, m.index) + m[0] + ", " + state + question.slice(m.index + m[0].length);
   return { kind: "clarify", about: "which Kings County", question: "Which Kings County: New York or California?", options: [{ label: "Kings County, New York", question: withState("New York") }, { label: "Kings County, California", question: withState("California") }] };
 }
-/** P290 (Jeff 2026-11-24, QL-shr-bcdb4c61db): "share of murders where the victim was black" is a table by year: all the murder victims, those of that race, and the share. */
+/** P295 (Jeff 2026-11-24, QL-shr-bcdb4c61db): "share of murders where the victim was black" is a table by year: all the murder victims, those of that race, and the share. */
 const RACE_WORDS = String.raw`(black|white|asian|african[-\s]american|american\s+indian|native\s+american|alaska\s+native|pacific\s+islander|native\s+hawaiian)`;
 const SHARE_OF_RACE = new RegExp(String.raw`\b(?:what\s+|how\s+much\s+)?(?:share|percent(?:age)?|proportion)\s+of\s+(murder|homicide)s?(?:\s+where\s+(?:the\s+)?victims?\s+(?:was|were|is|are)\s+|\s+victims(?:\s+in\s+([a-z.' ,-]+?))?\s+(?:was|were|are|is)\s+)${RACE_WORDS}\b`, "i");
 const RACE_LABEL = (w: string) => /black|african/i.test(w) ? "Black" : /^white/i.test(w) ? "White" : /asian/i.test(w) ? "Asian" : /hawaiian|pacific/i.test(w) ? "Native Hawaiian or Pacific Islander" : "American Indian or Alaska Native";
@@ -1081,7 +1081,26 @@ function shareOfRaceByYear(question: string, depsIn: ShadowDeps): ShadowOutcome 
   o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...o.delivered.text.slice(1)] } as typeof o.delivered;
   return o;
 }
+/** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
+const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  if (VIOLENT_ARRESTS_BY_TYPE.test(question)) {
+    const o = shadowAnswer(question.replace(VIOLENT_ARRESTS_BY_TYPE, "arrests for murder, rape, robbery and aggravated assault by year"), depsIn);
+    const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "answer" && t && t.columns.length === 5 && t.rows.length > 1) {
+      const names = ["Murder", "Rape", "Robbery", "Aggravated assault"];
+      const stat = t.columns[1].binding;
+      const columns = [{ binding: { kind: "grouping" as const, dimension: "offense.category" }, header: "Offense type" }, ...t.rows.map((r) => ({ binding: stat, header: String(r[0]) }))];
+      const rows = names.map((n, i) => [n, ...t.rows.map((r) => r[i + 1])]);
+      const first = o.delivered.text[0];
+      const m = first.match(/^(.*?) Murder Arrests Per Year, (.*)$/);
+      const rest = o.delivered.text.filter((x) => !/^.* (?:Murder|Rape|Robbery|Aggravated Assault) Arrests Per Year, /.test(x));
+      const title = m ? `${m[1]} Violent Crime Arrests by Offense Type Per Year, ${m[2]}` : first;
+      const evidence = rows.flatMap((r, ri) => r.slice(1).map((v) => ({ row: ri, statistic: (t.columns[ri + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+      o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest] } as typeof o.delivered;
+    }
+    return o;
+  }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
