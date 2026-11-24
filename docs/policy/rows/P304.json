@@ -1,0 +1,12 @@
+{
+  "id": "P304",
+  "topic": "Years and periods",
+  "decision needed": "None: decided by Jeff",
+  "situation (example wording)": "\"Murders in Richmond on May 24, 2025\": one calendar day named with its month and year.",
+  "what the app does today": "Before this: the reader declined (\"I didn't understand 'on May 24,'\"), because the data is monthly.",
+  "proposed behavior": "Answer for that month (May 2025) and say so in the answer text: \"A single day is not available, so the month is shown.\" Same pattern as \"per day\" (P291). Only one named day is read; two days in one question are left to the reader.",
+  "exact default or choices offered": "The month containing the day, with the note.",
+  "why": "Jeff 2026-11-24 (typed card, relayed by the coordinator): when a question names one calendar day, answer for that month and say a single day is not available.",
+  "status": "Decided 2026-11-24 (Jeff, approved)",
+  "test cases": "scripts/test-nibrs-shadow.ts: Shoplifting in Detroit on May 14, 2023 (and 14TH and day-first forms) gives May 2023's rows with the note; a month, a range of months and two days are untouched."
+}
