@@ -224,3 +224,19 @@ assert.equal(read("Murders in El Paso, Texas tecas over time").text, "Murders in
 assert.equal(fuzzyWord("ctime", "ctime in Ohio"), "crime");
 assert.equal(fuzzyWord("tecas", "murders in Ohio"), null, "a state is a target only when the question names it");
 for (const w of ["sample", "lark", "countywy", "tacoma"]) assert.equal(fuzzyWord(w, "x in Ohio"), null, w);
+
+// B1 place ids: a county police department with its state after "in" is "<County>, <State>"; Orleans Parish is New Orleans.
+assert.equal(rq("Murders reported by the Cook County police department in Illinois in 2022").text, "Murders reported by the Cook County, Illinois in 2022");
+assert.equal(rq("Murder rate for Fairfax County Police Department in Virginia from 2021 to 2025").text, "Murder rate for Fairfax County, Virginia from 2021 to 2025");
+assert.equal(rq("murders in Orleans Parish, Louisiana in 2022").text, "murders in New Orleans in 2022");
+assert.ok(rq("murders in Orleans Parish in 2022").readings.some((r) => r.from === "Orleans Parish" && r.to === "New Orleans"), "the reading says it");
+assert.equal(rq("murders in Orleans County, NY in 2022").text.includes("New Orleans"), false, "Orleans County stays itself");
+assert.equal(rq("murders reported by Fairfax County Police Department in Virginia Beach in 2022").text.includes("Fairfax County, Virginia"), false, "a longer place name is not a state");
+assert.equal(rq("King County Police Department in Washington DC").text.includes("King County, Washington"), false);
+assert.equal(rq("murders in Orleans Parish, Louisiana State in 2022").text, "murders in New Orleans in 2022");
+
+// C1 crime vocabulary: "willful murder" is the murder the data counts, and "show data on" is "show me" (bad-decline id QL-nibrs-7f3cf299f8; QL-nibrs-6e0f23927b says "armed", which waits on the robbery-by-weapon decision).
+assert.equal(rq("show me willful murders in salem oregon since 1991").text, "show me murders in salem oregon since 1991");
+assert.equal(rq("willful homicides in Salem Oregon in 2024").text, "murders in Salem Oregon in 2024", "willful homicide is murder (09A), never negligent manslaughter (Codex 447 P1)");
+assert.equal(rq("show data on robberies in new orleans").text, "show me robberies in new orleans");
+assert.equal(rq("the data on robberies in new orleans").text, "the data on robberies in new orleans", "only a leading 'show data on' is the opener");
