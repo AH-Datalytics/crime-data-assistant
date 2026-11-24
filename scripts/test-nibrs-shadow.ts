@@ -2313,7 +2313,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.notEqual(ask("Female murder offenders in Ohio in 2022").kind, "route");
   // Reader cluster 2: a change over a span ("changed since 2020", "over the past 5 years") is the series over it;
   // "trended"/"trending" read as "trend"; two named years stay a comparison.
-  for (const q of ["How has robbery changed in Denver since 2020?", "How have robberies in Denver trended since 2020?", "Is the Denver robbery rate trending up over the past 5 years?"]) {
+  for (const q of ["How has robbery changed in Denver since 2020?", "How have robberies in Denver trended since 2020?", "Is the Denver robbery rate trending up over the past 5 years?", "How has robbery changed in Denver?"]) {
     const o = ask(q);
     assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell|two named years|two years/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
   }
