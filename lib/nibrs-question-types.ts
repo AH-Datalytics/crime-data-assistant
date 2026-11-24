@@ -147,7 +147,7 @@ export function periodOf(p: Part): NPeriod | null {
   let m: RegExpExecArray | null;
   if ((m = /^year:(\d{4})$/.exec(v))) return { form: "year", year: Number(m[1]) };
   if ((m = /^(?:range|between):(\d{4}):(\d{4})$/.exec(v))) { const a = Number(m[1]); const b = Number(m[2]); return { form: "range", from: Math.min(a, b), to: Math.max(a, b) }; }
-  if ((m = /^years:(\d{4}):(\d{4})$/.exec(v))) return { form: "years", list: [Number(m[1]), Number(m[2])].sort() };
+  if ((m = /^years:(\d{4}(?::\d{4})+)$/.exec(v))) return { form: "years", list: [...new Set(m[1].split(":").map(Number))].sort((a, b) => a - b) };
   if ((m = /^month:(\d{4})-(\d{2})$/.exec(v))) return { form: "month", year: Number(m[1]), month: Number(m[2]) };
   if ((m = /^monthrange:(\d{4})-(\d{2}):(\d{4})-(\d{2})$/.exec(v))) return { form: "monthrange", from: [Number(m[1]), Number(m[2])], to: [Number(m[3]), Number(m[4])] };
   if ((m = /^since:(\d{4})$/.exec(v))) return { form: "since", from: Number(m[1]) };

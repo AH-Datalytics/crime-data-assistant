@@ -345,6 +345,8 @@ const RULES: Rule[] = [
   // ---- periods (the accepted Historical forms) ----
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `years:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(?:for|in)\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
+  // Three or more years named one by one ("in 2020, 2021, and 2022"): the same separate-years period, every year kept.
+  { concept: "period", value: (m) => `years:${m[0].match(/(?:19|20)\d{2}/g)!.join(":")}`, pattern: R(String.raw`\b(?:for|in)\s+${YEAR}(?:\s*,\s*${YEAR})+\s*,?\s*(?:and|or)\s+${YEAR}\b`) },
   { concept: "period", value: (m) => `between:${m[1]}:${m[2]}`, pattern: R(String.raw`\bbetween\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
   // Reader cluster 3 (2026-11-05): a year to the latest the source has, in the query log's words ("2018 to present",
   // "from 2014 to today", "to the most recent data", "through the most recent month", "to most current"): since that year.

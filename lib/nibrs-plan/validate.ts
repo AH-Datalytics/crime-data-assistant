@@ -329,7 +329,7 @@ function at(plan: NibrsPlan, path: string): unknown {
 const PERIOD_FORMS: [RegExp, (m: RegExpExecArray) => Period][] = [
   [/^year:(\d{4})$/, (m) => ({ kind: "absolute", from: `${m[1]}-01`, to: `${m[1]}-12` })],
   [/^(?:range|between):(\d{4}):(\d{4})$/, (m) => ({ kind: "absolute", from: `${Math.min(+m[1], +m[2])}-01`, to: `${Math.max(+m[1], +m[2])}-12` })],
-  [/^years:(\d{4}):(\d{4})$/, (m) => ({ kind: "years", years: [+m[1], +m[2]].sort((a, b) => a - b) })],
+  [/^years:(\d{4}(?::\d{4})+)$/, (m) => ({ kind: "years", years: [...new Set(m[1].split(":").map(Number))].sort((a, b) => a - b) })],
   [/^month:(\d{4}-\d{2})$/, (m) => ({ kind: "absolute", from: m[1], to: m[1] })],
   [/^monthrange:(\d{4}-\d{2}):(\d{4}-\d{2})$/, (m) => ({ kind: "absolute", from: m[1], to: m[2] })],
   [/^since:(\d{4})$/, (m) => ({ kind: "since", from: `${m[1]}-01` })],
