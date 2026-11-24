@@ -1193,8 +1193,9 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
     if (days.length === 1) {
       const d = days[0]; const month = d[1] ?? d[3]; const year = d[2] ?? d[4];
       const o = shadowAnswer(question.replace(d[0], `in ${month} ${year}`), depsIn);
-      const dl = (o as { delivered?: { text: string[] } }).delivered; if (dl && o.kind !== "decline" && o.kind !== "clarify") dl.text.splice(1, 0, "A single day is not available, so the month is shown.");
-      return o;
+      // Only a monthly answer says the month is shown; any other outcome (coverage by year, a decline, a question back) goes on as asked.
+      const dl = (o as { delivered?: { text: string[] } }).delivered;
+      if (o.kind === "answer" && dl) { dl.text.splice(1, 0, "A single day is not available, so the month is shown."); return o; }
     }
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
