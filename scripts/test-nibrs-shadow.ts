@@ -232,7 +232,7 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
     assert.equal(ask(q).kind, "decline", q);
   // Coordinator 2026-11-24: drug offenses in a state or the nation are one composite count (35A + 35B), alone, by year, and for several states.
-  for (const q of ["drug offenses in Texas in 2024", "Show me drug offense trends in Ohio from 2020 to 2024", "Compare drug offenses in Ohio and Pennsylvania since 2020"]) {
+  for (const q of ["drug offenses in Texas in 2024", "Show me drug offense trends in Ohio from 2020 to 2024", "Compare drug offenses in Ohio and Pennsylvania since 2020", "drug possession in Texas in 2024"]) {
     const dr = as(ask(q), "answer") as unknown as { plan: { measures: { id: string }[] } };
     assert.deepEqual(dr.plan.measures.map((m) => m.id), ["offenses.drug_crimes"], q);
   }
