@@ -1721,14 +1721,14 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
     if (places.length < 2 || places.length > 6) return null;
     const hqs: HateQuestion[] = [];
     for (const p of places) {
-      const one = hateQuestionOf({ ...plan, geography: { ...plan.geography, places: [p] }, groupings: plan.groupings.filter((g) => g.dimension !== "geo.place") }, period, deps.hate);
+      const one = hateQuestionOf({ ...plan, geography: { ...plan.geography, places: [p] }, groupings: plan.groupings.filter((g) => g.dimension !== "geo.place") }, period, deps.hate, allYears);
       if ("why" in one) return null;
       hqs.push(one);
     }
     const multi = combineHatePlaces(hqs, deps.hate, deps.execute);
     return multi.kind === "hate" ? multi : decline("outside_release_coverage", multi.explanation);
   }
-  const hq0 = hateQuestionOf(plan, period, deps.hate);
+  const hq0 = hateQuestionOf(plan, period, deps.hate, allYears);
   // Several biases: the columns in the order the question names them (the plan's filters are in code order).
   const at = (code: string) => ledger0.parts.find((p) => p.clause === 0 && p.concept === "filter" && p.value === `bias:${code}`)?.span?.[0] ?? Infinity;
   const hq = !("why" in hq0) && hq0.biases ? { ...hq0, biases: [...hq0.biases].sort((a, b) => at(a.code) - at(b.code)) } : hq0;
