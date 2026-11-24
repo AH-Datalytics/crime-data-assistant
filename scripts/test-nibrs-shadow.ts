@@ -669,7 +669,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
       return /AS k0/.test(sql) ? [["12", 6], ["11", 2], ["20", 2]] : [[10]];
     };
     const gdeps = { ...sdeps, execute: gstub } as ShadowDeps;
-    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "what weapons were used in murders in Houston in 2023"]) {
+    for (const q of ["what share of murders in Houston in 2023 involved a firearm", "What percentage of murders in Houston in 2023 were committed with a gun?", "Share of Murders committed with a firearm in Houston in 2023", "what weapons were used in murders in Houston in 2023"]) {
       const o = as(shadowAnswer(q, gdeps), "shr");
       assert.deepEqual(o.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder victims", "Share (%)"], q);
       assert.ok(/^Houston, Texas .* by Weapon, 2023$/.test(o.delivered.text[0]), o.delivered.text[0]);
