@@ -3258,10 +3258,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       plan.statistics = [{ kind: "count", as: plan.statistics[0].as, measure: m0.as }, { kind: "share", as: "share_of_period", measure: m0.as, within: plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension) }];
     }
   }
-  // P82: domestic violence is built for one agency first (a state or national count waits for its measured time).
-  // NIBRS_DV_WIDE=on lets the runner time the raw statement for a state or the nation (never set in production).
-  if (plan.measures.some((m) => /\.domestic_violence$/.test(m.id)) && process.env.NIBRS_DV_WIDE !== "on" && !(plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency"))
-    return decline("unsupported_capability", "This isn't available: domestic violence for a state, the nation or several places. Ask for one city or agency.");
+  // P82: domestic violence has its own definition (unchanged here); NIBRS_DV_WIDE=on lets the runner time several places.
+  // Coordinator 2026-11-24: the state/national gate is removed (the definition is unchanged); several agencies or places still decline.
+  if (plan.measures.some((m) => /\.domestic_violence$/.test(m.id)) && !plan.geography.places.every((p) => p.kind === "agency" || p.kind === "state" || p.kind === "national") && process.env.NIBRS_DV_WIDE !== "on")
+    return decline("unsupported_capability", "This isn't available: domestic violence for several places. Ask for one city, agency, state or the nation.");
   // Places (increment 4): named agencies, separate or combined, and a state's city agencies for a ranking. State and
   // national totals are increment 5.
   const citySet = (p: Place) => p.kind === "agency_set" && p.within.kind === "state"
@@ -3320,7 +3320,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const drugPart = clause0("measure").find((p) => p.value === "drug_possession" && !/possess/i.test(p.text));
   // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
   if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "This isn't available: drug crimes (drug and narcotic offenses plus drug equipment violations) beside other crimes.");
-  if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+  const drugStatePlace = plan.geography.places[0].kind === "state" || plan.geography.places[0].kind === "national";
+  if (drugPart && drugStatePlace && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+    // Coordinator 2026-11-24: a state or national sum counts the one composite measure (35A + 35B), so it is a single column.
+    plan.measures[0] = { ...plan.measures[0], id: "offenses.drug_crimes" };
+    combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  } else if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
