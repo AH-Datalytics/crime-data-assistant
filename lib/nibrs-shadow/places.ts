@@ -243,8 +243,12 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
   }
   // Cause A (Coordinator 2026-11-24): a city read with its state ("Los Angeles, CA") is the city's principal police agency (P16); the county's sheriff of the
   // same state is not asked about. Only a city of exactly that name in that state; a county read as one, and a name without a state, are unchanged.
-  if (m[1] === "city" && stateNamed && !countyNamed) {
-    const own = firsts.find((a) => a.kind === "city" && base(a.name) === base(name) && a.population >= ASK_POPULATION);
+  // An "ambiguous:" ledger value carries no state, so the state is read from the words ("San Diego, California").
+  const textState = m[4] ? (() => { const t = /^(?:the )?(?:city of )?(.+?),\s*([A-Za-z. ]+)$/i.exec(text.trim()); if (!t || base(t[1]) !== base(name)) return null;
+    return stateCodeOf(t[2].trim()) ?? (/^[A-Z]{2}$/.test(t[2].trim()) ? t[2].trim() : null); })() : null;
+  const cityState = m[1] === "city" ? stateNamed : textState;
+  if (cityState && !countyNamed) {
+    const own = firsts.find((a) => a.kind === "city" && a.state === cityState && base(a.name) === base(name) && a.population >= ASK_POPULATION);
     if (own) return asPlace(own);
   }
   // A bare state name beside only small same-name towns ("California" is California, PA: 4,981 people; "Kansas", "Nevada",
