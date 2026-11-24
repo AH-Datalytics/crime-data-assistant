@@ -2847,6 +2847,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // 2026-11-24: a NIBRS-only figure no other source holds is answered from the first year, the earlier years named.
   const clip = as(ask("Shoplifting in Memphis per year from 2012 to 2020"), "answer");
   assert.equal(clip.delivered.text[1], "These figures come from NIBRS, which starts in 2017, so 2012 to 2016 aren't included.", JSON.stringify(clip.delivered.text));
+  // 2026-11-24 (labels R14, DUI route): a national DUI trend to "today" is by year from 2017, the earlier years named.
+  for (const q of ["Show me the national trend in DWI/DUI from 2000 to today", "national trend in DWI/DUI from 2000 to today", "Show me the national DUI/DWI trend from 2000 to today"]) {
+    const dui = as(ask(q), "answer");
+    assert.equal(dui.delivered.text[0], "United States DUI Arrests Per Year, Jan 2017-Sep 2026", JSON.stringify(dui.delivered.text));
+    assert.equal(dui.delivered.text[1], "Arrests here come from NIBRS, which starts in 2017, so 2000 to 2016 aren't included.", JSON.stringify(dui.delivered.text));
+  }
   // Codex 449: monthly for one agency keeps the span choices when it is a rate too, never clipped to 2017.
   const monthlyRate = ask("Shoplifting rates in Memphis by month from 2012 to 2020");
   assert.ok(!(monthlyRate.kind === "answer" && monthlyRate.delivered.text.some((t) => /come from NIBRS, which starts in/.test(t))), JSON.stringify(monthlyRate).slice(0, 300));
