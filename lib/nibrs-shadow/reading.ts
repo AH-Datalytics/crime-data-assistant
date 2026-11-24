@@ -633,6 +633,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // ("Highlight major crime trends in the city of Philadelphia since 2022"). Not "major cities" (the large-city rule above).
   text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?highlight\s+(?:the\s+)?(?=[a-z])/i,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // Declines owner cause 2 (query log): "make a graph of murder rate in the US last 20 years" and "Please show my murder ... statistics in Atlanta"
+  // open with a request wrapper that adds no meaning; the chart words are read on their own further on. Only when a crime word follows.
+  text = text.replace(/^\s*(?:(?:can|could|would)\s+you\s+|please\s+)?(?:make|create|build|draw)\s+(?:me\s+)?an?\s+(?=(?:(?:line\s+)?(?:graph|chart|plot)|time\s*series)\b[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property|crime))/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  text = text.replace(/^\s*(?:please\s+)?show\s+my\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?))/i,
+    (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "show me " }); return "show me "; });
   text = text.replace(/\bmajor\s+(?=(?:crimes?|violent|property|offenses?)\b)/gi,
     (m) => { readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // The nation as "us" leading a crime phrase ("us homicide trend") or "American" before cities or a crime ("all American cities"): applied
