@@ -436,9 +436,13 @@ export const deterministicRewriter: FollowUpRewriter = {
     // "show 10 years", "the seven-year trend", "past 5 years": the last N complete years by year, from the release
     // (the reader reads "over the last N years"); the previous period and time grain are replaced, the rest kept.
     // Only whole-year periods are replaced; months, "since" or relative words are asked about. "go back further" asks.
-    const lastN = /^(?:(?:show|give)(?:\s+me)?\s+)?(?:the\s+)?(?:(?:last|past)\s+)?(\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)[\s-]+years?(?:\s+trend)?$/i.exec(f);
+    const lastN = /^(?:(?:show|give)(?:\s+me)?\s+|(?:(?:how|what)\s+about|now)\s+)?(?:the\s+)?(?:(?:last|past)\s+)?(\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)[\s-]+years?(?:\s+trend)?$/i.exec(f);
     if (lastN) {
       const n = /^\d+$/.test(lastN[1]) ? Number(lastN[1]) : ["two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].indexOf(lastN[1].toLowerCase()) + 2;
+      // A previous question whose period is "over the last M years" takes the new N in its place (QL-ct-f4129a6a05).
+      const lastM = [...prev.matchAll(/\b(over|in|for|during)\s+the\s+(?:last|past)\s+(\d{1,2})\s+years?\b/gi)];
+      if (lastM.length === 1 && n >= 2 && n <= 20 && /^(?:how|what)\s+about\b|^now\b/i.test(f) && /\b(?:last|past)\b/i.test(f))
+        return ok(prev.replace(lastM[0][0], `${lastM[0][1]} the last ${n} years`), "the last N years replaced");
       const period = /\s+(?:from\s+(?:19|20)\d{2}\s+(?:to|through)\s+(?:19|20)\d{2}|in\s+(?:19|20)\d{2})\b/i.exec(prev);
       // The previous period must be exactly the one phrase replaced: one year or one range ("in 2023 and 2024" asks).
       const whole = prevParts.periods.length === 1 && /^(?:year|range):/.test(String(prevParts.periods[0].value));
@@ -482,6 +486,12 @@ export const deterministicRewriter: FollowUpRewriter = {
       if (has) return ok(prev.replace(has[0], `by ${by[1] ? `${by[1].toLowerCase().replace(/s$/, "")} ` : has[1] ? `${has[1]} ` : ""}${attr}`), "the breakdown's attribute replaced");
       return ok(`${prev.replace(/[?.]\s*$/, "")} by ${by[1] ? `${by[1].toLowerCase().replace(/s$/, "")} ` : ""}${attr}`, "a breakdown added");
     }
+    // A hate crime breakdown by bias type (QL-hc-4cef33c1eb): added, or the earlier "by bias type" kept as it is.
+    if (/^(?:by|break (?:it )?down by|split by)\s+(?:the\s+)?bias(?:\s+(?:type|motivation|category))?$/i.test(f)) {
+      if (/\bby\s+bias\b/i.test(prev)) return ask("The previous answer is already by bias type.");
+      // The reader reads "by bias"; a following "type" would be a word left unread.
+      return ok(`${prev.replace(/[?.!\s]+$/, "")} by bias`, "a breakdown by bias type added");
+    }
     // P65's pairing named by the follow-up.
     if (/^(?:(?:use|show|count)\s+)?only\s+(?:the\s+)?offenders?\s+linked\s+to\s+(?:each|the)\s+victims?$|^(?:use\s+)?(?:only\s+)?(?:the\s+)?linked\s+offenders?(?:\s+only)?$|^(?:by\s+)?(?:the\s+)?(?:offenders?\s+)?who\s+(?:killed|attacked)\s+(?:them|each victim)$/.test(fl)) {
       const has = /\bby\s+offender\s+(race|sex|ethnicity|age)\b/i.exec(prev);
@@ -490,7 +500,9 @@ export const deterministicRewriter: FollowUpRewriter = {
       return ok(prev.replace(has[0], `by the ${has[1].toLowerCase()} of the offender who ${verb} them`), "P65's pairing named");
     }
     // The other sex.
-    const sx = /^(male|female|men|women)$/i.exec(f);
+    // "now give me male victims", "what about female offenders": the lead-in is dropped; a person named must be one the question names.
+    const sxLead = /^(?:(?:now|ok)[,;]?\s+)?(?:(?:give|show)(?:\s+me)?\s+|(?:what|how)\s+about\s+)?(male|female|men|women)(?:\s+(victim|offender|arrestee)s?)?$/i.exec(f);
+    const sx = sxLead && (!sxLead[2] || new RegExp(`\\b${sxLead[2]}s?\\b`, "i").test(prev)) ? sxLead : null;
     if (sx) {
       const want = /^(male|men)$/i.test(sx[1]) ? "male" : "female";
       const has = /\b(male|female)\b/i.exec(prev);
@@ -688,7 +700,11 @@ export const deterministicRewriter: FollowUpRewriter = {
           if (bare !== null && /^ambiguous:/.test(String(prevParts.places[0].value)) && !newYear)
             q = `${q.slice(0, pw.at)}${pw.text}, ${newPlace}${q.slice(pw.at + pw.text.length)}`;
           else return ask(`Whether ${newPlace} means the state or ${pw.text} in ${newPlace}.`);
-        } else q = `${q.slice(0, pw.at)}${newPlace}${q.slice(pw.at + pw.text.length)}`;
+        } else {
+          // "King County, Washington State": the word "State" after the county's state goes with the place replaced (QL-ct-36ce0013c3).
+          const rest = q.slice(pw.at + pw.text.length);
+          q = `${q.slice(0, pw.at)}${newPlace}${pw.text.includes(",") && !/\bstate\s*$/i.test(newPlace) ? rest.replace(/^\s+State\b/, "") : rest}`;
+        }
       }
       if (newYear) {
         // Only a period of one whole year ("in 2024") is replaced or added to; a range, a set of years, months or
