@@ -3508,6 +3508,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // COMPARED TO THE (REST OF THE) NATION is the nation's rates beside the place's.
   assert.equal(rd("How does Houston compare to the rest of the nation in 2024?").text, readQuestion("How does Houston compare to the nation in 2024?", 2026, "2026-09").text);
 }
+// P302 (Jeff 2026-11-24): the share of aggravated assaults that are domestic violence is the INCIDENTS share; no 3-way breakdown.
+{
+  type Out = { kind: string; delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } };
+  for (const q of ["what share of aggravated assaults in Texas are domestic violence according to NIBRS in 2025", "what share of aggravated assaults in Texas were domestic violence incidents according to NIBRS in 2025"]) {
+    const o = as(ask(q), "answer") as unknown as Out;
+    assert.ok(/^In Texas in 2025, [\d.]+% of the aggravated assault incidents had a domestic violence victim, summed over the \d+ agencies that reported\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
+    assert.ok(o.delivered.text.includes("This is the share of incidents, not of victims: an incident counts once when at least one of its victims is a domestic violence victim."), o.delivered.text.join(" | "));
+    assert.deepEqual(o.delivered.table.columns.map((c) => c.header).slice(1), ["Aggravated assault incidents", "With a domestic violence victim"], JSON.stringify(o.delivered.table.columns));
+  }
+  // The nation is the same answer over every state.
+  assert.ok(/^In the United States in 2025, [\d.]+% of the aggravated assault incidents had a domestic violence victim/.test((as(ask("what share of aggravated assaults in the United States are domestic violence according to NIBRS in 2025"), "answer") as unknown as Out).delivered.text[0]));
+  // The three-way breakdown stays declined.
+  assert.notEqual(ask("what share of female murder victims in Texas in 2025 were cleared and domestic violence according to NIBRS").kind, "answer");
+}
 // P203 (Jeff 2026-11-21): the share of a crime's clearances (or offenses) of one clearance type, for a state or the nation, from the by-type sums.
 {
   type Out = { kind: string; delivered: { table: { rows: unknown[][] }; text: string[] } };

@@ -512,6 +512,14 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         WHERE ${sameIncident("r4", "f")} AND r4.offender_number = f.offender_seq AND r4.offender_relationship IN (${list(w.values!.map(String))}) AND vo4.connected_offense IN (${list(codes)}))`);
       continue;
     }
+    // P302: incidents with a victim of the measure's crime whose offender had one of the relationships (domestic violence), each incident once.
+    if (f.kind === "exists" && !f.negate && f.entity === "victim_offender" && f.scope === "incident" && entity === "incident") {
+      const w = f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].dimension === "victim_offender.relationship" && f.where[0].op === "in" && f.where[0].values?.length ? f.where[0] : null;
+      if (!w || !codes.length) return no("v0 filters incidents by a victim's relationship to the offender for a named crime only");
+      unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r4 JOIN ${read("victim_offense")} vo4 ON ${sameVictim("vo4", "r4")}
+        WHERE ${sameIncident("r4", "o")} AND r4.offender_relationship IN (${list(w.values!.map(String))}) AND vo4.connected_offense IN (${list(codes)}))`);
+      continue;
+    }
     if (f.kind === "exists" && !f.negate && f.entity !== "property") {
       const w = f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].op === "in" && f.where[0].values?.length ? f.where[0] : null;
       const values = (w?.values ?? []).map(String);

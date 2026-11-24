@@ -1,0 +1,12 @@
+{
+  "id": "P302",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What share of aggravated assaults in Texas are domestic violence according to NIBRS\"",
+  "what the app does today": "The share counts incidents: the aggravated assault incidents with at least one domestic violence victim (P82), out of all aggravated assault incidents, summed over the agencies that reported, for one year and one state or the nation.",
+  "proposed behavior": "The answer says it is the share of incidents, not of victims, and why an incident counts once. A breakdown of the share (for example female murder victims by cleared by domestic violence) stays declined.",
+  "exact default or choices offered": "None.",
+  "why": "Jeff's ruling 2026-11-24: the share is the incidents share, not the victims share.",
+  "status": "Decided 2026-11-24 (Jeff's ruling)",
+  "test cases": "scripts/test-nibrs-shadow.ts: P302 block, the Texas and national share answers with the incidents note; the three-way breakdown does not answer."
+}

@@ -62,6 +62,7 @@ import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } fr
 import { answerStateSet } from "./state-set";
 import { answerCurrentClearance, answerStateClearanceRanking, answerStateClearanceSeries } from "./clearance-current";
 import { answerClearanceShare } from "./clearance-share";
+import { answerDvShare } from "./dv-share";
 import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { buildScorecard, type ScorecardPlace } from "./scorecard";
@@ -3749,13 +3750,16 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // P203 (Jeff 2026-11-21): what share of a crime's clearances (or offenses) were of one clearance type, for a state or the nation.
   const clearanceShare = d.spec.type === "share" && stateMode && plan.geography.places.length === 1 && d.spec.population.length === 0 && d.spec.subset.length === 1
     && d.spec.subset[0].startsWith("clearance:") && (plan.transforms.length === 0 || (!!d.spec.rank && d.spec.byState === true && plan.transforms.every((t) => t.kind === "rank"))) && !plan.defaults.some((x) => x.path === "unit");
+  // P302 (Jeff 2026-11-24): the share of a state's or the nation's aggravated assault incidents with a domestic violence victim.
+  const dvShare = d.spec.type === "share" && stateMode && plan.geography.places.length === 1 && d.spec.population.length === 0 && d.spec.subset.length === 1
+    && d.spec.subset[0] === "dv:domestic" && plan.transforms.length === 0 && !d.spec.byState && !catG.length;
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
   // P271: several crimes for one state or the nation, a column each (count or rate, no breakdown but a year, no change).
   const stateMulti = stateMode && plan.geography.places.length === 1 && plan.measures.length > 1 && !catG.length && !plan.transforms.length && !combined
     && plan.statistics.length === plan.measures.length && plan.statistics.every((x) => x.kind === "count" || x.kind === "rate")
     && plan.groupings.every((g) => g.dimension === "time.year");
-  if (stateMode && !stateBreakdown && !clearanceShare && !stateMulti && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
+  if (stateMode && !stateBreakdown && !clearanceShare && !dvShare && !stateMulti && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
     return decline("unsupported_capability", "This isn't available: a state or national sum of several crimes, a breakdown, a change or a ranking.");
   const placesMode = !stateMode && (plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate"));
   // P194 (Jeff 2026-11-21): several named agencies' clearance by type is a row for each, never summed.
@@ -3771,7 +3775,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
-  if (!clearanceShare && (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
+  if (!clearanceShare && !dvShare && (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
     || (several && !stateMulti && (catG.length || !counts)) || (combined && timeG.length && combined.label !== "drug crimes")))
     return decline("unsupported_capability", "This isn't available: this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share.");
 
@@ -4058,6 +4062,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const by = checked.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => { const [who, attr] = g.dimension.split("."); return who === "offender" || who === "victim" || who === "arrestee" ? `${who} ${attr.replace(/_/g, " ")}` : attr.replace(/_/g, " "); }).join(" and ");
     return decline("unsupported_capability", heavyNationalSentence("property crime", by, lastYear));
   }
+  if (dvShare) return answerDvShare(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (clearanceShare && d.spec.type === "share") return answerClearanceShare(checked, d.spec, period, yearSet, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (stateMode && stateMulti) return answerStateMulti(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (stateMode && checked.geography.places.length > 1) return answerStateSet(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));

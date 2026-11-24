@@ -337,7 +337,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (!structural) return { kind: "clarify", explanation: "Do you mean the share of all clearances, or the share of all offenses? Ask, for example, \"what share of rape clearances were prosecution declined\" or \"what share of rapes were cleared because prosecution was declined\"." };
     // The subset begins at the first linking word after the population ("were", "was", "that", "who", "involved").
     const tail = ledger.question.slice(shareStart);
-    const link = /\b(?:were|was|that|who|which|involved|involving|involve|involves|had|committed|cleared|deemed|carried\s+out)\b/i.exec(tail.slice(share[0].text.length));
+    const link = /\b(?:were|was|are|is|that|who|which|involved|involving|involve|involves|had|committed|cleared|deemed|carried\s+out)\b/i.exec(tail.slice(share[0].text.length));
     const subsetStart = link ? shareStart + share[0].text.length + link.index : Number.POSITIVE_INFINITY;
     const fparts = of("filter").concat(of("clearance-reason"));
     let subset = fparts.filter((p) => p.span[0] >= subsetStart).map((p) => p.value!);
@@ -354,7 +354,9 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     // r4: a clearance condition on the population ("rapes cleared by exceptional means") divides by those clearances,
     // however it is worded; otherwise the noun decides (clearances vs offenses).
     const clearancesDenominator = population.some((f) => f.startsWith("clearance:")) || clearance.some((p) => p.span[0] < subsetStart && p.value === "clearances");
-    return finish({ type: "share", measure: measures[0], unit, population, subset, denominator: clearancesDenominator ? "clearances" : "units", place: sharePlace!, period: periods[0] ?? { form: "none" }, ...(byState ? { byState: true } : {}), ...(stateShareRanking ? { rank: shareRank } : {}) });
+    // Jeff 2026-11-24: a domestic violence share of aggravated assaults is the share of INCIDENTS with a domestic violence victim, not of victims.
+    const shareUnit: Unit | null = unit ?? (measures[0] === "aggravated_assault" && subset.includes("dv:domestic") ? "incidents" : null);
+    return finish({ type: "share", measure: measures[0], unit: shareUnit, population, subset, denominator: clearancesDenominator ? "clearances" : "units", place: sharePlace!, period: periods[0] ?? { form: "none" }, ...(byState ? { byState: true } : {}), ...(stateShareRanking ? { rank: shareRank } : {}) });
   }
 
   // ---- N3 / N5 breakdowns ----
