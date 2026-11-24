@@ -31,6 +31,10 @@ const CASES: [string, string][] = [
   ["nibrs-8f18f9f338", "LMPD vs LFUCPD (Kentucky) murders over time"],
   ["nibrs-e5183adf58", "Maplewood Police Department in Maplewood, NJ"],
   ["shr-9a6a3f1355", "How many homicides took place in Maplewood, NJ since 1976"],
+  ["campus-1", "University of California Berkeley vehicle burglaries per month"],
+  ["campus-2", "vehicle burglaries per month in University of California, Berkeley"],
+  ["campus-3", "vehicle burglaries per month at UC Berkeley"],
+  ["campus-4", "Give me NIBRS burglaries for University of California Berkely by year"],
 ];
 let failed = 0;
 for (const [id, q] of CASES) {
@@ -46,6 +50,18 @@ const checks: [string, () => void][] = [
   ["a city-valued place named like a county still resolves its city agency", () => {
     const r = resolvePlace(places, "city:Athens-Clarke County:GA", "Athens, GA");
     assert.equal(r.kind, "agency");
+  }],
+  ["Berkeley, CA stays the city (CA0010300)", () => assert.equal(agencyInState(places, "Berkeley", "CA")?.ori, "CA0010300")],
+  ["the campus is its own agency (CA0019700)", () => {
+    for (const q of ["University of California Berkeley burglaries", "burglaries at UC Berkeley", "University of California, Berkley burglaries", "niversity of California Berkley burglaries"]) {
+      const v = accountNibrsRequest(q).parts.filter((p) => p.concept === "place").map((p) => p.value);
+      assert.deepEqual(v, ["city:University of California Berkeley:CA"], q);
+      const r = resolvePlace(places, v[0], q);
+      assert.equal(r.kind, "agency", q);
+      assert.equal((r as unknown as { agency: { ori: string } }).agency.ori, "CA0019700", q);
+    }
+    const city = accountNibrsRequest("burglaries in Berkeley, CA").parts.filter((p) => p.concept === "place").map((p) => p.value);
+    assert.deepEqual(city, ["city:Berkeley:CA"]);
   }],
   ["a county sheriff in a state code keeps the state", () => {
     const o = shadowAnswer("show violent crime by month for johnson county sheriff in ks", deps) as unknown as { explanation?: string; kind: string };
