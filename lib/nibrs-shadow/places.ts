@@ -187,6 +187,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
   if (m[1] === "county") while (!idx.byName.has(base(name)) && REQUEST_WORD.test(name)) name = name.replace(/^\S+\s+/, "");
   // B1: "Cook County police department" names the county's agency (its FBI name is the Sheriff's Office); the department words are not part of the name.
   if (m[1] === "county" && !idx.byName.has(base(name))) name = name.replace(/\s+(?:police(?:\s+department)?|sheriff(?:'?s)?(?:\s+(?:office|department))?)$/i, "");
+  // B1: Orleans Parish is the City of New Orleans (a consolidated city-parish): its figures are the New Orleans Police Department's, never Orleans County, New York.
+  if (/^orleans parish$/.test(key(name)) && (!m[3] || m[3] === "LA")) { const nopd = (idx.byName.get("new orleans") ?? []).find((a) => a.state === "LA" && a.kind === "city"); if (nopd) return asPlace(nopd); }
   const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
   const words = key(text).replace(/ (city|county)$/, "");
   // Exactly the name and "Police (Department)" names no state ("Arlington Police Department"); anything more still does

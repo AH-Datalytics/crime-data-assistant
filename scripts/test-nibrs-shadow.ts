@@ -194,6 +194,18 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
+{
+  for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
+    const c = as(ask(q), "clarify");
+    assert.equal(c.question, "Which Kings County: New York or California?");
+    assert.deepEqual(c.options.map((o) => o.label), ["Kings County, New York", "Kings County, California"]);
+    assert.ok(c.options.every((o) => /Kings County, (New York|California)/.test(o.question ?? "")), "each button is the question with its state");
+  }
+  for (const q of ["murders in Kings County, California in 2024 according to NIBRS", "murders in Kings County, NY in 2024 according to NIBRS"]) {
+    assert.notEqual(ask(q).kind === "clarify" && (ask(q) as { about?: string }).about, "which Kings County", q);
+  }
+}
 // P168 (Jeff 2026-11-19): offenders or arrests by age for the crimes of an incident with a weapon, for one agency; the answer says how a person is counted.
 {
   const byAge = as(ask("violent crimes involving a firearm in Houston in 2025 by offender age"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
@@ -230,7 +242,7 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   assert.ok(arr.delivered.text.includes("Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders."), JSON.stringify(arr.delivered.text));
   assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
   for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
-    assert.equal(ask(q).kind, "decline", q);
+    assert.equal(ask(q).kind, "answer", q); // Coordinator 2026-11-24: the state and national gate is gone, the definition is unchanged
   // Coordinator 2026-11-24: drug offenses in a state or the nation are one composite count (35A + 35B), alone, by year, and for several states.
   for (const q of ["drug offenses in Texas in 2024", "Show me drug offense trends in Ohio from 2020 to 2024", "Compare drug offenses in Ohio and Pennsylvania since 2020", "drug possession in Texas in 2024"]) {
     const dr = as(ask(q), "answer") as unknown as { plan: { measures: { id: string }[] } };
@@ -314,7 +326,9 @@ assert.equal(ori(at("city:Flint:MI", "Flint")), "MI2539800", "not Flint Township
 assert.equal(ori(at("ambiguous:Baldwin Borough", "Baldwin Borough")), "PA0020100");
 assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500");
 assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
-assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
+// B1 (Jeff 2026-11-24): Orleans Parish is the City of New Orleans; its figures are the New Orleans Police Department's, never Orleans County, New York.
+assert.equal(ori(at("ambiguous:Orleans Parish", "Orleans Parish")), "LANPD0000", "never Orleans County, New York");
+assert.equal(ori(at("county:Orleans Parish:LA", "Orleans Parish, Louisiana")), "LANPD0000");
 assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
 // No population floor (Jeff 2026-11-03): every city and county agency is in the index, so same-name towns ask a short
 // list, never dozens; a name with one clearly main city (twice the next) is that city; a city's name is a city (P16).
@@ -434,7 +448,7 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
   assert.deepEqual(county("murders in Tarrant County in 2024"), ["county:Tarrant County:"]);
   assert.deepEqual(county("number of homicides in richland county oh in 2025"), ["county:Richland County:OH"]);
   assert.deepEqual(county("Show me violent crime trends in Mecklenburg county in North Carolina between 2002 and 2024"), ["county:Mecklenburg County:NC"]);
-  assert.deepEqual(county("murders in Orleans Parish in 2024"), ["county:Orleans Parish:"]);
+  assert.deepEqual(county("murders in Orleans Parish in 2024"), ["city:New Orleans:LA"], "read as the city of New Orleans (B1)");
   assert.deepEqual(county("murders in each county in Texas in 2024").filter((v) => /^county/.test(v ?? "")), []);
   // Codex place review 01: "in" is Indiana only in capitals; "South King County" keeps its "South"; a sheriff's office
   // belongs to the county.
@@ -524,6 +538,18 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
 // Year | figure, each year counting the same months, titled with them; never the whole year in place of the months.
 {
   type Del = { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[]; chart: unknown } };
+  // A place with two agencies asks which, and each button keeps the months and the place chosen (QL same-months clarify): never "can't answer".
+  {
+    const la = ask("Murders through July in Los Angeles in 2024");
+    assert.equal(la.kind, "clarify", "Los Angeles asks which agency");
+    const opts = (la as unknown as { options: { label: string; continuation?: ShadowOutcome }[] }).options;
+    assert.ok(opts.length >= 2);
+    for (const o of opts) {
+      assert.notEqual(o.continuation?.kind, "clarify", `${o.label} is not asked again`);
+      assert.notEqual(o.continuation?.kind, "decline", `${o.label} answers`);
+      assert.ok(JSON.stringify((o.continuation as unknown as { delivered?: unknown }).delivered ?? "").includes("January through July"), `${o.label} keeps the months`);
+    }
+  }
   const one = as(ask("Murders through April in Houston in 2024"), "answer") as unknown as Del;
   assert.equal(one.delivered.text[0], "Houston, Texas Murder Victims January Through April Per Year, 2024");
   assert.deepEqual(one.delivered.table.columns.map((c) => c.header), ["Year", "Murder victims"]);
@@ -860,6 +886,18 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   assert.equal(title("juvenile robberies in Houston in 2024 by month"), "Houston, Texas Robbery Offenses With an Offender Under 18 Per Month, 2024");
   assert.equal(title("robbery victims in Houston in 2024 by month"), "Houston, Texas Robbery Offenses Per Month, 2024", "no age: property victims stay counted by offense (P11)");
 }
+// Jeff 2026-11-24 (QL-nibrs-00bfb752b5): violent crime arrests by offense type = offense type down, a column per year.
+{
+  const o = ask("Show the national violent crime arrest trend by offense type since 2018") as any;
+  assert.equal(o.kind, "answer");
+  assert.equal(o.delivered.text[0], "United States Violent Crime Arrests by Offense Type Per Year, Jan 2018-Sep 2026");
+  const t = o.delivered.table;
+  assert.deepEqual(t.rows.map((r: unknown[]) => r[0]), ["Murder", "Rape", "Robbery", "Aggravated assault"]);
+  assert.equal(t.columns[0].header, "Offense type");
+  assert.equal(t.columns[1].header, "2018");
+  assert.equal(t.columns.length, t.rows[0].length);
+  assert.ok(!o.delivered.text.some((x: string) => /^United States Murder Arrests/.test(x)), "one title, not one per crime");
+}
 // P120 on every side (Jeff 2026-11-16, Coordinator): teen and teenage are 13 to 19 for victims, offenders and arrestees, the range said;
 // juvenile, minor, child and kid stay under 18 (P107).
 {
@@ -991,6 +1029,8 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
     for (const t of ["VA", "Saint Augustine", "carjackings", "tecas", "aggregating both county"]) assert.ok(!fillerOnly(t), t);
     for (const t of ["since 20210", "to 202", "back to 1`980", "in2p2t"]) assert.ok(garbledYear(t), t);
     for (const t of ["since 2021", "to 2025", "in 1995", "hi", "202 robberies"]) assert.ok(!garbledYear(t), t);
+    // QL-hist-7c5f94c559: a year with a stray character is asked about, never repaired into 1980 and answered.
+    assert.equal(ask("SWhow me murders in new orleans back to 1`980").kind, "clarify", "garbled year is asked");
     const ANSWERS = new Set(["answer", "srs", "historical", "current"]);
     for (const q of ["Toledo crime scorecard", "Minneapolis scorecard", "is crime up in milwaukee", "What does crime look like in pierce county?", "Tell me more about crime in Pittsburgh"]) {
       const o = ask(q);
@@ -3680,4 +3720,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   as(ask("Carjackings in Houston and Texas in 2024"), "decline");
   as(ask("Share of murders cleared in Texas and Ohio in 2024"), "decline");
 }
+// Engine 2.0 2026-11-24: "the city of X" after an opener that already owns "the" ("Show me the", "What is the") keeps its place; the overlap had dropped it and the ask was "which place".
+{ const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const want: Record<string, string> = { "Show me the city of charlotte murder rate from beginning of data until present": "Charlotte, North Carolina Murder Rate Per Year, 1930-2025",
+    "What is the City of Atlanta's number of murders since 1970": "Atlanta, Georgia Murders Per Year, 1970-2025" };
+  for (const [q, title] of Object.entries(want)) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

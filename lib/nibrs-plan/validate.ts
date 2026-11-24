@@ -309,6 +309,7 @@ const FILTER_DIMENSIONS: Record<string, string[]> = {
 /** Ledger filter values that name a range or a family rather than one code: the exact condition they mean. */
 const FILTER_VALUE_RANGE: Record<string, [number, number]> = { "age:Under 18": [1, 17] };
 const FILTER_VALUE_SET: Record<string, string[]> = {
+  "bias:lgbtq": ["41", "42", "43", "45", "71", "72"],
   "weapon:firearm": ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"],
   "dv:intimate_partner": ["SE", "CS", "BG", "XS", "XR", "HR"],
   "dv:family": ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"],

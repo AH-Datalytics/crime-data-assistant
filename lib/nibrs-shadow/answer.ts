@@ -67,7 +67,7 @@ import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { buildScorecard, type ScorecardPlace } from "./scorecard";
 import { detectAgencyScorecardQuestion } from "../scorecard-format";
 import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
-import { answerHate, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild } from "./hate";
+import { answerHate, combineHatePlaces, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild, type HateQuestion } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
 import { titleCase } from "./titles";
@@ -95,6 +95,8 @@ export type ShadowDeps = {
   shareAsked?: boolean;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
+  /** The places already chosen from a button, by the place's own words (lower case): the same-months years ask each year's question without asking the place again (P22). */
+  placePins?: Map<string, Candidate>;
   /** Set by the tests of the asks themselves: no default (P180 to P182) fills a missing place, period or kind of crime; the question is asked as before. */
   noDefaults?: boolean;
   /** Set while a follow-up is answered from a rewrite or as its own question: the words the user typed and the previous question, which the
@@ -655,7 +657,7 @@ const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell 
  * asked about: the rest of the question was read in full. Never a place, crime, time or comparison word.
  */
 const PURE_FILLER = new Set(("a an the my me i we you your our please can could would will wanna gimme lemme tell give show see get let us plot chart graph draw " +
-  "display make list provide pull find report reports data info information stats statistics numbers figures any have has do does what " +
+  "display make list provide pull find calculate compute report reports data info information stats statistics numbers figures any have has do does what " +
   "what's whats how is are was hi hey hello just also kind sort some").split(/\s+/));
 const pureFillerOnly = (text: string) => {
   const words = wordsOf(text);
@@ -1043,7 +1045,35 @@ function peakMeasure(question: string): string | null {
   return hit.length === 1 ? hit[0][1] : null;
 }
 
+/** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
+const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+function kingsCountyAsk(question: string): ShadowOutcome | null {
+  const m = KINGS_COUNTY.exec(question);
+  if (!m) return null;
+  const withState = (state: string) => question.slice(0, m.index) + m[0] + ", " + state + question.slice(m.index + m[0].length);
+  return { kind: "clarify", about: "which Kings County", question: "Which Kings County: New York or California?", options: [{ label: "Kings County, New York", question: withState("New York") }, { label: "Kings County, California", question: withState("California") }] };
+}
+/** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
+const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  if (VIOLENT_ARRESTS_BY_TYPE.test(question)) {
+    const o = shadowAnswer(question.replace(VIOLENT_ARRESTS_BY_TYPE, "arrests for murder, rape, robbery and aggravated assault by year"), depsIn);
+    const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "answer" && t && t.columns.length === 5 && t.rows.length > 1) {
+      const names = ["Murder", "Rape", "Robbery", "Aggravated assault"];
+      const stat = t.columns[1].binding;
+      const columns = [{ binding: { kind: "grouping" as const, dimension: "offense.category" }, header: "Offense type" }, ...t.rows.map((r) => ({ binding: stat, header: String(r[0]) }))];
+      const rows = names.map((n, i) => [n, ...t.rows.map((r) => r[i + 1])]);
+      const first = o.delivered.text[0];
+      const m = first.match(/^(.*?) Murder Arrests Per Year, (.*)$/);
+      const rest = o.delivered.text.filter((x) => !/^.* (?:Murder|Rape|Robbery|Aggravated Assault) Arrests Per Year, /.test(x));
+      const title = m ? `${m[1]} Violent Crime Arrests by Offense Type Per Year, ${m[2]}` : first;
+      const evidence = rows.flatMap((r, ri) => r.slice(1).map((v) => ({ row: ri, statistic: (t.columns[ri + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+      o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest] } as typeof o.delivered;
+    }
+    return o;
+  }
+  { const kc = kingsCountyAsk(question); if (kc) return kc; }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
@@ -1705,7 +1735,21 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
       period = { from: `${ys[0]}-01`, to: `${ys[ys.length - 1]}-12` };
     } else period = { from: r.from, to: r.to };
   } catch { return null; }
-  const hq0 = hateQuestionOf(plan, period, deps.hate);
+  // Several places (B3, approved): each place asked on its own, put in one table with a Place column (never added together).
+  if (plan.geography.places.length > 1) {
+    const idOf = (p: NibrsPlan["geography"]["places"][number]) => JSON.stringify(p);
+    const places = plan.geography.places.filter((p, i, all) => all.findIndex((q) => idOf(q) === idOf(p)) === i);
+    if (places.length < 2 || places.length > 6) return null;
+    const hqs: HateQuestion[] = [];
+    for (const p of places) {
+      const one = hateQuestionOf({ ...plan, geography: { ...plan.geography, places: [p] }, groupings: plan.groupings.filter((g) => g.dimension !== "geo.place") }, period, deps.hate, allYears);
+      if ("why" in one) return null;
+      hqs.push(one);
+    }
+    const multi = combineHatePlaces(hqs, deps.hate, deps.execute);
+    return multi.kind === "hate" ? multi : decline("outside_release_coverage", multi.explanation);
+  }
+  const hq0 = hateQuestionOf(plan, period, deps.hate, allYears);
   // Several biases: the columns in the order the question names them (the plan's filters are in code order).
   const at = (code: string) => ledger0.parts.find((p) => p.clause === 0 && p.concept === "filter" && p.value === `bias:${code}`)?.span?.[0] ?? Infinity;
   const hq = !("why" in hq0) && hq0.biases ? { ...hq0, biases: [...hq0.biases].sort((a, b) => at(a.code) - at(b.code)) } : hq0;
@@ -1957,7 +2001,7 @@ const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "Jul
  * every figure the engine's own answer for that year (so its sources, limits and blanks apply), titled with the months. Never the whole
  * year in place of the months, and never a clarify whose buttons would forget the months.
  */
-function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome {
+function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps): ShadowOutcome | null {
   const NO = () => decline("unsupported_capability", "I can't answer this combination. Try a simpler version, for example one crime in one place for one year.");
   const n = Number(String(part.value).slice(7));
   if (!(n >= 1 && n <= 12)) return NO();
@@ -1979,7 +2023,8 @@ function answerSameMonths(ledger0: RequestLedger, part: Part, deps: ShadowDeps):
   for (let y = years[0]; y <= years[1]; y++) {
     const o = shadowAnswer(sub(y), deps);
     // The first year's ask or decline stands for the question (a place asked, a limit): never buttons that forget the months.
-    if (y === years[0] && o.kind === "clarify") return NO();
+    // A place to choose (several agencies of that name) is the ordinary place question; its buttons keep the months. Any other ask is declined.
+    if (y === years[0] && o.kind === "clarify") return /^which /.test(o.about) ? null : NO();
     results.push({ y, o });
   }
   // The year's figure: the sum of its months (the engine's own month rows), blank when any month is not known (never a partial sum as the
@@ -2115,7 +2160,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // The same months of each year (Q1): answered by its own function, or declined; the months are never dropped.
   // With no place named, the place is asked first as before (its buttons run the whole question, months and all, and come back here).
   const sameMonths = clause0("months-through");
-  if (sameMonths.length && clause0("place").length) return answerSameMonths(ledger0, sameMonths[0], deps);
+  if (sameMonths.length && clause0("place").length) {
+    // A place pinned from a button is carried into each year's question by its words. A place that must still be asked goes on to the
+    // ordinary place question, whose buttons come back here with the place chosen and the months kept.
+    const byWords = new Map(deps.placePins ?? []);
+    for (const p of clause0("place")) { const c = pins.get(p.span[0]); if (c) byWords.set(p.text.trim().toLowerCase(), c); }
+    const r = answerSameMonths(ledger0, sameMonths[0], byWords.size ? { ...deps, placePins: byWords } : deps);
+    if (r) return r;
+  }
 
   // "By state" (Jeff 2026-11-16, Q2): the 50 states from Crime Index for one Part I crime. One year is the table State | figure (the
   // ranking of all 50); years named, or a trend with none, is the long table State | Year | figure, no chart. No year and no trend asks the
@@ -2245,7 +2297,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const city = ledger0.parts.find((c) => c.clause === 0 && c.concept === "entity" && c.value === "city" && /^city$/i.test(c.text.trim())
       && c.span[0] >= p.span[1] && /^\s*$/.test(ledger0.question.slice(p.span[1], c.span[0])) && /^(city|ambiguous):/.test(p.value!));
-    const pin = pins.get(p.span[0]);
+    const pin = pins.get(p.span[0]) ?? deps.placePins?.get(p.text.trim().toLowerCase());
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, city ? `${p.text} city` : p.text, inList);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
@@ -3259,10 +3311,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       plan.statistics = [{ kind: "count", as: plan.statistics[0].as, measure: m0.as }, { kind: "share", as: "share_of_period", measure: m0.as, within: plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension) }];
     }
   }
-  // P82: domestic violence is built for one agency first (a state or national count waits for its measured time).
-  // NIBRS_DV_WIDE=on lets the runner time the raw statement for a state or the nation (never set in production).
-  if (plan.measures.some((m) => /\.domestic_violence$/.test(m.id)) && process.env.NIBRS_DV_WIDE !== "on" && !(plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency"))
-    return decline("unsupported_capability", "This isn't available: domestic violence for a state, the nation or several places. Ask for one city or agency.");
+  // P82: domestic violence has its own definition (unchanged here); NIBRS_DV_WIDE=on lets the runner time several places.
+  // Coordinator 2026-11-24: the state/national gate is removed (the definition is unchanged); several agencies or places still decline.
+  if (plan.measures.some((m) => /\.domestic_violence$/.test(m.id)) && !plan.geography.places.every((p) => p.kind === "agency" || p.kind === "state" || p.kind === "national") && process.env.NIBRS_DV_WIDE !== "on")
+    return decline("unsupported_capability", "This isn't available: domestic violence for several places. Ask for one city, agency, state or the nation.");
   // Places (increment 4): named agencies, separate or combined, and a state's city agencies for a ranking. State and
   // national totals are increment 5.
   const citySet = (p: Place) => p.kind === "agency_set" && p.within.kind === "state"
@@ -3270,12 +3322,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // Increment 5: one state or the nation, summed over the agencies that reported (P61).
   const geoPlace = (p: Place) => p.kind === "state" || p.kind === "national";
   // P270: several states, or a state and the nation, are separate rows (answerStateSet); beside agencies or city sets they stay declined.
-  if (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p) && !geoPlace(p)) || ((plan.geography.places.some(citySet) || plan.geography.places.some(geoPlace)) && plan.geography.places.length > 1
-    && !plan.geography.places.every(geoPlace)))
+  // Hate crimes of several places, whatever they are, are put side by side by hateOutcome (a Place column), not by NIBRS's own sets.
+  const hateSeveral = plan.geography.places.length > 1 && (plan.measures.some((m) => /\.hate_crime$/.test(m.id)) || plan.filters.some((f) => f.kind === "exists" && f.entity === "offense_bias"));
+  if (!hateSeveral && (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p) && !geoPlace(p)) || ((plan.geography.places.some(citySet) || plan.geography.places.some(geoPlace)) && plan.geography.places.length > 1
+    && !plan.geography.places.every(geoPlace))))
     return decline("unsupported_capability", "This isn't available: a state or the nation together with other places.");
   // The same agency named twice is one member (never counted twice).
   const namedPlaces = plan.geography.places.filter((p): p is Extract<Place, { kind: "agency" }> => p.kind === "agency");
-  if (namedPlaces.length > 1) {
+  if (!hateSeveral && namedPlaces.length > 1) {
     const kept = namedPlaces.filter((p, i) => namedPlaces.findIndex((q) => q.ori === p.ori) === i);
     // A part bound to a dropped duplicate is bound to the place kept for that agency.
     const moved = new Map(namedPlaces.map((p, i) => [`geography.places[${i}]`, `geography.places[${kept.findIndex((q) => q.ori === p.ori)}]`]));
