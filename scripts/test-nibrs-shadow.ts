@@ -3890,3 +3890,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const o = shadowAnswer(q, live) as any;
     assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
+
+// A polite request opener ("can i get data on ...") is dropped: the question is what follows, and it gets the answer the bare question gets.
+{
+  const bare = "Murders in Houston according to NIBRS in 2019 and 2021";
+  const shown = (q: string) => JSON.stringify((shadowAnswer(q, deps) as any).delivered ?? shadowAnswer(q, deps));
+  const want = shown(bare);
+  assert.equal(shadowAnswer(bare, deps).kind, "answer", "the bare question answers");
+  for (const opener of ["can i get data on ", "Can I see ", "could you give me the numbers for ", "Hi, can I please get the data about ", "may i have ", "can i get the stats on "]) {
+    assert.equal(shown(`${opener}${bare[0].toLowerCase()}${bare.slice(1)}`), want, opener);
+  }
+  // Only an opener is dropped: a question that merely starts with "can" is read as written, and a bare opener is not emptied.
+  assert.notEqual(shown("can i get data on"), want, "nothing after the opener: not turned into an answer");
+}
