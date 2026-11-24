@@ -553,7 +553,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/^\s*(?:[Hh]ello|[Hh]ey|HEY|HELLO|Hi|hi)\b[,;:!.\s-]*(?:(?:there\b[,;:!.\s-]*)|(?:(?:[Jj]eff|[Cc]laude)\b[,;:!.\s-]*(?=(?:can|could|would|please|i|i(?:'|’)m|im|any|tell|show|looking|summari[sz]e|make|basically)\b)))?/,
     (m) => { if (m.trim()) readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
   // A wrapper right before "how" is dropped, not turned into "show me": the how-rules in PHRASES are anchored on "how".
-  { const wm = text.match(H1_WRAPPER); if (wm && /^how\b/i.test(text.slice(wm[0].length))) { readings.push({ kind: "phrase", from: wm[0].trim(), to: "" }); text = text.slice(wm[0].length); } }
+  { const wm = text.match(H1_WRAPPER); if (wm && (/^how\b/i.test(text.slice(wm[0].length)) || /^The\s+[A-Z]/.test(text.slice(wm[0].length)))) { readings.push({ kind: "phrase", from: wm[0].trim(), to: "" }); text = text.slice(wm[0].length); } }
   // "Tell me about murder rates in the largest cities" (job S5): filler before a crime named; applied here, not in PHRASES,
   // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
   text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
