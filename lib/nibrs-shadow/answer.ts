@@ -516,7 +516,8 @@ function spanChoices(a: { ledger: RequestLedger; deps: ShadowDeps; pins: Map<num
     const yFrom = Math.max(startYear, hb?.firstYear ?? startYear), yTo = Math.min(Number(a.endMonth.slice(0, 4)), hb?.lastYear ?? Number(a.endMonth.slice(0, 4)));
     if (hb && yTo >= yFrom) {
       const out = fromLedger(filled(filled(ledger, "grain", "year", "by year"), "period", yFrom === yTo ? `year:${yFrom}` : `range:${yFrom}:${yTo}`, yFrom === yTo ? `in ${yFrom}` : `from ${yFrom} to ${yTo}`), deps, pins);
-      if (out.kind !== "decline" && out.kind !== "route" && out.kind !== "clarify")
+      // Only a Crime Index answer counts: a NIBRS by-year run clipped to its first year (R14) is not a Crime Index series.
+      if (out.kind !== "decline" && out.kind !== "route" && out.kind !== "clarify" && out.kind !== "answer")
         choices.push({ label: `Yearly, ${yFrom} to ${yTo} (Crime Index)`, kind: "yearly", from: String(yFrom), out });
     }
     // A monthly source is offered only when the asked period reaches into its months ("in 1999" has none).
