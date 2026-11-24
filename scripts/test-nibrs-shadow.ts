@@ -3849,5 +3849,9 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     "How many Hispanic people were murdered in the last five years", "How many people were murdered in the last five years that are Black",
     "How many people were murdered in the last five years that are Hispanic in Texas", "How many Hispanic or Latino people were murdered in Texas in 2024"]) {
     const o = shadowAnswer(q, live) as any;
-    assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
+    assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 300)}`); }
+  // Two different groups are never collapsed to the first (Codex review): "Black or Hispanic" keeps both words.
+  for (const q of ["How many Black or Hispanic people were murdered in Texas in 2024", "How many people were murdered in Texas in 2024 who were Black and Hispanic"]) {
+    const t = readQuestion(q, 2026, "2026-09").text;
+    assert.ok(/hispanic/i.test(t) && /black/i.test(t), `${q}: ${t.slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

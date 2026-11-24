@@ -323,8 +323,8 @@ const PHRASES: [RegExp, string][] = [
   // People murdered who are Hispanic (Latino, Black, ...) are that group's murder victims: "how many people were murdered in the last five
   // years that are of Hispanic or Latino descent" is "how many Hispanic murder victims in the last five years" (QL-ct-ad0277beb7). "Hispanic or
   // Latino" is one ethnicity, never two choices.
-  [/\bpeople\s+(?:were\s+)?murdered\b([^?.]*?)\s+(?:that|who)\s+(?:are|were)\s+(?:of\s+)?(hispanic|latino|latina|latinx|black|white|asian)(?:\s+(?:or|and|\/)\s+(?:latino|latina|latinx|hispanic))?(?:\s+(?:descent|origin|ethnicity|heritage|ancestry))?(\s+(?:in|for|across)\s+[^?.]*?)?(?=\s*[?.!]?\s*$)/gi, "$2 murder victims$1$3"],
-  [/\b(hispanic|latino|latina|latinx|black|white|asian)(?:\s+(?:or|and|\/)\s+(?:latino|latina|latinx|hispanic))?\s+(?:people|persons|individuals)\s+(?:were\s+)?murdered\b/gi, "$1 murder victims"],
+  [/\bpeople\s+(?:were\s+)?murdered\b([^?.]*?)\s+(?:that|who)\s+(?:are|were)\s+(?:of\s+)?((?:hispanic|latino|latina|latinx)(?:\s+(?:or|and|\/)\s+(?:hispanic|latino|latina|latinx))?|black|white|asian)(?:\s+(?:descent|origin|ethnicity|heritage|ancestry))?(\s+(?:in|for|across)\s+[^?.]*?)?(?=\s*[?.!]?\s*$)/gi, "$2 murder victims$1$3"],
+  [/\b((?:hispanic|latino|latina|latinx)(?:\s+(?:or|and|\/)\s+(?:hispanic|latino|latina|latinx))?|black|white|asian)\s+(?:people|persons|individuals)\s+(?:were\s+)?murdered\b/gi, "$1 murder victims"],
   [/\b(hispanic)\s+(?:or|and|\/)\s+latin[oax]\s+(murder\s+victims|victims)\b/gi, "$1 $2"],
 ];
 /** P31's composites: the crimes each counts, and its weapon. */
