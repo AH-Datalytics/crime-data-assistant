@@ -2768,6 +2768,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const clip = as(ask("Shoplifting in Memphis per year from 2012 to 2020"), "answer");
   assert.equal(clip.delivered.text[1], "These figures come from NIBRS, which starts in 2017, so 2012 to 2016 aren't included.", JSON.stringify(clip.delivered.text));
   assert.equal(readQuestion("Chicago robberies after 2010", 2026, "2026-09").ledger.parts.find((p) => p.concept === "period")?.value, "since:2011", "after 2010 starts with 2011");
+  // Coordinator counting review 2026-11-24: a measure Crime Index holds yearly keeps the Crime Index offer; it is never clipped to NIBRS.
+  for (const q of ["Robberies in Memphis per year from 2012 to 2020", "aggravated assaults in Memphis from 2010 to 2020"]) {
+    const o = ask(q);
+    const clipped = o.kind === "answer" && o.delivered.text.some((t) => /come from NIBRS, which starts in/.test(t));
+    assert.ok(!clipped, `${q}: ${o.kind} ${JSON.stringify("delivered" in o ? o.delivered.text : o).slice(0, 300)}`);
+  }
 }
 // Coordinator 2026-11-02 (the redesign's retest of #96). 1: a breakdown the question names is never dropped.
 {
