@@ -3841,4 +3841,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const [q, title] of Object.entries(want)) {
     const o = shadowAnswer(q, live) as any;
     assert.ok(o.kind !== "clarify" && JSON.stringify(o).includes(title), `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
+// QL-ct-ad0277beb7: "people murdered ... that are of Hispanic or Latino descent" is Hispanic murder victims (one ethnicity, never "or" choices); with no
+// place named the nation's answer is Homicide Reports', routed, never a "which place" ask.
+{ const live = { ...deps, execute: () => [], noDefaults: false } as unknown as ShadowDeps;
+  for (const q of ["How many people were murdered in the last five years that are of Hispanic or Latino descent",
+    "How many people were murdered in the last five years in the United States that are of Hispanic descent",
+    "How many Hispanic people were murdered in the last five years", "How many people were murdered in the last five years that are Black",
+    "How many people were murdered in the last five years that are Hispanic in Texas", "How many Hispanic or Latino people were murdered in Texas in 2024"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
