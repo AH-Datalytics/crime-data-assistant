@@ -59,18 +59,19 @@ export const BIAS_NAMES: Record<string, string> = {
   "81": "Anti-Eastern Orthodox (Russian, Greek, Other)", "82": "Anti-Other Christian", "83": "Anti-Buddhist", "84": "Anti-Hindu", "85": "Anti-Sikh",
 };
 /** The first data year a code has its modern meaning (the decoder's reference): before it the name differs or is unconfirmed. */
+const LGBTQ_CODES = ["41", "42", "43", "45", "71", "72"];
 const MODERN_FROM: Record<string, number> = { "14": 2013, "16": 2013, "28": 2015, "29": 2015, "31": 2015, "33": 2015, "43": 2013, "61": 2013, "62": 2012, "71": 2013, "72": 2012,
   "81": 2015, "82": 2015, "83": 2015, "84": 2015, "85": 2015, "51": 1997, "52": 1997 };
 
 export type HatePlace = { kind: "agency"; ori: string; label: string } | { kind: "state"; code: string } | { kind: "national" };
 export type HateQuestion = {
   place: HatePlace; /** Months inclusive, cut to the data's first year and last complete month. */ from: string; to: string;
-  grain: "total" | "year" | "month" | "rolling"; window?: number; bias: { code: string; name: string } | null;
+  grain: "total" | "year" | "month" | "rolling"; window?: number; bias: { code: string; name: string; codes?: string[] } | null;
   /**
    * Several biases named ("anti-Islamic and anti-Jewish hate crimes over time"; H1, 2026-11-21): one column each, every column the
    * incidents with that bias; an incident with two of them is in both columns, which are never added. `bias` is null then.
    */
-  biases?: { code: string; name: string }[];
+  biases?: { code: string; name: string; codes?: string[] }[];
   /**
    * H2/H3 (Jeff 2026-11-21): one row per bias (the decoder's names) or per location (the CDE names), the incidents with it, largest first;
    * an incident with several is in each row (said in one line); no share. "Location not confirmed" is its own row, last.
@@ -123,15 +124,17 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   const location = locs.length ? "school" as const : undefined;
   if (location && breakdown === "location") return { why: "this breakdown" };
   // One named bias per filter: the reader writes each bias named as its own filter ("anti-Islamic and anti-Jewish").
-  const biasOf = (f: NibrsPlan["filters"][number]): { code: string; name: string } | null => {
+  const biasOf = (f: NibrsPlan["filters"][number]): { code: string; name: string; codes?: string[] } | null => {
     const w = f.kind === "exists" && !f.negate && f.entity === "offense_bias" && f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].dimension === "offense_bias.bias" && f.where[0].op === "in"
       ? f.where[0] : null;
+    // The anti-LGBTQ group: every sexual-orientation and gender-identity bias except anti-heterosexual (44); an incident counts once.
+    if (w && w.values?.length === LGBTQ_CODES.length && LGBTQ_CODES.every((c) => w.values!.map(String).includes(c))) return { code: "lgbtq", name: "Anti-LGBTQ", codes: LGBTQ_CODES };
     const code = w && w.values?.length === 1 ? String(w.values[0]) : null;
     return code && BIAS_NAMES[code] ? { code, name: BIAS_NAMES[code] } : null;
   };
   const named = plan.filters.filter((f) => !locs.includes(f)).map(biasOf);
   if (named.some((b) => !b)) return plan.filters.length > 1 ? { why: "several conditions" } : { why: "a bias this source does not name" };
-  const all = named as { code: string; name: string }[];
+  const all = named as { code: string; name: string; codes?: string[] }[];
   if (new Set(all.map((b) => b.code)).size !== all.length || all.length > 5) return { why: "several conditions" };
   if (all.length > 1 && roll.length) return { why: "several biases with a rolling window" };
   if (all.length > 1 && (breakdown || location)) return { why: "several conditions" };
@@ -144,7 +147,7 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   const grain = roll.length ? "rolling" : time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   const window = roll.length ? (roll[0] as { months: number }).months : undefined;
   const readFrom = window ? firstNeeded(from, window) : from;
-  if (all.some((b) => MODERN_FROM[b.code] && Number(readFrom.slice(0, 4)) < MODERN_FROM[b.code])) return { why: "a bias whose meaning changed in the years asked" };
+  if (all.some((b) => (b.codes ?? [b.code]).some((c) => MODERN_FROM[c] && Number(readFrom.slice(0, 4)) < MODERN_FROM[c]))) return { why: "a bias whose meaning changed in the years asked" };
   return { place, from, to, grain, ...(window ? { window } : {}), bias, ...(all.length > 1 ? { biases: all } : {}), ...(breakdown ? { breakdown } : {}), ...(location ? { location } : {}),
     ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}), ...(period.to > to ? { cutAt: to } : {}) };
 }
@@ -160,7 +163,7 @@ export const LOCATION_NOT_CONFIRMED = "Location not confirmed";
 /** The rows a question reads: its place, bias, school and months. */
 function hateWhere(hq: HateQuestion, from: string): string {
   const place = hq.place.kind === "agency" ? `ori = ${q(hq.place.ori)}` : hq.place.kind === "state" ? `state = ${q(hq.place.code)}` : "TRUE";
-  const bias = hq.bias ? ` AND bias_code = ${q(hq.bias.code)}` : "";
+  const bias = hq.bias ? (hq.bias.codes ? ` AND bias_code IN (${hq.bias.codes.map(q).join(", ")})` : ` AND bias_code = ${q(hq.bias.code)}`) : "";
   const school = hq.location === "school" ? ` AND location IN (${SCHOOL_LOCATIONS.map(q).join(", ")})` : "";
   const ymExpr = "year(incident_date) * 100 + month(incident_date)";
   const lo = Number(from.slice(0, 4)) * 100 + Number(from.slice(5, 7)), hi = Number(hq.to.slice(0, 4)) * 100 + Number(hq.to.slice(5, 7));
@@ -181,7 +184,7 @@ export function hateUnconfirmedSql(hq: HateQuestion, build: HateBuild): string {
 }
 export function hateSql(hq: HateQuestion, build: HateBuild, from = hq.from): string {
   const place = hq.place.kind === "agency" ? `ori = ${q(hq.place.ori)}` : hq.place.kind === "state" ? `state = ${q(hq.place.code)}` : "TRUE";
-  const bias = hq.bias ? ` AND bias_code = ${q(hq.bias.code)}` : "";
+  const bias = hq.bias ? (hq.bias.codes ? ` AND bias_code IN (${hq.bias.codes.map(q).join(", ")})` : ` AND bias_code = ${q(hq.bias.code)}`) : "";
   const school = hq.location === "school" ? ` AND location IN (${SCHOOL_LOCATIONS.map(q).join(", ")})` : "";
   const ymExpr = "year(incident_date) * 100 + month(incident_date)";
   const lo = Number(from.slice(0, 4)) * 100 + Number(from.slice(5, 7)), hi = Number(hq.to.slice(0, 4)) * 100 + Number(hq.to.slice(5, 7));
@@ -263,7 +266,7 @@ export const HATE_BIASES_OVERLAP = "An incident with more than one of these bias
  * together by period: one column per bias, never added. The lines are the first bias's (they are the same for every bias: the caveat,
  * the years and the latest month), with the overlap line.
  */
-function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string }[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
+function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string; codes?: string[] }[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
   const each = biases.map((b) => answerHate({ ...hq, bias: b, biases: undefined }, build, execute));
   const bad = each.find((a): a is HateDecline => a.kind === "hate-decline");
   if (bad) return bad;

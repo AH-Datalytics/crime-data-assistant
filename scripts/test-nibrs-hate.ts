@@ -53,6 +53,12 @@ const sql = sqls[sqls.length - 1];
 assert.ok(/hate_crime_incident\/data\.parquet/.test(sql) && /bias_code = '32'/.test(sql) && /state = 'TX'/.test(sql) && /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/.test(sql), sql);
 assert.ok(!/read_parquet\([^)]*(?:offense|victim)\//.test(sql), "never a NIBRS table");
 
+// Anti-LGBTQ is the six sexual orientation and gender codes as one group of distinct incidents; a year before its codes existed is refused.
+const lgbtq = as(ask("anti-LGBTQ hate crimes in Texas in 2024"), "hate");
+const lsql = sqls[sqls.length - 1];
+assert.ok(/bias_code IN \('41', '42', '43', '45', '71', '72'\)/.test(lsql) && /count\(DISTINCT year/.test(lsql), lsql);
+assert.ok(/anti-LGBTQ/.test(lgbtq.delivered.text[0]), lgbtq.delivered.text[0]);
+
 // A plain count by year and by month, and a rolling window; nothing is NIBRS's.
 const byYear = as(ask("hate crimes in Texas by year from 2022 to 2024"), "hate");
 assert.deepEqual(byYear.delivered.table.columns.map((c) => c.header), ["Year", "Hate crimes"]);
