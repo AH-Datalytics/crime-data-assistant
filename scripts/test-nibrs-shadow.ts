@@ -2942,6 +2942,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     return stub(sql);
   };
   const cdeps = { ...deps, execute: ctStub, current: { root: "/ct", release: "ct-test", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" } } as unknown as ShadowDeps;
+  // "current crime trends for <place>" names no crime: it is asked or defaulted, never the NOT_YET "I can't answer this combination" decline of a monthly series of two crimes (Asheville, g432).
+  { const cc: any = shadowAnswer("current crime trends for Denver", { ...cdeps, noDefaults: false }); assert.ok(cc.kind !== "decline" || !/combination/.test(cc.explanation ?? ""), JSON.stringify(cc).slice(0, 300)); }
   const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
   assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
   if (sev.kind === "current") {

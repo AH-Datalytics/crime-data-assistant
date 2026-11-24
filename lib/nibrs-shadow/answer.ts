@@ -2401,6 +2401,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   if (clause0("recent").length) {
     const rest = withParts(ledger, ledger.parts.filter((p) => !(p.clause === 0 && p.concept === "recent")));
     if (clause0("period").length) return fromLedger(rest, deps, pins);
+    // No crime named ("current crime trends for Asheville"): the default (P182) picks "Both" (violent plus property), which no monthly series
+    // of two crimes answers; it is read as "crime trends for Asheville", the same default for the latest year.
+    const both = clause0("measure").filter((p) => p.rule === "shadow:button");
+    if (both.length > 1 && both.length === clause0("measure").length) return fromLedger(rest, deps, pins);
     const from = Number(deps.release.lastMonth.slice(0, 4)) - 1;
     return fromLedger(filled(filled(rest, "period", `since:${from}`, `since ${from}`), "grain", "month", "by month"), deps, pins);
   }

@@ -145,7 +145,12 @@ export type ReadQuestion = Flags & { question: string; text: string; ledger: Req
 
 /** A state's name, one word (the set regexes take one word between "top N" and "cities": "the 5 biggest Texas cities"). */
 const STATE_WORD = new RegExp(`^(?:${'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|Ohio|Oklahoma|Oregon|Pennsylvania|Tennessee|Texas|Utah|Vermont|Virginia|Washington|Wisconsin|Wyoming'})$`, "i");
+/** H1 request wrappers ("can you get me", "I'm interested in"): replaced by "show me", or dropped outright before "how" (readQuestion). */
+const H1_WRAPPER = /^\s*(?:(?:can|could|would)\s+you\s+(?:please\s+)?(?:get|pull|give|show)\s+me|(?:i(?:'|’)?m|i\s+am)\s+(?:looking\s+for|interested\s+in)|(?:basically\s+)?i(?:(?:'|’)d)?\s+(?:want|would\s+like|like|need)(?:\s+to\s+(?:see|know))?|(?:can|could|would)\s+you\s+(?:please\s+)?tell\s+me|let\s+me\s+know|tell\s+me\s+what(?:(?:'|’)?s|\s+is)\s+going\s+on\s+(?:with|in)|looking\s+for|any\s+way\s+to\s+tell\s+me\s+about|(?:tell\s+me|show\s+me)\s+more\s+about|summari[sz]e|make\s+a\s+(?:graph|chart|table)\s+of)\s+/i;
 const PHRASES: [RegExp, string][] = [
+  // H1 chatty openers (bad-declines plan): a request wrapper adds no meaning; the rest is the question. Before "how" the wrapper is dropped
+  // outright (the how-rules below are anchored on "how"). A greeting is dropped before this loop runs (see readQuestion).
+  [H1_WRAPPER, "show me "],
   // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
   [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
   // B1: "johnson county sheriff in ks": the state's code after "in" (not IN, OR, ME, HI or OK, which are words).
@@ -566,6 +571,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     text = text.replace(L12, (m) => { const to = `from ${first} to ${lastName}`; readings.push({ kind: "period", from: m, to }); return to; });
     last12 = true;
   }
+  // H1: a greeting (and a name only when a request follows it: "Hi Jeff can you ...", never "Hey Jeff Davis County ...") is dropped
+  // first, so the opener cleanups below still see the question. "HI" in capitals is Hawaii.
+  text = text.replace(/^\s*(?:[Hh]ello|[Hh]ey|HEY|HELLO|Hi|hi)\b[,;:!.\s-]*(?:(?:there\b[,;:!.\s-]*)|(?:(?:[Jj]eff|[Cc]laude)\b[,;:!.\s-]*(?=(?:can|could|would|please|i|i(?:'|’)m|im|any|tell|show|looking|summari[sz]e|make|basically)\b)))?/,
+    (m) => { if (m.trim()) readings.push({ kind: "phrase", from: m.trim(), to: "" }); return ""; });
+  // A wrapper right before "how" is dropped, not turned into "show me": the how-rules in PHRASES are anchored on "how".
+  { const wm = text.match(H1_WRAPPER); if (wm && (/^how\b/i.test(text.slice(wm[0].length)) || /^(?:about\s+)?The\s+[A-Z]/.test(text.slice(wm[0].length)))) { readings.push({ kind: "phrase", from: wm[0].trim(), to: "" }); text = text.slice(wm[0].length).replace(/^about\s+(?=The\s+[A-Z])/i, ""); } }
   // "Tell me about murder rates in the largest cities" (job S5): filler before a crime named; applied here, not in PHRASES,
   // whose replacement re-reads only the matched words (its look-ahead would fail: Codex review 13.2).
   text = text.replace(/^\s*(?:can\s+you\s+)?tell\s+me\s+(?:more\s+)?about\s+(?=[a-z\s]*\b(?:murders?|homicides?|robber\w*|burglar\w*|rapes?|assaults?|thefts?|violent|property)\b)/i,
