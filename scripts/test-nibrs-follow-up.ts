@@ -381,6 +381,7 @@ assert.equal(q(rw("calculate the percent change in violent crime rates for King 
 assert.equal(q(rw("Texas domestic violence murders per year, 2019 to 2025, where the victim was female broken down by firearm and non-firearm", "now give me male victims")),
   "Texas domestic violence murders per year, 2019 to 2025, where the victim was male broken down by firearm and non-firearm");
 assert.equal(rw("murders of female offenders in Texas in 2024", "now give me male victims").kind, "ask");
+assert.equal(rw("murders of victims with female offenders in Texas in 2024", "what about male victims").kind, "ask");
 // "how about the last 20 years" replaces a "last N years" period (QL-ct-f4129a6a05).
 assert.equal(q(rw("compare Seattle and Denver homicides over the last 10 years", "how about the last 20 years")), "compare Seattle and Denver homicides over the last 20 years");
 // A breakdown by bias type (QL-hc-4cef33c1eb, QL-nibrs-4cef33c1eb): added to the question.

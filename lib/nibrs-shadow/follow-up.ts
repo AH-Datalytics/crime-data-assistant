@@ -505,6 +505,9 @@ export const deterministicRewriter: FollowUpRewriter = {
     const sx = sxLead && (!sxLead[2] || new RegExp(`\\b${sxLead[2]}s?\\b`, "i").test(prev)) ? sxLead : null;
     if (sx) {
       const want = /^(male|men)$/i.test(sx[1]) ? "male" : "female";
+      // A named person only picks the sex when the question names that person alone; with victims and offenders both named, which one is meant is asked (Codex row-1 review).
+      if (sx[2] && new Set([...prev.matchAll(/\b(victim|offender|arrestee)s?\b/gi)].map((m) => m[1].toLowerCase())).size > 1)
+        return ask(`The previous question names more than one person type; which one should be ${want}?`);
       const has = /\b(male|female)\b/i.exec(prev);
       // One sex word only: with two ("female victims with female offenders") which one is meant is asked (Codex 7b-04 seventh pass).
       // Asked with a button for each reading, each a complete question (coordinator, 2026-11-01).
