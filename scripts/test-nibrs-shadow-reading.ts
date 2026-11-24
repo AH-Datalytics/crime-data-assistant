@@ -224,4 +224,5 @@ assert.equal(rq("the data on robberies in new orleans").text, "the data on robbe
   assert.deepEqual(a.ledger.parts.filter((x) => x.state === "not-interpreted").map((x) => x.text), [], "Summarize is filler");
   assert.equal(a.text, b.text);
   assert.equal(rq("current murder trends in Asheville, NC").ledger.parts.some((x) => x.concept === "recent"), true, "a named crime keeps the Current Trends reading");
+  assert.equal(rq("Show current crime trends for robberies in Asheville, NC").ledger.parts.some((x) => x.concept === "recent"), true, "a crime named after 'current crime trends' keeps the Current Trends reading");
 }

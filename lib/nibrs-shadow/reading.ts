@@ -149,7 +149,8 @@ const PHRASES: [RegExp, string][] = [
   // G1: "a time line of robberies in Denver" is the robberies by year; the opener adds nothing.
   [/\b(?:an?\s+)?time\s*line\s+of\s+/gi, ""],
   // D: "summarize current crime trends for Asheville" names no crime: it is the opener (P182 default), not Current Trends' monthly series.
-  [/\bcurrent(?:ly)?\s+(crimes?\s+trends?)\b/gi, "$1"],
+  // A crime named anywhere after it ("current crime trends for robberies in Asheville") keeps the Current Trends reading.
+  [/\bcurrent(?:ly)?\s+(crimes?\s+trends?)\b(?![^?]*\b(?:murder|homicide|robber|burglar|rape|assault|theft|larceny|arson|shooting|vehicle|violent|property)\w*)/gi, "$1"],
   // B1: "johnson county sheriff in ks": the state's code after "in" (not IN, OR, ME, HI or OK, which are words).
   [/\b(County\s+Sheriff(?:'?s)?(?:\s+(?:Office|Department))?)\s+in\s+(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|ID|IL|KS|KY|LA|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/gi, "$1, $2"],
   [/,\s*(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s+State\b/gi, ", $1"],
