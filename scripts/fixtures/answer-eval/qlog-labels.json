@@ -901,16 +901,19 @@
    "question": "i want to know how crime in nashville compares to peer citites",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -1001,16 +1004,19 @@
    "question": "compare crime trends in San Francisco per 100k to similar sized cities",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -16388,16 +16394,19 @@
    "question": "Crime trends in Philadelphia compared to similar cities",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -38751,16 +38760,19 @@
    "question": "Show me the crime data for Jersey Village, Texas in comparisson to similar agencies in Size in Harris County, Texas",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -42927,16 +42939,19 @@
    "question": "How does Philadelphia'homicide decline compare to the national average and peer city average?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -55960,16 +55975,19 @@
    "question": "Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -69607,16 +69625,19 @@
    "question": "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -98321,16 +98342,19 @@
    "question": "how does the clearance rate for violent crime in albuquerque compare to the national average and other comparable cities",
    "previous": "can i see violent crime clearance rate in albuquerque new mexico since 2023",
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
