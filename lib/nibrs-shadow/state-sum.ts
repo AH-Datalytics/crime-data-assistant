@@ -49,9 +49,11 @@ export function agencyHeaderSql(root: string, states: string[], years: number[])
 export const coveredText = (share: number, lower: boolean) => `${lower ? "≥" : ""}${Math.min(share, 100).toFixed(1)}%`;
 export const universeStates = (p: NibrsPlan["geography"]["places"][number]) => (p.kind === "national" ? NATION : p.kind === "state" ? headerCodes(p.code) : []);
 
-/** `noPopulation`: agencies counted with no FBI population (coverage is then a lower bound, and no rate is given). */
+/** `noPopulation`: agencies counted with no FBI population (coverage is then a lower bound). P303: a rate is computed over the agencies WITH a population
+ *  (above 0) only: `rateSum` is their crimes, `rateAgencies` their number, `left` the counted agencies with no population (missing or 0), left out of the rate. */
 export type StateSumYear = { year: number; sum: number; agencies: number; partial: number; population: number; share: number; noPopulation: number; conflicts: number;
-  every: { agencies: number; sum: number; population: number; share: number; noPopulation: number } };
+  rateSum: number; rateAgencies: number; left: number;
+  every: { agencies: number; sum: number; population: number; share: number; noPopulation: number; rateSum: number; rateAgencies: number; left: number } };
 /**
  * `everyCurrentPopulation` (P90, Jeff 2026-11-02: "population should be sum of current population of consistent
  * agencies"): the Consistent Reporting Agencies' current populations summed, each agency's most recent FBI population
@@ -202,7 +204,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     && keptYears.every((y) => { const a = of(o, y); return !a || a.val === a.months; }));
   const sumsFromGrid = (rows: unknown[][]) => categorySumsFromGrid(rows, everySet, arrests ? inYear : null);
   const byYear: StateSumYear[] = years.map((y) => {
-    let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0;
+    let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0, rateSum = 0, rateAgencies = 0, left = 0;
     for (const o of inYear.get(y)!) {
       const a = of(o, y);
       if (!a) continue;
@@ -213,17 +215,20 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       agencies++;
       const p = pop.get(`${o}|${y}`);
       if (p === null || p === undefined) noPopulation++; else population += p;
+      if (p) { rateSum += a.sum; rateAgencies++; } else left++;
       if (a.rep < (monthsIn.get(y) ?? 0)) partial++;
       sum += a.sum;
     }
-    const ev = { agencies: everySet.length, sum: 0, population: 0, share: 0, noPopulation: 0 };
+    const ev = { agencies: everySet.length, sum: 0, population: 0, share: 0, noPopulation: 0, rateSum: 0, rateAgencies: 0, left: 0 };
     for (const o of everySet) {
-      ev.sum += of(o, y)?.sum ?? 0;
+      const n = of(o, y)?.sum ?? 0;
+      ev.sum += n;
       const p = pop.get(`${o}|${y}`);
       if (p === null || p === undefined) ev.noPopulation++; else ev.population += p;
+      if (p) { ev.rateSum += n; ev.rateAgencies++; } else ev.left++;
     }
     ev.share = pct(ev.population, ciPop[y]);
-    return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, every: ev };
+    return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, rateSum, rateAgencies, left, every: ev };
   });
   const current = new Map(everySet.length ? deps.execute(currentPopulationSql(deps.target.root, everySet)).map((r) => [String(r[0]), Number(r[1])]) : []);
   const everyCurrentPopulation = { sum: everySet.reduce((a, o) => a + (current.get(o) ?? 0), 0), missing: everySet.filter((o) => !current.has(o)).length };
@@ -254,24 +259,28 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const lines: string[] = [];
     if (years.length === 1) {
       const y = byYear[0];
-      const n = every ? y.every.sum : y.sum, P = every ? y.every.population : y.population;
       const noPop = every ? y.every.noPopulation : y.noPopulation;
-      // No rate over an incomplete denominator (P62, review 2.5).
-      const v = isRate ? (noPop ? null : rate({ value: n, status: "VALUE" }, P).value) : n;
+      // P303 (Jeff's ruling, 2026-11-24 coordinator relay): a rate is the crimes of the agencies WITH a population over their combined population;
+      // the agencies without one are left out of both and said. Counts keep every agency.
+      const left = every ? y.every.left : y.left, rateN = every ? y.every.rateSum : y.rateSum, rateM = every ? y.every.rateAgencies : y.rateAgencies;
+      const n = isRate ? rateN : every ? y.every.sum : y.sum, P = every ? y.every.population : y.population;
+      const v = isRate ? (rateM === 0 ? null : rate({ value: n, status: "VALUE" }, P).value) : n;
       const counted = every ? `the ${CRA}` : "the agencies counted";
       const subject = Where === "United States" ? "The United States" : Where;
       lines.push(isRate && v === null
-        ? `No rate is given for ${Where} in ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
+        ? `No rate is given for ${Where} in ${when}, because none of ${counted} has an FBI population.`
         : every
         ? `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
         : `${isRate ? rateSentence(Where === "United States" ? nationSubject : { text: Where }, rateNoun(what), when, fmtRate(v!)).replace(/\.$/, "") : `${subject} had ${fmt(n)} ${what} in ${when}`}, summed over the agencies that reported.`);
       lines.push(note(every), FBI_MASTER_FILES);
-      if (isRate && v !== null) lines.push(`The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
+      if (isRate && v !== null) lines.push(left
+        ? `The rate leaves out ${fmt(left)} ${left === 1 ? "agency" : "agencies"} with no FBI population. It uses the combined population of the ${fmt(rateM)} ${rateM === 1 ? "agency" : "agencies"} counted: ${fmt(P)} (the FBI's ${y.year} populations).`
+        : `The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
       return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }],
         agencies: [{ value: every ? y.every.agencies : y.agencies, status: "VALUE" }],
         coverage: [covered(every ? y.every.share : y.share, noPop)],
-        population: [noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" }] };
+        population: [isRate && v === null ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" }] };
     }
     lines.push(seriesTitle(when, what, "Year", Where));
     lines.push(every

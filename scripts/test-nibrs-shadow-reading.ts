@@ -148,6 +148,10 @@ assert.equal(readQuestion("Assaults during an argumentative dispute in Memphis i
 assert.equal(readQuestion("Drug-related arrests in Memphis in 2024", 2026).circumstance, null, "drug crimes, not a circumstance");
 // Places' nicknames, read for every source (coordinator 2026-11-02).
 assert.match(readQuestion("Philly homicides 2010 to 2020", 2026).text, /^Philadelphia homicides/);
+// "At an annual tempo" / "at a monthly pace" is the series by year / by month (QL-ct-497f978f17).
+assert.equal(readQuestion("homicide in baltimore at an annual tempo", 2026).text, "homicide in baltimore by year");
+assert.equal(readQuestion("homicide in baltimore at a monthly pace", 2026).text, "homicide in baltimore by month");
+assert.equal(readQuestion("homicide in baltimore at a fast pace", 2026).text, "homicide in baltimore at a fast pace");
 assert.match(readQuestion("murders in NOLA since 2015", 2026).text, /in New Orleans since/);
 assert.equal(readQuestion("Nolan County robberies in 2020", 2026).text.includes("New Orleans"), false, "a whole word only");
 
