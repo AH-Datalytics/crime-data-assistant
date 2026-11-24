@@ -52,7 +52,10 @@ const checks: [string, () => void][] = [
   }],
   ["a state name beside a state is not read as one city (Kansas, Missouri)", () => {
     const o = shadowAnswer("Robberies in Kansas, Missouri in 2024 according to NIBRS", deps) as unknown as { explanation?: string };
-    assert.ok(/state or the nation together with other places/.test(String(o.explanation ?? "")), String(o.explanation));
+    // P270 (PR 433): two states are now two rows of one answer, so the old "state or the nation together with other places"
+    // decline no longer applies. With this offline stub (no data) the state set cannot be built, so it says it can't answer
+    // this combination; what must never come back is a place-lookup miss or a Kansas City read for "Kansas, Missouri".
+    assert.ok(!/couldn't find|didn't understand|couldn't use|Kansas City/i.test(String(o.explanation ?? "")), String(o.explanation));
   }],
 ];
 for (const [name, fn] of checks) { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}: ${(e as Error).message}`); failed++; } }
