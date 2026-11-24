@@ -7,6 +7,6 @@
   "proposed behavior": "A NIBRS state or national single-year rate counts crimes and people over the same agencies: only agencies with an FBI population above 0. An agency with no population (missing or 0) is left out of both the numerator and the denominator. The answer says how many agencies were left out and what population is included: \"The rate leaves out N agencies with no FBI population. It uses the combined population of the M agencies counted: X.\" Counts (not rates) are unchanged and still include every reporting agency. If no counted agency has a population, no rate is given.",
   "exact default or choices offered": "Default: the rate over the agencies with a population, with the note above.",
   "why": "A rate's population must match its count: the same agencies in both (P62). Jeff's earlier ruling, relayed by the coordinator 2026-11-24. Supersedes the parts of P62 and P184 that keep a zero-population agency's crimes in a rate.",
-  "status": "Decided (Jeff, earlier ruling; reviewed_by Jeff; ruling date to be added by the coordinator)",
+  "status": "Decided (Jeff, 2026-11-24; reviewed_by Jeff)",
   "test cases": "Tests that cite this row: scripts/test-nibrs-shadow.ts (Texas and North Carolina rates, with the left-out note)."
 }
