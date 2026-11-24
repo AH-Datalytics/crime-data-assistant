@@ -79,7 +79,12 @@ function stub(sql: string): unknown[][] {
 function stub0(sql: string): unknown[][] {
   sqls.push(sql);
   // Stolen-property value (stolen-value.ts): year, type (NULL for a total), records, total, $0 records left out, average, median, p10, p25, p75, p90.
-  if (/AS left_out,/.test(sql) && /AS p90/.test(sql)) { withLeftOut = true; return /NULL AS d/.test(sql) ? [[2025, null, 42952, 141315699, 1574, 3290.5, 300, 20, 100, 1200, 6000]] : [[2025, "03", 4602, 57029353, 0, 12392, 7000, 500, 3000, 15000, 40000], [2025, "77", 10539, 33437714, 612, 3173, 179, 10, 50, 900, 5000]]; }
+  // The last column is the records with a placeholder value ($999,999,998 or more), left out of the total, average, median and percentiles; 2021 has 1,747.
+  if (/AS left_out,/.test(sql) && /AS p90/.test(sql)) {
+    withLeftOut = true;
+    if (/data_year=2021\//.test(sql) && !/data_year=2025\//.test(sql)) return [[2021, null, 40000, 98000000, 1500, 2450, 250, 20, 100, 1100, 5500, 1747]];
+    return /NULL AS d/.test(sql) ? [[2025, null, 42952, 141315699, 1574, 3290.5, 300, 20, 100, 1200, 6000, 0]] : [[2025, "03", 4602, 57029353, 0, 12392, 7000, 500, 3000, 15000, 40000, 0], [2025, "77", 10539, 33437714, 612, 3173, 179, 10, 50, 900, 5000, 0]];
+  }
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
@@ -1605,6 +1610,7 @@ for (const q of ["What weapons are most commonly used in aggravated assaults in 
 {
   const text = (o: any) => o.delivered.text.join(" | ");
   const askNat = (q: string) => as(shadowAnswer(q, { ...deps, noDefaults: false }) as ShadowOutcome, "answer") as any;
+  for (const q of ["what was the average value of stolen items in shoplifting incidents in 2024"]) assert.match(text(askNat(q)), /No place was named, so the United States is shown/, q);
   const total = as(ask("What was the value of everything stolen in Philadelphia in 2024?"), "answer");
   assert.match(text(total), /total value of stolen property in Philadelphia, Pennsylvania in 2024 was \$141,315,699/, "the total includes every record");
   assert.match(text(total), /1,574 .*(?:no value|\$0)/i, "the $0 records are counted, not hidden");
@@ -1632,6 +1638,19 @@ for (const q of ["What weapons are most commonly used in aggravated assaults in 
   const pct = askNat("provide the percentiles of the value of shoplifted goods in 2024");
   assert.ok(pct.delivered.table.columns.some((c: { header: string }) => /90th Percentile/.test(c.header)), "percentiles are columns beside the median");
   assert.match(text(pct), /percentiles are of the records with a value/);
+  // A leading "Q:" and the percentile / average / top-N wordings with no place named answer for the United States, said (Jeff 2026-11-24).
+  for (const q of ["Q: provide the percentiles of the value of shoplifted goods in 2024", "what was the average value of stolen items in shoplifting incidents in 2024"]) {
+    const o: any = shadowAnswer(q, { ...deps, noDefaults: false });
+    assert.equal(o.kind, "answer", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    assert.match(text(o), /No place was named, so the United States is shown/);
+  }
+  // Placeholder values ($999,999,998 or more) are left out of the total, average and median, and counted in the answer.
+  const placeholder = askNat("What was the total value of stolen property in 2021?");
+  assert.match(text(placeholder), /leaves out 1,747 records with placeholder values/);
+  assert.ok(placeholder.delivered.table.columns.some((c: { header: string }) => /placeholder/i.test(c.header)), "the count is a column");
+  assert.ok(/v < 999999998/.test(sqls.at(-1)!) && /v >= 999999998/.test(sqls.at(-1)!), "the statement leaves placeholders out and counts them");
+  const clean = askNat("What was the total value of stolen property in 2024?");
+  assert.ok(!/placeholder/.test(text(clean)), "no placeholder sentence when there are none");
   // The median of a crime's value per incident is not a stolen-property value: it is declined, never answered as a count.
   assert.notEqual(ask("robberies in Fort Worth, Texas in 2025 and their median value per incident").kind, "answer");
   // Other loss types are not swapped for the stolen value; two measures are not answered by one figure (Codex review).

@@ -33,6 +33,8 @@ export const PROPERTY_NAMES: Record<string, string> = {
   "72": "Musical Instruments", "73": "Pets", "74": "Photographic and Optical Equipment", "75": "Portable Electronic Communications", "76": "Recreational and Sports Equipment",
   "77": "Other", "78": "Trailers", "79": "Watercraft Equipment, Parts and Accessories", "80": "Weapons, Other", "88": "Pending Inventory", "99": "Special",
 };
+/** A value of $999,999,998 or more is a placeholder (not a price): left out of the total, average, median and percentiles, and counted in the answer (Jeff 2026-11-24). */
+const PLACEHOLDER = 999999998;
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** True when the plan is a question about the value of stolen property (the plan layer's property value measure). */
@@ -85,15 +87,16 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
   const sql = `WITH v AS (SELECT ${byYear || years.length === 1 ? "p.data_year" : String(years[0])} AS y, p.property_description AS d, try_cast(p.value AS BIGINT) AS v
       FROM read_parquet([${parts.join(", ")}], hive_partitioning = true) p
       WHERE p.loss_type = '7' AND ${scope}${shopCond})
-    SELECT y, ${byType ? "d" : "NULL"} AS d, CAST(count(*) AS BIGINT) AS records, CAST(coalesce(sum(v), 0) AS BIGINT) AS total,
+    SELECT y, ${byType ? "d" : "NULL"} AS d, CAST(count(*) AS BIGINT) AS records, CAST(coalesce(sum(v) FILTER (WHERE v < ${PLACEHOLDER}), 0) AS BIGINT) AS total,
       CAST(count(*) FILTER (WHERE coalesce(v, 0) <= 0) AS BIGINT) AS left_out,
-      CAST(avg(v) FILTER (WHERE v > 0) AS DOUBLE) AS average, CAST(median(v) FILTER (WHERE v > 0) AS DOUBLE) AS median,
-      CAST(quantile_cont(v, 0.1) FILTER (WHERE v > 0) AS DOUBLE) AS p10, CAST(quantile_cont(v, 0.25) FILTER (WHERE v > 0) AS DOUBLE) AS p25,
-      CAST(quantile_cont(v, 0.75) FILTER (WHERE v > 0) AS DOUBLE) AS p75, CAST(quantile_cont(v, 0.9) FILTER (WHERE v > 0) AS DOUBLE) AS p90
+      CAST(avg(v) FILTER (WHERE v > 0 AND v < ${PLACEHOLDER}) AS DOUBLE) AS average, CAST(median(v) FILTER (WHERE v > 0 AND v < ${PLACEHOLDER}) AS DOUBLE) AS median,
+      CAST(quantile_cont(v, 0.1) FILTER (WHERE v > 0 AND v < ${PLACEHOLDER}) AS DOUBLE) AS p10, CAST(quantile_cont(v, 0.25) FILTER (WHERE v > 0 AND v < ${PLACEHOLDER}) AS DOUBLE) AS p25,
+      CAST(quantile_cont(v, 0.75) FILTER (WHERE v > 0 AND v < ${PLACEHOLDER}) AS DOUBLE) AS p75, CAST(quantile_cont(v, 0.9) FILTER (WHERE v > 0 AND v < ${PLACEHOLDER}) AS DOUBLE) AS p90,
+      CAST(count(*) FILTER (WHERE v >= ${PLACEHOLDER}) AS BIGINT) AS placeholders
     FROM v GROUP BY ALL ORDER BY y, ${byType ? "total DESC, d" : "y"}`;
   const got = deps.execute(sql) ?? [];
-  type R = { y: number; d: string | null; records: number; total: number; leftOut: number; average: number | null; median: number | null; p: (number | null)[] };
-  const rows: R[] = got.map((r) => ({ y: Number(r[0]), d: r[1] === null ? null : String(r[1]), records: Number(r[2]), total: Number(r[3]), leftOut: Number(r[4]),
+  type R = { y: number; d: string | null; records: number; total: number; leftOut: number; placeholders: number; average: number | null; median: number | null; p: (number | null)[] };
+  const rows: R[] = got.map((r) => ({ y: Number(r[0]), d: r[1] === null ? null : String(r[1]), records: Number(r[2]), total: Number(r[3]), leftOut: Number(r[4]), placeholders: Number(r[11] ?? 0),
     average: r[5] === null || r[5] === undefined ? null : Number(r[5]), median: r[6] === null || r[6] === undefined ? null : Number(r[6]),
     p: [7, 8, 9, 10].map((i) => (r[i] === null || r[i] === undefined ? null : Number(r[i]))) }));
   if (!rows.length) return decline(`No property was recorded as stolen ${shop ? "in shoplifting incidents " : ""}for ${where} in ${when}.`);
@@ -108,6 +111,7 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
     { as: "median", header: "Median Value ($)", cells: rows.map((r) => ({ value: r.median === null ? null : Math.round(r.median), status: r.median === null ? "UNAVAILABLE" : "VALUE" })) },
     { as: "records", header: "Property records", cells: rows.map((r) => ({ value: r.records, status: "VALUE" })) },
     { as: "left_out", header: "Records with no value", cells: rows.map((r) => ({ value: r.leftOut, status: "VALUE" })) },
+    ...(rows.some((r) => r.placeholders) ? [{ as: "placeholders", header: "Records with placeholder values", cells: rows.map((r) => ({ value: r.placeholders, status: "VALUE" })) }] : []),
   ];
   const pct: Support[] = percentiles ? [["p10", "10th Percentile Value ($)", 0], ["p25", "25th Percentile Value ($)", 1], ["p75", "75th Percentile Value ($)", 2], ["p90", "90th Percentile Value ($)", 3]]
     .map(([as, header, i]) => ({ as: as as string, header: header as string, cells: rows.map((r) => { const x = r.p[i as number]; return { value: x === null ? null : Math.round(x), status: x === null ? "UNAVAILABLE" : "VALUE" }; }) })) : [];
@@ -127,6 +131,8 @@ export function answerStolenValue(plan: NibrsPlan, main: "total_value" | "averag
   lines.push(main === "total_value" ? "The total adds every record, including those with no value recorded."
     : `The ${wording} leaves out ${noun(leftOutTotal)} with a $0 or blank value (value not known); the total includes them.`);
   if (main === "total_value" && leftOutTotal) lines.push(`${noun(leftOutTotal)} had a $0 or blank value.`);
+  const placeholderTotal = rows.reduce((n, r) => n + r.placeholders, 0);
+  if (placeholderTotal) lines.push(`The ${wording} leaves out ${noun(placeholderTotal)} with placeholder values ($999,999,998 or more).`);
   if (percentiles) lines.push("The 10th, 25th, 50th (median), 75th and 90th percentiles are of the records with a value.");
   lines.push(...trimmed, "Counts each property record of an incident that was recorded as stolen.", "Includes all agencies.");
   const delivered = deliverTable(plan2, grouping, stat, rows.map((r) => ({ key: grouping ? label(r) : null, value: val(r) === null ? null : Math.round(val(r) as number), status: val(r) === null ? "UNAVAILABLE" : "VALUE" })),

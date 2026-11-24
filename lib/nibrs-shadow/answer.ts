@@ -1118,7 +1118,10 @@ function weaponRow(label: string): number {
 const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
 const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  const ud = UP_DOWN_YES_NO.exec(question);
+  // A pasted "Q: ..." label is not part of the question (QL-nibrs-96e29db407): the question is read without it, so every default applies as it does without the label.
+  const unlabeled = question.replace(/^\s*Q\s*:\s*/i, "");
+  if (unlabeled !== question && unlabeled.trim()) return shadowAnswer(unlabeled, depsIn);
+  const ud =UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
     const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
     const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;

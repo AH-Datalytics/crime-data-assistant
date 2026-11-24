@@ -123,7 +123,7 @@ const FILTERS: Rule[] = [
   // Not a weapon law violation ("gun possession", "possession of a firearm": job AR6), which is its own crime.
   { concept: "filter", value: () => "weapon:firearm", pattern: R(String.raw`(?<!\b(?:possession|carrying)\s+of\s+(?:a\s+)?|\b(?:illegal|unlawful)\s+|\bcarrying\s+(?:a\s+)?(?:concealed\s+)?)\b(?:(?:that|which)\s+)?(?:involv(?:e|es|ing)\s+(?:the\s+)?use\s+of\s+a\s+)?(?:guns?|firearms?)\b(?!\s+(?:possession|laws?\s+violations?|laws?|violations?)\b)`) },
   // "shoplifted goods" / "the value of shoplifting": the stolen property of the incidents that had a shoplifting offense.
-  { concept: "filter", value: () => "offense:23C", pattern: R(String.raw`\bshoplifted(?=\s+(?:items?|goods?|merchandise|property)\b)|(?<=\b(?:value\s+(?:of|stolen\s+in)|stolen\s+in)\s+)shopliftings?\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b|\bpercentiles?\b/i.test(q) },
+  { concept: "filter", value: () => "offense:23C", pattern: R(String.raw`\bshoplifted(?=\s+(?:items?|goods?|merchandise|property)\b)|(?<=\b(?:value\s+(?:of|stolen\s+in)|stolen\s+in)\s+)shopliftings?\b|(?<=\bstolen\s+(?:items?|goods?|merchandise|property)\s+in\s+)shopliftings?(?:\s+incidents?)?\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b|\bpercentiles?\b/i.test(q) },
   // drugs
   { concept: "filter", value: () => "drug:E", pattern: R(String.raw`\bmarijuana\b|\bcannabis\b`) },
   { concept: "filter", value: () => "drug:L", pattern: R(String.raw`\bmeth(?:amphetamines?)?\b|\bamphetamines?\b`) },
@@ -255,7 +255,7 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
   { concept: "measure", value: () => "kidnapping", pattern: R(String.raw`\bkidnap(?:ping|pings|ped)?s?\b`) },
   { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))(?![\s-]+(?:rifles?|weapons?|guns?|pistols?|style|offen[cs]es)\b)`) },
-  { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`(?<!\bvalue\s+(?:of|stolen\s+in)\s+)\bshoplifting\b`) },
+  { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`(?<!\bvalue\s+(?:of|stolen\s+in)\s+)(?<!\bstolen\s+(?:items?|goods?|merchandise|property)\s+in\s+)\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
   { concept: "measure", value: () => "theft", pattern: R(String.raw`\blarcen(?:y|ies)\b|\bthefts?\b`) },
   { concept: "measure", value: () => "arson", pattern: R(String.raw`\barsons?\b`) },
@@ -424,7 +424,7 @@ const RULES: Rule[] = [
   { concept: "unit", value: () => "victims", pattern: R(String.raw`\bvictims?\b|\bvictimi[sz]ations?\b`) },
   { concept: "unit", value: () => "offenders", pattern: R(String.raw`\boffenders?\b|\bsuspects?\b|\bperpetrators?\b`) },
   { concept: "unit", value: () => "arrests", pattern: R(String.raw`\barrest(?:s|ees?)?\b|\barrested\b`) },
-  { concept: "unit", value: () => "incidents", pattern: R(String.raw`\bincidents?\b`) },
+  { concept: "unit", value: () => "incidents", pattern: R(String.raw`(?<!\bstolen\s+(?:items?|goods?|merchandise|property)\s+in\s+shopliftings?\s+)\bincidents?\b`) },
   // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread); so are
   // "drug offenses" ("drug offenses in Ohio" had left "drug" unread: bad-decline audit, 2026-11-06).
   { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\b(?:sex(?:ual)?|drug|narcotics?|assault)\s)\boffen[cs]es\b`) },
