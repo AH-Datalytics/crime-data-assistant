@@ -1061,6 +1061,34 @@ function kingsCountyAsk(question: string): ShadowOutcome | null {
   const withState = (state: string) => question.slice(0, m.index) + m[0] + ", " + state + question.slice(m.index + m[0].length);
   return { kind: "clarify", about: "which Kings County", question: "Which Kings County: New York or California?", options: [{ label: "Kings County, New York", question: withState("New York") }, { label: "Kings County, California", question: withState("California") }] };
 }
+/** P295 (Jeff 2026-11-24, QL-shr-bcdb4c61db): "share of murders where the victim was black" is a table by year: all the murder victims, those of that race, and the share. */
+const RACE_WORDS = String.raw`(black|white|asian|african[-\s]american|american\s+indian|native\s+american|alaska\s+native|pacific\s+islander|native\s+hawaiian)`;
+const SHARE_OF_RACE = new RegExp(String.raw`\b(?:what\s+|how\s+much\s+)?(?:share|percent(?:age)?|proportion)\s+of\s+(murder|homicide)s?(?:\s+where\s+(?:the\s+)?victims?\s+(?:was|were|is|are)\s+|\s+victims(?:\s+in\s+([a-z.' ,-]+?))?\s+(?:was|were|are|is)\s+)${RACE_WORDS}\b`, "i");
+const RACE_LABEL = (w: string) => /black|african/i.test(w) ? "Black" : /^white/i.test(w) ? "White" : /asian/i.test(w) ? "Asian" : /hawaiian|pacific/i.test(w) ? "Native Hawaiian or Pacific Islander" : "American Indian or Alaska Native";
+function shareOfRaceByYear(question: string, depsIn: ShadowDeps): ShadowOutcome | null {
+  const m = SHARE_OF_RACE.exec(question);
+  if (!m) return null;
+  const crime = m[1].toLowerCase();
+  const label = RACE_LABEL(m[3]);
+  const o = shadowAnswer(question.replace(m[0], `${crime} victims by race by year${m[2] ? ` in ${m[2].trim()}` : ""}`), depsIn);
+  const t = (o.kind === "shr" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
+  if (o.kind !== "shr" || !t || t.columns.length !== 4 || t.columns[1].header !== "Victim's race" || !t.rows.length) return o;
+  const years = [...new Set(t.rows.map((r) => String(r[0])))];
+  const rows = years.map((y) => {
+    const mine = t.rows.filter((r) => String(r[0]) === y);
+    const total = mine.reduce((s, r) => s + (typeof r[2] === "number" ? r[2] : 0), 0);
+    const n = mine.filter((r) => r[1] === label).reduce((s, r) => s + (typeof r[2] === "number" ? r[2] : 0), 0);
+    return [y, total, n, total ? Math.round((n * 1000) / total) / 10 : null] as (string | number | null)[];
+  });
+  const noun = crime === "murder" ? "Murder" : "Homicide";
+  const columns = [t.columns[0], { binding: { kind: "statistic" as const, as: "count" }, header: `${noun} victims` }, { binding: { kind: "statistic" as const, as: "count_race" }, header: `${label} victims` }, { binding: { kind: "statistic" as const, as: "share" }, header: "Share (%)" }];
+  const first = o.delivered.text[0];
+  const tm = first.match(/^(.*?) (?:Murder|Homicide) Victims by Year and the Victims' Race, (.*)$/);
+  const title = tm ? `${tm[1]} Share of ${noun} Victims Who Were ${label}, ${tm[2].replace(/(\d{4})-(\d{4})/, "$1 to $2")}` : first;
+  const evidence = rows.flatMap((r, ri) => [1, 2, 3].map((ci) => ({ row: ri, statistic: (columns[ci].binding as { as: string }).as, status: typeof r[ci] === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+  o.delivered = { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...o.delivered.text.slice(1)] } as typeof o.delivered;
+  return o;
+}
 /** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
 const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
@@ -1081,6 +1109,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
     }
     return o;
   }
+  { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
   if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?)\b/i.test(question)) {
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
