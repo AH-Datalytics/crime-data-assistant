@@ -220,3 +220,9 @@ assert.equal(rq("murders in Orleans County, NY in 2022").text.includes("New Orle
 assert.equal(rq("murders reported by Fairfax County Police Department in Virginia Beach in 2022").text.includes("Fairfax County, Virginia"), false, "a longer place name is not a state");
 assert.equal(rq("King County Police Department in Washington DC").text.includes("King County, Washington"), false);
 assert.equal(rq("murders in Orleans Parish, Louisiana State in 2022").text, "murders in New Orleans in 2022");
+
+// C1 crime vocabulary: "willful murder" is the murder the data counts, and "show data on" is "show me" (bad-decline id QL-nibrs-7f3cf299f8; QL-nibrs-6e0f23927b says "armed", which waits on the robbery-by-weapon decision).
+assert.equal(rq("show me willful murders in salem oregon since 1991").text, "show me murders in salem oregon since 1991");
+assert.equal(rq("willful homicides in Salem Oregon in 2024").text, "murders in Salem Oregon in 2024", "willful homicide is murder (09A), never negligent manslaughter (Codex 447 P1)");
+assert.equal(rq("show data on robberies in new orleans").text, "show me robberies in new orleans");
+assert.equal(rq("the data on robberies in new orleans").text, "the data on robberies in new orleans", "only a leading 'show data on' is the opener");
