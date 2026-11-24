@@ -667,6 +667,14 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     text = t;
     break;
   }
+  // A state said again at the end of a question that already named a city with it ("DWI in El Paso, Texas per month over time Texas"):
+  // the second one is the same place, not another (an agency with a state is not "a state beside other places").
+  for (const sn of Object.values(STATE_NAME_BY_CODE)) {
+    const rx = new RegExp(String.raw`,\s*${sn}\b[^,]*?\s+${sn}\s*[?.!]?\s*$`, "i");
+    if (rx.test(text)) { text = text.replace(new RegExp(String.raw`\s+${sn}\s*([?.!]?)\s*$`, "i"), "$1"); break; }
+  }
+  // "rifle" beside another weapon is the weapon, not Rifle, Colorado ("handgun vs rifle murders in Texas"): the plural reads as the weapon.
+  text = text.replace(/\b(handguns?|shotguns?|knives|knife|firearms?)(\s+(?:vs\.?|versus|and|or|to)\s+)rifle\b(?!\s*,)/gi, "$1$2rifles");
   // "... and the national rate / average / total": the United States, only where a rate, if asked, is named before it
   // ("the national rate" may be the question's only rate word, and then it is left as written: Codex comparison review
   // 01.1). Applied here, not in PHRASES, whose replacement sees only the matched words.
