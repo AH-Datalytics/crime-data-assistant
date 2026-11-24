@@ -1698,9 +1698,12 @@ assert.equal(scoreShadow(vLabel, stripped, r, ctx, both(84)).result!.outcome, "i
 // corrected spelling is disclosed before the source; Part I counts are left to Historical and Current Trends (P01).
 const fc = as(ask("Will shoplifting go up in Memphis next year?"), "decline");
 assert.deepEqual([fc.reason, fc.alternative!.label], ["forecast", "The last 10 complete years, by year"]);
-assert.equal(as(fc.alternative!.continuation!, "decline").notBuilt, true, "2016 is before this build");
+// A NIBRS-only measure over years that begin before this build is answered from the first built year, the missing years named
+// (P130 extended, 2026-11-24); it no longer declines with a button.
+const fcStart = as(fc.alternative!.continuation!, "answer");
+assert.ok(fcStart.delivered.text.some((t) => /come from NIBRS, which starts in 2017, so 2016 isn't included\./.test(t)), JSON.stringify(fcStart.delivered.text));
 // A forecast verb the reader reads as a change ("increase") is dropped from the alternative too.
-assert.equal(as(as(ask("Will carjackings increase in Memphis in 2027?"), "decline").alternative!.continuation!, "decline").notBuilt, true);
+as(as(ask("Will carjackings increase in Memphis in 2027?"), "decline").alternative!.continuation!, "answer");
 // Codex review 2: with the years present, the forecast's alternative reaches an annual answer (its two filled parts no
 // longer share a binding); a real word is never corrected into a crime; P01 leaves a crime's details to NIBRS's limits.
 const deeper: ShadowDeps = { ...deps, release: { ...deps.release, firstMonth: "2016-01" }, target: { ...deps.target, builtYears: [2016, ...deps.target.builtYears] } };
@@ -1858,8 +1861,8 @@ for (const q of ["Did shoplifting go up in Detroit in 2028?", "Change in shoplif
 }
 const fcCmp = as(ask("Will shoplifting increase in Detroit in 2027 compared with 2026?"), "decline");
 assert.equal(fcCmp.reason, "forecast");
-const fcAltCmp = as(fcCmp.alternative!.continuation!, "decline");
-assert.deepEqual([fcAltCmp.notBuilt, /2016 to 2025/.test(fcAltCmp.explanation)], [true, true], "the trend alternative is the last 10 complete years (before this build), not the forecast's comparison");
+const fcAltCmp = as(fcCmp.alternative!.continuation!, "answer");
+assert.ok(fcAltCmp.delivered.text.some((t) => /come from NIBRS, which starts in 2017, so 2016 isn't included\./.test(t)), "the trend alternative is the last 10 complete years, answered from 2017 with 2016 named, not the forecast's comparison");
 assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /^This isn.t available here\./);
 // Scoring: the comparison's periods are checked against the label; prose must be the templates with the table's numbers;
 // a rolling answer must show every displayed month.
@@ -2761,6 +2764,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const before = as(ask("Shoplifting in Memphis from January 2016 to March 2024"), "answer");
   assert.deepEqual(before.period, { from: "2017-01", to: "2024-03" });
   assert.equal(before.delivered.text[1], "Monthly figures for Memphis, Tennessee start in January 2017 (NIBRS). Showing NIBRS monthly figures from January 2017.");
+  // 2026-11-24: a NIBRS-only figure no other source holds is answered from the first year, the earlier years named.
+  const clip = as(ask("Shoplifting in Memphis per year from 2012 to 2020"), "answer");
+  assert.equal(clip.delivered.text[1], "These figures come from NIBRS, which starts in 2017, so 2012 to 2016 aren't included.", JSON.stringify(clip.delivered.text));
   assert.equal(readQuestion("Chicago robberies after 2010", 2026, "2026-09").ledger.parts.find((p) => p.concept === "period")?.value, "since:2011", "after 2010 starts with 2011");
 }
 // Coordinator 2026-11-02 (the redesign's retest of #96). 1: a breakdown the question names is never dropped.

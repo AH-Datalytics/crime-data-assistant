@@ -1,0 +1,12 @@
+{
+  "id": "P285",
+  "topic": "Proposed: extends the 2026-11-02 and 2026-11-11 rules",
+  "decision needed": "Jeff to confirm that a NIBRS-only figure over years that start before 2017 is answered from 2017 with a line, instead of declining with a \"From 2017\" button.",
+  "situation (example wording)": "\"carjacking rates in Atlanta for the past ten years\", \"drug offenses in Salem since 2000\", \"aggravated assault with a firearm in DC and Prince George's since 2010\", \"violent crime by offender age, California, 2015 to 2025\" (a measure only NIBRS holds, with no yearly Crime Index figure, over a period that starts before NIBRS's first year)",
+  "what the app does today": "A decline (\"NIBRS figures here cover January 2017 through ..., so they don't include ...\") with a button, \"From 2017, the first year in the data\" (Jeff 2026-11-02). Arrests alone were answered from 2017 with a line (Jeff 2026-11-11).",
+  "proposed behavior": "Answered from 2017, with one line after the title: \"These figures come from NIBRS, which starts in 2017, so 2015 to 2016 aren't included.\" (\"2016 isn't included.\" for one year). The same line the arrests rule uses, with \"These figures\" for \"Arrests here\". Not used when Crime Index has a yearly figure for the same question (that offer stays), when the question is monthly for one agency (the span choices stay), or when the years are a list.",
+  "exact default or choices offered": "The answer from 2017, with the line.",
+  "why": "The labels for these questions are answers (R14); the arrests rule already answers this way. The button asked for a second click to get what the question was after.",
+  "status": "Proposed 2026-11-24 (engine session, bad-decline group outside_release_coverage); not yet confirmed by Jeff",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"A period starting before the data\": Shoplifting in Memphis per year from 2012 to 2020; the forecast alternative, \"Will shoplifting go up in Memphis next year?\")."
+}

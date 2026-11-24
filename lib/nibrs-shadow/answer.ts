@@ -2746,7 +2746,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // answer, no ask (Jeff 2026-11-14: "just give the SHR data since that's the only source that covers that"; only when
     // the monthly span reaches outside Current Trends). It shows its own span; nothing is joined to Current Trends' months.
     const murderish = ["murder", "homicide", "homicide_all"].includes(sp.measures[0]);
-    if (span && form === "months" && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && murderish && deps.shr) {
+    if (span && (form === "months" || form === "total") && place && place.kind === "agency" && span[0] < cur.finalFirstMonth && !flags(ledger0).nibrsAsked && sp.statistic === "count" && murderish && deps.shr) {
       const hrFirst = span[0] > `${SHR_FIRST_YEAR}-01` ? span[0] : `${SHR_FIRST_YEAR}-01`;
       const hrEnd = span[1] >= cur.lastMonth || span[1] > deps.shr.latestMonth ? deps.shr.latestMonth : span[1];
       if (hrEnd >= hrFirst) {
@@ -3634,11 +3634,17 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").
     // Arrests (Jeff 2026-11-11): answered from NIBRS's first year, saying the earlier years aren't in this data, until a
     // summary-arrest source exists. Crime Index has no arrests, so there is no other answer to offer.
-    if (covered?.kind === "answer" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) {
-      const lastBefore = String(Number(firstY) - 1);
-      const note = `Arrests here come from NIBRS, which starts in ${firstY}, so ${periodWords(period.from, `${lastBefore}-12`)} aren't included.`;
-      return { ...covered, delivered: { ...covered.delivered, text: [covered.delivered.text[0], note, ...covered.delivered.text.slice(1)] } };
-    }
+    // The same for any NIBRS-only figure no other source holds (labels R14, 2026-11-24: "drug offenses in Salem since 2000",
+    // "carjacking rates in Atlanta for the past ten years"): answered from the first year, the earlier years named, when
+    // Crime Index has no yearly figure for it (by year does not run).
+    const arrestsOnly = plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id));
+    const clipNote = (who: string) => {
+      const missing = periodWords(period.from, `${String(Number(firstY) - 1)}-12`);
+      const note = `${who} come from NIBRS, which starts in ${firstY}, so ${missing} ${/ (?:through|and|to) /.test(missing) ? "aren't" : "isn't"} included.`;
+      const c = covered as Extract<ShadowOutcome, { kind: "answer" }>;
+      return { ...c, delivered: { ...c.delivered, text: [c.delivered.text[0], note, ...c.delivered.text.slice(1)] } };
+    };
+    if (covered?.kind === "answer" && arrestsOnly) return clipNote("Arrests here");
     // The covered years themselves can't be answered (every national arrest by age over several years: job AR6): that
     // reason is the true one, not the years outside the data.
     if (covered?.kind === "decline" && covered.reason === "unsupported_capability" && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) return covered;
@@ -3648,6 +3654,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       && !plan.measures.some((m) => /^(?:victims|offenses|incidents)\.(?:murder|homicide_all|homicide)(?![a-z_])/.test(m.id))) {
       const ch = spanChoices({ ledger, deps, pins, agency: onePlace.label, ori: onePlace.ori, startYear: Number(period.from.slice(0, 4)), startMonth: period.from, endMonth: period.to });
       if (ch) return ch;
+    }
+    // Any other NIBRS-only figure no other source holds: answered from the first year, the earlier years named, instead of a
+    // button (labels R14, 2026-11-24). Only when Crime Index has no yearly figure for it.
+    // A by-year run that is itself NIBRS (kind "answer", clipped the same way) is no other source.
+    if (covered?.kind === "answer" && !yearSet) {
+      const by = byYearInstead(ledger, deps, pins);
+      if (!by || by.continuation?.kind === "answer") return clipNote("These figures");
     }
     const byYear = covered && runsNow(covered) ? null : byYearInstead(ledger, deps, pins);
     return decline("outside_release_coverage", `NIBRS figures here cover ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so they don't include ${periodWords(period.from, period.to)}.${byYear ? ` Crime Index has yearly figures: cities and counties from ${deps.historical?.firstYear ?? 1930}, states and the nation from 1960.` : ""}`,
