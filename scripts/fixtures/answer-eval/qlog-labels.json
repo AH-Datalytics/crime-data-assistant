@@ -2190,19 +2190,15 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): a bare juvenile crime trend is the nation's juvenile arrests by year; relabeled from clarify victims or offenders."
    }
   },
   {
@@ -46768,19 +46764,15 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): a bare juvenile crime trend is the nation's juvenile arrests by year; relabeled from clarify victims or offenders."
    }
   },
   {
