@@ -3013,6 +3013,38 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       assert.equal(po.delivered.text[po.delivered.text.length - 1], "Source: Crime Index.");
     }
   }
+  // Part I wording is consumed only by the crime-over-time composite, including its explicit offense unit.
+  for (const phrase of ["Part 1", "Part I", "Part one", "Part 1 UCR", "Part I UCR", "Part one UCR"]) {
+    const q = `Chart New Orleans ${phrase} offenses by month`;
+    const po = shadowAnswer(q, cdeps);
+    assert.equal(po.kind, "current", `${q}: ${JSON.stringify(po).slice(0, 300)}`);
+    if (po.kind === "current") {
+      assert.deepEqual(po.delivered.table.columns.map((c) => c.header), ["Month", "Violent crime", "Property crime", "Part I crime", "Murder", "Rape", "Robbery",
+        "Aggravated assault", "Burglary", "Larceny-theft", "Motor vehicle theft"], q);
+      assert.deepEqual(po.delivered.table.rows[0].slice(0, 4), ["2025-01", 11, 11, 22], q);
+      assert.match(po.delivered.text[0], /^New Orleans, Louisiana /);
+    }
+    assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.state === "not-interpreted" && p.text === phrase), "the reader itself is unchanged");
+  }
+  for (const q of ["New Orleans Part 2 UCR offenses by month", "New Orleans Part 1 UCR arrests by month",
+    "New Orleans Part 1 UCR victims by month", "New Orleans Part 1 UCR offenses in 2024", "New Orleans Part 1 UCR murders by month",
+    "New Orleans Part 1 UCR mysterious offenses by month"]) {
+    assert.equal(shadowAnswer(q, cdeps).kind, "decline", q);
+  }
+  const laCity = shadowAnswer("Los Angeles city murder per month", cdeps);
+  assert.equal(laCity.kind, "current", JSON.stringify(laCity).slice(0, 300));
+  if (laCity.kind === "current") {
+    assert.match(laCity.delivered.text[0], /^Los Angeles, California /);
+    assert.deepEqual(laCity.delivered.table, as(shadowAnswer("LAPD murder per month", cdeps), "current").delivered.table);
+  }
+  const laBare = as(shadowAnswer("Los Angeles murder per month", cdeps), "clarify");
+  assert.match(laBare.about, /Los Angeles/);
+  assert.ok(laBare.options.some((o) => /Sheriff|County/.test(o.label)), "bare Los Angeles still offers the county");
+  const cityDeps = { ...deps, execute: () => [["TXHPD0000", 2024, 11, 0.5, 2300000]],
+    historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
+  const houstonCity = as(shadowAnswer("Houston city murders in 2024", cityDeps), "historical");
+  assert.deepEqual(houstonCity.delivered.table, as(shadowAnswer("Houston murders in 2024", cityDeps), "historical").delivered.table);
+  assert.ok(houstonCity.delivered.table.rows.some((r) => r.includes(11)), "Houston's yearly count still answers");
   const poGap = shadowAnswer("Houston crime per month", cdeps);
   assert.ok(poGap.kind === "current" && poGap.delivered.table.rows.some((r) => r[0] === "2026-08" && r[1] === null && r[2] === null && r[3] === null)
     // Every column is blank that month: the line is said once, naming no column (Engine 2.0 2026-11-21).
