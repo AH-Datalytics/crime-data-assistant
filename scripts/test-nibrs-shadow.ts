@@ -3850,6 +3850,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     "How many people were murdered in the last five years that are Hispanic in Texas", "How many Hispanic or Latino people were murdered in Texas in 2024"]) {
     const o = shadowAnswer(q, live) as any;
     assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 300)}`); }
+  // Bare places and fragments with no race named keep their ask (the Runner's gate ids).
+  for (const q of ["do for nyc", "i want for the District", "Nopd", "i want to see this for denver", "can you show me dallas's rate", "Is this in California?", "show me portland", "Show me juvenile crime trends"]) {
+    const o = shadowAnswer(q, live) as any;
+    assert.ok(o.kind !== "route", `${q}: ${JSON.stringify(o).slice(0, 200)}`); }
   // Two different groups are never collapsed to the first (Codex review): "Black or Hispanic" keeps both words.
   for (const q of ["How many Black or Hispanic people were murdered in Texas in 2024", "How many people were murdered in Texas in 2024 who were Black and Hispanic"]) {
     const t = readQuestion(q, 2026, "2026-09").text;
