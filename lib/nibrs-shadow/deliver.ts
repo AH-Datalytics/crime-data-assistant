@@ -141,7 +141,9 @@ export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent man
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
 /** A victim's age for the NIBRS crimes against property (Jeff 2026-11-15, the short line). */
 export const PROPERTY_AGE_LINE = "Counts victims of NIBRS crimes against property, such as robbery, burglary, theft, fraud and vandalism. Businesses and other victims that are not people have no age and show as Unknown.";
-export const NIGHT_LINE = "Many agencies record midnight when the time is not known, so night may be overstated.";
+/** P280 (Jeff 2026-11-23, "Offenses with a note"): a crime against a person by location or by hour is counted by offense. */
+export const OFFENSES_NOT_VICTIMS_LINE = "These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.";
+export const NIGHT_LINE ="Many agencies record midnight when the time is not known, so night may be overstated.";
 export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
 export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
 /** Increment 7: a person condition in words: "under 18", "aged 18 to 24", "female", "recorded as Black". */
