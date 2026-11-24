@@ -194,6 +194,12 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const SENT = "We don't track non-fatal shootings. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).";
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
+// QL-nibrs-c74cec7689: "offender demographics for robbery by sex" is the robbery offenders by sex (it was declined as unread).
+for (const q of ["Compare offender demographics for robbery by sex nationally in 2024", "offender demographics for robbery by sex nationally in 2024"]) {
+  const o = as(ask(q), "answer");
+  assert.deepEqual(o.plan.groupings.map((g) => g.dimension), ["offender.sex"], q);
+  assert.equal(o.plan.measures[0].id, "offenders.robbery", q);
+}
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
