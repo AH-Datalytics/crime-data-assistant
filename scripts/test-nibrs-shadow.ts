@@ -3048,7 +3048,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   { const live = { ...deps, execute: () => [], noDefaults: false, historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
     const want: Record<string, string> = { "rates of property crime, by type, since 2000": "United States Property Crime Rate by Type Per Year, 2000-2025",
       "property crime rates by type in the United States since 2000": "United States Property Crime Rate by Type Per Year, 2000-2025",
-      "property crime by type in the US by year since 2000": "United States Property Crime by Type Per Year, 2000-2025" };
+      "property crime by type in the US by year since 2000": "United States Property Crime by Type Per Year, 2000-2025",
+      // P286 (Jeff 2026-11-24): 2017 on too, where NIBRS also has the years.
+      "rates of property crime, by type, since 2017": "United States Property Crime Rate by Type Per Year, 2017-2025",
+      "property crime by type in 2019": "United States Property Crime by Type Per Year, 2019" };
     for (const [q, title] of Object.entries(want)) {
       const o = shadowAnswer(q, live) as unknown as { kind: string; delivered?: { text: string[]; table: { columns: { header: string }[] } } };
       assert.ok(o.kind === "srs" && o.delivered?.text[0] === title && o.delivered.text.at(-1) === "Source: Crime Index.", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
