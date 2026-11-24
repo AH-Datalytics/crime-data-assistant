@@ -491,9 +491,10 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const most = rq.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
   // A title that reads back the question's datapoints (Jeff 2026-11-17: "2024 Murder Rate by State"), then plain notes, then the source line.
-  const unitTitle = states ? "State" : counties ? "County Agency" : cities || rq.region ? "City" : "Agency";
   const unitPlural = states ? "states" : counties ? "county agencies" : cities || rq.region ? "cities" : "agencies";
-  const title = `${states ? "United States" : titleCase(where)} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
+  // Jeff 2026-11-24 (ranked table card): "Cities With the Most Murders, 2024", the place said only when it is a state or region.
+  const inWhere = national && !rq.region ? "" : ` in ${titleCase(where)}`;
+  const title = `${titleCase(`${unitPlural}${inWhere} with the ${most} ${what}`)}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
   const text = [title,
     `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? "rates" : m.words} are shown.`,
     states ? "The 50 states are ranked; the District of Columbia is not a state, so it is left out."

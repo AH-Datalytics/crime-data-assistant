@@ -31,6 +31,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
+import { RANK_DEFAULT_ROWS } from "./titles";
 import { DEMOGRAPHIC_RATE, negatedBefore, WHERE_MOST_ONCE } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
@@ -1831,7 +1832,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
     return decline("outside_release_coverage", `Homicide Reports in the data run through ${latest.slice(0, 4)}, so ${fromY} is outside them.`);
   const to = toY >= Number(latest.slice(0, 4)) ? latest : `${toY}-12`;
   const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide" | "homicide_all", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
-    limit: rankVal[2] ? Number(rankVal[2]) : 20, minPopulation: 250000 }, deps.shr, deps.historical, deps.execute);
+    limit: rankVal[2] ? Number(rankVal[2]) : RANK_DEFAULT_ROWS, minPopulation: 250000 }, deps.shr, deps.historical, deps.execute);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 
@@ -2853,14 +2854,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
       const base = { measure: sp.measure, statistic: sp.statistic === "rate" ? "rate" as const : "count" as const, minPopulation: named ?? defaultFloor, floorAsked: named !== null };
       if (yrs && yrs[0] === yrs[1] && yrs[0] <= hb.lastYear && !toDate) {
-        const r = answerHistoricalRanking({ ...base, state: "US", year: yrs[0], direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, entity: sp.entity, region }, hb, deps.execute);
+        const r = answerHistoricalRanking({ ...base, state: "US", year: yrs[0], direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? RANK_DEFAULT_ROWS, entity: sp.entity, region }, hb, deps.execute);
         if (r.kind === "historical") return said(r);
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
       }
       const cur = deps.current;
       const ctSpan = yrs && yrs[0] === yrs[1] && cur ? currentYearSpan(yrs[0], cur, toDate) : null;
       if (ctSpan && cur) {
-        const r = answerCurrentRanking({ ...base, state: "US", from: ctSpan[0], to: ctSpan[1], pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 },
+        const r = answerCurrentRanking({ ...base, state: "US", from: ctSpan[0], to: ctSpan[1], pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? RANK_DEFAULT_ROWS },
           entity: sp.entity === "agency" ? "agency" : "city", region }, cur, hb.root, deps.execute, rankAgencies);
         if (r.kind === "current") return said(r);
         return decline("unsupported_capability", r.explanation);
@@ -3098,7 +3099,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // A year past Crime Index's last (2026) is Current Trends' (decision 4), on its own path.
     if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear && !toDate) {
       const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
-        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation, floorAsked: floorOf(sp) !== null,
+        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? RANK_DEFAULT_ROWS, minPopulation, floorAsked: floorOf(sp) !== null,
         entity: sp.entity }, deps.historical, deps.execute);
       if (r.kind === "historical") return saidFloor(r);
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -3110,7 +3111,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (toDate && !ctSpan) return decline("outside_release_coverage", "Year-to-date rankings come from Current Trends, which covers 2025 and 2026.");
     if (ctSpan && cur && sp.entity !== "state") {
       const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: ctSpan[0], to: ctSpan[1],
-        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation, floorAsked: floorOf(sp) !== null,
+        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? RANK_DEFAULT_ROWS }, minPopulation, floorAsked: floorOf(sp) !== null,
         entity: sp.entity === "agency" ? "agency" : sp.entity === "county" ? "county" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
       if (r.kind === "current") return saidFloor(r);
       return decline("unsupported_capability", r.explanation);
@@ -3322,8 +3323,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     set0.where.push({ field: "agency.population", op: ">=", value: 250000 });
     plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities have a population of 250,000 or more" });
   }
-  // D05: a ranking with no number shows 20 rows.
-  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
+  // D05, changed by Jeff 2026-11-24 (ranked table card): a ranking with no number shows the top 10.
+  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: RANK_DEFAULT_ROWS } : t));
   let parts2 = a.parts;
   const statements: AnswerStatement[] = [];
   const unbind = (drop: (p: (typeof parts2)[number]) => boolean) => {
