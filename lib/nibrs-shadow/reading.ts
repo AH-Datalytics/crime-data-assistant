@@ -225,6 +225,8 @@ const PHRASES: [RegExp, string][] = [
   // "retail theft" is shoplifting; "larceny from auto" is theft from a motor vehicle; "violent crime and property trends" is violent crime and property crime.
   [/\b(?:have\s+|has\s+|had\s+)?(?:occurred|occured|ocurred|occurrd|occurrred)\s*in\b/gi, "in"],
   [/\bhow\s+(?:mnay|mny|manny|mamy)\b/gi, "how many"],
+  // R53 (declines owner 2026-11-23): "how many people were murdered last year" is "murder victims last year" (the people murdered are the victims; stays after the "how mnay" fix so typos still match).
+  [/\bhow\s+many\s+(?:people|persons|individuals)\s+(?:were|are|have\s+been|got)\s+murdered\b/gi, "murder victims"],
   [/\bs(?:incce|icne|inec|ince(?=e))\b/gi, "since"],
   [/\bfor\s+year\s+((?:19|20)\d{2})\b/gi, "in $1"],
   [/\bmassachuss?ett?s\b|\bmassachusetes\b|\bmassachussetts\b|\bmasachusetts\b/gi, "Massachusetts"],
