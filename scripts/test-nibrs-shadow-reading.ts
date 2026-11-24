@@ -5,7 +5,7 @@
  * flagged. Boundaries keep their own meaning. The wordings here are not the held-out cases' (LS-246..LS-270). Offline.
  */
 import assert from "node:assert/strict";
-import { nearestWord, readQuestion } from "../lib/nibrs-shadow/reading";
+import { fuzzyWord, nearestWord, readQuestion } from "../lib/nibrs-shadow/reading";
 
 const read = (q: string) => readQuestion(q, 2026);
 
@@ -210,6 +210,30 @@ console.log("nibrs shadow reading: general wording forms read; boundaries keep t
 // All years by default (Jeff 2026-11-11): "going back as far as possible" is by year with no range.
 assert.equal(rq("indianapolis homicide counts going back as far as possible").text, "indianapolis homicide counts by year");
 assert.equal(rq("Carjackings in Houston by month for all years since 2020").text.replace(/\s+/g, " "), "Carjackings in Houston by month since 2020", "a grain and a range of its own: the phrase is dropped");
+
+// H2 typos (bad-declines): stray characters, one changed letter in a word that is no English word, and slips in asking words.
+// A garbled year is never repaired into a year (QL-hist-7c5f94c559): the word slip is fixed, the digits stay for the ask.
+assert.equal(read("SWhow me murders in new orleans back to 1`980").text, "Show me murders in new orleans back to 1`980");
+assert.equal(read("Can you calcul;ate the national murder rate by year?").text, "Can you calculate the national murder rate by year?");
+assert.equal(read("vilont ctime rate in NH since 2000").text, "violent crime rate in NH since 2000");
+assert.equal(read("Can ypu list Chicago murders in 2024").text, "Can you list Chicago murders in 2024");
+assert.equal(read("can I seen homicides in Chicago in 2024").text, "can I see homicides in Chicago in 2024");
+assert.equal(read("show me aggravates assaults in salem oregon").text, "show me aggravated assaults in salem oregon");
+assert.equal(read("murders per 100.000 in Texas").text, "murders per 100,000 in Texas");
+assert.equal(read("Murders in El Paso, Texas tecas over time").text, "Murders in El Paso, Texas over time", "a repeated state is dropped");
+assert.equal(fuzzyWord("ctime", "ctime in Ohio"), "crime");
+assert.equal(fuzzyWord("tecas", "murders in Ohio"), null, "a state is a target only when the question names it");
+for (const w of ["sample", "lark", "countywy", "tacoma"]) assert.equal(fuzzyWord(w, "x in Ohio"), null, w);
+
+// B1 place ids: a county police department with its state after "in" is "<County>, <State>"; Orleans Parish is New Orleans.
+assert.equal(rq("Murders reported by the Cook County police department in Illinois in 2022").text, "Murders reported by the Cook County, Illinois in 2022");
+assert.equal(rq("Murder rate for Fairfax County Police Department in Virginia from 2021 to 2025").text, "Murder rate for Fairfax County, Virginia from 2021 to 2025");
+assert.equal(rq("murders in Orleans Parish, Louisiana in 2022").text, "murders in New Orleans in 2022");
+assert.ok(rq("murders in Orleans Parish in 2022").readings.some((r) => r.from === "Orleans Parish" && r.to === "New Orleans"), "the reading says it");
+assert.equal(rq("murders in Orleans County, NY in 2022").text.includes("New Orleans"), false, "Orleans County stays itself");
+assert.equal(rq("murders reported by Fairfax County Police Department in Virginia Beach in 2022").text.includes("Fairfax County, Virginia"), false, "a longer place name is not a state");
+assert.equal(rq("King County Police Department in Washington DC").text.includes("King County, Washington"), false);
+assert.equal(rq("murders in Orleans Parish, Louisiana State in 2022").text, "murders in New Orleans in 2022");
 
 // C1 crime vocabulary: "willful murder" is the murder the data counts, and "show data on" is "show me" (bad-decline id QL-nibrs-7f3cf299f8; QL-nibrs-6e0f23927b says "armed", which waits on the robbery-by-weapon decision).
 assert.equal(rq("show me willful murders in salem oregon since 1991").text, "show me murders in salem oregon since 1991");

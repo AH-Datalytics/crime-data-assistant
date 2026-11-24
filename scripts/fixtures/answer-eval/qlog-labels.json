@@ -24775,7 +24775,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "Orleans Parish is the City of New Orleans; figures are New Orleans Police Department."
    }
   },
   {
@@ -37908,7 +37908,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "This is a reporting-coverage lookup."
+    "notes": "Orleans Parish is the City of New Orleans; figures are New Orleans Police Department."
    }
   },
   {
@@ -70675,7 +70675,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Kings County requires distinguishing New York from California."
+    "notes": "Kings County requires distinguishing New York from California. Jeff ruled 2026-11-24: clarify \"Which Kings County: New York or California?\" (county means sheriff per the standing rule)."
    }
   },
   {
