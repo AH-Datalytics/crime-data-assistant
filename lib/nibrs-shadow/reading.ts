@@ -273,8 +273,13 @@ const PHRASES: [RegExp, string][] = [
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
   // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
   // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
-  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|were\s+committed\s+(?:with|using)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|(?:were\s+)?committed\s+(?:with|using|via)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?|knife|knives)\b([^?.]*)/gi, "share of $1 by weapon$2"],
   [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  // "what weapons do people use in robberies in Texas", "what weapons are most commonly used in ..." and "by weapons" are the same by-weapon question.
+  [/\bwhat\s+(?:types?\s+of\s+)?weapons?\s+(?:do\s+(?:people|offenders|criminals|suspects)\s+use|are\s+(?:most\s+)?(?:commonly\s+|often\s+)?used)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
+  [/\bby\s+weapons\b/gi, "by weapon"],
+  // "the value of items stolen in burglaries" is the value stolen in burglaries.
+  [/\bvalue\s+of\s+(?:all\s+)?(?:the\s+)?(?:items|property|goods)\s+(?:stolen|taken)\s+(?:in|via|from)\b/gi, "value stolen in"],
   [/\b(with|involving)\s+(a|an)\s+(firearm|gun|knife|handgun|weapon)\s+used\b/gi, "$1 $2 $3"],
   [/\s+analysis\s+for\s+/gi, " in "],
   // P191: "for the entire US", "across the whole country" are the nation ("nationwide").
