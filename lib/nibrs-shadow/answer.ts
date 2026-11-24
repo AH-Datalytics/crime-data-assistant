@@ -1066,6 +1066,9 @@ const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+/** P306: "typical dollar value" / "typical loss" (also amount, cost, worth); "typical" alone or with other nouns is not this ask. */
+const TYPICAL_VALUE = /\btypical\s+(?:dollar\s+)?(?:value|loss|amount|cost|worth)\b/i;
+const TYPICAL_ASK = "Do you mean the average or the median?";
 /** P305: peers named by wording ("similar cities", "peer cities", "3 agencies of similar size", "to other cities"). "Other large cities" is a different ask. */
 const PEER_CITIES = /\b(?:(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+)?(?:other\s+)?(?:(?:similar(?:ly)?(?:[-\s]?sized?|\s+situated)?|comparable|peer)\s+(?:cities|city|counties|agencies|departments|places)|(?:cities|counties|agencies|departments|places)\s+of\s+(?:a\s+)?(?:similar|comparable|the\s+same)\s+size)\b|\b(?:to|versus|vs\.?|against|with|than)\s+(?:the\s+)?other\s+(?:cities|counties|agencies|departments|places)\b/i;
 const PEER_ASK = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
@@ -1180,6 +1183,16 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  // P306 (Jeff 2026-11-24): a "typical" dollar value or loss does not say which summary is meant; ask average or median.
+  { const ty = TYPICAL_VALUE.exec(question);
+    if (ty) {
+      const swap = (word: string) => question.replace(/\btypical\b/i, word);
+      return { kind: "clarify", about: "mean or median value", question: TYPICAL_ASK, options: [
+        { label: "Average", question: swap("average") },
+        { label: "Median", question: swap("median") },
+      ] };
+    }
+  }
   // P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
   // A place that has to be told apart (Richmond, Baltimore) is still asked first: the peer wording rides on each of its buttons.
   { const pm = PEER_CITIES.exec(question);
