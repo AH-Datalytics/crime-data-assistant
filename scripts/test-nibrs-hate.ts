@@ -87,6 +87,12 @@ const total = ask("hate crimes in Texas from 2020 to 2024");
 as(total, "hate");
 assert.match(sqls[sqls.length - 1], /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/);
 assert.notEqual(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013").kind, "hate", "the window reaches 2012, when code 14 meant another group");
+// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
+const asian = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
+assert.ok(asian.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asian.delivered.text.join(" | "));
+assert.notEqual(ask("anti-Asian hate crimes in Texas from 2010 to 2024").kind, "hate", "an explicit range before 2013 is not answered");
+const asianNy = ask("Compare anti-Asian hate crimes in California and New York by year");
+assert.equal(asianNy.kind, "clarify", "which New York is asked, as it is for anti-Jewish");
 assert.equal(as(ask("hate crimes in Texas in 1980"), "decline").explanation, "Hate crime data here start in 1991, so 1980 isn't included.");
 assert.equal(as(ask("hate crimes in Texas from 1960 to 1990"), "decline").explanation, "Hate crime data here start in 1991, so 1960 through 1990 aren't included.");
 assert.ok(as(ask("hate crimes in Texas by year from 1990 to 1993"), "hate").delivered.text.includes("Hate crime data here start in 1991, so 1990 isn't included."));
