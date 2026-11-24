@@ -1,0 +1,12 @@
+{
+  "id": "P398",
+  "topic": "Value of stolen property",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What was the value of stolen property in Philadelphia in 2024?\", \"average value of shoplifted goods per year\", \"median value of stolen property by property type\", \"percentiles of the value of shoplifted goods\".",
+  "what the app does today": "Answers the total, average or median dollar value of property recorded as stolen, for one agency, a state or the nation, by year or by property type.",
+  "proposed behavior": "The total counts every stolen-property record. The average and median leave out records with a $0 or blank value, and the answer says how many were left out. Percentiles (10th, 25th, 50th, 75th, 90th) are of the records with a value. Shoplifted goods are the stolen property in incidents with a shoplifting offense (23C). A median value of an offense count (\"median value per incident\" of robberies) is declined.",
+  "exact default or choices offered": "None. With no place named, the United States is shown; with no year, the latest complete year.",
+  "why": "Coordinator relay of the ruling, 2026-11-24: option A with rule 1. Records with no dollar value would pull the average and median toward zero.",
+  "status": "Decided 2026-11-24 (coordinator ruling)",
+  "test cases": "scripts/test-nibrs-shadow.ts: stolen-property value total, average, median, by type, shoplifting, state, nation, years, percentiles."
+}

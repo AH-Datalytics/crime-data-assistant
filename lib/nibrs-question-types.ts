@@ -102,14 +102,16 @@ export type NPeriod =
   | { form: "none" };
 
 export type Grain = "total" | "year" | "month" | "rolling";
-export type Statistic = "count" | "rate" | "clearance_rate" | "total_value" | "average_value";
+export type Statistic = "count" | "rate" | "clearance_rate" | "total_value" | "average_value" | "median_value";
 
 export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null; statistic: Statistic; filters: string[]; places: NPlace[]; period: NPeriod; grain: Grain;
   /** A rolling series' window (Jeff 2026-11-05: any length named; an average when asked): months null when none is named. */
   window?: { months: number | null; average: boolean } };
 export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true;
   /** P194 (Jeff 2026-11-21): clearance by type for several named agencies, one row each, never summed (place is the first of them). */
-  places?: NPlace[] };
+  places?: NPlace[];
+  /** Stolen property value by type: the average, median or total asked for (Jeff 2026-11-24). */
+  statistic?: "total_value" | "average_value" | "median_value" };
 export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true; rank?: { dir: "top" | "bottom"; n: number | null } };
 export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency" | "county"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
 export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; statistic: "count" | "rate"; place: NPlace; earlier: number; later: number };
@@ -239,9 +241,13 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   for (const p of statParts) {
     take([p]);
     if (["rate", "per100k", "percapita"].includes(p.value ?? "")) statistic = "rate";
-    else if (p.value === "total_value" || p.value === "average_value") statistic = p.value;
+    else if (p.value === "total_value" || p.value === "average_value" || p.value === "median_value") statistic = p.value;
     else if (p.value === "count") { /* count */ }
     else return declineParts([p], (q) => cannot(q, "rates are given per 100,000 people."));
+  }
+  // A median dollar value is only for the stolen-property value; "median value per incident" of a crime is not that.
+  if (statistic === "median_value" && measures.length && measures.some((m) => m !== "property_value")) {
+    return declineParts(statParts, (p) => cannot(p, "a dollar value is given for stolen property, not for other offenses."));
   }
   const clearanceRate = clearance.some((p) => p.value === "rate");
   // r2 (L12): a part a type does not apply is declined by name here; the route also binds every typed answer by value.
@@ -419,6 +425,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (byYear && byMonth) return declineParts(grainParts, (p) => cannot(p, "a breakdown is by year or by month, not both."));
     return finish({ type: "breakdown", measure: measures[0], unit: bUnit, filters, dim, place: places[0]!, period: periods[0] ?? { form: "none" },
       ...(severalAgencies ? { places: places as NPlace[] } : {}),
+      ...(statistic === "average_value" || statistic === "median_value" || statistic === "total_value" ? { statistic } : {}),
       ...(byYear ? { byYear: true as const } : {}), ...(byMonth ? { byMonth: true as const } : {}) });
   }
 

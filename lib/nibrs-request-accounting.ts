@@ -122,6 +122,8 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "weapon:20", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?(?:knives|knife)\b`) },
   // Not a weapon law violation ("gun possession", "possession of a firearm": job AR6), which is its own crime.
   { concept: "filter", value: () => "weapon:firearm", pattern: R(String.raw`(?<!\b(?:possession|carrying)\s+of\s+(?:a\s+)?|\b(?:illegal|unlawful)\s+|\bcarrying\s+(?:a\s+)?(?:concealed\s+)?)\b(?:(?:that|which)\s+)?(?:involv(?:e|es|ing)\s+(?:the\s+)?use\s+of\s+a\s+)?(?:guns?|firearms?)\b(?!\s+(?:possession|laws?\s+violations?|laws?|violations?)\b)`) },
+  // "shoplifted goods" / "the value of shoplifting": the stolen property of the incidents that had a shoplifting offense.
+  { concept: "filter", value: () => "offense:23C", pattern: R(String.raw`\bshoplifted(?=\s+(?:items?|goods?|merchandise|property)\b)|(?<=\b(?:value\s+(?:of|stolen\s+in)|stolen\s+in)\s+)shopliftings?\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b|\bpercentiles?\b/i.test(q) },
   // drugs
   { concept: "filter", value: () => "drug:E", pattern: R(String.raw`\bmarijuana\b|\bcannabis\b`) },
   { concept: "filter", value: () => "drug:L", pattern: R(String.raw`\bmeth(?:amphetamines?)?\b|\bamphetamines?\b`) },
@@ -144,6 +146,8 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "bias:41", pattern: R(String.raw`\banti[-\s]?gay\b`) },
   { concept: "filter", value: () => "bias:lgbtq", pattern: R(String.raw`\banti[-\s]?(?:lgbtq?\+?|lgbt|glbt|lgbtqia\+?)(?![a-z])|\banti[-\s]?lesbian,?\s*gay,?\s*bisexual,?\s*(?:and\s+)?transgender\b`) },
   // property loss
+  // "value stolen in shoplifting" (the reader's form of "value of property stolen in shoplifting"): the word is the measure, not a loss-type filter.
+  { concept: "measure", value: () => "property_value", pattern: R(String.raw`(?<=\bvalue\s+)stolen(?=\s+in\s+shopliftings?\b)`) },
   { concept: "filter", value: () => "loss:7", pattern: R(String.raw`\bstolen\b`) },
   { concept: "filter", value: () => "loss:5", pattern: R(String.raw`\brecovered\b`) },
   { concept: "filter", value: () => "loss:4", pattern: R(String.raw`\b(?:damaged|destroyed|vandali[sz]ed)\b`) },
@@ -193,6 +197,8 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "relationship", pattern: R(String.raw`\bby\s+relationship(?:\s+to\s+(?:the\s+)?offenders?)?\b`) },
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
   { concept: "breakdown", value: () => "drug", pattern: R(String.raw`\bby\s+drug\s+(?:type|category)\b`) },
+  // Stolen property value (Jeff 2026-11-24): "by property type" and "the different types of stolen property".
+  { concept: "breakdown", value: () => "property-type", pattern: R(String.raw`\bby\s+(?:the\s+)?(?:type\s+of\s+)?property(?:\s+(?:type|category|description))?s?\b|\b(?:different\s+|various\s+)?types?\s+of\s+(?:stolen\s+)?(?=property\b)`) },
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\bby\s+bias(?:\s+motivation)?\b`) },
   // Jeff 2026-11-24: "most common bias" (or motivation) is the table of every bias, largest first, with a sentence naming the top one.
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\b(?:the\s+)?(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)(?:\s*\/\s*(?:bias(?:es)?|motivations?)|\s+motivations?)?\b|\bwhat\s+(?:bias(?:es)?|motivations?)\b`) },
@@ -205,7 +211,12 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "motor_vehicle_theft", pattern: R(String.raw`\b(?:motor[-\s]vehicle|auto(?:mobile)?|car|vehicle)\s+thefts?\b`) },
   { concept: "measure", value: () => "theft_from_motor_vehicle", pattern: R(String.raw`\b(?:(?:motor\s+)?vehicle|car|auto)\s+burglar(?:y|ies)\b|\btheft\s+from\s+(?:a\s+)?(?:motor\s+)?vehicles?\b|\bcar\s+break[-\s]?ins?\b`) },
   { concept: "measure", value: () => "motor_vehicle_property", pattern: R(String.raw`\bmotor\s+vehicles?(?:\s+property)?\b|\bcars\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
-  { concept: "measure", value: () => "property_value", pattern: R(String.raw`\bproperty\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
+  { concept: "measure", value: () => "property_value", pattern: R(String.raw`\bproperty\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b|\btypes?\s+of\s+(?:stolen\s+)?property\b/i.test(q) },
+  // "the value of everything stolen" / "stolen items" asks for the stolen property's value.
+  // "the value of property stolen in shopliftings" (the reader's text: "value stolen in shoplifting").
+  // The shoplifted goods: the stolen property of the incidents that had a shoplifting (23C) offense.
+  { concept: "measure", value: () => "property_value", pattern: R(String.raw`(?<=\bshoplifted\s+)(?:items?|goods?|merchandise|property)\b|(?<=\b(?:value\s+(?:of|stolen\s+in)|stolen\s+in)\s+)shopliftings?\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b|\bpercentiles?\b/i.test(q) },
+  { concept: "measure", value: () => "property_value", pattern: R(String.raw`\b(?:everything|all\s+(?:the\s+)?(?:goods|items|things|property))\s+(?=stolen\b)|(?<=\bstolen\s+)(?:items?|goods?)\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
   { concept: "measure", value: () => "carjacking", pattern: R(String.raw`\bcarjack(?:ing|ings|ed)?\b`) },
   { concept: "measure", value: () => "domestic_violence", pattern: R(String.raw`\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b|\bdomestic\b`) },
   { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b|(?<=\b(?:anti[-\s]?[a-z]+|antisemitic)\s)incidents?\b|\b(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)\b`) },
@@ -244,7 +255,7 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
   { concept: "measure", value: () => "kidnapping", pattern: R(String.raw`\bkidnap(?:ping|pings|ped)?s?\b`) },
   { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))(?![\s-]+(?:rifles?|weapons?|guns?|pistols?|style|offen[cs]es)\b)`) },
-  { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`\bshoplifting\b`) },
+  { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`(?<!\bvalue\s+(?:of|stolen\s+in)\s+)\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
   { concept: "measure", value: () => "theft", pattern: R(String.raw`\blarcen(?:y|ies)\b|\bthefts?\b`) },
   { concept: "measure", value: () => "arson", pattern: R(String.raw`\barsons?\b`) },
@@ -375,6 +386,7 @@ const RULES: Rule[] = [
   { concept: "threshold", value: (m) => thresholdValue(m[0]), pattern: R(String.raw`\b(?:of\s+)?\d[\d,]*\s*(?:k|thousand|million)?\s*(?:${POP_WORD}\s+)?(?:or\s+(?:more|larger|greater)|\+)(?:\s+${POP_WORD})?`),
     when: (m) => /(?:population|people|residents|persons|inhabitants|\d\s*k\b|thousand|million)/i.test(m[0]) },
   // ---- shares (the structure is read by the types from where the words sit) ----
+  { concept: "statistic", value: () => "median_value", pattern: R(String.raw`\bpercentiles?\s+of\s+(?:the\s+)?(?:(?:average|typical)\s+)?value(?:\s+of)?\b|\bpercent(?:iles?|ages?)\s+of\s+(?:the\s+)?(?:average|typical)\s+value(?:\s+of)?\b`) },
   { concept: "share", value: () => "share", pattern: R(String.raw`\b(?:what|which)\s+(?:share|percent(?:age)?|proportion|portion)\s+of\b|\b(?:the\s+)?(?:share|percent(?:age)?|proportion|portion)\s+of\b|\bas\s+a\s+(?:share|percent(?:age)?|proportion)\s+of\b|\bshares?\b|\bpercent(?:age)?\b|\bproportion\b`) },
   // ---- clearance words ----
   { concept: "clearance", value: () => "rate", pattern: R(String.raw`\bclearance\s+rates?\b`) },
@@ -385,6 +397,8 @@ const RULES: Rule[] = [
   ...FILTERS,
   // ---- value statistics (property families) ----
   { concept: "statistic", value: () => "average_value", pattern: R(String.raw`\baverage\s+(?:dollar\s+)?value(?:\s+of)?\b`) },
+  // Jeff 2026-11-24 (stolen property value): the median of the records with a value.
+  { concept: "statistic", value: () => "median_value", pattern: R(String.raw`\bmedian\s+(?:dollar\s+)?value(?:\s+of)?\b`) },
   { concept: "statistic", value: () => "total_value", pattern: R(String.raw`\b(?:total\s+)?(?:dollar\s+)?value(?:\s+of)?\b|\bworth\b`) },
   // ---- rate and count statistics ----
   { concept: "statistic", value: () => "per100k", pattern: R(String.raw`\bper\s+100(?:,?000|\s*k|\s+thousand)(?:\s+${POP_WORD})?\b`) },

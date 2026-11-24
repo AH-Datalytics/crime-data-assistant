@@ -109,6 +109,8 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
     case "location": return onEntity("offense", attr("offense.location_type", val === "commercial" ? COMMERCIAL_LOCATION_CODES : [val]));
     // Counting property, the loss type applies to the counted segments; counting anything else, to the incident.
     case "loss": return ent === "property" ? attr("property.loss_type", [val]) : { kind: "exists", scope: "incident", entity: "property", attribution: "incident_level_only", where: [attr("property.loss_type", [val])] };
+    // An offense of the incident (shoplifting is 23C), for the stolen property's value (Jeff 2026-11-24).
+    case "offense": return onEntity("offense", attr("offense.offense", [val]));
     case "drug": return { kind: "exists", scope: "incident", entity: "property_drug", attribution: "incident_level_only", where: [attr("property_drug.drug_type", [val])] };
     case "dv": return DV[val] ? { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", DV[val])] } : null;
     case "relationship": return { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", [val])] };
@@ -142,6 +144,7 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
     case "hour": return g("incident.hour", { bins: HOUR_BINS });
     case "drug": return g("property_drug.drug", { multiValue: "each_value" });
+    case "property-type": return g("property.description");
     // Hate crimes by bias (H2, Jeff 2026-11-21): answered from the hate crime data only (planFromSpec allows it for hate crimes alone).
     case "bias": return g("offense_bias.bias", { multiValue: "each_value" });
     default: return null;
@@ -216,7 +219,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       for (const m of measures.filter((x) => !x.as.endsWith("_cleared"))) {
         if (spec.statistic === "rate") statistics.push({ kind: "rate", as: `${m.as}_rate`, measure: m.as, per: 100000 });
         else if (spec.statistic === "clearance_rate") statistics.push({ kind: "ratio", as: `${m.as}_clearance_rate`, numerator: `${m.as}_cleared`, denominator: m.as });
-        else if (spec.statistic === "average_value") {
+        else if (spec.statistic === "average_value" || spec.statistic === "median_value") {
           // The denominator counts the same property as the numerator's dollars (motor-vehicle segments for
           // motor-vehicle value), with the same filters.
           measures.push({ id: `${m.id}_segments`, unit: "property_segment", as: `${m.as}_segments`, ...(m.filters ? { filters: m.filters } : {}) });
@@ -264,6 +267,12 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       const g = groupingFor(spec.dim, unit);
       if (!g) return { kind: "unmapped", reason: `breakdown ${spec.dim} has no plan form` };
       groupings.push(g);
+      if (spec.statistic === "average_value" || spec.statistic === "median_value") {
+        const m = measures[0];
+        measures.push({ id: `${m.id}_segments`, unit: "property_segment", as: `${m.as}_segments`, ...(m.filters ? { filters: m.filters } : {}) });
+        statistics.push({ kind: "ratio", as: `${m.as}_average`, numerator: m.as, denominator: `${m.as}_segments` });
+        break;
+      }
       statistics.push({ kind: "count", as: "count", measure: spec.measure });
       statistics.push({ kind: "share", as: "share", measure: spec.measure, within: spec.byYear ? ["time.year"] : spec.byMonth ? ["time.month"] : [] });
       break;
@@ -378,7 +387,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       case "filter": case "clearance-reason": return filterPath.get(v) ?? null;
       case "breakdown": { const i = gi((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo.")); return i >= 0 ? `groupings[${i}]` : null; }
       case "statistic": {
-        const want = ["rate", "per100k", "percapita"].includes(v) ? "rate" : v === "average_value" ? "ratio" : "count";
+        const want = ["rate", "per100k", "percapita"].includes(v) ? "rate" : v === "average_value" || v === "median_value" ? "ratio" : "count";
         const i = si((s) => s.kind === want);
         return i >= 0 ? `statistics[${i}]` : null;
       }

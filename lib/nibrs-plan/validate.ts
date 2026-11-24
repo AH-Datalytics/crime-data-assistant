@@ -304,7 +304,7 @@ const UNIT_OF: Record<string, string> = { victims: "victim", offenses: "offense"
 const FILTER_DIMENSIONS: Record<string, string[]> = {
   sex: ["sex"], age: ["age"], race: ["race"], ethnicity: ["ethnicity"], weapon: ["weapon"], drug: ["drug_type"],
   location: ["location_type"], loss: ["loss_type"], relationship: ["relationship"], bias: ["bias"], dv: ["relationship"],
-  clearance: ["exceptional_clearance", "clearance_type", "clearance_method"],
+  clearance: ["exceptional_clearance", "clearance_type", "clearance_method"], offense: ["offense"],
 };
 /** Ledger filter values that name a range or a family rather than one code: the exact condition they mean. */
 const FILTER_VALUE_RANGE: Record<string, [number, number]> = { "age:Under 18": [1, 17] };
@@ -417,7 +417,7 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
     case "breakdown": {
       const dim = String(t.dimension ?? "");
       const whose = /^(offender|victim|arrestee)-age$/.exec(v);
-      const name = ({ location: "location_type" } as Record<string, string>)[v] ?? v.replace(/-/g, "_");
+      const name = ({ location: "location_type", "property-type": "description" } as Record<string, string>)[v] ?? v.replace(/-/g, "_");
       const ok = whose ? dim === `${whose[1]}.age` || dim === `victim_offender.${whose[1]}_age` : dim.split(".").pop() === name;
       return ok ? null : `grouping at ${path} is not by ${v}`;
     }
@@ -432,7 +432,7 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
     case "statistic": {
       // Rates are per 100,000 people in this product (today's rule); the multiplier is part of the value.
       if (["rate", "per100k", "percapita"].includes(v)) return t.kind === "rate" && t.per === 100000 ? null : `statistic at ${path} is not a rate per 100,000`;
-      const want = v === "average_value" ? "ratio" : "count";
+      const want = v === "average_value" || v === "median_value" ? "ratio" : "count";
       return t.kind === want ? null : `statistic at ${path} is not a ${want}`;
     }
     case "share":

@@ -78,6 +78,8 @@ function stub(sql: string): unknown[][] {
 }
 function stub0(sql: string): unknown[][] {
   sqls.push(sql);
+  // Stolen-property value (stolen-value.ts): year, type (NULL for a total), records, total, $0 records left out, average, median, p10, p25, p75, p90.
+  if (/AS left_out,/.test(sql) && /AS p90/.test(sql)) { withLeftOut = true; return /NULL AS d/.test(sql) ? [[2025, null, 42952, 141315699, 1574, 3290.5, 300, 20, 100, 1200, 6000]] : [[2025, "03", 4602, 57029353, 0, 12392, 7000, 500, 3000, 15000, 40000], [2025, "77", 10539, 33437714, 612, 3173, 179, 10, 50, 900, 5000]]; }
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
@@ -1591,6 +1593,40 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
 // Reader: "what weapons are most commonly used in X" and "by weapons" read as X by weapon; "value of items stolen in" reads as the value stolen in.
 for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
   assert.equal(ask(q).kind, "answer", q);
+}
+// Stolen-property value: total, average and median by property type; $0 records are left out of the average and median, said how many, and kept in the total.
+{
+  const text = (o: any) => o.delivered.text.join(" | ");
+  const askNat = (q: string) => as(shadowAnswer(q, { ...deps, noDefaults: false }) as ShadowOutcome, "answer") as any;
+  const total = as(ask("What was the value of everything stolen in Philadelphia in 2024?"), "answer");
+  assert.match(text(total), /total value of stolen property in Philadelphia, Pennsylvania in 2024 was \$141,315,699/, "the total includes every record");
+  assert.match(text(total), /1,574 .*(?:no value|\$0)/i, "the $0 records are counted, not hidden");
+  const avg = as(ask("What was the average value of stolen property in Philadelphia in 2024?"), "answer");
+  assert.match(text(avg), /average value of stolen property/i);
+  assert.match(text(avg), /3,291|3,290/, "the average of the records with a value");
+  const med = as(ask("What was the median value of stolen property in Philadelphia in 2024?"), "answer");
+  assert.match(text(med), /median value of stolen property/i);
+  assert.match(text(med), /\$300\b/);
+  const byType = as(ask("What was the value of stolen property by property type in the United States in 2025?"), "answer");
+  assert.equal(byType.delivered.table.rows.length, 2, "one row per property type");
+  assert.ok(byType.delivered.table.columns.some((c: { header: string }) => /Total Value/.test(c.header)));
+  const types = askNat("list the different types of stolen property");
+  assert.equal(types.delivered.table.rows.length, 2);
+  const shop = as(ask("What was the average value of shoplifted goods in Philadelphia in 2024?"), "answer");
+  assert.match(text(shop), /shoplifted goods/i);
+  assert.ok(sqls.at(-1)!.includes("o.offense_code = '23C'"), "shoplifting is the offense 23C, not a loss type alone");
+  const state = as(ask("Total value of stolen property in Texas in 2024"), "answer");
+  assert.ok(sqls.at(-1)!.includes("agency/data.parquet") && sqls.at(-1)!.includes("state = 'TX'"), "a state is its reporting agencies");
+  const nation = askNat("What was the total value of stolen property in 2024?");
+  assert.match(text(nation), /United States/);
+  const years = askNat("average value of shoplifted goods per year, 2021 to 2025");
+  assert.match(years.delivered.table.columns[0].header, /Year/);
+  assert.ok(/2021/.test(sqls.at(-1)!) && /2025/.test(sqls.at(-1)!), "every asked year is read");
+  const pct = askNat("provide the percentiles of the value of shoplifted goods in 2024");
+  assert.ok(pct.delivered.table.columns.some((c: { header: string }) => /90th Percentile/.test(c.header)), "percentiles are columns beside the median");
+  assert.match(text(pct), /percentiles are of the records with a value/);
+  // The median of a crime's value per incident is not a stolen-property value: it is declined, never answered as a count.
+  assert.notEqual(ask("robberies in Fort Worth, Texas in 2025 and their median value per incident").kind, "answer");
 }
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
 {
