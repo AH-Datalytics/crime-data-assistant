@@ -1055,7 +1055,38 @@ function kingsCountyAsk(question: string): ShadowOutcome | null {
 }
 /** Jeff 2026-11-24 (QL-nibrs-00bfb752b5): "violent crime arrests by offense type" is the four violent offenses' arrests, offense type down the side, a column for each year. */
 const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\s+(?:offense|crime)\s+type\b/i;
+/** P297 (Jeff 2026-11-24): the weapon types used in violent crimes, one table with the four crimes across. */
+const VIOLENT_WEAPON_TYPES = /\bweapon\s+types?\s+(?:were\s+|was\s+|are\s+)?used\s+in\s+violent\s+crimes?\b\s*(.*)$/i;
+const WEAPON_ROWS = ["Firearm (handgun, rifle, shotgun, other or unknown firearm)", "Knife or cutting instrument", "Blunt object", "Personal weapons (hands, fists, feet)", "Other or none/unknown"];
+function weaponRow(label: string): number {
+  if (/firearm|handgun|rifle|shotgun/i.test(label)) return 0;
+  if (/^knife|cutting/i.test(label)) return 1;
+  if (/^blunt|^club/i.test(label)) return 2;
+  if (/^personal|^unarmed/i.test(label)) return 3;
+  return 4;
+}
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const vw = question.match(VIOLENT_WEAPON_TYPES);
+  if (vw) {
+    const crimes = ["Murder", "Rape", "Robbery", "Aggravated assault"];
+    const outs = crimes.map((c) => shadowAnswer(`${c.toLowerCase()} offenses by weapon ${vw[1]} according to NIBRS`, depsIn));
+    type Tbl = { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] };
+    if (outs.every((o) => o.kind === "answer" && (o.delivered.table as unknown as Tbl | undefined)?.columns.length === 3)) {
+      const answers = outs as Extract<ShadowOutcome, { kind: "answer" }>[];
+      const tables = answers.map((a) => a.delivered.table as unknown as Tbl);
+      const rows: (string | number | null)[][] = WEAPON_ROWS.map((w) => [w, ...crimes.map(() => 0 as string | number | null)]);
+      tables.forEach((t, ci) => t.rows.forEach((r) => { const cell = rows[weaponRow(String(r[0]))]; cell[ci + 1] = Number(cell[ci + 1] ?? 0) + Number(r[1] ?? 0); }));
+      const columns = [tables[0].columns[0], ...crimes.map((c, ci) => ({ binding: tables[ci].columns[1].binding, header: c }))];
+      const first = answers[0].delivered.text[0];
+      const m = first.match(/^(.*?) Murder Offenses by Weapon, (.*)$/);
+      const title = m ? `${m[1]} Weapon Types Used in Violent Crimes, Offenses, ${m[2]}` : first;
+      const rest = answers[0].delivered.text.slice(1).filter((x) => !/^A crime that falls in several/.test(x) && !/^Counts are /.test(x));
+      const note = "Counts are offenses; a crime with two weapons is counted in each weapon's row, so the rows can add up to more than the crimes.";
+      const evidence = rows.flatMap((r, ri) => r.slice(1).map((v, ci) => ({ row: ri, statistic: (columns[ci + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
+      const o = answers[0];
+      return { ...o, delivered: { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest, note] } as typeof o.delivered };
+    }
+  }
   if (VIOLENT_ARRESTS_BY_TYPE.test(question)) {
     const o = shadowAnswer(question.replace(VIOLENT_ARRESTS_BY_TYPE, "arrests for murder, rape, robbery and aggravated assault by year"), depsIn);
     const t = (o.kind === "answer" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] } | undefined;
