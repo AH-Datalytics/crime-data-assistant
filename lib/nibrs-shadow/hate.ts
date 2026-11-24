@@ -301,7 +301,7 @@ export const HATE_BIASES_OVERLAP = "An incident with more than one of these bias
  * together by period: one column per bias, never added. The lines are the first bias's (they are the same for every bias: the caveat,
  * the years and the latest month), with the overlap line.
  */
-function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string; codes?: string[] }[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
+function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string; codes?: string[]; note?: string }[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
   const each = biases.map((b) => answerHate({ ...hq, bias: b, biases: undefined }, build, execute));
   const bad = each.find((a): a is HateDecline => a.kind === "hate-decline");
   if (bad) return bad;
