@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 
 const deps: ShadowDeps = {
   places: loadPlaceIndex(),
@@ -50,9 +51,19 @@ run("national overall and violent rates by month decline (P289)", () => { const 
 for (const q of ["Carjackings per day in Houston, 2019 to 2025", "daily robberies in Denver in 2024"])
   run(`per day is read as by month and says so (P291): ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "answer"); assert.ok(o.delivered?.text.includes("Per day is not available, so monthly figures are shown."), JSON.stringify(o.delivered?.text)); });
 run("a national crime rate by month with the place after the rate declines (P289)", () => { const o = shadowAnswer("violent crime rates in the United States by month", deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available."); });
-run("which agencies report is the coverage sentence (P292)", () => { const o = shadowAnswer("which agencies report monthly in Pennsylvania?", deps) as unknown as { kind: string }; assert.equal(o.kind, "coverage"); });
-run("juvenile crime rates are not rewritten to arrest counts (P293)", () => { const o = shadowAnswer("juvenile crime rates 2005 to 2025", deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.ok(!(o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text)); });
+run("Monthly rate with the monthly word first and the place after declines (P289)", () => { const o = shadowAnswer("Monthly violent crime rates in the United States", deps) as unknown as { kind: string; explanation?: string }; assert.equal(o.kind, "decline"); assert.equal(o.explanation, "That data is not available."); });
+run("which agencies report is the coverage sentence (P292)", () => { const o = shadowAnswer("which agencies report monthly in Pennsylvania?", deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "coverage"); assert.equal(o.delivered?.text[0], "Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included."); });
+// P293: the reading itself is checked (this file's stub has no national agencies, so the answer step cannot run here: the nation resolves in test-nibrs-shadow's stub and live).
+// The rewrite must be applied, the note must be the one the answer carries, and the ask must not clarify.
+const juvenile = (q: string) => {
+  const r = readQuestion(q, 2026, "2026-10");
+  assert.ok(r.readings.some((x) => x.kind === "phrase" && /^juveniles?\s+arrests\s+in\s+the\s+united\s+states\s+by\s+year$/i.test(x.to)), JSON.stringify(r.readings));
+  const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } };
+  assert.notEqual(o.kind, "clarify", JSON.stringify(o));
+  if (o.kind === "answer") assert.ok((o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text));
+};
+run("juvenile crime rates read as the nation's juvenile arrests, which answer with the note (P293)", () => juvenile("juvenile crime rates 2005 to 2025"));
 for (const q of ["which country do you cover", "which cities are represented in Pennsylvania?", "What agencies match Dallas County in Texas? Show me the agencies table entries."])
   run(`coverage question gets the one coverage sentence (P292): ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "coverage"); assert.equal(o.delivered?.text[0], "Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included."); });
-run("a juvenile crime trend is the nation's juvenile arrests per year (P293)", () => { const o = shadowAnswer("show me juvenile crime trend 2005 to 2025", deps) as unknown as { kind: string; delivered?: { text: string[] }; explanation?: string }; assert.notEqual(o.kind, "clarify"); assert.ok(o.kind === "answer" ? (o.delivered?.text ?? []).includes("Arrests do not equal crimes.") : !/clarif/i.test(String(o.explanation)), JSON.stringify(o)); });
+run("a juvenile crime trend reads as the nation's juvenile arrests per year (P293)", () => juvenile("show me juvenile crime trend 2005 to 2025"));
 if (failed) { console.log(`${failed} failed`); process.exit(1); }

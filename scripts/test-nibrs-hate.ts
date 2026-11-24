@@ -104,7 +104,9 @@ assert.equal(as(ask("anti-LGBTQ hate crimes in Texas from 2014 to 2020"), "hate"
 assert.equal(ask("anti-LGBTQ hate crimes in Texas from 2005 to 2015").kind, "decline", "lgbtq group before 2013 declines");
 // Two biases with a note each: the combined answer carries the note once.
 const asianJewish = as(ask("anti-Asian and anti-Jewish hate crimes in California from 2005 to 2015"), "hate");
-assert.equal(asianJewish.delivered.text.filter((t: string) => t === "The FBI combined Asian and Pacific Islander bias before 2013.").length, 1, asianJewish.delivered.text.join(" | "));// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
+assert.equal(asianJewish.delivered.text.filter((t: string) => t === "The FBI combined Asian and Pacific Islander bias before 2013.").length, 1, asianJewish.delivered.text.join(" | "));
+assert.ok(asianJewish.delivered.text.some((t: string) => /Anti-Jewish/i.test(t)), "the anti-Jewish bias is in the answer: " + asianJewish.delivered.text.join(" | "));
+// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
 const asianAll = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
 assert.ok(asianAll.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asianAll.delivered.text.join(" | "));
 assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");
