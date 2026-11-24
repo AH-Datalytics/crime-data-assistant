@@ -2991,6 +2991,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.deepEqual(rr.delivered.table.columns.map((c) => c.header), ["Month", "Rolling 12-month murder rate per 100,000"]);
     assert.deepEqual(rr.delivered.table.rows[0], ["2026-01", 32.4], "36,000 murders over 111,272,916 people");
     assert.ok(rr.delivered.text.some((t) => /not scaled to a full year/.test(t)), rr.delivered.text.join(" / "));
+    // A month where a sample agency has no count: the group's count and population no longer cover the same agencies, so every window with it is blank.
+    const gap = { ...cdeps, execute: (sql: string) => (/WHERE sample/.test(sql) ? ctStub(sql).map((r) => (r[0] === "2026-03" ? [r[0], r[1], r[2], r[3], 2] : r)) : ctStub(sql)) } as unknown as ShadowDeps;
+    const rg = shadowAnswer("murder rate rolling over 12 months nationally", gap);
+    assert.equal(rg.kind, "current", JSON.stringify(rg).slice(0, 300));
+    if (rg.kind === "current") {
+      const byMonth = new Map(rg.delivered.table.rows.map((r) => [r[0], r[1]]));
+      assert.equal(byMonth.get("2026-01"), 32.4);
+      assert.equal(byMonth.get("2026-03"), null, "a window with a blank-count month has no rate");
+      assert.equal(byMonth.get("2026-08"), null);
+    }
+    // A 3-month rate is the 3 months' count per 100,000, not annualized (coordinator 2026-11-24, P59/P96).
+    const rr3 = roll("murder rate rolling over 3 months nationally");
+    assert.deepEqual(rr3.delivered.table.columns.map((c) => c.header), ["Month", "Rolling 3-month murder rate per 100,000"]);
+    assert.ok(rr3.delivered.text.some((t) => /not scaled to a full year/.test(t)), rr3.delivered.text.join(" / "));
     const rrEarly = shadowAnswer("murder rate rolling over 12 months since 2024 nationally", cdeps);
     assert.equal(rrEarly.kind, "decline", JSON.stringify(rrEarly).slice(0, 300));
     assert.ok(/given from January 2025/.test((rrEarly as { explanation: string }).explanation));

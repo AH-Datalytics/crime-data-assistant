@@ -615,7 +615,8 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
         // The windows' whole lookback is inside the published sample's life (2025-01 on): the published Consistent Reporting Agencies
         // (the `sample` flag), so the figure matches crimeindex.org (Jeff 2026-11-19).
         const g = groupMonths(b, p.states, cq.measure, need, to, execute);
-        values = new Map(span.map((m) => [m, g.get(m)?.value ?? null]));
+        // A rate needs the count and the population over the same agencies: a month where a sample agency has no figure is blank.
+        values = new Map(span.map((m) => [m, asRate && (g.get(m)?.blank ?? 0) > 0 ? null : g.get(m)?.value ?? null]));
         if (asRate) pops = new Map(span.map((m) => [m, (g.get(m)?.population ?? 0) > 0 ? g.get(m)!.population : null]));
         const last = g.get(to);
         cov = last ? { agencies: last.agencies, population: last.population, from: b.firstMonth } : null;
