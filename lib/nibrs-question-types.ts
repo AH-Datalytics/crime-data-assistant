@@ -299,7 +299,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   // figure, so it keeps its own path (declined until two years are named), never answered as counts.
   const percentAsked = ledger.parts.some((p) => p.clause === 0 && ((p.concept === "punctuation" && p.text.trim() === "%") || (p.concept === "share" && /percent/i.test(p.text))))
     || changeParts.some((p) => /percent|%/i.test(p.text));
-  const overSpan = (periods[0]?.form === "since" || periods[0]?.form === "last") && periods.length === 1 && !of("versus").length && !percentAsked;
+  const overSpan = ((periods[0]?.form === "since" || periods[0]?.form === "last") && periods.length === 1 || periods.length === 0) && !of("versus").length && !percentAsked;
   if (changeParts.length && !rankParts.length && overSpan) take(changeParts);
   else if (changeParts.length && !rankParts.length) {
     take(changeParts);
