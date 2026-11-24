@@ -31,7 +31,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
-import { DEMOGRAPHIC_RATE, negatedBefore } from "../nibrs-request-accounting";
+import { DEMOGRAPHIC_RATE, negatedBefore, WHERE_MOST_ONCE } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
 import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, pointsBack, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
@@ -53,7 +53,7 @@ import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, OFFENSES_NOT_VICTIMS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyInState, agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateCodeOf, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
-import { answerSrs, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
+import { answerSrs, answerSrsPeak, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { HISTORICAL_MEASURE, answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, answerHistoricalStatesByYear, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
@@ -1001,8 +1001,29 @@ function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps):
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
   return { ...o, delivered: { ...del, text: [...text.slice(0, at), ...said.filter((s) => !text.includes(s)), ...text.slice(at)] } } as ShadowOutcome;
 }
+/** "When was violent crime the highest?" / "peak year for murder": the nation's peak year of a Crime Index rate, no place named. */
+const PEAK_ASK = /\b(?:when\s+(?:was|were|did|has|have)\b.*\b(?:highest|worst|peak(?:ed)?|most)\b|(?:what|which)\s+year\b.*\b(?:highest|worst|peak|most)\b|peak\s+year\b)/i;
+const PEAK_MEASURE: [RegExp, string][] = [
+  [/\bviolent\s+crimes?\b/i, "violent_crime"], [/\bproperty\s+crimes?\b/i, "property_crime"], [/\bmurders?\b|\bhomicides?\b/i, "murder"],
+  [/\brapes?\b/i, "rape"], [/\brobber(?:y|ies)\b/i, "robbery"], [/\baggravated\s+assaults?\b/i, "aggravated_assault"],
+  [/\bburglar(?:y|ies)\b/i, "burglary"], [/\b(?:larceny|theft)s?\b/i, "theft"], [/\bmotor\s+vehicle\s+thefts?\b|\bauto\s+thefts?\b/i, "motor_vehicle_theft"],
+];
+/** Every word a plain "peak year of the national rate" question may carry. A word outside this list (a place, "intimate", "firearm", "victims", "reports", an age, a sex) means a different question: it falls through to the old route. */
+const PEAK_WORDS = new Set(("when was were did has have been is are the a an what which year years peak peaked highest worst most ever recorded history overall all time "
+  + "national nationally nationwide nation country america us u.s. usa united states in of for at on across rate rates per 100,000 100000 crime crimes "
+  + "violent property murder murders homicide homicides rape rapes robbery robberies aggravated assault assaults burglary burglaries larceny larcenies theft thefts motor vehicle auto").split(/\s+/));
+function peakMeasure(question: string): string | null {
+  if (!PEAK_ASK.test(question)) return null;
+  const words = question.toLowerCase().replace(/[?!.,;:]+(?=\s|$)/g, "").split(/\s+/).filter(Boolean);
+  if (words.some((w) => !PEAK_WORDS.has(w))) return null;
+  const hit = PEAK_MEASURE.filter(([re]) => re.test(question));
+  return hit.length === 1 ? hit[0][1] : null;
+}
+
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
-  const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) } : depsIn;
+  { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
+  // "Where do most robberies occur" asks for the nation-wide split by location: the statement is long, but it is what was asked, so it runs (as for a share) rather than waiting behind a button.
+  const deps: ShadowDeps = depsIn.shareAsked === undefined ? { ...depsIn, shareAsked: clearanceTypeShareAsked(question) || WHERE_MOST_ONCE.test(question) } : depsIn;
   const o = withMeaningNotes(question, applyDefaults(question, withoutDeadButtons(shadowAnswerWithDeadButtons(question, deps)), deps), deps);
   const blank = allBlankMonthly(o);
   if (blank) return blank.kind === "decline" ? withYearlyOffer(blank, o, deps) : blank;
