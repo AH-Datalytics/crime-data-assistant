@@ -3873,7 +3873,17 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // The asked end kept to the month (Codex period review 01.1), never widened; a set of years gets none.
     const firstY = release.firstMonth.slice(0, 4), to = period.to > release.lastMonth ? release.lastMonth : period.to;
     const value = to.endsWith("-12") ? (firstY === to.slice(0, 4) ? `year:${firstY}` : `range:${firstY}:${to.slice(0, 4)}`) : `monthrange:${release.firstMonth}:${to}`;
-    const covered = period.to >= release.firstMonth && !yearSet ? fromLedger(filled(ledger, "period", value, `from ${firstY}`), deps, pins) : null;
+    let covered = period.to >= release.firstMonth && !yearSet ? fromLedger(filled(ledger, "period", value, `from ${firstY}`), deps, pins) : null;
+    // A national or state arrest trend to "today" (labels R14, 2026-11-24: "national trend in DWI/DUI from 2000 to today"): the
+    // month-ended period reads as monthly, which a state or national sum can't give; the asked years are by year, the last
+    // one clipped to the release's last month like "since 2017".
+    const grainParts = ledger.parts.filter((p) => p.clause === 0 && p.concept === "grain");
+    if (covered && covered.kind === "decline" && !yearSet && !to.endsWith("-12") && grainParts.every((p) => p.value === "year") && plan.measures.every((m) => /^(?:arrests|group_b_arrests)\./.test(m.id))) {
+      const yv = firstY === to.slice(0, 4) ? `year:${firstY}` : `range:${firstY}:${to.slice(0, 4)}`;
+      const inYears = filled(ledger, "period", yv, `from ${firstY}`);
+      const byY = fromLedger(grainParts.length ? inYears : filled(inYears, "grain", "year", "by year"), deps, pins);
+      if (byY.kind === "answer") covered = byY;
+    }
     // Murder before NIBRS's years is Homicide Reports' (FBI SHR, from 1976: by month, weapon, victim and offender), never
     // "not in the data" (Jeff 2026-11-09: "oakland murders per month in 1996", "firearm murders in Louisville in 2003").
     // Only what Homicide Reports count (homicide victims and offenses, never offenders or arrests) and only its own
