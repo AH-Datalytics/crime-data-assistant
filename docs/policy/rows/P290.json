@@ -1,0 +1,12 @@
+{
+  "id": "P290",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"most common bias in Philadelphia\", \"are hate crimes in Texas getting worse?\", \"antisemitic incidents in New York\", a hate-crime question before 1991",
+  "what the app does today": "These asked a question back or declined.",
+  "proposed behavior": "\"Most common bias\" (also \"most frequent\", \"top\", \"leading\") answers the by-bias table and says the top bias in a sentence. A trend question (\"getting worse\", \"up or down\") answers by year with one sentence: incidents rose from A in Y-1 to B in Y, fell, or were the same. \"Anti-X incidents\" reads as hate crimes. A period before 1991 answers from 1991 with the note \"Hate crime data by bias starts in 1991.\" Anti-Asian over a span that reaches before 2013 combines the old Asian/Pacific Islander code (16) with Asian (14) under the label \"Anti-Asian or Pacific Islander\" and the note \"The FBI combined Asian and Pacific Islander bias before 2013.\"; anti-Native Hawaiian or Pacific Islander (43) over such a span carries a renamed-code note. Spans wholly from 2013 on stay on code 14 only. Codes with no clean older mapping (16 alone, 28, 29, 31, 33, 61, 62, 71, 72, 81 to 85) still decline for years before their meaning changed.",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-hate.ts."
+}

@@ -180,6 +180,11 @@ export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
 /** Asks about how the data is built or what it holds that no table answers (Jeff 2026-11-23): one plain sentence, whatever crime is named. */
 const DATA_ABSENT = /\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i;
 const DATA_ABSENT_TEXT = "That data is not available.";
+/** Jeff 2026-11-24: misdemeanor/felony arrests (NIBRS does not record the class of an arrest) and a national overall/violent rate by month (national rates are annual, from Historical). */
+const MISDEMEANOR_ARREST = /\b(?:misdemeanou?rs?|felony|felonies)\s+arrests?\b|\barrests?\s+(?:for|of|as)\s+(?:a\s+)?(?:misdemeanou?rs?|felony|felonies)\b/i;
+const DAILY_WORDS = /\bper\s+day\b|\beach\s+day\b|\bby\s+(?:the\s+)?day\b|\bday[-\s]by[-\s]day\b|\bdaily\b/i;
+const MISDEMEANOR_TEXT ="That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor.";
+const NATIONAL_MONTHLY_RATE = /\b(?:national|nationwide|united\s+states|u\.?s\.?)\b[^?]*\bcrime\s+rates?\b[^?]*\b(?:monthly|by\s+month|each\s+month|per\s+month)\b|\b(?:monthly|by\s+month|each\s+month|per\s+month)\b[^?]*\b(?:national|nationwide)\b[^?]*\bcrime\s+rates?\b/i;
 const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bon\s+a\s+map\b|\bmaps?\s+of\b/i, false, "Maps aren't available here; answers come as tables and charts."],
   [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here."],
@@ -1046,6 +1051,8 @@ function peakMeasure(question: string): string | null {
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
+  if (MISDEMEANOR_ARREST.test(question)) return decline("unsupported_capability", MISDEMEANOR_TEXT);
+  if (NATIONAL_MONTHLY_RATE.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
     return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
@@ -1692,7 +1699,7 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
   // What this count is not: a supporting column, a person's detail, a clearance, a property or composite count, or a unit other than incidents
   // ("hate crime victims"): declined, never answered as the plain count (Codex review 04, 05).
   const f = flags(ledger0);
-  if (f.column || f.people || f.clearance || f.property || f.composite || f.combined || f.arrestsThrough || ledger0.parts.some((p) => p.clause === 0 && p.concept === "unit")) return null;
+  if (f.column || f.people || f.clearance || f.property || f.composite || f.combined || f.arrestsThrough || ledger0.parts.some((p) => p.clause === 0 && p.concept === "unit" && p.value !== "incidents")) return null;
   let period: { from: string; to: string };
   // No range named for a series: every year the hate crime data have, said (Jeff 2026-11-11, "All years by default").
   const allYears = plan.defaults.some((x) => x.path === "period");
@@ -1729,7 +1736,8 @@ function hateOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger):
     if (hq.why === "after the latest month") return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the hate crime data; the latest complete month available is ${monthName(deps.hate.latestMonth)}.`);
     return null;
   }
-  const a = answerHate(allYears ? { ...hq, allYears: true } : hq, deps.hate, deps.execute);
+  const direction = /\b(?:getting|gotten|got)\s+(?:worse|better)\b|\bgoing\s+(?:up|down)\b|\b(?:rising|falling|increasing|decreasing)\b|\bup\s+or\s+down\b/i.test([ledger0.question ?? "", ...(flags(ledger0).readings ?? []).map((r) => r.from)].join(" "));
+  const a = answerHate({ ...hq, ...(allYears ? { allYears: true } : {}), ...(direction ? { direction: true } : {}) }, deps.hate, deps.execute);
   return a.kind === "hate" ? a : decline("outside_release_coverage", a.explanation);
 }
 function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): ShadowOutcome | null {
@@ -3794,6 +3802,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "This isn't available: this weapon or relationship selection.");
   const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
+    // P291 (Jeff 2026-11-24): "per day" answers by month, and says so.
+    ...((flags(ledger0).readings ?? []).some((x) => x.kind === "phrase" && x.to === "by month" && DAILY_WORDS.test(x.from)) ? ["Per day is not available, so monthly figures are shown."] : []),
+    // P293 (Jeff 2026-11-24): "juvenile crime trend" is read as juvenile arrests; arrests are not crimes.
+    ...((flags(ledger0).readings ?? []).some((x) => x.kind === "phrase" && /^juveniles?\s+arrests\s+in\s+the\s+united\s+states\s+by\s+year$/i.test(x.to)) ? ["Arrests do not equal crimes."] : []),
     // P84 (Jeff 2026-11-01): how the phrase was read.
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : []),
     // Marijuana (Jeff 2026-11-15): one line under the answer says what is counted.

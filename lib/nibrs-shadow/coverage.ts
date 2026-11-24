@@ -17,7 +17,7 @@ export const COVERAGE_SOURCE = "Source: FBI NIBRS.";
 /** The one constant Jeff chose for definitions (2026-11-18). */
 export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 
-export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions";
+export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "scope";
 export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean };
 export type CoverageAnswer = {
   kind: "coverage"; shape: CoverageShape; period: { from: string; to: string };
@@ -68,6 +68,11 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
   const ABOUT_CHANGE = /\b(?:chang\w*|histor\w*|legal(?:ly)?|over\s+time|evolv\w*|used\s+to|revis\w*|updat\w*|amend\w*|ever)\b/i;
   if (DEFINED.test(t) && !ABOUT_CHANGE.test(t) && !hasPlace && (t.match(/\?/g) ?? []).length <= 1 && !/\b(?:and|also)\s+(?:show|give|can|how\s+many)\b|\bcan\s+you\s+show\b/i.test(t) && t.split(/\s+/).length <= 16)
     return one("definitions");
+  // P292: which country, which cities or which agencies are covered: one coverage sentence.
+  if (!hasMeasure && (/\bwhich\s+countr(?:y|ies)\b[^?]*\b(?:cover\w*|include\w*|have)\b/i.test(t)
+    || /\bwhich\s+(?:cities|agencies)\s+are\s+(?:represented|covered|included)\b/i.test(t)
+    || /\bwhat\s+agencies\s+match\b/i.test(t) || /\bagencies\s+table\b/i.test(t)))
+    return one("scope", { state: null, from: null, to: null, byYear: false });
   if (hasMeasure || hasPlace) return null;
   // Agencies reporting.
   if (/\bhow\s+many\s+(?:law\s+enforcement\s+)?agen\w*\s+(?:have\s+|has\s+)?(?:reported|report|reporting|submit\w*|send\w*|contribut\w*|participat\w*|are\s+(?:in|included)|in\s+(?:the|this)\s+data)\b/i.test(t))
@@ -178,6 +183,12 @@ export function answerCoverage(cq: CoverageQuestion, d: CoverageDeps): CoverageA
     text.push(COVERAGE_SOURCE);
     return { kind: "coverage", shape: "years", period: { from: d.release.firstMonth, to: d.release.lastMonth }, meaning: meaning("years covered", { from: d.release.firstMonth, to: d.release.lastMonth }, []),
       delivered: { table: { columns: [txt("coverage.source", "Source"), txt("coverage.from", "From"), txt("coverage.through", "Through")], rows }, text }, read };
+  }
+
+  if (cq.shape === "scope") {
+    const sentence = `Current Trends covers United States agencies that report monthly, ${firstY} to present; ask about a city to see if it is included.`;
+    return { kind: "coverage", shape: "scope", period: span0, meaning: meaning("coverage", null, []),
+      delivered: { table: { columns: [txt("coverage.scope", "Coverage")], rows: [[sentence]] }, text: [sentence] }, read };
   }
 
   if (cq.shape === "sources") {

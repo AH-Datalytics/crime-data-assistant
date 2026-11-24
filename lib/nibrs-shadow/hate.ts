@@ -65,12 +65,12 @@ const MODERN_FROM: Record<string, number> = { "14": 2013, "16": 2013, "28": 2015
 export type HatePlace = { kind: "agency"; ori: string; label: string } | { kind: "state"; code: string } | { kind: "national" };
 export type HateQuestion = {
   place: HatePlace; /** Months inclusive, cut to the data's first year and last complete month. */ from: string; to: string;
-  grain: "total" | "year" | "month" | "rolling"; window?: number; bias: { code: string; name: string } | null;
+  grain: "total" | "year" | "month" | "rolling"; window?: number; bias: { code: string; name: string; codes?: string[]; note?: string } | null;
   /**
    * Several biases named ("anti-Islamic and anti-Jewish hate crimes over time"; H1, 2026-11-21): one column each, every column the
    * incidents with that bias; an incident with two of them is in both columns, which are never added. `bias` is null then.
    */
-  biases?: { code: string; name: string }[];
+  biases?: { code: string; name: string; codes?: string[]; note?: string }[];
   /**
    * H2/H3 (Jeff 2026-11-21): one row per bias (the decoder's names) or per location (the CDE names), the incidents with it, largest first;
    * an incident with several is in each row (said in one line); no share. "Location not confirmed" is its own row, last.
@@ -81,6 +81,7 @@ export type HateQuestion = {
   /** The first year asked when it was before the data start (the answer says so). */ askedFrom?: string;
   /** Said when the span asked reached past the last complete month. */ cutAt?: string;
   /** No range was named for a series: every year the data have is shown, and the answer says so. */ allYears?: boolean;
+  /** "Getting worse", "going up" (Jeff 2026-11-24): a sentence says which way the last two full years went; no opinion on "worse". */ direction?: boolean;
 };
 export type HateAnswer = {
   kind: "hate"; question: HateQuestion; period: { from: string; to: string };
@@ -144,8 +145,18 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   const grain = roll.length ? "rolling" : time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   const window = roll.length ? (roll[0] as { months: number }).months : undefined;
   const readFrom = window ? firstNeeded(from, window) : from;
-  if (all.some((b) => MODERN_FROM[b.code] && Number(readFrom.slice(0, 4)) < MODERN_FROM[b.code])) return { why: "a bias whose meaning changed in the years asked" };
-  return { place, from, to, grain, ...(window ? { window } : {}), bias, ...(all.length > 1 ? { biases: all } : {}), ...(breakdown ? { breakdown } : {}), ...(location ? { location } : {}),
+  // Jeff 2026-11-24: a bias whose FBI code was split or renamed is matched, not declined, where the older group maps cleanly
+  // (14: Asian/Pacific Islander before 2013, then 14 + 16; 43: Anti-Homosexual before 2013). Other changed codes keep the guard.
+  const early = Number(readFrom.slice(0, 4));
+  const adjust = (b: { code: string; name: string; codes?: string[]; note?: string }) => {
+    if (b.code === "14" && early < 2013) return { code: "14", codes: ["14", "16"], name: "Anti-Asian or Pacific Islander", note: "The FBI combined Asian and Pacific Islander bias before 2013." };
+    if (b.code === "43" && early < 2013) return { ...b, note: "Before 2013 this bias was recorded as Anti-Homosexual (Gay and Lesbian)." };
+    return b;
+  };
+  const adj = all.map(adjust);
+  if (adj.some((b) => !("note" in b) && MODERN_FROM[b.code] && early < MODERN_FROM[b.code])) return { why: "a bias whose meaning changed in the years asked" };
+  const bias2: HateQuestion["bias"] = adj.length === 1 ? adj[0] : null;
+  return { place, from, to, grain, ...(window ? { window } : {}), bias: bias2, ...(adj.length > 1 ? { biases: adj } : {}), ...(breakdown ? { breakdown } : {}), ...(location ? { location } : {}),
     ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}), ...(period.to > to ? { cutAt: to } : {}) };
 }
 
@@ -160,12 +171,14 @@ export const LOCATION_NOT_CONFIRMED = "Location not confirmed";
 /** The rows a question reads: its place, bias, school and months. */
 function hateWhere(hq: HateQuestion, from: string): string {
   const place = hq.place.kind === "agency" ? `ori = ${q(hq.place.ori)}` : hq.place.kind === "state" ? `state = ${q(hq.place.code)}` : "TRUE";
-  const bias = hq.bias ? ` AND bias_code = ${q(hq.bias.code)}` : "";
+  const bias = hq.bias ? ` AND ${biasCond(hq.bias)}` : "";
   const school = hq.location === "school" ? ` AND location IN (${SCHOOL_LOCATIONS.map(q).join(", ")})` : "";
   const ymExpr = "year(incident_date) * 100 + month(incident_date)";
   const lo = Number(from.slice(0, 4)) * 100 + Number(from.slice(5, 7)), hi = Number(hq.to.slice(0, 4)) * 100 + Number(hq.to.slice(5, 7));
   return `${place}${bias}${school} AND ${ymExpr} BETWEEN ${lo} AND ${hi}`;
 }
+/** The bias test: one code as `bias_code = x`, several as IN. */
+const biasCond = (b: { code: string; codes?: string[] }) => (b.codes && b.codes.length > 1 ? `bias_code IN (${b.codes.map(q).join(", ")})` : `bias_code = ${q(b.code)}`);
 const INCIDENT = "count(DISTINCT year || '|' || ori || '|' || incident_number)";
 /** H2/H3: the incidents per bias (the decoder's name) or location (the CDE name), by year when asked. */
 export function hateBreakdownSql(hq: HateQuestion, build: HateBuild): string {
@@ -181,7 +194,7 @@ export function hateUnconfirmedSql(hq: HateQuestion, build: HateBuild): string {
 }
 export function hateSql(hq: HateQuestion, build: HateBuild, from = hq.from): string {
   const place = hq.place.kind === "agency" ? `ori = ${q(hq.place.ori)}` : hq.place.kind === "state" ? `state = ${q(hq.place.code)}` : "TRUE";
-  const bias = hq.bias ? ` AND bias_code = ${q(hq.bias.code)}` : "";
+  const bias = hq.bias ? ` AND ${biasCond(hq.bias)}` : "";
   const school = hq.location === "school" ? ` AND location IN (${SCHOOL_LOCATIONS.map(q).join(", ")})` : "";
   const ymExpr = "year(incident_date) * 100 + month(incident_date)";
   const lo = Number(from.slice(0, 4)) * 100 + Number(from.slice(5, 7)), hi = Number(hq.to.slice(0, 4)) * 100 + Number(hq.to.slice(5, 7));
@@ -216,6 +229,13 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
     columns.push({ binding: { kind: "grouping", dimension: "time.year" }, header: "Year" }, { binding: { kind: "statistic", as: "count" }, header: head });
     for (let y = fromY; y <= toY; y++) rows.push([String(y), got.get(y) ?? 0]);
     text.push(seriesTitle(span, what, "Year", where));
+    if (hq.direction && !hq.bias) {
+      const lastFull = hq.to.endsWith("-12") ? toY : toY - 1;
+      if (lastFull - 1 >= fromY) {
+        const a = got.get(lastFull - 1) ?? 0, b = got.get(lastFull) ?? 0;
+        text.push(b > a ? `Incidents rose from ${fmt(a)} in ${lastFull - 1} to ${fmt(b)} in ${lastFull}.` : b < a ? `Incidents fell from ${fmt(a)} in ${lastFull - 1} to ${fmt(b)} in ${lastFull}.` : `Incidents were ${fmt(b)} in both ${lastFull - 1} and ${lastFull}.`);
+      }
+    }
   } else {
     const start = hq.grain === "rolling" ? firstNeeded(hq.from, hq.window!) : hq.from;
     const got = new Map(execute(hateSql(hq, build, start)).map((r) => [ym2(Number(r[0])), Number(r[1])]));
@@ -235,7 +255,8 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
   }
   text.push(HATE_REPORTING_CAVEAT);
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${fromY} through ${toY}.`);
-  if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(hq.askedFrom), HATE_FIRST_YEAR - 1)}.`);
+  if (hq.askedFrom) text.push(`Hate crime data by bias starts in ${HATE_FIRST_YEAR}.`);
+  if (hq.bias?.note) notes.push(hq.bias.note);
   // The data's last complete month ends the answer when it is not a December: the year (or span) asked may reach past it.
   if (hq.to === build.latestMonth && build.latestDate.slice(0, 7) > hq.to) {
     const [y, m, d] = build.latestDate.split("-").map(Number);
@@ -316,8 +337,13 @@ function answerHateBreakdown(hq: HateQuestion, build: HateBuild, execute: (sql: 
   const each = hq.breakdown === "bias" ? "An incident with more than one bias is counted under each" : "An incident at more than one location is counted under each";
   const overlap = yearly ? `${each}, so a year's rows can add to more than its hate crimes.` : `${each}, so the rows add to more than ${fmt(total!)} hate crimes.`;
   const text = [seriesTitle(span, what, yearly ? `Year and ${name}` : name, where), HATE_REPORTING_CAVEAT, overlap];
+  // Jeff 2026-11-24 ("most common bias"): one sentence names the top bias (the first row; a tie names each).
+  if (hq.breakdown === "bias" && !yearly && !hq.bias && got.length && got[0].c !== "Not recorded" && got[0].n > 0) {
+    const tops = got.filter((g) => g.n === got[0].n && g.c !== "Not recorded").map((g) => g.c);
+    text.splice(1, 0, tops.length === 1 ? `${tops[0]} is the most common bias, with ${fmt(got[0].n)} hate crimes.` : `${tops.join(" and ")} are tied as the most common bias, with ${fmt(got[0].n)} hate crimes each.`);
+  }
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${hq.from.slice(0, 4)} through ${hq.to.slice(0, 4)}.`);
-  if (hq.askedFrom) text.push(`Hate crime data here start in ${HATE_FIRST_YEAR}, so ${notIncluded(Number(hq.askedFrom), HATE_FIRST_YEAR - 1)}.`);
+  if (hq.askedFrom) text.push(`Hate crime data by bias starts in ${HATE_FIRST_YEAR}.`);
   text.push(HATE_SOURCE);
   const period = { from: hq.from, to: hq.to };
   return {

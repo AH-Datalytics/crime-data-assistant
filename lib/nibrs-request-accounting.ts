@@ -193,6 +193,8 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
   { concept: "breakdown", value: () => "drug", pattern: R(String.raw`\bby\s+drug\s+(?:type|category)\b`) },
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\bby\s+bias(?:\s+motivation)?\b`) },
+  // Jeff 2026-11-24: "most common bias" (or motivation) is the table of every bias, largest first, with a sentence naming the top one.
+  { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\b(?:the\s+)?(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)(?:\s*\/\s*(?:bias(?:es)?|motivations?)|\s+motivations?)?\b|\bwhat\s+(?:bias(?:es)?|motivations?)\b`) },
   // "and sex" right after another breakdown is a second breakdown (declined by the types: one breakdown only).
   { concept: "breakdown", value: () => "sex", pattern: R(String.raw`\band\s+(?:sex|gender)\b`), when: (m, q) => /\bby\s+\w+(?:\s+\w+)?\s*$/i.test(q.slice(0, m.index)) },
 ];
@@ -205,7 +207,7 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "property_value", pattern: R(String.raw`\bproperty\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
   { concept: "measure", value: () => "carjacking", pattern: R(String.raw`\bcarjack(?:ing|ings|ed)?\b`) },
   { concept: "measure", value: () => "domestic_violence", pattern: R(String.raw`\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b|\bdomestic\b`) },
-  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b`) },
+  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b|(?<=\b(?:anti[-\s]?[a-z]+|antisemitic)\s)incidents?\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
   // Group B offenses (arrests only), 2026-11-11.
   { concept: "measure", value: () => "disorderly_conduct", pattern: R(String.raw`\bdisorderly\s+conduct\b|\bdisorderly\b`) },

@@ -2513,18 +2513,18 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
-    "rule": "R08>2nd",
+    "status": "reviewed",
+    "rule": "P292",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is an answerable coverage lookup under R07."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Coverage question: one coverage sentence only (P292)."
    }
   },
   {
@@ -8791,7 +8791,7 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -8799,10 +8799,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R07>2nd",
+    "rule": "P292",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Coverage question: one coverage sentence only (P292); replaces the 11-09 agency-table answer."
    }
   },
   {
@@ -9993,18 +9993,18 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
-    "rule": "R09>2nd",
+    "status": "reviewed",
+    "rule": "P292",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is an agency coverage lookup."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Coverage question: one coverage sentence only (P292)."
    }
   },
   {
@@ -14079,24 +14079,16 @@
    "question": "Can I see national overall and violent crime rates monthly from 2016 to present",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output; by month for a state or the nation is Current Trends (P155). Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "rule": "P289",
+    "drafted_by": "jeff-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: national overall/violent crime rate by month declines with 'That data is not available.' (national rates are annual, from Historical; Current Trends has no national monthly rate)."
    }
   },
   {
@@ -37921,19 +37913,15 @@
    "question": "show me juvenile crime trend 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): United States juvenile (under 18) arrests per year, with the note: Arrests do not equal crimes. No up/down sentence; P285 note for years before 2017."
    }
   },
   {
@@ -64304,19 +64292,15 @@
    "question": "show me juvenile crime trend 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): United States juvenile (under 18) arrests per year, with the note: Arrests do not equal crimes. No up/down sentence; P285 note for years before 2017."
    }
   },
   {
@@ -66955,19 +66939,16 @@
    "question": "What are the trends in misdemeanor arrests nationally since 1991?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which misdemeanor offenses"
-    ],
-    "about": "which misdemeanor offenses"
+    "reason": "That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor."
    },
    "label": {
-    "status": "draft",
-    "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Misdemeanor does not define an approved offense grouping."
+    "status": "reviewed",
+    "rule": "P288",
+    "drafted_by": "jeff-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: misdemeanor (or felony) arrests decline with 'That data is not available.' and the note that NIBRS does not record the class of an arrest."
    }
   },
   {
