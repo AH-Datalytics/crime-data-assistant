@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, answerCurrentRolling, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -50,6 +50,39 @@ assert.equal(currentRate(88, 100000, 0), null);
   assert.equal(agencyPopulation(bld, "X", "2026-02", own), 100_000);
   assert.equal(agencyPopulation(bld, "X", "2027-02", own), null, "2027 does not carry");
   assert.equal(agencyPopulation(bld, "X", "2025-11", own), null, "a past month does not carry");
+}
+// A rolling rate (Jeff 2026-11-23, P269): the window's count over the month-weighted population. His example: the 12 months
+// ending March 2025 hold 220 murders; nine months at 576,000 and three at 569,000 weight to 574,250, so 38.3 per 100,000.
+{
+  const bld = { root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
+  const counts: Record<string, number> = {};
+  for (const m of months("2024-04", "2024-12")) counts[m] = 18; // 162
+  Object.assign(counts, { "2025-01": 20, "2025-02": 19, "2025-03": 19 }); // 58, so 220 in all
+  const fake = (sql: string): unknown[][] => {
+    if (sql.includes("UNION ALL")) return Object.entries(counts);
+    if (sql.includes("max(year)")) return [[2024]];
+    if (sql.includes("current_crime")) return [["2025-01", 569_000], ["2025-02", 569_000], ["2025-03", 569_000]];
+    return [[2024, 576_000]];
+  };
+  const place = { kind: "agency" as const, ori: "X", label: "Xville", name: "Xville", state: "TX" };
+  const r = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, fake);
+  assert.equal(r.kind, "current");
+  if (r.kind === "current") {
+    assert.deepEqual(r.delivered.table.rows, [["2025-03", 38.3]], "220 / 574,250 per 100,000");
+    assert.equal(r.delivered.table.columns[1].header, "Rolling 12-month murder rate per 100,000");
+    assert.ok(r.delivered.text.some((t) => t.includes("not scaled to a full year")));
+  }
+  // The same window as a count is unchanged.
+  const c = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12 }, bld, fake);
+  assert.ok(c.kind === "current" && c.delivered.table.rows[0][1] === 220);
+  // A month in the window with no population leaves the window blank and says so, never a shorter average.
+  // (the latest completed year is 2023 here, so February 2025 has no carried population either)
+  const nopop = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2023]] : sql.includes("current_crime") && !sql.includes("UNION ALL") ? [["2025-01", 569_000], ["2025-03", 569_000]] : fake(sql));
+  const b2 = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, nopop);
+  assert.ok(b2.kind === "current" && b2.delivered.table.rows[0][1] === null && b2.delivered.text.some((t) => t.includes("No population is available for February 2025")));
+  // A state or the nation whose windows start before the published sample does not get a rate.
+  const early = answerCurrentRolling({ measure: "murder", places: [{ kind: "group", states: null, label: "The United States" }], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, fake);
+  assert.equal(early.kind, "current-decline");
 }
 assert.equal(currentRate(null, 100000, 8), null);
 assert.equal(currentRate(5, 0, 8), null);

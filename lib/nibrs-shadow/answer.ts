@@ -2681,16 +2681,19 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P154 (Jeff 2026-11-19): "murders rolling over 12 months" is a series of rolling totals by month (not "the last 12 months", which stays one
     // total): from the first January with a full window (none named), or from the January of the year named; counts, Current Trends' months.
     const rollW = sp.window?.months ?? 12;
-    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && sp.statistic === "count" && rollW >= 2
+    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && (sp.statistic === "count" || sp.statistic === "rate") && rollW >= 2
       && (sp.period.form === "none" || sp.period.form === "since" || sp.period.form === "range" || sp.period.form === "year");
     if (rollingSeries) {
       const pf = sp.period;
-      const earliest = firstFullJanuary(cur.finalFirstMonth, rollW);
+      // A rate for a state or the nation starts in the published sample's months (2025-01 on), so its first default window is later.
+      const groupRate = sp.statistic === "rate" && sp.places.some((p) => p.kind === "national" || p.kind === "state");
+      const earliest = firstFullJanuary(groupRate ? cur.firstMonth : cur.finalFirstMonth, rollW);
       const cap = (m: string) => (m > cur.lastMonth ? cur.lastMonth : m);
       let from = pf.form === "since" ? `${pf.from}-01` : pf.form === "range" ? `${pf.from}-01` : pf.form === "year" ? `${pf.year}-01` : earliest;
       const to = pf.form === "range" ? cap(`${pf.to}-12`) : pf.form === "year" ? cap(`${pf.year}-12`) : cur.lastMonth;
       let outside: string | undefined;
-      if (from < earliest) {
+      // A start named before the first window a group rate can have is declined by the rate itself, not clipped.
+      if (from < earliest && !(groupRate && pf.form !== "none")) {
         const gone = [from, shiftMonth(cur.finalFirstMonth, -1)];
         outside = `Current Trends figures in the data cover ${monthName(cur.finalFirstMonth)} through ${monthName(cur.lastMonth)}; ${monthName(gone[0])} through ${monthName(gone[1])} ${gone[0] === gone[1] ? "is" : "are"} outside them.`;
         from = earliest;
@@ -2705,7 +2708,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const several = rp.length > 1;
       if (rp.every((p): p is CurrentPlace => p !== null) && (!several || rp.every((p) => p.kind === "agency")) && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).column) {
         const agencyIds = rp.flatMap((p) => (p.kind === "agency" ? [p.ori] : []));
-        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, ...(outside ? { outside } : {}),
+        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, statistic: sp.statistic === "rate" ? "rate" : "count", ...(outside ? { outside } : {}),
           ...(agencyIds.length ? { agencyLine: reportedBy(agencyIds.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
         if (r.kind === "current") return r;
         return decline(/outside them|not all in them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
