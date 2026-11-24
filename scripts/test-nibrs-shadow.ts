@@ -199,7 +199,7 @@ const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert
   const w = as(ask("what weapon types were used in violent crimes in pennsylvania in 2025"), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[]; rows: unknown[][] } } };
   assert.deepEqual(w.delivered.table.columns.map((c) => c.header), ["Weapon", "Murder", "Rape", "Robbery", "Aggravated assault"]);
   assert.deepEqual(w.delivered.table.rows.map((r) => r[0]), ["Firearm (handgun, rifle, shotgun, other or unknown firearm)", "Knife or cutting instrument", "Blunt object", "Personal weapons (hands, fists, feet)", "Other or none/unknown"]);
-  assert.equal(w.delivered.text[0], "Pennsylvania Weapon Types Used in Violent Crimes, Offenses, 2025");
+  assert.equal(w.delivered.text[0], "Pennsylvania Weapon Types Used in Violent Crimes, Victims, 2025");
   assert.ok(w.delivered.text.some((t) => /counted in each weapon's row/.test(t)), JSON.stringify(w.delivered.text));
 }
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.

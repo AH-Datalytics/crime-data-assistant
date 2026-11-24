@@ -79,6 +79,8 @@ export type ShadowDeps = {
   target: CompileTarget;
   /** Runs one SQL statement read-only and returns its rows. */
   execute(sql: string): unknown[][];
+  /** Set only by the violent-crime weapon table (Jeff 2026-11-24): a victim count by weapon stays victims (P166 is skipped). */
+  victimWeapons?: boolean;
   /** The Crime Index build (scripts/build-crimeindex.py): with it, agencies' Part I questions are Historical's answers; without it, routed. */
   historical?: HistoricalBuild;
   /** The Crime Index build's Current Trends tables (current.ts): with them, Part I questions by month are Current Trends' answers. */
@@ -1069,7 +1071,8 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   const vw = question.match(VIOLENT_WEAPON_TYPES);
   if (vw) {
     const crimes = ["Murder", "Rape", "Robbery", "Aggravated assault"];
-    const outs = crimes.map((c) => shadowAnswer(`${c.toLowerCase()} offenses by weapon ${vw[1]} according to NIBRS`, depsIn));
+    const vdeps = { ...depsIn, victimWeapons: true, target: { ...depsIn.target, victimWeapons: true } };
+    const outs = crimes.map((c) => shadowAnswer(`${c.toLowerCase()} victims by weapon ${vw[1]} according to NIBRS`, vdeps));
     type Tbl = { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] };
     if (outs.every((o) => o.kind === "answer" && (o.delivered.table as unknown as Tbl | undefined)?.columns.length === 3)) {
       const answers = outs as Extract<ShadowOutcome, { kind: "answer" }>[];
@@ -1078,10 +1081,10 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       tables.forEach((t, ci) => t.rows.forEach((r) => { const cell = rows[weaponRow(String(r[0]))]; cell[ci + 1] = Number(cell[ci + 1] ?? 0) + Number(r[1] ?? 0); }));
       const columns = [tables[0].columns[0], ...crimes.map((c, ci) => ({ binding: tables[ci].columns[1].binding, header: c }))];
       const first = answers[0].delivered.text[0];
-      const m = first.match(/^(.*?) Murder Offenses by Weapon, (.*)$/);
-      const title = m ? `${m[1]} Weapon Types Used in Violent Crimes, Offenses, ${m[2]}` : first;
-      const rest = answers[0].delivered.text.slice(1).filter((x) => !/^A crime that falls in several/.test(x) && !/^Counts are /.test(x));
-      const note = "Counts are offenses; a crime with two weapons is counted in each weapon's row, so the rows can add up to more than the crimes.";
+      const m = first.match(/^(.*?) Murder Victims by Weapon, (.*)$/);
+      const title = m ? `${m[1]} Weapon Types Used in Violent Crimes, Victims, ${m[2]}` : first;
+      const rest = answers[0].delivered.text.slice(1).filter((x) => !/^A crime that falls in several/.test(x) && !/^Counts are /.test(x) && !/^Property crimes are counted by offense/.test(x));
+      const note = "Counts are victims; a victim of an offense with two weapons is counted in each weapon's row, so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
       const evidence = rows.flatMap((r, ri) => r.slice(1).map((v, ci) => ({ row: ri, statistic: (columns[ci + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
       const o = answers[0];
       return { ...o, delivered: { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest, note] } as typeof o.delivered };
@@ -3442,7 +3445,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const property = name !== "against_property" && (name === "carjacking" || (!!codes && codes.every((c) => CRIMES_AGAINST_PROPERTY.has(c))));
     // P120 (Jeff 2026-11-16): victims of a property crime with an age ("juvenile robbery victims") are counted by victim.
     const victimAge = plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age");
-    if (m.id.startsWith("victims.") && property && !victimAge) {
+    if (!deps.victimWeapons && m.id.startsWith("victims.") && property && !victimAge) {
       plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense" };
       plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
       unbind((p) => p.concept === "unit");
@@ -3450,7 +3453,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     }
     // P166 (Jeff 2026-11-19): a crime counted by victim, broken down by weapon, is counted by offense (the weapon belongs to the offense), and
     // the answer says so: "Counts are aggravated assault offenses by weapon, not victims."
-    if (m.id.startsWith("victims.") && plan.measures[i].id === m.id && plan.groupings.some((g) => g.dimension === "offense_weapon.weapon")
+    if (!deps.victimWeapons && m.id.startsWith("victims.") && plan.measures[i].id === m.id && plan.groupings.some((g) => g.dimension === "offense_weapon.weapon")
       && !!MEASURE_CODES[name] && !["violent_crime", "property_crime", "person_crimes", "against_property", "homicide", "homicide_all", "murder"].includes(name)) {
       const toOffense = (f: Filter): Filter => (f.kind === "exists" && f.entity === "offense_weapon" ? { ...f, scope: "offense" } : f);
       plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense", ...(m.filters ? { filters: m.filters.map(toOffense) } : {}) };
