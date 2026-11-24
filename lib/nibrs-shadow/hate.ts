@@ -59,6 +59,7 @@ export const BIAS_NAMES: Record<string, string> = {
   "81": "Anti-Eastern Orthodox (Russian, Greek, Other)", "82": "Anti-Other Christian", "83": "Anti-Buddhist", "84": "Anti-Hindu", "85": "Anti-Sikh",
 };
 /** The first data year a code has its modern meaning (the decoder's reference): before it the name differs or is unconfirmed. */
+const LGBTQ_CODES = ["41", "42", "43", "45", "71", "72"];
 const MODERN_FROM: Record<string, number> = { "14": 2013, "16": 2013, "28": 2015, "29": 2015, "31": 2015, "33": 2015, "43": 2013, "61": 2013, "62": 2012, "71": 2013, "72": 2012,
   "81": 2015, "82": 2015, "83": 2015, "84": 2015, "85": 2015, "51": 1997, "52": 1997 };
 
@@ -79,6 +80,7 @@ export type HateQuestion = {
   /** H4 (Jeff 2026-11-21): incidents with any offense at a school; incidents whose location is not confirmed are not counted (said). */
   location?: "school";
   /** The first year asked when it was before the data start (the answer says so). */ askedFrom?: string;
+  /** A bias whose current meaning begins after the data start: the every-year span starts there, and the answer says so. */ modernFrom?: { year: number; biases: { name: string; year: number }[] };
   /** Said when the span asked reached past the last complete month. */ cutAt?: string;
   /** No range was named for a series: every year the data have is shown, and the answer says so. */ allYears?: boolean;
   /** "Getting worse", "going up" (Jeff 2026-11-24): a sentence says which way the last two full years went; no opinion on "worse". */ direction?: boolean;
@@ -98,7 +100,12 @@ const ORI_STATE: Record<string, string> = { NB: "NE", GM: "GU" };
  * (an agency, a state or the nation), the hate crime count (any unit: it is always incidents), optionally one named bias,
  * as a total, by year or month, or as a rolling window of months; no rate, share, change or breakdown yet.
  */
-export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: HateBuild): HateQuestion | { why: string } {
+export function modernFromNote(m: { year: number; biases: { name: string; year: number }[] }): string {
+  const same = m.biases.every((b) => b.year === m.year);
+  if (same) return `${m.biases.map((b) => b.name).join(" and ")} is shown from ${m.year}, when the bias category took its current meaning.`;
+  return `${m.biases.map((b) => `${b.name} took its current meaning in ${b.year}`).join(" and ")}, so the years are shown from ${m.year}.`;
+}
+export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: string }, build: HateBuild, allYears = false): HateQuestion | { why: string } {
   if (plan.measures.length !== 1 || !/\.hate_crime$/.test(plan.measures[0].id)) return { why: "not a hate crime count" };
   const stats = plan.statistics.map((s) => s.kind);
   // A breakdown's share column is not given (Jeff 2026-11-21: the rows overlap); its count is.
@@ -124,15 +131,17 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   const location = locs.length ? "school" as const : undefined;
   if (location && breakdown === "location") return { why: "this breakdown" };
   // One named bias per filter: the reader writes each bias named as its own filter ("anti-Islamic and anti-Jewish").
-  const biasOf = (f: NibrsPlan["filters"][number]): { code: string; name: string } | null => {
+  const biasOf = (f: NibrsPlan["filters"][number]): { code: string; name: string; codes?: string[] } | null => {
     const w = f.kind === "exists" && !f.negate && f.entity === "offense_bias" && f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].dimension === "offense_bias.bias" && f.where[0].op === "in"
       ? f.where[0] : null;
+    // The anti-LGBTQ group: every sexual-orientation and gender-identity bias except anti-heterosexual (44); an incident counts once.
+    if (w && w.values?.length === LGBTQ_CODES.length && LGBTQ_CODES.every((c) => w.values!.map(String).includes(c))) return { code: "lgbtq", name: "Anti-LGBTQ", codes: LGBTQ_CODES };
     const code = w && w.values?.length === 1 ? String(w.values[0]) : null;
     return code && BIAS_NAMES[code] ? { code, name: BIAS_NAMES[code] } : null;
   };
   const named = plan.filters.filter((f) => !locs.includes(f)).map(biasOf);
   if (named.some((b) => !b)) return plan.filters.length > 1 ? { why: "several conditions" } : { why: "a bias this source does not name" };
-  const all = named as { code: string; name: string }[];
+  const all = named as { code: string; name: string; codes?: string[] }[];
   if (new Set(all.map((b) => b.code)).size !== all.length || all.length > 5) return { why: "several conditions" };
   if (all.length > 1 && roll.length) return { why: "several biases with a rolling window" };
   if (all.length > 1 && (breakdown || location)) return { why: "several conditions" };
@@ -141,7 +150,13 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   const to = period.to > build.latestMonth ? build.latestMonth : period.to;
   if (to < first) return { why: "before the data start" };
   if (period.from > build.latestMonth) return { why: "after the latest month" };
-  const from = period.from < first ? first : period.from;
+  let from = period.from < first ? first : period.from;
+  // No range named: every year the data have for the bias, starting where its current meaning begins (said), not declined for the earlier years.
+  let modernFrom: HateQuestion["modernFrom"];
+  if (allYears && !roll.length) {
+    const late = all.filter((b) => MODERN_FROM[b.code] && Number(from.slice(0, 4)) < MODERN_FROM[b.code]);
+    if (late.length) { const year = Math.max(...late.map((b) => MODERN_FROM[b.code])); from = `${year}-01`; modernFrom = { year, biases: late.map((b) => ({ name: b.name, year: MODERN_FROM[b.code] })) }; }
+  }
   const grain = roll.length ? "rolling" : time[0]?.dimension === "time.month" ? "month" : time[0]?.dimension === "time.year" ? "year" : "total";
   const window = roll.length ? (roll[0] as { months: number }).months : undefined;
   const readFrom = window ? firstNeeded(from, window) : from;
@@ -157,7 +172,7 @@ export function hateQuestionOf(plan: NibrsPlan, period: { from: string; to: stri
   if (adj.some((b) => !("note" in b) && MODERN_FROM[b.code] && early < MODERN_FROM[b.code])) return { why: "a bias whose meaning changed in the years asked" };
   const bias2: HateQuestion["bias"] = adj.length === 1 ? adj[0] : null;
   return { place, from, to, grain, ...(window ? { window } : {}), bias: bias2, ...(adj.length > 1 ? { biases: adj } : {}), ...(breakdown ? { breakdown } : {}), ...(location ? { location } : {}),
-    ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}), ...(period.to > to ? { cutAt: to } : {}) };
+    ...(period.from < first ? { askedFrom: period.from.slice(0, 4) } : {}), ...(period.to > to ? { cutAt: to } : {}), ...(modernFrom ? { modernFrom } : {}) };
 }
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -255,6 +270,7 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
   }
   text.push(HATE_REPORTING_CAVEAT);
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${fromY} through ${toY}.`);
+  if (hq.modernFrom) text.push(`${modernFromNote(hq.modernFrom)}`);
   if (hq.askedFrom) text.push(`Hate crime data by bias starts in ${HATE_FIRST_YEAR}.`);
   if (hq.bias?.note) notes.push(hq.bias.note);
   // The data's last complete month ends the answer when it is not a December: the year (or span) asked may reach past it.
@@ -284,7 +300,7 @@ export const HATE_BIASES_OVERLAP = "An incident with more than one of these bias
  * together by period: one column per bias, never added. The lines are the first bias's (they are the same for every bias: the caveat,
  * the years and the latest month), with the overlap line.
  */
-function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string }[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
+function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string; codes?: string[] }[], build: HateBuild, execute: (sql: string) => unknown[][]): HateAnswer | HateDecline {
   const each = biases.map((b) => answerHate({ ...hq, bias: b, biases: undefined }, build, execute));
   const bad = each.find((a): a is HateDecline => a.kind === "hate-decline");
   if (bad) return bad;
@@ -343,6 +359,7 @@ function answerHateBreakdown(hq: HateQuestion, build: HateBuild, execute: (sql: 
     text.splice(1, 0, tops.length === 1 ? `${tops[0]} is the most common bias, with ${fmt(got[0].n)} hate crimes.` : `${tops.join(" and ")} are tied as the most common bias, with ${fmt(got[0].n)} hate crimes each.`);
   }
   if (hq.allYears) text.push(`No years were given, so every year in the data is shown: ${hq.from.slice(0, 4)} through ${hq.to.slice(0, 4)}.`);
+  if (hq.modernFrom) text.push(`${modernFromNote(hq.modernFrom)}`);
   if (hq.askedFrom) text.push(`Hate crime data by bias starts in ${HATE_FIRST_YEAR}.`);
   text.push(HATE_SOURCE);
   const period = { from: hq.from, to: hq.to };

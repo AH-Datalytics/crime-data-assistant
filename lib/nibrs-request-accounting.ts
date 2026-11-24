@@ -142,6 +142,7 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "bias:14", pattern: R(String.raw`\banti[-\s]?asian\b`) },
   { concept: "filter", value: () => "bias:24", pattern: R(String.raw`\banti[-\s]?(?:islamic|muslim)\b`) },
   { concept: "filter", value: () => "bias:41", pattern: R(String.raw`\banti[-\s]?gay\b`) },
+  { concept: "filter", value: () => "bias:lgbtq", pattern: R(String.raw`\banti[-\s]?(?:lgbtq?\+?|lgbt|glbt|lgbtqia\+?)(?![a-z])|\banti[-\s]?lesbian,?\s*gay,?\s*bisexual,?\s*(?:and\s+)?transgender\b`) },
   // property loss
   { concept: "filter", value: () => "loss:7", pattern: R(String.raw`\bstolen\b`) },
   { concept: "filter", value: () => "loss:5", pattern: R(String.raw`\brecovered\b`) },
