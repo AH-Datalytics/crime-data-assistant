@@ -3902,4 +3902,8 @@ console.log("nibrs shadow: answers, clarifications and declines follow the slice
   }
   // Only an opener is dropped: a question that merely starts with "can" is read as written, and a bare opener is not emptied.
   assert.notEqual(shown("can i get data on"), want, "nothing after the opener: not turned into an answer");
+  // Known edge (Coordinator 2026-11-24): "can I see the trends data library" has no crime question in it; it reads as the bare form does (a clarify), never an answer or a guess.
+  const lib = shadowAnswer("can I see the trends data library", deps);
+  assert.equal(lib.kind, "clarify", "the trends data library ask clarifies");
+  assert.equal(shown("can I see the trends data library"), shown("see the trends data library"), "the opener changes nothing");
 }
