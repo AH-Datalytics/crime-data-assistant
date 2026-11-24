@@ -36,7 +36,11 @@ const checks: [string, () => void][] = [
   ["The Dalles keeps its The (Codex 03d136e1)", () => assert.ok(/The Dalles murders/.test(read("Can you show me The Dalles murders in 2024")), read("Can you show me The Dalles murders in 2024"))],
   ["a comma after the greeting name (Codex 03d136e1)", () => assert.ok(/^show me murders in Texas/.test(read("Hi, Jeff, can you show me murders in Texas in 2024").trim()), read("Hi, Jeff, can you show me murders in Texas in 2024"))],
   ["a place starting with a greeting name is kept (Codex 464d5d03)", () => assert.ok(/^Jefferson City murders in 2024/.test(read("Hi Jefferson City murders in 2024").trim()), read("Hi Jefferson City murders in 2024"))],
-  ["a wrapped change question still reads as a change (Codex 464d5d03)", () => assert.equal(read("Can you show me how murder in Denver has changed since 2020"), read("show me how murder in Denver has changed since 2020"))],
+  ["a wrapped change question still reads as a change (Codex 464d5d03)", () => assert.equal(read("Can you show me how murder in Denver has changed since 2020"), read("how murder in Denver has changed since 2020"))],
+  ["a name that is part of a place is kept (Codex f394af1a)", () => { assert.ok(/^Jeff Davis County murders/.test(read("Hey Jeff Davis County murders in 2024").trim())); assert.ok(/^Claude, Texas murders/.test(read("Hey Claude, Texas murders in 2024").trim()), read("Hey Claude, Texas murders in 2024")); }],
+  ["a wrapper before a comparison keeps the comparison reading (Codex f394af1a)", () => assert.equal(read("Hey Im interested in how does murder in Denver compare to Boston in 2024").trim(), read("How does murder in Denver compare to Boston in 2024").trim())],
+  ["a greeting before tell me about is dropped too (Codex f394af1a)", () => assert.equal(read("Hi, tell me about murder rates in Denver in 2024").trim(), read("tell me about murder rates in Denver in 2024").trim())],
+  ["tell me whats going on and one-space wrappers (Codex f394af1a)", () => { for (const q of ["tell me whats going on with murders in Denver in 2024", "I want murders in Denver in 2024", "I would like murders in Denver in 2024", "I'd like murders in Denver in 2024"]) assert.ok(/^show me murders in Denver/.test(read(q).trim()), `${q} -> ${read(q)}`); }],
 ];
 for (const [name, fn] of checks) { try { fn(); console.log(`  PASS  ${name}`); } catch (e) { console.log(`  FAIL  ${name}: ${(e as Error).message}`); failed++; } }
 if (failed) { console.log(`${failed} failed`); process.exit(1); }
