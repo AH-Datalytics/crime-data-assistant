@@ -1118,7 +1118,46 @@ const VIOLENT_ARRESTS_BY_TYPE = /\bviolent\s+crime\s+arrests?(?:\s+trend)?\s+by\
 /** P297 (Jeff 2026-11-24): the weapon types used in violent crimes, one table with the four crimes across. */
 const VIOLENT_WEAPON_TYPES = /\bweapon\s+types?\s+(?:were\s+|was\s+|are\s+)?used\s+in\s+violent\s+crimes?\b\s*(.*)$/i;
 const WEAPON_ROWS = ["Firearm (handgun, rifle, shotgun, other or unknown firearm)", "Knife or cutting instrument", "Blunt object", "Personal weapons (hands, fists, feet)", "Other or none/unknown"];
-function weaponRow(label: string): number {
+/**
+ * A person's attribute (offender age) for several named crimes or places (2026-11-24, QL ids ffbd537ab6, a780a37ab6, 3a51bb5f96): each piece
+ * is asked on its own and the tables are stacked under a leading Crime or Place column; nothing is added together. The title joins the
+ * pieces' labels around the words they share; any piece that is not an answer makes the whole ask a decline (no partial answer).
+ */
+const andList = (xs: string[]) => (xs.length > 2 ? ` and ` : xs.join(" and "));
+function stackPieces(outs: ShadowOutcome[], by: "crime" | "place"): ShadowOutcome | null {
+  type Tbl = { columns: { binding: unknown; header: string }[]; rows: (string | number | null)[][] };
+  const ncol = (o: ShadowOutcome) => (o.kind === "answer" ? (o.delivered.table as unknown as Tbl | undefined)?.columns.length : undefined);
+  if (!outs.every((o) => o.kind === "answer" && ncol(o) !== undefined && ncol(o) === ncol(outs[0]) && (ncol(o) ?? 0) >= 3)) return null;
+  const answers = outs as Extract<ShadowOutcome, { kind: "answer" }>[];
+  const tables = answers.map((a) => a.delivered.table as unknown as Tbl);
+  const words = answers.map((a) => a.delivered.text[0].split(" "));
+  const minLen = Math.min(...words.map((w) => w.length));
+  let pre = 0, suf = 0;
+  if (by === "crime") while (pre < minLen - 1 && words.every((w) => w[pre] === words[0][pre])) pre++;
+  while (suf < minLen - pre - 1 && words.every((w) => w[w.length - 1 - suf] === words[0][words[0].length - 1 - suf])) suf++;
+  // A label cut after a comma ("Worcester County,") keeps the shared word that completes it ("Maryland").
+  while (suf > 0 && words.some((w) => w[w.length - suf - 1].endsWith(","))) suf--;
+  const labels = words.map((w) => w.slice(pre, w.length - suf).join(" "));
+  if (labels.some((l) => !l) || new Set(labels).size !== labels.length) return null;
+  const title = [...words[0].slice(0, pre), andList(labels), ...words[0].slice(words[0].length - suf)].join(" ");
+  const shared = (hs: string[]) => { const ws = hs.map((h) => h.split(" ")); let k = 0; while (k < ws[0].length && ws.every((w) => w[w.length - 1 - k] === ws[0][ws[0].length - 1 - k])) k++; return ws[0].slice(ws[0].length - k).join(" "); };
+  const header = (i: number, isStat: boolean) => {
+    const hs = tables.map((t) => t.columns[i].header);
+    if (hs.every((h) => h === hs[0])) return hs[0];
+    if (!isStat) return /^Share/.test(hs[0]) ? "Share within each " + (by === "crime" ? "crime" : "place") + " (%)" : hs[0];
+    const x = shared(hs);
+    return x ? x.replace(/^./, (c) => c.toUpperCase()) : "Count";
+  };
+  const isGroup = (i: number) => (tables[0].columns[i].binding as { kind?: string }).kind === "grouping";
+  const columns = [{ binding: { kind: "grouping" as const, dimension: by === "crime" ? "offense.category" : "geo.place" }, header: by === "crime" ? "Crime" : "Place" },
+    ...tables[0].columns.map((c, i) => ({ ...c, header: header(i, !isGroup(i) && !/^Share/.test(c.header)) }))];
+  const rows = tables.flatMap((t, i) => t.rows.map((r) => [labels[i], ...r]));
+  const notes: string[] = [];
+  answers.forEach((a) => a.delivered.text.slice(1).forEach((x) => { if (!notes.includes(x)) notes.push(x); }));
+  const evidence = rows.flatMap((r, ri) => r.map((v, ci) => ci > 0 && !isGroup(ci - 1) ? { row: ri, statistic: (columns[ci].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" } : null).filter(Boolean)) as unknown as Delivered["evidence"];
+  const o = answers[0];
+  return { ...o, delivered: { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...notes] } as typeof o.delivered };
+}function weaponRow(label: string): number {
   if (/firearm|handgun|rifle|shotgun/i.test(label)) return 0;
   if (/^knife|cutting/i.test(label)) return 1;
   if (/^blunt|^club/i.test(label)) return 2;
@@ -3487,7 +3526,15 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // another unit.
   const ppl = flags(ledger0).people;
   if (ppl && (ppl.by || ppl.where.length)) {
-    if (plan.measures.length !== 1) return decline("unsupported_capability", "This isn't available: a person's attributes for several crimes.");
+    if (plan.measures.length !== 1) {
+      // Several crimes by an offender's attribute (2-6 named): each crime on its own, stacked under a Crime column.
+      const named = clause0("measure").filter((p) => p.state === "recognized" && p.value !== "unspecified");
+      if (ppl.by && !ppl.by.paired && plan.measures.length === named.length && named.length >= 2 && named.length <= 6 && new Set(named.map((p) => String(p.value))).size === named.length) {
+        const stacked = stackPieces(named.map((p) => fromLedger(filledAll(ledger, "measure", [[String(p.value), p.text]]), deps, pins)), "crime");
+        if (stacked) return stacked;
+      }
+      return decline("unsupported_capability", "This isn't available: a person's attributes for several crimes.");
+    }
     // "Violent crime" by a victim's or offender's age counts NIBRS crimes against persons for that person, not the FBI's four-crime
     // violent crime (Jeff 2026-11-15); a firearm selected is the victim's offense weapon (offenders' is not built).
     if (ppl.by && !ppl.by.paired && ppl.by.who === "offender" && ppl.by.attr === "age" && ["violent_crime.ucr", "offenders.violent_crime"].includes(plan.measures[0].id)) {
@@ -3521,7 +3568,20 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       if (b.who === "arrestee" && unit !== "arrest" && unit !== "group_b_arrest") return decline("unsupported_capability", "This isn't available: an arrestee's attributes for anything but arrests.");
       if (b.paired && unit !== "victim") return decline("unsupported_capability", "This isn't available: the linked offenders' attributes for anything but victims.");
       if (b.who === "offender" && (unit === "arrest" || unit === "group_b_arrest")) return decline("unsupported_capability", "This isn't available: offenders' attributes for arrests.");
-      if (plan.groupings.some((g) => !g.dimension.startsWith("time."))) return decline("unsupported_capability", "This isn't available: a person's attribute beside another breakdown.");
+      if (plan.groupings.some((g) => !g.dimension.startsWith("time."))) {
+        // Several named places by an offender's attribute (2-6): each place on its own, stacked under a Place column.
+        const where = clause0("place").filter((p) => p.state === "recognized");
+        if (plan.groupings.every((g) => g.dimension === "geo.place" || g.dimension.startsWith("time.")) && plan.geography.places.length >= 2 && plan.geography.places.length <= 6
+          && where.length === plan.geography.places.length && plan.geography.combine !== "combined") {
+          const hasPeriod = clause0("period").length > 0;
+          const rp = hasPeriod ? null : resolvePeriod(plan.period, release);
+          const wholeYear = rp && rp.kind === "absolute" && rp.from.endsWith("-01") && rp.to.endsWith("-12") && rp.from.slice(0, 4) === rp.to.slice(0, 4) ? rp.from.slice(0, 4) : null;
+          const base = wholeYear ? filled(ledger, "period", `year:${wholeYear}`, `in ${wholeYear}`) : ledger;
+          const stacked = stackPieces(where.map((p) => fromLedger(filledAll(base, "place", [[String(p.value), p.text]]), deps, pins)), "place");
+          if (stacked) return stacked;
+        }
+        return decline("unsupported_capability", "This isn't available: a person's attribute beside another breakdown.");
+      }
       const dimension = b.paired ? `victim_offender.offender_${b.attr}` : b.who === "arrestee" && unit === "group_b_arrest" ? `group_b_arrest.${b.attr}` : `${b.who}.${b.attr}`;
       const multi = b.paired || (b.who === "offender" && unit !== "offender");
       plan.groupings.push({ dimension, unknown: "visible", absent: "show", ...(multi ? { multiValue: "each_value" as const } : {}), ...(b.attr === "age" ? { bins: AGE_BINS } : {}) });
