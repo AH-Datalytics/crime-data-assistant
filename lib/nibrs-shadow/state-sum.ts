@@ -107,7 +107,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     return decline("This isn't available: a state or national sum by month or by two categories.");
   if (catDims.length && isRate) return decline("Rates by category aren't given for a state or the nation: there is no population for each group.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
-  if (years.length > 1 && !yearG) return decline("This isn't available: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
+  // Coordinator 2026-11-24 (ruling A): one category over several years, not by year, is that category's table summed over the years.
+  if (years.length > 1 && !yearG && !catDims.length) return decline("This isn't available: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
   if (isRate && yearG) return decline("This isn't available: a state or national rate by year.");
   const where = place.kind === "national" ? "the United States" : stateName((place as { code: string }).code);
   const Where = place.kind === "national" ? "United States" : where;
@@ -331,7 +332,15 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       const cats = [...new Set(sums.map((r) => r[1] as string | null))];
       const total = (y: number) => { const b = byYear.find((x) => x.year === y)!; return every ? b.every.sum : b.sum; };
       const rows: unknown[][] = [];
-      for (const y of keptYears) for (const k of cats) {
+      if (!yearG && keptYears.length > 1) {
+        // Several years in one table: each category summed over the years, its share of the years' total.
+        const den = keptYears.reduce((a, y) => a + total(y), 0);
+        for (const k of cats) {
+          const hits = sums.filter((r) => r[1] === k);
+          const n = hits.reduce((a, r) => a + Number(r[2] ?? 0), 0);
+          rows.push([k, n, "VALUE", ...(incOut ? [hits.reduce((a, r) => a + Number(r[3] ?? 0), 0), "VALUE"] : []), ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);
+        }
+      } else for (const y of keptYears) for (const k of cats) {
         const hit = sums.find((r) => Number(r[0]) === y && r[1] === k);
         const n = Number(hit?.[2] ?? 0), den = total(y);
         rows.push([...(yearG ? [String(y)] : []), k, n, "VALUE", ...(incOut ? [Number(hit?.[3] ?? 0), "VALUE"] : []), ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);

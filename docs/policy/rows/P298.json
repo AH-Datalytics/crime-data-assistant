@@ -1,0 +1,12 @@
+{
+  "id": "P298",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"DUI arrests by age nationally, 2023 - 2025\", \"burglary arrests by age in Texas, 2022 - 2024\"",
+  "what the app does today": "A state or national breakdown by category over several years, not by year, was declined (a state or national total over several years without by year).",
+  "proposed behavior": "One table summed over the years (all agencies that reported each year), with the note and the Consistent Reporting Agencies button, no ask, as P158 and P03 say for several years. A by-year question keeps the year rows.",
+  "exact default or choices offered": "No question: the category table summed over the years, with the note and the button.",
+  "why": "Coordinator ruling A, 2026-11-24 (QL-nibrs-b2f415c823).",
+  "status": "Decided 2026-11-24 (coordinator ruling)",
+  "test cases": "scripts/test-nibrs-shadow.ts: DUI arrests by age nationally 2023-2025; burglary arrests by age in Texas 2022-2024."
+}
