@@ -71,6 +71,7 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
   // P292: which country, which cities or which agencies are covered: one coverage sentence.
   if (!hasMeasure && (/\bwhich\s+countr(?:y|ies)\b[^?]*\b(?:cover\w*|include\w*|have)\b/i.test(t)
     || /\bwhich\s+(?:cities|agencies)\s+are\s+(?:represented|covered|included)\b/i.test(t)
+    || /\bwhich\s+(?:cities|agencies)\s+(?:report|reports|submit|contribute)\w*\b(?:\s+(?:monthly|each\s+month))?/i.test(t)
     || /\bwhat\s+agencies\s+match\b/i.test(t) || /\bagencies\s+table\b/i.test(t)))
     return one("scope", { state: null, from: null, to: null, byYear: false });
   if (hasMeasure || hasPlace) return null;

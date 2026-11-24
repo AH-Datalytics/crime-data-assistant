@@ -186,7 +186,7 @@ const DATA_ABSENT_TEXT = "That data is not available.";
 const MISDEMEANOR_ARREST = /\b(?:misdemeanou?rs?|felony|felonies)\s+arrests?\b|\barrests?\s+(?:for|of|as)\s+(?:a\s+)?(?:misdemeanou?rs?|felony|felonies)\b/i;
 const DAILY_WORDS = /\bper\s+day\b|\beach\s+day\b|\bby\s+(?:the\s+)?day\b|\bday[-\s]by[-\s]day\b|\bdaily\b/i;
 const MISDEMEANOR_TEXT ="That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor.";
-const NATIONAL_MONTHLY_RATE = /\b(?:national|nationwide|united\s+states|u\.?s\.?)\b[^?]*\bcrime\s+rates?\b[^?]*\b(?:monthly|by\s+month|each\s+month|per\s+month)\b|\b(?:monthly|by\s+month|each\s+month|per\s+month)\b[^?]*\b(?:national|nationwide)\b[^?]*\bcrime\s+rates?\b/i;
+const NATIONAL_MONTHLY_RATE = /\b(?:national|nationwide|united\s+states|u\.?s\.?)\b[^?]*\bcrime\s+rates?\b[^?]*\b(?:monthly|by\s+month|each\s+month|per\s+month)\b|\bcrime\s+rates?\b[^?]*\b(?:in|for|across|of)\s+(?:the\s+)?(?:united\s+states|u\.?s\.?a?\.?|nation|country)\b[^?]*\b(?:monthly|by\s+month|each\s+month|per\s+month)\b|\b(?:monthly|by\s+month|each\s+month|per\s+month)\b[^?]*\b(?:national|nationwide)\b[^?]*\bcrime\s+rates?\b/i;
 const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bon\s+a\s+map\b|\bmaps?\s+of\b/i, false, "Maps aren't available here; answers come as tables and charts."],
   [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here."],

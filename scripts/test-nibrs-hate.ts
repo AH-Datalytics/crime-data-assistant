@@ -98,8 +98,13 @@ assert.ok(/bias_code IN \('14', '16'\)/.test(sqls[sqls.length - 1]), sqls[sqls.l
 assert.ok(asian.delivered.text.some((t) => /Anti-Asian or Pacific Islander hate crimes/i.test(t)) && asian.delivered.text.includes("The FBI combined Asian and Pacific Islander bias before 2013."), asian.delivered.text.join(" / "));
 assert.ok(asian.delivered.text.includes("Hate crime data by bias starts in 1991."));
 assert.equal(as(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013"), "hate").delivered.text.includes("The FBI combined Asian and Pacific Islander bias before 2013."), true);
-assert.notEqual(ask("anti-Native Hawaiian or Other Pacific Islander hate crimes in Texas from 2005 to 2015").kind, "hate", "code 16 has no older group");
-// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
+// Codex review of 472: code 16 cannot be asked by name here (its phrase is not read), so the cutoff is proved on the combined anti-LGBTQ group, whose
+// codes 71 and 72 had no older meaning: the same span answers from 2013 on and declines before, so the cutoff is what declines it.
+assert.equal(as(ask("anti-LGBTQ hate crimes in Texas from 2014 to 2020"), "hate").period.from, "2014-01", "from 2013 on answers");
+assert.equal(ask("anti-LGBTQ hate crimes in Texas from 2005 to 2015").kind, "decline", "lgbtq group before 2013 declines");
+// Two biases with a note each: the combined answer carries the note once.
+const asianJewish = as(ask("anti-Asian and anti-Jewish hate crimes in California from 2005 to 2015"), "hate");
+assert.equal(asianJewish.delivered.text.filter((t: string) => t === "The FBI combined Asian and Pacific Islander bias before 2013.").length, 1, asianJewish.delivered.text.join(" | "));// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
 const asianAll = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
 assert.ok(asianAll.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asianAll.delivered.text.join(" | "));
 assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");

@@ -60,7 +60,7 @@ export const BIAS_NAMES: Record<string, string> = {
 };
 /** The first data year a code has its modern meaning (the decoder's reference): before it the name differs or is unconfirmed. */
 const LGBTQ_CODES = ["41", "42", "43", "45", "71", "72"];
-const MODERN_FROM: Record<string, number> = { "14": 2013, "16": 2013, "28": 2015, "29": 2015, "31": 2015, "33": 2015, "43": 2013, "61": 2013, "62": 2012, "71": 2013, "72": 2012,
+const MODERN_FROM: Record<string, number> = { "14": 2013, "16": 2013, "28": 2015, "29": 2015, "31": 2015, "33": 2015, "43": 2013, "lgbtq": 2013, "61": 2013, "62": 2012, "71": 2013, "72": 2012,
   "81": 2015, "82": 2015, "83": 2015, "84": 2015, "85": 2015, "51": 1997, "52": 1997 };
 
 export type HatePlace = { kind: "agency"; ori: string; label: string } | { kind: "state"; code: string } | { kind: "national" };
@@ -246,7 +246,8 @@ export function answerHate(hq: HateQuestion, build: HateBuild, execute: (sql: st
     text.push(seriesTitle(span, what, "Year", where));
     if (hq.direction && !hq.bias) {
       const lastFull = hq.to.endsWith("-12") ? toY : toY - 1;
-      if (lastFull - 1 >= fromY) {
+      // Both years must be whole inside the span: a first year that starts after January is partial and is not compared.
+      if (lastFull - 1 > fromY || (lastFull - 1 === fromY && hq.from.endsWith("-01"))) {
         const a = got.get(lastFull - 1) ?? 0, b = got.get(lastFull) ?? 0;
         text.push(b > a ? `Incidents rose from ${fmt(a)} in ${lastFull - 1} to ${fmt(b)} in ${lastFull}.` : b < a ? `Incidents fell from ${fmt(a)} in ${lastFull - 1} to ${fmt(b)} in ${lastFull}.` : `Incidents were ${fmt(b)} in both ${lastFull - 1} and ${lastFull}.`);
       }
@@ -317,11 +318,13 @@ function answerHateBiases(hq: HateQuestion, biases: { code: string; name: string
   // In a sentence a bias's name starts lower case, as for one bias ("857 anti-Hispanic or Latino hate crimes").
   const counts = hq.grain === "total" ? answers.map((a, i) => `${fmt(Number(a.delivered.table.rows[0][0]))} ${biases[i].name[0].toLowerCase()}${biases[i].name.slice(1)} hate crimes`) : [];
   const head = hq.grain === "total" ? `${who} had ${andList(counts)} in ${span}.` : seriesTitle(span, what, hq.grain === "year" ? "Year" : "Month", where);
-  const lines = first.delivered.text.slice(1).filter((t) => t !== HATE_SOURCE);
+  // Every bias's own note (a renamed or combined code) is said, once, not only the first bias's.
+  const biasNotes = [...new Set(biases.map((b) => b.note).filter((n): n is string => !!n))];
+  const lines = first.delivered.text.slice(1).filter((t) => t !== HATE_SOURCE && !biasNotes.includes(t));
   return {
     ...first, question: hq,
     meaning: { ...first.meaning, filters: biases.map((b) => b.name) },
-    delivered: { table: { columns, rows }, text: [head, ...lines, HATE_BIASES_OVERLAP, HATE_SOURCE] },
+    delivered: { table: { columns, rows }, text: [head, ...lines, ...biasNotes, HATE_BIASES_OVERLAP, HATE_SOURCE] },
   };
 }
 

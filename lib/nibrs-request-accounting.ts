@@ -208,7 +208,7 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "property_value", pattern: R(String.raw`\bproperty\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
   { concept: "measure", value: () => "carjacking", pattern: R(String.raw`\bcarjack(?:ing|ings|ed)?\b`) },
   { concept: "measure", value: () => "domestic_violence", pattern: R(String.raw`\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b|\bdomestic\b`) },
-  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b|(?<=\b(?:anti[-\s]?[a-z]+|antisemitic)\s)incidents?\b`) },
+  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b|(?<=\b(?:anti[-\s]?[a-z]+|antisemitic)\s)incidents?\b|\b(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
   // Group B offenses (arrests only), 2026-11-11.
   { concept: "measure", value: () => "disorderly_conduct", pattern: R(String.raw`\bdisorderly\s+conduct\b|\bdisorderly\b`) },
