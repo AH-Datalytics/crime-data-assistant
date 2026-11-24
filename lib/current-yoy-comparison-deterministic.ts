@@ -490,9 +490,10 @@ export function decideCurrentYoyPairs(certifications: YearCertification[]): Curr
   return decisions;
 }
 
+import { roundHalfAway1 } from "./round-half-away";
 function roundedPercent(now: number, prev: number): number | null {
   if (!Number.isFinite(now) || !Number.isFinite(prev) || prev === 0) return null;
-  return Math.round((1000 * (now - prev)) / prev) / 10;
+  return roundHalfAway1((100 * (now - prev)) / prev);
 }
 
 /**
