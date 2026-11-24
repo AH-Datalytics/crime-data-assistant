@@ -3610,6 +3610,44 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(cityClearanceShare("top 5 cities in Texas by share of murders cleared by exception in 2024", deps), null);
   assert.equal(cityClearanceShare("top 5 cities by murder rate in 2024", deps), null);
 }
+// P271: several crimes for one state or the nation: one table, a column for each crime, never added together.
+{
+  const two = as(ask("Shoplifting and carjackings in Texas in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Carjacking offenses", "Shoplifting offenses"], JSON.stringify(two.delivered.table.columns));
+  assert.equal(two.delivered.table.rows.length, 1, "one row, a column for each crime");
+  assert.deepEqual(two.delivered.contractProblems, []);
+  assert.equal(two.delivered.evidence.length, 2, "one evidence record per figure");
+  assert.equal(two.buttons, undefined, "no Consistent Reporting Agencies button across several crimes");
+  // Each crime is its own sum: the columns are never added into one total.
+  assert.equal(two.delivered.table.rows[0].length, 2);
+  // Combined stays declined.
+  as(ask("Shoplifting and carjackings combined in Texas in 2024"), "decline");
+  // By year, and as rates (the generic several-crimes guard must not stop a rate).
+  const byYear = as(ask("Shoplifting and carjackings in Texas by year 2022 to 2024"), "answer");
+  assert.equal(byYear.delivered.table.rows.length, 3, "a row for each year");
+  assert.deepEqual(byYear.delivered.contractProblems, []);
+  const rates = ask("Shoplifting and carjacking rates per 100,000 in Texas in 2024");
+  const rt = as(rates, "answer");
+  assert.deepEqual(rt.delivered.table.columns.map((c) => c.header), ["Carjacking offenses per 100,000", "Shoplifting offenses per 100,000"]);
+  assert.deepEqual(rt.delivered.evidence.map((e) => [e.row, e.statistic]), [[0, "carjacking_rate"], [0, "shoplifting_rate"]]);
+  // Every figure is the one the crime's own single-crime answer gives (a rate is never summed).
+  const oneCj = as(ask("Carjacking rate per 100,000 in Texas in 2024"), "answer"), oneSh = as(ask("Shoplifting rate per 100,000 in Texas in 2024"), "answer");
+  assert.deepEqual(rt.delivered.table.rows[0], [oneCj.delivered.table.rows[0][0], oneSh.delivered.table.rows[0][0]]);
+  const oneCj2 = as(ask("Carjackings in Texas in 2024"), "answer"), oneSh2 = as(ask("Shoplifting in Texas in 2024"), "answer");
+  assert.deepEqual(two.delivered.table.rows[0], [oneCj2.delivered.table.rows[0][0], oneSh2.delivered.table.rows[0][0]]);
+  // Each evidence record names its own column's statistic, on a row that exists.
+  for (const o of [two, byYear, rt]) {
+    const stats = o.delivered.table.columns.flatMap((c) => (c.binding.kind === "statistic" ? [c.binding.as] : []));
+    assert.ok(o.delivered.evidence.every((e) => stats.includes(e.statistic) && e.row < o.delivered.table.rows.length));
+    assert.equal(o.delivered.evidence.length, stats.length * o.delivered.table.rows.length);
+  }
+  // Coverage is kept for each crime, in column order, and the lead says the figures are summed across the agencies that reported.
+  assert.equal(two.stateSums?.length, 2);
+  assert.ok(two.delivered.text.filter((t) => /summed over the agencies that reported/.test(t)).length === 2, "each crime's sentence is kept");
+  // A composite named together is not several crimes in columns: a real decline.
+  const drug = as(ask("Drug crimes and carjackings in Texas by year 2022 to 2024"), "decline");
+  assert.equal(drug.reason, "unsupported_capability");
+}
 // P270: several states, or a state and the nation, asked together: one table with a Place column, each place its own state sum, never added together.
 {
   const two = as(ask("Carjackings in Texas and Ohio in 2024"), "answer");
