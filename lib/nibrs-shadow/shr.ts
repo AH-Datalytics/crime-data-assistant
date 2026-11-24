@@ -213,7 +213,7 @@ export function shrQuestionOf(plan: NibrsPlan, period: { from: string; to: strin
   // categories of ONE breakdown (a column each), never both conditions on one record or person, who has a single sex, race or
   // weapon (Jeff 2026-11-15 order, item 2; the Coordinator 2026-11-23: female vs male victims counted 0 for every cell). The
   // dimension must be the counted person's own (or a record detail), so the group test reads the person being counted.
-  let weaponGroups: { label: string; codes: string[] }[] | null = null;
+  let weaponGroups: { label: string; codes: string[]; rest?: boolean }[] | null = null;
   let groupedDim: ShrDim | null = null;
   const dimsOf = conditions.flatMap((c) => (c && c.f.op === "in" && c.f.values?.length && !/age$/.test(NIBRS_DIM[c.f.dimension] ?? "") ? [NIBRS_DIM[c.f.dimension]] : []));
   const repeated = dimsOf.filter((d, i) => d && dimsOf.indexOf(d) !== i);
