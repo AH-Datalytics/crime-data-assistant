@@ -3453,6 +3453,16 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(rd("murders in the major cities in 2024").includes("major"), false, "the large-city rule still takes 'major cities'");
   assert.equal(rd("highlighting murders in Dallas"), "highlighting murders in Dallas");
 }
+// Declines owner cause 2: "make a graph of ..." and "show my ..." are request wrappers (query log), only before a crime word.
+{
+  const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
+  assert.equal(rd("make a graph of murder rate in the US last 20 years"), "graph of murder rate in the U.S. last 20 years");
+  assert.equal(rd("Please create a chart of robbery in Texas since 2015"), "chart of robbery in Texas since 2015");
+  assert.equal(rd("Please show my murder and aggravated assault statistics in Atlanta since 1977"), "show me murder and aggravated assault statistics in Atlanta since 1977");
+  assert.equal(rd("make a graph of the weather"), "make a graph of the weather", "no crime word: left as asked");
+  assert.equal(rd("show my location"), "show my location");
+  assert.equal(ask("make a graph of murder rate in the US last 20 years").kind, ask("graph of murder rate in the US last 20 years").kind);
+}
 // A city named with its state is that state's agency, checked against the place index; never the same name in another state
 // (coordinator 2026-11-22: "burglaries in Westlake, Florida" answered Westlake, Ohio plus the state of Florida).
 {
