@@ -1196,6 +1196,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
       // Only a monthly answer says the month is shown; any other outcome (coverage by year, a decline, a question back) goes on as asked.
       const dl = (o as { delivered?: { text: string[] } }).delivered;
       if (o.kind === "answer" && dl) { dl.text.splice(1, 0, "A single day is not available, so the month is shown."); return o; }
+      if (o.kind === "clarify") return o; // the place (or other thing) is asked about first; the day changes nothing there
     }
   }
   // Data the release does not hold: one plain sentence, before any other route can answer, clarify or add an example.

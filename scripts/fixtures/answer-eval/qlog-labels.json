@@ -61380,20 +61380,19 @@
    "question": "MURDERS IN RICHMOND ON MAY 24, 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Richmond"
+    ],
+    "about": "which Richmond"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-24 card",
-    "notes": "Jeff card answer 2026-11-24: single day shows the month"
+    "reviewed_by": null,
+    "notes": "Richmond has multiple qualifying cities.; with the 2026-11-07 rules' parts"
    }
   },
   {

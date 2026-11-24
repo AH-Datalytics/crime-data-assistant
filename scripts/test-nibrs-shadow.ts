@@ -1930,6 +1930,12 @@ assert.ok(chg.delivered.text.includes("Detroit had 84 shoplifting offenses in 20
     assert.deepEqual(day.delivered.table.rows, month.delivered.table.rows, q);
     assert.equal(day.delivered.text[1], "A single day is not available, so the month is shown.", q);
   } }
+// A state-qualified place keeps its state: the day reads as the month and the place is untouched.
+{ const m = as(ask("Shoplifting in Detroit, MI in May 2023"), "answer"), d = as(ask("Shoplifting in Detroit, MI on May 14, 2023"), "answer");
+  assert.deepEqual(d.delivered.table.rows, m.delivered.table.rows); assert.equal(d.delivered.text[1], "A single day is not available, so the month is shown."); }
+// QL-nibrs-9c8479e4d9: a bare "Richmond" is still clarified first; the day does not skip that.
+{ const day = ask("MURDERS IN RICHMOND ON MAY 24, 2025"), month = ask("MURDERS IN RICHMOND IN MAY 2025");
+  assert.equal(month.kind, "clarify"); assert.equal(day.kind, "clarify"); assert.equal((day as { about?: string }).about, (month as { about?: string }).about); }
 assert.ok(!as(ask("Shoplifting in Detroit in May 2023"), "answer").delivered.text.some((x) => /single day/.test(x)));
 assert.ok(!JSON.stringify(ask("Shoplifting in Detroit from May 2023 to June 2023")).includes("single day"));
 assert.ok(!JSON.stringify(ask("Shoplifting in Detroit on May 14, 2023 and May 20, 2023")).includes("single day is not available, so the month")); // two days: left to the reader
