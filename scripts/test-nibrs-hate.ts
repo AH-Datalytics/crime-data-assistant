@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { hateBuildAt, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
+import { hateBuildAt, modernFromNote, HATE_BIASES_OVERLAP, HATE_REPORTING_CAVEAT, HATE_SOURCE, SCHOOL_LINE } from "../lib/nibrs-shadow/hate";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 // A release folder as the export writes it: the latest incident date is mid-October 2026, so the last complete month is September 2026.
@@ -53,6 +53,12 @@ const sql = sqls[sqls.length - 1];
 assert.ok(/hate_crime_incident\/data\.parquet/.test(sql) && /bias_code = '32'/.test(sql) && /state = 'TX'/.test(sql) && /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/.test(sql), sql);
 assert.ok(!/read_parquet\([^)]*(?:offense|victim)\//.test(sql), "never a NIBRS table");
 
+// Anti-LGBTQ is the six sexual orientation and gender codes as one group of distinct incidents; a year before its codes existed is refused.
+const lgbtq = as(ask("anti-LGBTQ hate crimes in Texas in 2024"), "hate");
+const lsql = sqls[sqls.length - 1];
+assert.ok(/bias_code IN \('41', '42', '43', '45', '71', '72'\)/.test(lsql) && /count\(DISTINCT year/.test(lsql), lsql);
+assert.ok(/anti-LGBTQ/.test(lgbtq.delivered.text[0]), lgbtq.delivered.text[0]);
+
 // A plain count by year and by month, and a rolling window; nothing is NIBRS's.
 const byYear = as(ask("hate crimes in Texas by year from 2022 to 2024"), "hate");
 assert.deepEqual(byYear.delivered.table.columns.map((c) => c.header), ["Year", "Hate crimes"]);
@@ -87,6 +93,14 @@ const total = ask("hate crimes in Texas from 2020 to 2024");
 as(total, "hate");
 assert.match(sqls[sqls.length - 1], /count\(DISTINCT year \|\| '\|' \|\| ori \|\| '\|' \|\| incident_number\)/);
 assert.notEqual(ask("anti-Asian hate crimes in Texas rolling 12 months in 2013").kind, "hate", "the window reaches 2012, when code 14 meant another group");
+// 21b369b201: no range named for a bias whose current meaning begins later: every year from then (said); a range reaching earlier still declines.
+const asian = as(ask("anti-Asian hate crimes in Texas by year"), "hate");
+assert.ok(asian.delivered.text.some((t: string) => /Anti-Asian is shown from 2013, when the bias category took its current meaning\./.test(t)), asian.delivered.text.join(" | "));
+assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");
+assert.match(modernFromNote({ year: 2015, biases: [{ name: "Anti-Arab", year: 2015 }, { name: "Anti-Jehovah's Witness", year: 2015 }] }), /shown from 2015, when the bias category took its current meaning/);
+assert.notEqual(ask("anti-Asian hate crimes in Texas from 2010 to 2024").kind, "hate", "an explicit range before 2013 is not answered");
+const asianNy = ask("Compare anti-Asian hate crimes in California and New York by year");
+assert.equal(asianNy.kind, "clarify", "which New York is asked, as it is for anti-Jewish");
 assert.equal(as(ask("hate crimes in Texas in 1980"), "decline").explanation, "Hate crime data here start in 1991, so 1980 isn't included.");
 assert.equal(as(ask("hate crimes in Texas from 1960 to 1990"), "decline").explanation, "Hate crime data here start in 1991, so 1960 through 1990 aren't included.");
 assert.ok(as(ask("hate crimes in Texas by year from 1990 to 1993"), "hate").delivered.text.includes("Hate crime data here start in 1991, so 1990 isn't included."));

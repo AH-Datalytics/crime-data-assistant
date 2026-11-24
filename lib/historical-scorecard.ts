@@ -285,6 +285,18 @@ function groupTotal(row: Record<string, number | null>, group: "violent" | "prop
   return total;
 }
 
+/**
+ * A group's rate is its summed count over the population, rounded once. Never a sum of the
+ * components' already-rounded rates: 193.6 + 1144.1 + 197.0 = 1534.7, but the published
+ * national property rate is 5,245,768 / 341,784,860 per 100,000 = 1,534.8 (P296).
+ */
+function groupRate(row: Record<string, number | null>, group: "violent" | "property"): number | null {
+  const count = groupTotal(row, group, "count");
+  const population = row.population;
+  if (count == null || population == null || population <= 0) return null;
+  return count * 100000 / population;
+}
+
 function changePct(current: number | null, previous: number | null): number | null {
   // NULL or non-positive prior is UNKNOWN, not zero: "no change" and "cannot know"
   // are different claims, and a fake 0.0% is the worse of the two errors.
@@ -345,12 +357,12 @@ function buildAggregateScorecard(
     });
   };
 
-  pushRow("Violent Crime", groupTotal(data, "violent", "count"), groupTotal(data, "violent", "rate"),
+  pushRow("Violent Crime", groupTotal(data, "violent", "count"), groupRate(data, "violent"),
     previous ? groupTotal(previous, "violent", "count") : null, true);
   for (const c of AGGREGATE_COMPONENTS.filter((x) => x.group === "violent")) {
     pushRow(c.label, data[c.count], data[c.rate], previous?.[c.count] ?? null);
   }
-  pushRow("Property Crime", groupTotal(data, "property", "count"), groupTotal(data, "property", "rate"),
+  pushRow("Property Crime", groupTotal(data, "property", "count"), groupRate(data, "property"),
     previous ? groupTotal(previous, "property", "count") : null, true);
   for (const c of AGGREGATE_COMPONENTS.filter((x) => x.group === "property")) {
     pushRow(c.label, data[c.count], data[c.rate], previous?.[c.count] ?? null);

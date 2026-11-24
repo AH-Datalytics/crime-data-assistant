@@ -10286,19 +10286,20 @@
    "question": "show me the trend of juvenile crime in Kansas since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "NIBRS arrests of arrestees under 18 in Kansas per year, 2020 to the latest year, titled \"Kansas Arrests of Arrestees Under 18 Per Year\", noting that arrests do not equal crimes, with the Consistent Reporting Agencies option beside it",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P285-juvenile-crime",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: \"juvenile crime\" asked with a state or place and no crime named routes to NIBRS juvenile (under 18) arrests per year, with the note \"Arrests do not equal crimes.\" and the consistent-reporting-agencies option alongside."
    }
   },
   {
@@ -24782,7 +24783,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "Orleans Parish is the City of New Orleans; figures are New Orleans Police Department."
    }
   },
   {
@@ -37916,7 +37917,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "This is a reporting-coverage lookup."
+    "notes": "Orleans Parish is the City of New Orleans; figures are New Orleans Police Department."
    }
   },
   {
@@ -43602,7 +43603,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "arrests for murder, rape, robbery and aggravated assault, offense type down the side, a column for each year since 2018; title United States Violent Crime Arrests by Offense Type Per Year",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -43610,10 +43611,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "violent-arrests-by-offense-type",
+    "drafted_by": "capability-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "violent crime = murder, rape, robbery, aggravated assault; usual reported-agencies notes"
    }
   },
   {
@@ -70683,7 +70684,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Kings County requires distinguishing New York from California."
+    "notes": "Kings County requires distinguishing New York from California. Jeff ruled 2026-11-24: clarify \"Which Kings County: New York or California?\" (county means sheriff per the standing rule)."
    }
   },
   {

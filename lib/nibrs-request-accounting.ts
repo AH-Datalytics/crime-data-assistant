@@ -142,6 +142,7 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "bias:14", pattern: R(String.raw`\banti[-\s]?asian\b`) },
   { concept: "filter", value: () => "bias:24", pattern: R(String.raw`\banti[-\s]?(?:islamic|muslim)\b`) },
   { concept: "filter", value: () => "bias:41", pattern: R(String.raw`\banti[-\s]?gay\b`) },
+  { concept: "filter", value: () => "bias:lgbtq", pattern: R(String.raw`\banti[-\s]?(?:lgbtq?\+?|lgbt|glbt|lgbtqia\+?)(?![a-z])|\banti[-\s]?lesbian,?\s*gay,?\s*bisexual,?\s*(?:and\s+)?transgender\b`) },
   // property loss
   { concept: "filter", value: () => "loss:7", pattern: R(String.raw`\bstolen\b`) },
   { concept: "filter", value: () => "loss:5", pattern: R(String.raw`\brecovered\b`) },
@@ -532,7 +533,7 @@ const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of
  * a leading "OK", "(just) do it" (a follow-up's verb), a complaint about the last answer ("this is not even close"),
  * and "broken down" right before "by" (read as "by").
  */
-const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
+const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /^\s*summari[sz]e\b/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
 function recordNibrsPhraseFiller(ledger: RequestLedger): void {
   // "Where do most robberies occur - residences, streets, or commercial buildings?": the verb and the list of example places never restrict.
   const whereMost = WHERE_MOST_ONCE.test(ledger.question) ? [new RegExp(String.raw`\b(?:occur|occurs|happen|happens|take\s+place|committed)\b`, "i"), /\s[-–—:]\s*[a-z][a-z,\s]*?(?=\s*\??\s*$)/i] : [];
