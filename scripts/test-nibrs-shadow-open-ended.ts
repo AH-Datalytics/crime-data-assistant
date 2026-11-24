@@ -62,7 +62,12 @@ const juvenile = (q: string) => {
   assert.notEqual(o.kind, "clarify", JSON.stringify(o));
   if (o.kind === "answer") assert.ok((o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text));
 };
-run("juvenile crime rates read as the nation's juvenile arrests, which answer with the note (P293)", () => juvenile("juvenile crime rates 2005 to 2025"));
+run("juvenile crime rates are not rewritten to arrest counts, so no arrests note (P293)", () => {
+  const r = readQuestion("juvenile crime rates 2005 to 2025", 2026, "2026-10");
+  assert.ok(!r.readings.some((x) => x.kind === "phrase" && /arrests\s+in\s+the\s+united\s+states/i.test(x.to)), JSON.stringify(r.readings));
+  const o = shadowAnswer("juvenile crime rates 2005 to 2025", deps) as unknown as { delivered?: { text: string[] } };
+  assert.ok(!(o.delivered?.text ?? []).includes("Arrests do not equal crimes."), JSON.stringify(o.delivered?.text));
+});
 for (const q of ["which country do you cover", "which cities are represented in Pennsylvania?", "What agencies match Dallas County in Texas? Show me the agencies table entries."])
   run(`coverage question gets the one coverage sentence (P292): ${q}`, () => { const o = shadowAnswer(q, deps) as unknown as { kind: string; delivered?: { text: string[] } }; assert.equal(o.kind, "coverage"); assert.equal(o.delivered?.text[0], "Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included."); });
 run("a juvenile crime trend reads as the nation's juvenile arrests per year (P293)", () => juvenile("show me juvenile crime trend 2005 to 2025"));

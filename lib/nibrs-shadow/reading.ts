@@ -643,7 +643,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   dropWord(/\b(anti[-\s]?[a-z]+|antisemitic)\s+incidents?\b/gi, "$1 hate crimes");
   // Jeff 2026-11-24 (P291): "per day" / "daily" answers by month, with a note that per day is not available.
   // P293 (Jeff 2026-11-24): a bare "juvenile crime trend" (no place, no victims, offenders or arrests named) is the nation's juvenile arrests by year.
-  dropWord(/\b(juveniles?|minors?)\s+crime\s+(?:trends?|rates?|levels?|numbers?|statistics?)(?![^?]*\b(?:in|for|of|at|victims?|offenders?|arrest\w*|by)\b)/gi, "$1 arrests in the United States by year");
+  dropWord(/\b(juveniles?|minors?)\s+crime\s+(?:trends?|levels?|numbers?|statistics?)(?![^?]*\b(?:in|for|of|at|victims?|offenders?|arrest\w*|by)\b)/gi, "$1 arrests in the United States by year");
   dropWord(/\b(?:per\s+day|each\s+day|by\s+(?:the\s+)?day|day[-\s]by[-\s]day|daily)\b/gi, "by month");
   dropWord(/(?<!\b(?:state|city|county|national|local|agency|federal|neighborhood|district|ward|police)\s)\blevels?\b\s*(?=(?:in|for|since|from|between|by|per|during|over|across)\b|[?.]?\s*$)/gi, "");
   dropWord(/\b(louisville|nashville)\s+metro\b(?!\s+(?:area|region))/gi, "$1");
