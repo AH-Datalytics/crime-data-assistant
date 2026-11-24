@@ -449,7 +449,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     if (!!d.age !== !!g.bins) return no(d.age ? `v0 groups ${g.dimension} in bins` : `v0 bins ages only, not ${g.dimension}`);
     const bins = g.bins ?? [];
     if (bins.some((b, i) => b.from > b.to || bins.some((c, j) => j !== i && b.from <= c.to && c.from <= b.to))) return no("age bins must not overlap (P5)");
-    groupCols.push(g.bins ? (d.binned ? d.binned(g.bins) : ageBins(d.col, g.bins)) : d.col);
+    // The violent-crime weapon table (victimWeapons): the grouping is the weapon GROUP (firearm 11-15, knife 20, blunt 30, personal 40, other),
+    // so the unit query's DISTINCT counts a victim once per group, not once per weapon code (a victim with a handgun and a rifle is one firearm victim).
+    const weaponGroup = entity === "victim" && g.dimension === "offense_weapon.weapon" && t.victimWeapons;
+    groupCols.push(weaponGroup ? `CASE WHEN ${d.col} IN ('11', '12', '13', '14', '15') THEN '11' WHEN ${d.col} = '20' THEN '20' WHEN ${d.col} = '30' THEN '30' WHEN ${d.col} = '40' THEN '40' ELSE '90' END`
+      : g.bins ? (d.binned ? d.binned(g.bins) : ageBins(d.col, g.bins)) : d.col);
     if (d.join) joins.push(d.join);
   }
   if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
