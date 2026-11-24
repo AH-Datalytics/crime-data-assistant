@@ -241,6 +241,12 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string, inLis
     const alone = CITY_NAME_MEANS_CITY.has(base(name)) && !large.some((c) => c.kind === "state" || (c.kind === "agency" && c.agency.kind === "county" && c.agency.state === city.state));
     if (inList || alone) return asPlace(city);
   }
+  // Cause A (Coordinator 2026-11-24): a city read with its state ("Los Angeles, CA") is the city's principal police agency (P16); the county's sheriff of the
+  // same state is not asked about. Only a city of exactly that name in that state; a county read as one, and a name without a state, are unchanged.
+  if (m[1] === "city" && stateNamed && !countyNamed) {
+    const own = firsts.find((a) => a.kind === "city" && base(a.name) === base(name) && a.population >= ASK_POPULATION);
+    if (own) return asPlace(own);
+  }
   // A bare state name beside only small same-name towns ("California" is California, PA: 4,981 people; "Kansas", "Nevada",
   // "Oregon") is never silently the town: the state or the town (Engine 2.0 review of ca2f4f3b; the old same-name-towns ask
   // had caught these by accident).
