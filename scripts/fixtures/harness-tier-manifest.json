@@ -2484,6 +2484,15 @@
       "note": "NIBRS compiler increment 3: time transforms (period totals, two-period changes, rolling windows) from monthly cells under D6, P51, D17 and P55; pure, offline"
     },
     {
+      "id": "test-nibrs-shadow-place-aliases",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-place-aliases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "B1 place aliases: 14 labeled place spellings (town short names, Saint forms, State-after-comma, county sheriff in a state code, department names, Athens-Clarke) reach the route; stub DuckDB step, checked-in place index"
+    },
+    {
       "id": "test-nibrs-shadow",
       "tier": "F",
       "script": "scripts/test-nibrs-shadow.ts",
@@ -2770,6 +2779,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "request accounting 2b r3: where a typed answer records what it applied (source scan of lib/nibrs-question-compiler.ts) and rate/presence operands on an in-memory database; no fixture database, no route, no network"
+    },
+    {
+      "id": "test-nibrs-offenses-note",
+      "tier": "F",
+      "script": "scripts/test-nibrs-offenses-note.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "owner 2026-11-23: person crime by location or hour answers say they count offenses, not victims; in-memory database only, no route, no network"
     },
     {
       "id": "test-current-request-accounting",
