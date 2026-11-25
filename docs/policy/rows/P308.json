@@ -1,0 +1,12 @@
+{
+    "id":  "P308",
+    "topic":  "Already decided",
+    "decision needed":  "None: already decided",
+    "situation (example wording)":  "\"Compare robbery in Florida, Texas, and New York since 1990\", \"anti-Asian hate crimes in New York vs California\" (a state name that is also a city's name, named beside only states).",
+    "what the app does today":  "P28 asks which New York (the state or New York City) for a single place. P196 (on the reader branch, not yet on dev) reads a city named beside other places as that city's police, with no ask.",
+    "proposed behavior":  "When every other place named in the question is a state, a name that is also a state's name is the state, with no ask. \"New York\" beside only states means New York State, not New York City. A single place on its own still asks (P28). A city named beside other places that are not all states still follows P196, and Washington keeps P238. A place the question names as a city, county or police department keeps that meaning.",
+    "exact default or choices offered":  "No ask; the state.",
+    "why":  "Jeff 2026-11-24 (through the coordinator): a state name beside only states is the state, no ask; New York beside only states is New York State. PR 317's code already does this; this row writes it down.",
+    "status":  "Decided 2026-11-24 (Jeff, through the coordinator); build: Engine, in PR 317",
+    "test cases":  "QL-hist-6f624e6886 (robbery in Florida, Texas and New York since 1990), QL-nibrs-21b369b201 and QL-nibrs-cedcacb5ce (anti-Asian or anti-Black hate crimes, New York vs California or Texas): New York is the state. QL-ct-6cd2364e08 (nationwide and Baltimore) is P196, not this row: Baltimore City PD."
+}
