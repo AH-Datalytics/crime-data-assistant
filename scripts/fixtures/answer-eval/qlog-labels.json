@@ -837,9 +837,8 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
      "rtci"
     ],
     "answer": "the figures asked for",
@@ -853,7 +852,7 @@
     "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state (P28); through July is P126 By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state (P28); through July is P126 By rule from the question text; second labeler NIBRS Model 2026-11-22 Monthly city count, 2017 or later: Current Trends only (Coordinator, Jeff 2026-11-25; Current Trends monthly data runs Jan 2017 to Sep 2026)."
    }
   },
   {
@@ -16081,8 +16080,7 @@
     "outcome": "answer",
     "source": "rtci",
     "source_any": [
-     "rtci",
-     "historical"
+     "rtci"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -16095,7 +16093,7 @@
     "rule": "P238>P196",
     "drafted_by": "claude-p238",
     "reviewed_by": null,
-    "notes": "Charlotte means Charlotte, NC, alone or in a list, no ask (P238; Jeff 2026-11-22). Was clarify (which Charlotte). Values unchecked: pending Runner verification."
+    "notes": "Charlotte means Charlotte, NC, alone or in a list, no ask (P238; Jeff 2026-11-22). Was clarify (which Charlotte). Values unchecked: pending Runner verification. Monthly city count, 2017 or later: Current Trends only (Coordinator, Jeff 2026-11-25; Current Trends monthly data runs Jan 2017 to Sep 2026)."
    }
   },
   {
@@ -70987,9 +70985,8 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
      "rtci"
     ],
     "answer": "the figures asked for",
@@ -71003,7 +71000,7 @@
     "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-0c9baffc48 (a plain murder count is Crime Index's, D3) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-0c9baffc48 (a plain murder count is Crime Index's, D3) By rule from the question text; second labeler NIBRS Model 2026-11-22 Monthly city count, 2017 or later: Current Trends only (Coordinator, Jeff 2026-11-25; Current Trends monthly data runs Jan 2017 to Sep 2026)."
    }
   },
   {
