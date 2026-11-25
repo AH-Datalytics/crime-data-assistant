@@ -3600,6 +3600,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       return m && Number(m[1]) < before.length ? { ...b, path: `${to(Number(m[1]))}${before[Number(m[1])].dimension === "geo.place" ? "" : m[2]}` } : b;
     });
   }
+  // Capability state-city-list (Jeff via coordinator 2026-11-24): a state's cities over a population the question gives show 50 rows
+  // (the answer says "Top 50 of N agencies"); "all", "every", "complete list" or "entire" shows every row.
+  const askedFloor = plan.geography.places[0]?.kind === "agency_set" && plan.geography.places[0].where.some((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+  const askedAll = /\b(?:all|every|complete\s+list|entire)\b/i.test(ledger0.question);
   // P08: "large" cities are 250,000 residents or more.
   const set0 = plan.geography.places[0];
   if (flags(ledger0).largeCities) {
@@ -3608,7 +3612,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities have a population of 250,000 or more" });
   }
   // D05: a ranking with no number shows 20 rows.
-  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
+  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: askedFloor ? (askedAll ? null : 50) : 20 } : t));
   let parts2 = a.parts;
   const statements: AnswerStatement[] = [];
   const unbind = (drop: (p: (typeof parts2)[number]) => boolean) => {
@@ -4105,6 +4109,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   } };
   const authority = (v: string) => { const p = resolved.get(v); return p && p.kind === "agency" ? { oris: [p.ori] } : null; };
   const problems = [...validateOutcome({ kind: "plan", plan: checked }, DRAFT_LAYER, release, geo), ...validateBindings(plan, parts2, authority)];
+  // Capability state-city-list: a population filter no city agency of the state meets says so, with the filter stated.
+  const emptySet = checked.geography.places[0];
+  if (problems.length && problems.every((p) => p.rule === "R4") && emptySet?.kind === "agency_set" && emptySet.within.kind === "state") {
+    const f = emptySet.where.find((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+    if (f) return decline("unsupported_capability", `No city agency in ${stateName(emptySet.within.code)} has a population of ${Number(f.value).toLocaleString("en-US")} or more.`);
+  }
   if (problems.length) return notYet(`plan did not validate: ${problems.map((p) => `${p.rule} ${p.path}: ${p.message}`).join("; ")}`);
 
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.

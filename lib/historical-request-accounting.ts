@@ -385,9 +385,19 @@ export function recordPlaces(ledger: RequestLedger): void {
   const q = q0.replace(/['’]s\b/g, "  ").replace(/(?<=[A-Za-z])['’](?=[A-Za-z])/g, " ");
   const lead = q.length - q.replace(/^\s+/, "").length;
   for (const mention of resolveGeoPlaces(q).mentions) {
-    const top = mention.candidates[0];
+    let top = mention.candidates[0];
     let start = mention.start + lead;
     let end = mention.end + lead;
+    // "every Texas city over 50,000": after every/each/all, "<State> city" is the state's cities, not the city of that name
+    // ("Texas City, TX"). The place is the state; "city" stays for the entity rule.
+    if (/(?:\bevery|\beach|\ball)\s+$/i.test(q.slice(0, mention.start)) && /\s+city$/i.test(mention.text)) {
+      const stateOnly = resolveGeoPlaces(mention.text.replace(/\s+city$/i, "")).mentions[0];
+      if (stateOnly && !stateOnly.requiresClarification && stateOnly.candidates[0]?.kind === "state") {
+        top = stateOnly.candidates[0];
+        end = mention.start + lead + stateOnly.end;
+        mention.requiresClarification = false;
+      }
+    }
     const before = CITY_OF.exec(q.slice(0, start));
     // "Show me the city of Charlotte": the opener already owns "the", so the place starts at "city" (an overlapping span is dropped).
     if (before) start = ledger.overlaps([before.index, start]) ? before.index + before[0].search(/\bcity\b/i) : before.index;
