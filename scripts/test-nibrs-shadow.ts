@@ -1270,6 +1270,9 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
   // "shooting incidents" are never rewritten as firearm murders or assaults.
   for (const q of ["murders in Ohio and Texas combined in 2024", "Ohio murder count vs Texas murder rate in 2024", "How many murders in Ohio vs Texas murder rate in 2024", "Ohio murder counts vs Texas murder rates in 2024"]) assert.notEqual(ask(q).kind, "srs", q);
   for (const q of ["police shootings in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, SENT, q);
+  // P312 (Jeff 2026-11-25): "do you track shootings?" is answered as a yes/no question about the data; P313: "police fatal shootings" is declined (not collected).
+  for (const q of ["do you track shootings?", "do you have shootings data", "do we have any dataset that can do shootings"]) { assert.equal(ask(q).kind, "coverage", q); assert.match(JSON.stringify(ask(q)), /Homicide Reports tab/, q); }
+  for (const q of ["What is the trend of police fatal shootings over the last 10 years?", "What is the trend of police fatal shootings since 2015?"]) { const a = ask(q) as { kind: string; explanation?: string }; assert.equal(a.kind, "decline", q); assert.match(a.explanation ?? "", /doesn't collect fatal shootings by police or police officers killed/, q); }
   // Jeff 2026-11-14 (D14): "shooting incidents" and "people shot" are asked like "shootings"; the choices name what they count.
   for (const q of ["shooting incidents in Houston", "people shot in Dallas"]) assert.equal((ask(q) as { about?: string }).about, SENT, q);
 }

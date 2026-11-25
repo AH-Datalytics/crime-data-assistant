@@ -1,0 +1,12 @@
+{
+  "id": "P313",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What is the trend of police fatal shootings over the last 10 years?\", \"... since 2015\".",
+  "what the app does today": "Declined as a request for shootings.",
+  "proposed behavior": "Declined in plain words: the FBI data used here doesn't collect fatal shootings by police or police officers killed. No ask.",
+  "exact default or choices offered": "None: a decline.",
+  "why": "Jeff 2026-11-25: \"police fatal shootings should decline as that data isn't collected\" (replaces an earlier clarify).",
+  "status": "Decided 2026-11-25 (Jeff, through the coordinator); build: Engine",
+  "test cases": "QL-shr-6e9f56e1a8, QL-shr-820b9e683e."
+}
