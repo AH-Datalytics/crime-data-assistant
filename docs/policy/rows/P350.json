@@ -1,0 +1,12 @@
+{
+  "id": "P350",
+  "topic": "Ranking of individual incidents",
+  "decision needed": "None: decided",
+  "situation (example wording)": "\"top 20 shoplifting incidents with the highest values stolen in 2024\", \"top 10 incidents with the largest dollar loss\", \"the 5 largest individual burglaries\".",
+  "what the app does today": "Asked which place, or went to the reader, as if the incidents were a total.",
+  "proposed behavior": "Declines with \"That data is not available.\" The site shows totals by place, not incident rows.",
+  "exact default or choices offered": "Decline sentence: \"That data is not available.\"",
+  "why": "Jeff 2026-11-24 (coordinator): individual-incident ranking questions decline for now.",
+  "status": "Decided 2026-11-24 (Jeff, by coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts: P350 block (three incident-ranking questions, one untouched total)."
+}

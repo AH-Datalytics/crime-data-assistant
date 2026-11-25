@@ -282,6 +282,12 @@ const PEER_ASK_TEXT = "Which cities should it be compared with? For example, cit
   for (const q of ["los angeles homicide rate in 2025 vs. other large cities", "Compare assault rates in Seattle vs other major cities", "murders in Denver and Portland in 2024"])
     assert.notEqual((ask(q) as { about?: string }).about, "which cities", q);
 }
+// P350 (Jeff 2026-11-24): a ranking of individual incidents declines with the plain "not available" sentence; totals by place are untouched.
+for (const q of ["provide the values and agencies for the top 20 shoplifting incidents with the highest values stolen in 2024", "top 10 incidents with the largest dollar loss in Detroit in 2024", "show the 5 largest individual burglaries in Texas in 2023"]) {
+  const o = ask(q) as { kind: string; reason?: string; explanation?: string };
+  assert.ok(o.kind === "decline" && o.reason === "unsupported_capability" && o.explanation === "That data is not available.", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+}
+assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer");
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
