@@ -62,7 +62,7 @@ export type Table = { columns?: { binding?: { kind?: string; dimension?: string 
  * What an answer's table shows, for the labels' period, top_n and min_population: the first and last period (the time
  * column's values, or year/month column headers when the periods run across), the row count, the smallest population.
  */
-export function tableShape(t: Table | undefined, latest: string): Pick<Got, "period" | "rows" | "minPop" | "latest"> {
+export function tableShape(t: Table | undefined, latest: string): Pick<Got, "period" | "rows" | "minPop" | "popGaps" | "latest"> {
   if (!t || !Array.isArray(t.rows)) return { latest };
   const cols = t.columns ?? [];
   const isPeriod = (s: string) => /^\d{4}(?:-\d{2})?$/.test(s);
