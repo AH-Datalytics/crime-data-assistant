@@ -1530,15 +1530,21 @@ const GUARDRAILS: Guardrail[] = [
     name: "nibrs-homicide-code-drift",
     tabs: ["nibrs"],
     match: (ctx) => {
+      // Jeff 2026-11-25: "murder" is 09A only; "homicide" (and "all homicides") is 09A, 09B and 09C.
       const q = ctx.question.toLowerCase();
-      const asksMurder = /\b(murder|murders|homicide|homicides|killing|killings)\b/i.test(q) &&
-        !/\b(manslaughter|negligent|justifiable|all homicide|all homicides|all homicide types)\b/i.test(q);
-      if (!asksMurder) return false;
+      const qualified = /\b(manslaughter|negligent|justifiable)\b/i.test(q);
+      if (qualified) return false;
       const codes = sqlQuotedCodes(ctx.sql);
+      if (/\b(homicide|homicides)\b/i.test(q)) {
+        return /Crimes Against Persons/i.test(ctx.sql) || (codes.has("09A") && !(codes.has("09B") && codes.has("09C")));
+      }
+      if (!/\b(murder|murders|killing|killings)\b/i.test(q)) return false;
       return codes.has("09B") || codes.has("09C") || /Crimes Against Persons/i.test(ctx.sql);
     },
-    message: () =>
-      "[SYSTEM: For ordinary NIBRS murder/homicide wording, use offense code 09A only. Do not include 09B negligent manslaughter or 09C justifiable homicide unless the user explicitly asks for those categories or for all homicide types. State that the result is murder/nonnegligent manslaughter.]",
+    message: (ctx) =>
+      /\b(homicide|homicides)\b/i.test(ctx.question)
+        ? "[SYSTEM: For NIBRS homicide wording, use offense codes 09A, 09B and 09C together: murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide. Do not use the Crimes Against Persons category. State that the result includes all three.]"
+        : "[SYSTEM: For ordinary NIBRS murder wording, use offense code 09A only. Do not include 09B negligent manslaughter or 09C justifiable homicide unless the user explicitly asks for those categories or for homicides. State that the result is murder/nonnegligent manslaughter.]",
   },
   {
     name: "nibrs-officer-involved-unsupported",

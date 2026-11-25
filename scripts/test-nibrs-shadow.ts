@@ -646,8 +646,10 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
   if (avg.kind === "current") assert.match(JSON.stringify((presentationOf(avg, places) as { lead: unknown }).lead), /a month on average/);
   assert.deepEqual(unsaid(["A. B: 1 murder. Not scaled to a full year.", "Figures for X."], new Set(["A. B: 1 murder.", "Figures for X."])), ["Not scaled to a full year."]);
 }
-// Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
-assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
+// Jeff 2026-11-25 ("NIBRS homicide offenses are 09A/B/C and should say so"): homicide in NIBRS is 09A, 09B and 09C; murder stays 09A.
+assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B", "09C"]);
+assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+assert.deepEqual(MEASURE_CODES.justifiable_homicide, ["09C"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
 // The same months of each year (Jeff 2026-11-16, Q1): "through April", "first 6 months": one year is that month range; several years are the table
 // Year | figure, each year counting the same months, titled with them; never the whole year in place of the months.
@@ -1137,12 +1139,16 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
 {
   const sqlOf = (q: string) => { sqls.length = 0; const o = ask(q); return { o, codes: (sqls[0]?.match(/'(09[ABC])'/g) ?? []).join(",") }; };
   const plain = sqlOf("homicides in Houston in 2024 by month"), every = sqlOf("all homicides in Houston in 2024 by month"), murder = sqlOf("murders in Houston in 2024 by month");
-  assert.equal(plain.codes, "'09A','09B'");
+  const justifiable = sqlOf("justifiable homicides in Houston in 2024 by month");
+  assert.equal(plain.codes, "'09A','09B','09C'");
   assert.equal(every.codes, "'09A','09B','09C'");
   assert.equal(murder.codes, "'09A'");
+  assert.equal(justifiable.codes, "'09C'");
+  const plainLines = (as(plain.o, "answer") as { delivered: { text: string[] } }).delivered.text;
+  assert.ok(plainLines.includes("Homicides here include murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide."), plainLines.join(" | "));
+  assert.ok(!(as(murder.o, "answer") as { delivered: { text: string[] } }).delivered.text.some((t) => /^Homicides here include/.test(t)));
   const everyText = (as(every.o, "answer") as { delivered: { text: string[] } }).delivered.text;
   assert.ok(everyText.includes("All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide."), everyText.join(" | "));
-  assert.ok(!(as(plain.o, "answer") as { delivered: { text: string[] } }).delivered.text.some((t) => /justifiable/.test(t)));
   for (const q of ["all homicides in Texas in 2024", "all homicides in the United States in 2024"]) {
     const o = as(ask(q), "srs") as { delivered: { text: string[] } };
     assert.ok(/ murders in 2024\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);

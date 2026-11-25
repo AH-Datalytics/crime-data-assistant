@@ -136,6 +136,7 @@ export const DOMESTIC_VIOLENCE_LINE = "Domestic violence counts each victim of m
 export const DOMESTIC_VIOLENCE_OFFENSES_LINE = "Offenses are the offenses of those crimes in incidents that had a domestic violence victim.";
 export const DOMESTIC_VIOLENCE_ARRESTS_LINE = "Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders.";
 export const DOMESTIC_VIOLENCE_INCIDENTS_LINE ="An incident is counted once when at least one of its victims is counted as a domestic violence victim.";
+export const HOMICIDES_LINE = "Homicides here include murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide.";
 export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide.";
 /** Marijuana recorded among an incident's drugs (drug type E), as arrests of it: "Marijuana possession arrests". */
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
