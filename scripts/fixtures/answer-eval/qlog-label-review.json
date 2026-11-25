@@ -232,7 +232,16 @@
 },
 "QL-ct-0c9baffc48": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state (P28); through July is P126 By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"rtci"
+]
+}
 },
 "QL-ct-0cb8a87be2": {
 "status": "reviewed",
@@ -458,14 +467,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-1435929e80": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires distinguishing Baltimore city and county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department (Baltimore beside the nation), but \"meaningfully different\" asks a judgement (D12, P138) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
-]
+"outcome": "decline",
+"reason": "a judgement of whether trends differ is not given (D12, P138)"
 }
 },
 "QL-ct-1453f4a6e5": {
@@ -1309,13 +1316,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-33fb87de8b": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Several unqualified place names meet P28 ambiguity rules.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 settles Baltimore and Jacksonville (city against county); Washington (DC or the state), Kansas City (MO/KS) and Richmond (VA/CA) are two places of one name of 100,000+ each (P28); Jackson TN is under 100,000 in the place index, so Jackson is Jackson, MS By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+"which Washington",
+"which Kansas City",
+"which Richmond"
 ]
 }
 },
@@ -1344,7 +1353,16 @@
 },
 "QL-ct-3523faaa58": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a comparison of counts, every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-35e2cd9f29": {
 "status": "reviewed",
@@ -1450,7 +1468,16 @@
 },
 "QL-ct-3c287d1582": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; by year since 2020 By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-3c51bd85a9": {
 "status": "reviewed",
@@ -1767,7 +1794,16 @@
 },
 "QL-ct-49f10ad033": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-49f501e7c0": {
 "status": "reviewed",
@@ -2028,7 +2064,16 @@
 },
 "QL-ct-532287e676": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-5323272be4": {
 "status": "reviewed",
@@ -2348,21 +2393,28 @@
 }
 },
 "QL-ct-5ceae8ff09": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires resolving both ambiguous place names.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 settles Baltimore; \"Washington\" is DC or the state, and a name that is also a state always offers the state (P28); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"which Washington",
-"which Baltimore",
-"period"
+"which Washington"
 ]
 }
 },
 "QL-ct-5d8bb2b496": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Sacramento city against its county; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-5dc4002550": {
 "status": "draft",
@@ -2488,13 +2540,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-6416ec1fbb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires distinguishing Baltimore city and county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a monthly series is Current Trends By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
 ]
 }
 },
@@ -2567,14 +2621,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-6575c8f870": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires distinguishing Baltimore city and county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department (Baltimore beside DC), but \"Is DC improving more\" asks a verdict (P138); no partial answers (P187) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
-]
+"outcome": "decline",
+"reason": "a verdict on which place is improving is not given (P138), and no partial answer (P187)"
 }
 },
 "QL-ct-65d7c2a52a": {
@@ -2794,13 +2846,15 @@
 }
 },
 "QL-ct-6cd2364e08": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Baltimore city and county are ambiguous under P28.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "Baltimore = Baltimore City Police Department (ORI MDBPD0000), plus the national figure, per P196 (Jeff 2026-11-22 \"Any 2+ places\": a city named beside another place is that city's police department; Jeff 2026-11-24 relabel clarify to answer): annual murder rate nationwide and for Baltimore City PD By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -2835,7 +2889,16 @@
 },
 "QL-ct-6e1b5cbca2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-6e5a3bb5e5": {
 "status": "reviewed",
@@ -3442,7 +3505,16 @@
 },
 "QL-ct-8281018a03": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; rates since 2017 By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-82e96877f2": {
 "status": "reviewed",
@@ -3954,14 +4026,15 @@
 }
 },
 "QL-ct-9892acb50a": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires distinguishing city and county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; both cities settled; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -4135,14 +4208,15 @@
 }
 },
 "QL-ct-9fbeb184fb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Baltimore city and county require disambiguation.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"current\" is the latest complete year (P188) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -4307,7 +4381,16 @@
 },
 "QL-ct-a90e55b0b3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Mobile city against its county By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-a9f17a6098": {
 "status": "reviewed",
@@ -4626,13 +4709,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-b7a84f6bc7": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; per year By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -4951,14 +5036,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-c73231a211": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Jacksonville has multiple qualifying places under P28.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Jacksonville, FL is the only one of 100,000+ (P28); its sheriff's office is the city's police By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Jacksonville",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -5069,13 +5155,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-cc458a6a1a": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "D5 permits the moving series but Baltimore remains ambiguous.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a 3-month rolling average is P94 By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
 ]
 }
 },
@@ -5232,14 +5320,15 @@
 }
 },
 "QL-ct-d160d8e580": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; DC named as DC; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -5358,14 +5447,15 @@
 }
 },
 "QL-ct-d6b442eb36": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; rates per 100,000; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -5486,7 +5576,16 @@
 },
 "QL-ct-dbcbd2a52a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; El Paso city against its county; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-dbe5eafde9": {
 "status": "reviewed",
@@ -5608,12 +5707,14 @@
 },
 "QL-ct-e0f3926385": {
 "status": "reviewed",
-"by": "jeff-2026-11-15-which-la",
-"why": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"LA\" in a list of cities is Los Angeles (P141); monthly is Current Trends By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which LA"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
 ]
 }
 },
@@ -5622,14 +5723,13 @@
 "by": "codex-second-1"
 },
 "QL-ct-e2c0caf3df": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Fayetteville has multiple qualifying cities under P28.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "Fayetteville NC and AR are both 100,000+ in the place index (P28); Albany GA is under 100,000, so Albany is Albany, NY; P196 does not choose between states By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"which Fayetteville",
-"period"
+"which Fayetteville"
 ]
 }
 },
@@ -5713,12 +5813,14 @@
 },
 "QL-ct-e72003a2ec": {
 "status": "reviewed",
-"by": "jeff-2026-11-15-which-la",
-"why": "Jeff 2026-11-15: LA is Los Angeles or Louisiana, so 'NYC and LA' asks which LA",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; P141; monthly is Current Trends By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which LA"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
 ]
 }
 },
@@ -5959,7 +6061,16 @@
 },
 "QL-ct-f11df24514": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a comparison of counts, every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-f126741bee": {
 "status": "reviewed",
@@ -6018,7 +6129,16 @@
 },
 "QL-ct-f3bca6b8c5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-ct-f3bed2b9ca": {
 "status": "reviewed",
@@ -6042,13 +6162,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-f412900230": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; LA in a city list (P141); PG County is the county named; the last 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -6237,13 +6359,15 @@
 }
 },
 "QL-ct-f897c52110": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; the first sentence is a comment; the request is the monthly rate (P144) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
 ]
 }
 },
@@ -7135,14 +7259,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-0da15a6cce": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "New York does not explicitly specify the city.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside a city is New York City; a staffing rate By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -7380,14 +7505,15 @@
 }
 },
 "QL-hist-184acc0c40": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "New York requires city versus state clarification.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates (P57); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York",
-"period"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -7647,7 +7773,16 @@
 },
 "QL-hist-27757a865c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; officers per capita over time By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-27933240c3": {
 "status": "reviewed",
@@ -7784,7 +7919,16 @@
 },
 "QL-hist-2f9951cdad": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates (P57); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-2fccc68bd6": {
 "status": "reviewed",
@@ -8526,7 +8670,16 @@
 },
 "QL-hist-4eb651d666": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; since 1985 By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-4ee5352868": {
 "status": "reviewed",
@@ -8714,13 +8867,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-58da00f902": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "New York does not explicitly specify city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside Chicago is the city; 1935 agency years (P76) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -9225,13 +9380,14 @@
 }
 },
 "QL-hist-6f624e6886": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "New York is not explicitly specified as state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "New York = the state of New York (a name beside other states only is the state, no ask; Jeff 2026-11-24, P196): robbery for Florida, Texas and the state of New York since 1990, from Crime Index's state figures (P53) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical"
 ]
 }
 },
@@ -9351,13 +9507,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-75205a81de": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Population is available in Historical but Baltimore is ambiguous.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; population by year By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -9819,13 +9977,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-8c6a9fb99c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P26 requires city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; since 1930 By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -10927,13 +11087,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-baedf1c4bd": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; the past 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -11199,11 +11361,29 @@
 },
 "QL-hist-c6ce7a41e6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; since 1985 By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-c6f07a0296": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"overlay\" is several places by year; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-c7746d3fb6": {
 "status": "reviewed",
@@ -11241,7 +11421,16 @@
 },
 "QL-hist-c7f6c6c7c8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-c8095590c0": {
 "status": "reviewed",
@@ -11549,7 +11738,16 @@
 },
 "QL-hist-d54e893dbf": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state; since 1930 By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-d5f5268a08": {
 "status": "reviewed",
@@ -12040,13 +12238,15 @@
 }
 },
 "QL-hist-ed68b532cf": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P26 requires city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside Los Angeles is the city; since 1930 By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -12064,13 +12264,15 @@
 }
 },
 "QL-hist-edccd1614c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P26 requires city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"New York\" beside Los Angeles is the city; historically = every year By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -13714,13 +13916,14 @@
 }
 },
 "QL-nibrs-21b369b201": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P26 requires city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "New York = the state of New York (a name beside other states only is the state, no ask; Jeff 2026-11-24, P196): anti-Asian hate crimes for California and the state of New York by year (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "hate_crime",
+"source_any": [
+"hate_crime"
 ]
 }
 },
@@ -14288,7 +14491,16 @@
 },
 "QL-nibrs-374b3eab47": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates (P57); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-nibrs-375abeaa09": {
 "status": "reviewed",
@@ -15056,13 +15268,15 @@
 }
 },
 "QL-nibrs-4dd4d890f9": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "D5 permits the rolling series but Baltimore remains ambiguous.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; a 3-month rolling average rate (P94); Kansas City MO named with its state By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
 ]
 }
 },
@@ -15275,7 +15489,15 @@
 },
 "QL-nibrs-52daf17740": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; carjacking is NIBRS-only; no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-nibrs-53525d97a5": {
 "status": "reviewed",
@@ -18250,14 +18472,14 @@
 }
 },
 "QL-nibrs-af50987d2f": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P26 requires city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department (\"New York\" beside Boston is the city); homicides and carjackings, carjacking NIBRS-only By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York",
-"period"
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
 ]
 }
 },
@@ -19251,13 +19473,14 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-cedcacb5ce": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P26 requires city versus state.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "New York = the state of New York (a name beside other states only is the state, no ask; Jeff 2026-11-24, P196): anti-Black hate crimes for the state of New York and Texas in 2024 (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which New York"
+"outcome": "answer",
+"source": "hate_crime",
+"source_any": [
+"hate_crime"
 ]
 }
 },
@@ -19881,7 +20104,16 @@
 },
 "QL-nibrs-e716ef1e5e": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates by year (P57) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-nibrs-e719cc6eab": {
 "status": "reviewed",
@@ -20718,7 +20950,16 @@
 },
 "QL-shr-0c9baffc48": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-0c9baffc48 (a plain murder count is Crime Index's, D3) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"rtci"
+]
+}
 },
 "QL-shr-0d0efa5a1f": {
 "status": "reviewed",
@@ -23026,7 +23267,16 @@
 },
 "QL-shr-9e03f9c4f0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; homicide on Crime Index is the murder count (P10); no period: every year (P181) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-shr-9e4aca8cbb": {
 "status": "reviewed",
@@ -24712,13 +24962,15 @@
 "why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2018) is carried from the previous question (\"San fran agg assaults since 2018\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model"
 },
 "QL-ct-0eab9f4129": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P28 requires city versus county.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230 (the follow-up stands alone, F1) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -25010,13 +25262,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-33fb833fb8": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Several unqualified place names remain ambiguous.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "as QL-ct-33fb87de8b (the follow-up repeats the question) By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"which Washington, Baltimore, Kansas City, Jacksonville, Jackson and Richmond"
+"which Washington",
+"which Kansas City",
+"which Richmond"
 ]
 }
 },
@@ -25684,13 +25938,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-a6a05a9e47": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Baltimore city versus county remains unresolved.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230, at least 15 years, 2026 left out By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which Baltimore"
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
 ]
 }
 },
@@ -27706,7 +27962,16 @@
 },
 "QL-hist-dbf93d54e8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-hist-d54e893dbf (the follow-up stands alone, F1) By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"nibrs"
+]
+}
 },
 "QL-hist-dd140cbc2c": {
 "status": "reviewed",
@@ -29601,12 +29866,12 @@
 "by": "jeff-2026-11-22",
 "why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 1980) is carried from the previous question (\"domestic homicides in California since 1980\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model",
 "expected": {
- "outcome": "answer",
- "source": "shr",
- "source_any": [
-  "shr",
-  "nibrs"
- ]
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-0c9ba27c5d": {
@@ -29821,12 +30086,12 @@
 "by": "jeff-2026-11-22",
 "why": "P195 (follow-up #1, Jeff 2026-11-22 decision A): the period (since 2000) is carried from the previous question (\"domestic homicides in Texas since 2000\"); outcome and source unchanged by rule. By rule from the question text; second labeler NIBRS Model",
 "expected": {
- "outcome": "answer",
- "source": "shr",
- "source_any": [
-  "shr",
-  "nibrs"
- ]
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
+]
 }
 },
 "QL-shr-400d5cda3d": {
