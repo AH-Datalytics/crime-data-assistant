@@ -85757,10 +85757,9 @@
     "outcome": "answer",
     "source": "rtci",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "rtci"
     ],
-    "answer": "the earlier question, changed as asked",
+    "answer": "2026 so far as one total for each city",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -85771,7 +85770,7 @@
     "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "notes": "a follow-up to an answerable question Entire year: 2026 so far as one total per city, Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
