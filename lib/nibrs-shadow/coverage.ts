@@ -20,7 +20,8 @@ export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "scope";
 /** `lookup`: a scope question that names an agency, a county or a state ("What agencies match Dallas County in Texas?"). `term`: the one term a definitions question names that has an FBI definition on hand. */
 export type CoverageLookup = { kind: "agency" | "county" | "state"; name: string; state?: string | null };
-export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean; lookup?: CoverageLookup | null; term?: "simple assault" | "violent crime" | null; ucr?: boolean };
+export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean; lookup?: CoverageLookup | null; term?: CoverageTerm | null; program?: "srs" | "nibrs" | null; ucr?: boolean };
+export type CoverageTerm = "simple assault" | "violent crime" | "domestic violence" | "personal weapons" | "srs";
 export type CoverageAnswer = {
   kind: "coverage"; shape: CoverageShape; period: { from: string; to: string };
   meaning: { source: "nibrs"; places: unknown[]; filters: string[]; measures: { name: string; unit: string }[]; period: { from: string; to: string }; groupings: string[]; statistic: "count" };
@@ -34,11 +35,18 @@ export type CoverageDeps = { root: string; release: CoverageRelease; execute(sql
 const FIFTY = Object.keys(STATE_NAMES).filter((c) => c !== "DC");
 /** The one answer to "where does the data come from" (Jeff 2026-11-25), word for word. */
 export const SOURCES_SENTENCE = "The data comes from the FBI's Uniform Crime Report NIBRS, SHR and SRS programs as well as the Crime Index";
-/** FBI definitions on hand, quoted as published. Terms with no source from Jeff (domestic violence, personal weapons, SRS) keep the link. */
-export const FBI_DEFINITIONS: Record<"simple assault" | "violent crime", { title: string; text: string; source: string }> = {
+/** FBI definitions on hand, as Jeff gave them (2026-11-25). A term not listed keeps the link to the FBI's definitions. */
+export const VIOLENT_NIBRS = "In NIBRS, violent crime is murder and nonnegligent manslaughter (09A), rape (11A, 11B and 11C), robbery (120) and aggravated assault (13A).";
+export const FBI_DEFINITIONS: Record<CoverageTerm, { title: string; text: string; source: string }> = {
+  "domestic violence": { title: "Domestic Violence (NIBRS)", source: "Source: FBI NIBRS.",
+    text: "NIBRS has no domestic violence offense. Domestic violence is recorded through the victim-to-offender relationship codes (spouse, boyfriend or girlfriend, parent, child and other family). Do not equate it with Family Offenses, Nonviolent (90F)." },
+  "personal weapons": { title: "Personal Weapons (NIBRS Weapon Code 40)", source: "Source: FBI NIBRS.",
+    text: "Personal weapons are NIBRS weapon code 40: hands, fists, feet and teeth." },
+  "srs": { title: "SRS (Summary Reporting System)", source: "Source: FBI SRS.",
+    text: "SRS is the Summary Reporting System, the FBI's older summary reporting program. It is a program, not an offense." },
   "simple assault": { title: "Simple Assault (NIBRS Offense 13B)", source: "Source: FBI NIBRS.",
     text: "Simple Assault: An unlawful physical attack by one person upon another where neither the offender displays a weapon, nor the victim suffers obvious severe or aggravated bodily injury involving apparent broken bones, loss of teeth, possible internal injury, severe laceration, or loss of consciousness." },
-  "violent crime": { title: "Violent Crime (FBI SRS Category)", source: "Source: FBI SRS.",
+  "violent crime": { title: "Violent Crime", source: "Source: FBI SRS.",
     text: "In the FBI's Summary Reporting System (SRS), violent crime is murder and nonnegligent manslaughter, rape, robbery and aggravated assault." },
 };
 /** The FBI writes Nebraska as NB in agency lists (its ORI prefix too); every other state is its postal code. */
@@ -62,7 +70,16 @@ function lookupIn(t: string): CoverageLookup | null {
   const st = /\bwhich\s+(?:cities|agencies)\b/i.test(t) ? stateIn(t) : null;
   return st ? { kind: "state", name: st } : null;
 }
-const DEFINED = /\bhow\s+(?:is|are|do\s+you\s+define|does\s+(?:nibrs|the\s+fbi|ucr)\s+define)\b.*\bdef[ia]n\w*\b|\bwhat\s+(?:is|are)\s+(?:the\s+)?def[ia]n\w+\s+of\b|\bdef[ia]nitions?\s+(?:of|please)\b|\bwhat\s+(?:is|are)\s+defined\s+as\b|\bwhat\s+(?:counts\s+as|constitutes)\b/i;
+/** The one term a definitions question names that has a definition on hand (a violent crime question that names SRS asks for violent crime). */
+function termIn(t: string): CoverageTerm | null {
+  if (/\bsimple\s+assault\b/i.test(t)) return "simple assault";
+  if (/\bviolent\s+crime\b/i.test(t)) return "violent crime";
+  if (/\bdomestic\s+violence\b|\bDV\b/.test(t)) return "domestic violence";
+  if (/\bpersonal\s+weapons?\b/i.test(t)) return "personal weapons";
+  if (/\bsrs\b/i.test(t)) return "srs";
+  return null;
+}
+const DEFINED =/\bhow\s+(?:is|are|do\s+you\s+define|does\s+(?:nibrs|the\s+fbi|ucr)\s+define)\b.*\bdef[ia]n\w*\b|\bwhat\s+(?:is|are)\s+(?:the\s+)?def[ia]n\w+\s+of\b|\bdef[ia]nitions?\s+(?:of|please)\b|\bwhat\s+(?:is|are)\s+defined\s+as\b|\bwhat\s+(?:counts\s+as|constitutes)\b/i;
 
 /**
  * The question about the data the words ask, or null (the question is a figure, a place and a period, or something else).
@@ -87,7 +104,7 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
   // does not say whether it changed, so it keeps its old reading.
   const ABOUT_CHANGE = /\b(?:chang\w*|histor\w*|legal(?:ly)?|over\s+time|evolv\w*|used\s+to|revis\w*|updat\w*|amend\w*|ever)\b/i;
   if (DEFINED.test(t) && !ABOUT_CHANGE.test(t) && !hasPlace && (t.match(/\?/g) ?? []).length <= 1 && !/\b(?:and|also)\s+(?:show|give|can|how\s+many)\b|\bcan\s+you\s+show\b/i.test(t) && t.split(/\s+/).length <= 16)
-    return one("definitions", { term: /\bsimple\s+assault\b/i.test(t) ? "simple assault" : /\bviolent\s+crime\b/i.test(t) ? "violent crime" : null });
+    return one("definitions", { term: termIn(t), program: /\b(?:srs|summary\s+reporting|crime\s+index)\b/i.test(t) ? "srs" : /\bnibrs\b/i.test(t) ? "nibrs" : null });
   // P292: which country, which cities or which agencies are covered: one coverage sentence.
   if (!hasMeasure && (/\bwhich\s+countr(?:y|ies)\b[^?]*\b(?:cover\w*|include\w*|have)\b/i.test(t)
     || /\bwhich\s+(?:cities|agencies)\s+are\s+(?:represented|covered|included)\b/i.test(t)
@@ -266,8 +283,11 @@ export function answerCoverage(cq: CoverageQuestion, d: CoverageDeps): CoverageA
 
   if (cq.term) {
     const f = FBI_DEFINITIONS[cq.term];
+    // Violent crime has two definitions: the program the question names picks one; none named gives both, each labeled (Jeff 2026-11-25).
+    const parts = cq.term === "violent crime" ? (cq.program === "nibrs" ? [VIOLENT_NIBRS] : cq.program === "srs" ? [f.text] : [f.text, VIOLENT_NIBRS]) : [f.text];
+    const source = cq.term === "violent crime" ? (cq.program === "nibrs" ? "Source: FBI NIBRS." : cq.program === "srs" ? f.source : "Source: FBI SRS and NIBRS.") : f.source;
     return { kind: "coverage", shape: "definitions", period: span0, meaning: meaning("definitions", null, []),
-      delivered: { table: { columns: [txt("coverage.definition", f.title)], rows: [[f.text]] }, text: [f.title, f.text, f.source] }, read };
+      delivered: { table: { columns: [txt("coverage.definition", f.title)], rows: parts.map((p) => [p]) }, text: [f.title, ...parts, source] }, read };
   }
 
   const text = [`The FBI Crime Data Explorer defines these terms: ${DEFINITIONS_LINK}`, "Source: FBI Crime Data Explorer."];

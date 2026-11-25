@@ -90,14 +90,25 @@ const SENT = "The data comes from the FBI's Uniform Crime Report NIBRS, SHR and 
 assert.deepEqual(src.delivered.text, [SENT]);
 assert.deepEqual(ask("Where does this data come from?  Is this UCR data?").delivered.text, [`Yes. ${SENT}`]);
 for (const q of ["Sources?", "where is this data taken from", "What is the source of this data?"]) { assert.equal(ask(q).shape, "sources", q); assert.deepEqual(ask(q).delivered.text, [SENT], q); }
-const def = ask("how is domestic violence defined?");
+// A term with no definition on hand keeps the link to the FBI's definitions.
+const def = ask("how is hate crime defined?");
 assert.ok(def.delivered.text.some((t) => t.includes(DEFINITIONS_LINK)) && DEFINITIONS_LINK === "https://cde.ucr.cjis.gov/");
 assert.ok(def.delivered.text.every((t) => t.length < 120), "no written definition");
 for (const q of ["what is the defanition of simple assault", "SRS definition please", "What counts as violent crime here?"]) assert.equal(ask(q).shape, "definitions", q);
-// FBI definitions on hand are quoted as published; terms with no source from Jeff keep the link.
+// FBI definitions on hand are as Jeff gave them.
 assert.match(ask("what is the defanition of simple assault").delivered.text[1], /^Simple Assault: An unlawful physical attack by one person upon another/);
 assert.match(ask("What is defined as violent crime").delivered.text[1], /murder and nonnegligent manslaughter, rape, robbery and aggravated assault\.$/);
-assert.ok(ask("SRS definition please").delivered.text.some((t) => t.includes(DEFINITIONS_LINK)));
+{
+  const txt = (q: string) => ask(q).delivered.text.join("\n");
+  assert.match(ask("SRS definition please").delivered.text[1], /^SRS is the Summary Reporting System, the FBI's older summary reporting program\. It is a program, not an offense\.$/);
+  for (const q of ["how is domestic violence defined in NIBRS?", "What constitutes domestic violence in nibrs?", "how is domestic violence defined?"])
+    assert.match(ask(q).delivered.text[1], /^NIBRS has no domestic violence offense\..*Do not equate it with Family Offenses, Nonviolent \(90F\)\.$/, q);
+  assert.match(ask('what counts as "personal weapons" in weapon type').delivered.text[1], /weapon code 40: hands, fists, feet and teeth/);
+  // Violent crime: no program named gives both, each labeled; SRS or Crime Index gives SRS; NIBRS gives the codes.
+  assert.ok(/SRS/.test(txt("What is defined as violent crime")) && /09A/.test(txt("What is defined as violent crime")));
+  assert.ok(!/09A/.test(txt("how is violent crime defined in SRS?")) && /robbery and aggravated assault/.test(txt("how is violent crime defined in SRS?")));
+  assert.ok(/09A.*11A, 11B and 11C.*120.*13A/.test(txt("how is violent crime defined in NIBRS?")) && !/Summary Reporting/.test(txt("how is violent crime defined in NIBRS?")));
+}
 // Scope lookups come from the agency lists: Nashville, Dallas County, Pennsylvania.
 const nash = ask("What is the exact agency name for Nashville in the dataset? Show me the agencies table entry.");
 assert.ok(nash.delivered.table.rows.some((r) => r[0] === "TN0190100"), JSON.stringify(nash.delivered.table.rows));
