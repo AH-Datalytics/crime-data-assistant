@@ -1119,8 +1119,14 @@ for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile 
   // PR 195 run: a national city ranking with no year asks the year (P05), never "a state or the nation together with other places";
   // "the annual number of murders" is by year (P06); a "why" about the data (no crime named) is not an explanation decline.
   const hdeps = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
-  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"])
-    assert.equal(as(shadowAnswer(q, hdeps), "clarify").about, "which period", q);
+  // Jeff 2026-11-23 supersedes the year ask for a city ranking with a crime named: it is the latest complete year (2025), said; the stub has no data, so it reaches the 2025 ranking and declines there.
+  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"]) {
+    const o = shadowAnswer(q, hdeps) as { kind: string; about?: string; explanation?: string };
+    assert.ok(!(o.kind === "clarify" && o.about === "which period"), q);
+    assert.ok(/2025/.test(o.explanation ?? ""), q);
+  }
+  // No crime named, or a ranking of states, keeps the period ask.
+  assert.equal((shadowAnswer("top 10 states by murder", hdeps) as { about?: string }).about, "which period");
   assert.ok(!/number of/.test(readQuestion("show me the annual number of murders in the us", 2026).text), "read as annual murders, a series by year");
   // A question about the data itself is answered from the release's agency lists (Jeff 2026-11-18, test-nibrs-coverage.ts), no longer asked "which place".
   assert.equal(shadowAnswer("why can't you tell me which states are not represented?", { ...deps, execute: () => [] }).kind, "coverage");
@@ -3134,6 +3140,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("Cities With the ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
   }
   assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
+  // Review 419 N2: a size written beside "most dangerous", "highest murder" or "top-N" is the limit; a stray number is not.
+  const limitOf = (q: string) => { const o = shadowAnswer(q, rdeps); return o.kind === "shr" ? (o.question.ranking as { limit?: number } | undefined)?.limit : `not shr: ${JSON.stringify(o).slice(0, 250)}`; };
+  assert.equal(limitOf("Big cities, top 5 by share of murders via firearm in 2024"), 5, "control: top 5");
+  assert.match(String(limitOf("Big cities, the 5 most dangerous by share of murders via firearm in 2024")), /^not shr: .*no agreed definition of safest or most dangerous/, "\"most dangerous\" is still declined, never a size");
+  assert.equal(limitOf("Big cities, the 5 highest by share of murders via firearm in 2024"), 5, "5 highest cities");
+  assert.equal(limitOf("Big cities, top-5 by share of murders via firearm in 2024"), 5, "top-5 cities");
+  assert.equal(limitOf("Big cities with the highest share of murders via firearm in 2024"), 10, "no number: the default");
   // Without a release it stays Homicide Reports' (the tab has them), as before.
   const old = shadowAnswer("Big cities with highest share of murders via firearm in 2024", deps);
   assert.ok(old.kind === "route" && old.source === "shr", JSON.stringify(old).slice(0, 200));
@@ -3934,6 +3947,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.equal(ask("murders cleared by clearance type in 2025 in Detroit").kind, ask("murder clearances by type in 2025 in Detroit").kind);
   // The same wording as "by type by year", which answers.
   assert.equal(ask("Detroit murder clearances by year and clearance type in 2023 and 2024").kind, ask("Detroit murder clearances by type by year in 2023 and 2024").kind);
+}
+// Cities ranked with no rank word ("cities by murder rate"): the same ranking as "top cities", never "I couldn't use cities".
+{
+  for (const q of ["cities by murder rate", "cities by homicide rate in 2025", "homicide rates in cities 2019", "city homicide rates in 2024"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && o.reason === "reader"), q);
+  }
 }
 // P191 (Jeff 2026-11-21, reader class): clearance wording and "the entire US" are read, never "I didn't understand".
 {

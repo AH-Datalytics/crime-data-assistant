@@ -2028,6 +2028,14 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
     return { ...a, delivered: { ...a.delivered, text: [a.delivered.text[0], `No years were given, so every year in the data is shown: ${SHR_FIRST_YEAR} through ${deps.shr.latestMonth.slice(0, 4)}.`, ...a.delivered.text.slice(1)] } };
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
+/** "(min 30 murders)": the count floor of a city ranking, when the threshold is a small number (a population floor is far larger). */
+function shrMinMurders(ledger0: RequestLedger): number | null {
+  const t = ledger0.parts.find((p) => p.clause === 0 && p.concept === "threshold" && /^>=\|\d+$/.test(String(p.value)));
+  const n = t ? Number(String(t.value).split("|")[1]) : 0;
+  if (!(n > 0 && n < 10000) || /people|population|resident/i.test(t?.text ?? "")) return null;
+  // A small number is a murder floor only when the question says murders or homicides after it ("min 30 murders", "50+ murders"); a bare "min 5,000" stays a population.
+  return new RegExp(String.raw`\b${n.toLocaleString("en-US").replace(",", ",?")}\+?\s*(?:or more\s+)?(?:murders?|homicides?|killings?)\b`, "i").test(ledger0.question) ? n : null;
+}
 /**
  * Big cities ranked by a murder detail from Homicide Reports (SHR-B, Jeff 2026-11-11 order): "big cities with the highest
  * share of murders by firearm in 2024", "... the most homicides by knife", "... the highest share of teenage homicide
@@ -2036,7 +2044,8 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
  * (250,000) leaves the question to the old route. With no period the period is asked, as every ranking asks.
  */
 function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: ShadowDeps, rerun: (l: RequestLedger) => ShadowOutcome): ShadowOutcome | null {
-  if (!deps.shr || !deps.historical || !flags(ledger0).largeCities) return null;
+  const minTotal = shrMinMurders(ledger0);
+  if (!deps.shr || !deps.historical || (!flags(ledger0).largeCities && !minTotal)) return null;
   const f = flags(ledger0);
   if (f.consistent || f.quarter || f.nibrsAsked || f.clearance || f.property || f.composite || f.combined || f.region || f.column || f.forecast || f.court || f.offenders
     || f.undefinedTerm || f.comparison || f.last12 || f.countywide || f.circumstance || f.shrDetail || f.arrestsThrough) return null;
@@ -2047,10 +2056,16 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   const crimes = [...new Set(c0.filter((p) => p.concept === "measure").map((p) => String(p.value)))];
   if (crimes.length !== 1 || !["murder", "homicide", "homicide_all"].includes(crimes[0])) return null;
   const rank = c0.find((p) => p.concept === "rank");
-  const rankVal = /^(top|bottom):(\d*)$/.exec(String(rank?.value ?? ""));
+  const rankVal = /^(top|bottom|rank):(\d*)$/.exec(String(rank?.value ?? ""));
+  // "top-5" reads as the bare rank "rank:"; only the word "top" is taken that way (a "bottom-5" keeps its old route, never read as the top).
+  if (rankVal?.[1] === "rank" && rank?.text.trim().toLowerCase() !== "top") return null;
+  // The size is a number written beside the rank or the entity word ("top 5", "5 cities"), never a stray number (a month's day, a count in another place).
+  const sizeOf = (p: { text: string }) => /^(?:the\s+|-\s*)?(\d{1,3})(?:\s+by)?$/.exec(p.text.trim())?.[1];
+  const nWord = c0.find((p) => p.concept === "unrecognized" && sizeOf(p) !== undefined
+    && (() => { const n = sizeOf(p)!; return new RegExp(String.raw`\b(?:top|bottom|highest|lowest|most|least)[\s-]*${n}\b|\b${n}\s+(?:(?:most|least|highest|lowest|safest|deadliest|\w+est)\s+)?(?:\w+\s+)?(?:cities|city)\b|\b${n}\s+(?:most|least|highest|lowest|safest|deadliest|\w+est)\b`, "i").test(ledger0.question); })());
   if (!rankVal || !c0.some((p) => p.concept === "entity" && p.value === "city")) return null;
   // A unit other than victims, or a place, isn't read here.
-  if (c0.some((p) => (p.concept === "unit" && p.value !== "victims") || p.concept === "place" || p.concept === "clearance" || p.concept === "clearance-reason" || p.concept === "breakdown" || p.concept === "threshold")) return null;
+  if (c0.some((p) => (p.concept === "unit" && p.value !== "victims") || p.concept === "place" || p.concept === "clearance" || p.concept === "clearance-reason" || p.concept === "breakdown" || (p.concept === "threshold" && !minTotal))) return null;
   // Details: a weapon the question names, and teenage victims (13 to 19, or the range written beside it).
   const filters: ShrFilter[] = [];
   for (const p of c0.filter((x) => x.concept === "filter")) {
@@ -2066,7 +2081,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
   const knifeOnly = filters.length === 1 && filters[0].codes?.join() === "20";
   const harmless = new RegExp(`^(?:via|by|with${knifeOnly ? "|or sharp object" : ""}${teen ? "|\\(\\s*13\\s*(?:-|to|–)\\s*19\\s*\\)" : ""})$`, "i");
   const periods = c0.filter((p) => p.concept === "period");
-  if (c0.some((p) => p.state === "not-interpreted" && !harmless.test(p.text.trim()) && !(p.concept === "period"))) return null;
+  if (c0.some((p) => p.state === "not-interpreted" && !harmless.test(p.text.trim()) && p !== nWord && !(p.concept === "period"))) return null;
   // The people wording the reader took out ("teenage") must be only that.
   if (f.people && (f.people.by || f.people.ask || f.people.unsupported || !teen || f.people.where.length !== 1 || f.people.where.some((w) => w.who !== "victim" || w.attr !== "age"))) return null;
   const share = c0.some((p) => p.concept === "share" || (p.concept === "punctuation" && p.text.trim() === "%"));
@@ -2085,7 +2100,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
     return decline("outside_release_coverage", `Homicide Reports in the data run through ${latest.slice(0, 4)}, so ${fromY} is outside them.`);
   const to = toY >= Number(latest.slice(0, 4)) ? latest : `${toY}-12`;
   const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide" | "homicide_all", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
-    limit: rankVal[2] ? Number(rankVal[2]) : RANK_DEFAULT_ROWS, minPopulation: 250000 }, deps.shr, deps.historical, deps.execute);
+    limit: rankVal[2] ? Number(rankVal[2]) : nWord ? Number(sizeOf(nWord)) : RANK_DEFAULT_ROWS, minPopulation: flags(ledger0).largeCities ? 250000 : null, ...(minTotal ? { minTotal } : {}) }, deps.shr, deps.historical, deps.execute);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 
@@ -2745,7 +2760,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // ask (job S: 36 questions that asked the place declined instead).
     // The whole country's answer, or what it still asks (the period: job S2, the labels Jeff's decision moved); a
     // decline keeps the place asked, as before.
-    if (flags(ledger0).largeCities || flags(ledger0).largestSet) {
+    if (flags(ledger0).largeCities || flags(ledger0).largestSet || shrMinMurders(ledger0)) {
       const ranked = shrCityRanking(ledger, ledger0, deps, (l) => fromLedger(l, deps, pins));
       if (ranked) return ranked;
       // "Big cities" that rank nothing ("Other large cities and violent crime"): the leftover "cities" and "other" aren't
@@ -2784,6 +2799,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     }
     // States ranked are the nation's states (Jeff 2026-11-10, ranking decision 5): no place to ask.
     if (clause0("rank").length && clause0("entity").some((p) => p.value === "state")) return fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins);
+    // Cities ranked by a named measure with no place (Jeff 2026-11-23, rankings group A): the nation's cities, the same ranking as "big
+    // cities" without the size flag; its own size words, number and year are read as usual and the rate floor is stated by the ranking.
+    const citiesAsked = clause0("entity").some((p) => p.value === "city") || clause0("list").some((p) => p.value === "list:city")
+      || (clause0("rank").length > 0 && !clause0("entity").length);
+    // Words the reader cannot read ("postal crimes", "cities with gars") keep the old ask for the place, never a ranking that drops them.
+    if (citiesAsked &&!ledger0.parts.some((p) => p.clause === 0 && p.state === "not-interpreted") && clause0("measure").some((p) => isHistoricalMeasure(String(p.value)) || (p.value === "unspecified" && !flags(ledger0).clearance)))
+      // The cities are stated as the entity, so a crime chosen later by a button (a vague "top 10 crimes") still ranks cities.
+      return fromLedger(clause0("entity").length ? filled(clause0("rank").length ? ledger : filled(ledger, "rank", "rank:", "ranked"), "place", "national", "the United States") : filled(filled(ledger, "entity", "city", "cities"), "place", "national", "the United States"), deps, pins);
     // P170 (Jeff 2026-11-21): no place named is the United States, said, with buttons to pick a place; asked as before only when that cannot answer now.
     // The national clearance share by type is exempt from the heavy-statement deferral (coordinator 2026-11-22, Jeff's P122: decline while too slow,
     // make it work later): the runner timed it at 5.5 s with the cube on (6.3 s off), under the threshold. Narrow: only a share of a clearance type.
@@ -3385,17 +3408,21 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // is "large" (P08: 250,000) or one named; a clearance or a detail stays on its own path (NIBRS ranks NIBRS-only detail).
   const floorOf = (sp: Extract<typeof d.spec, { type: "rank" }>) => (sp.min ? (sp.min.op === ">" ? sp.min.amount + 1 : sp.min.amount) : flags(ledger0).largeCities ? 250000 : null);
   if (deps.historical && d.spec.type === "rank" && (d.spec.entity === "city" || d.spec.entity === "state" || d.spec.entity === "agency" || d.spec.entity === "county")
-    && (d.spec.scope.kind === "state" ? d.spec.entity !== "state" : d.spec.scope.kind === "national") && isHistoricalMeasure(d.spec.measure)
+    && (d.spec.scope.kind === "state" ? d.spec.entity !== "state" : d.spec.scope.kind === "national") && isHistoricalMeasure(d.spec.measure) && (d.spec.more ?? []).every(isHistoricalMeasure)
     && (d.spec.statistic === "count" || d.spec.statistic === "rate") && !(d.spec.entity === "state" && (d.spec.min || flags(ledger0).largeCities))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).shrAsked && !flags(ledger0).consistent
     && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite
     && !flags(ledger0).arrestsThrough && !flags(ledger0).region && !flags(ledger0).combined && !flags(ledger0).column
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec;
+    // "min 30 murders" on a rate ranking is a murder floor, which is built only for a count of murders from Homicide Reports; never read as a population of 30.
+    if (sp.statistic === "rate" && shrMinMurders(ledger0)) return decline("unsupported_capability", "A minimum number of murders is applied to a ranking by murder count (from Homicide Reports), not to a ranking by rate. Ask for the count, or for the rate among cities of a stated population.");
     // Jeff 2026-11-10 ("Agreed when no pop request is given"): a rate ranking with no population named ranks agencies of
     // 100,000 or more, said; a population or size named overrides it (replaces D05 for rate rankings). States: none.
     const defaultFloor = sp.statistic === "rate" && sp.entity !== "state" && floorOf(sp) === null ? 100000 : null;
     const minPopulation = floorOf(sp) ?? defaultFloor;
+    const countByDefault = sp.statistic === "count" && !sp.more?.length && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "statistic")
+      && !new RegExp(String.raw`\b(?:most|counts?|number|total)\b`, "i").test(ledger0.question);
     // Capability state-city-list: a floor the question gave with no number to show is 50 rows (said: "Top 50 of N Agencies"); "all", "every",
     // "complete list" or "entire" shows every row. A strict "over N" says "Over N" (the filter is N + 1, unchanged).
     const askedAllRows = /\b(?:all|every|complete\s+list|entire)\b/i.test(ledger0.question);
@@ -3405,6 +3432,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const floorOver = sp.min?.op === ">";
     const saidFloor = <T extends { delivered: { text: string[] } }>(r: T): T => {
       if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
+      // Jeff: a crime named alone ("highest murder") is the count; the rate is offered.
+      if (countByDefault) r.delivered.text.push(`This ranks the number of ${sp.measure.replace(/_/g, " ")} offenses. Ask for the rate to rank by ${sp.measure.replace(/_/g, " ")} per 100,000 people.`);
       return r;
     };
     // No period (D31/P05): asked before anything else, also for the nation, whose plan would otherwise be declined as "a state or the
@@ -3412,6 +3441,15 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (sp.period.form === "none") {
       const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
       const thisYear = Number(release.lastMonth.slice(0, 4));
+      // Jeff 2026-11-23: a city or agency ranking with a crime named and no year is the latest complete year, said in the title; no ask.
+      if ((sp.entity === "city" || sp.entity === "agency") && lcy <= deps.historical.lastYear && clause0("measure").some((p) => p.value !== "unspecified" && p.rule !== "shadow:button")) {
+        const r = fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins);
+        if (r.kind === "historical") {
+          const x = r as typeof r & { delivered: { text: string[] } };
+          x.delivered.text.splice(1, 0, `No year was given, so the latest complete year, ${lcy}, is shown.`);
+        }
+        return r;
+      }
       return { kind: "clarify", about: "which period", question: ledger0.question, options: [
         { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps, pins) },
@@ -3425,7 +3463,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear && !toDate) {
       const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
         statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: rankLimit, minPopulation, floorAsked: floorOf(sp) !== null, floorOver, floorCapped,
-        entity: sp.entity }, deps.historical, deps.execute);
+        entity: sp.entity, ...(sp.more?.length ? { more: sp.more } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return saidFloor(r);
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
@@ -3442,6 +3480,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       return decline("unsupported_capability", r.explanation);
     }
   }
+  // Several measures in one ranking table are Historical's only (rankings group B): never answered from one measure with the others dropped.
+  if (d.spec.type === "rank" && d.spec.more?.length)
+    return decline("unsupported_capability", "A ranking with several crimes side by side is built for Historical's Part I figures (violent crime, property crime and the seven Part I offenses) for one year. This question asks for something else.");
   // Counties ranked are Crime Index's county agencies (above) or nothing: never another path's reading (rankings PR B).
   if (d.spec.type === "rank" && d.spec.entity === "county")
     return decline("unsupported_capability", "Counties are ranked by their own agency (the sheriff or county police) from Crime Index, for one year through 2025, or from Current Trends' sample in 2026, by count or rate of a Part I crime. This question asks for something else.");
