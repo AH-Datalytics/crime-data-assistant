@@ -3244,6 +3244,30 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     return stub(sql);
   };
   const cdeps = { ...deps, execute: ctStub, current: { root: "/ct", release: "ct-test", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" } } as unknown as ShadowDeps;
+  // Capability (YoY, 5cb7168473 and 0cb8a87be2): the year-over-year % change by month is each month against the same month a year earlier,
+  // one decimal, blank where that month is zero or has no figure; the rolling 3-month form does the same to the 3-month totals (the nation's with no place).
+  {
+    const yoyDeps = { ...cdeps, execute: (sql: string) => (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql) && /TXDPD0000/.test(sql) ? ctStub(sql).map((r) => (r[0] === "2025-03" ? [r[0], 40] : r[0] === "2026-03" ? [r[0], 50] : r[0] === "2026-04" ? [r[0], 0] : r[0] === "2025-04" ? [r[0], 0] : r)) : ctStub(sql)) } as unknown as ShadowDeps;
+    const y = shadowAnswer("Give me the year over year % change in murders by month for Dallas. E.g. if the value for March 2026 is 50 and the value for March 2025 is 40, then the year over year percent change by month is (50 - 40)/40.", yoyDeps);
+    assert.equal(y.kind, "current", JSON.stringify(y).slice(0, 300));
+    if (y.kind === "current") {
+      const m = new Map(y.delivered.table.rows.map((r) => [r[0], r[1]]));
+      assert.deepEqual(y.delivered.table.columns.map((c) => c.header), ["Month", "Murders, % change from the same month a year earlier"]);
+      assert.equal(m.get("2017-01"), null, "no earlier year in the data");
+      assert.equal(m.get("2018-01"), 0);
+      assert.equal(m.get("2026-03"), 25, "(50 - 40) / 40");
+      assert.equal(m.get("2026-04"), null, "a zero month a year earlier has no percent change");
+      assert.equal(m.get("2026-05"), 0);
+    }
+    const yr = shadowAnswer("3 month rolling % change in murder relative to same 3 months the previous year", cdeps);
+    assert.equal(yr.kind, "current", JSON.stringify(yr).slice(0, 300));
+    if (yr.kind === "current") {
+      assert.deepEqual(yr.delivered.table.columns.map((c) => c.header), ["Month", "Rolling 3-month murders, % change from the same months a year earlier"]);
+      assert.equal(yr.delivered.table.rows.length, 104 + 12 - 12 + 0, "every month from January 2018 to August 2026");
+      assert.equal(yr.delivered.table.rows[0][1], null);
+      assert.equal(yr.delivered.table.rows[12][1], 0);
+    }
+  }
   const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
   assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
   if (sev.kind === "current") {
