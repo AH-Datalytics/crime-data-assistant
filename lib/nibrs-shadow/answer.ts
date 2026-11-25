@@ -1133,7 +1133,12 @@ const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?
 const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
+/** A polite request opener ("can i get data on ...", "could I see ...") says nothing about the question; the question is what follows. */
+const REQUEST_OPENER = /^\s*(?:(?:hi|hello|hey)[,!]?\s+)?(?:please\s+)?(?:can|could|may|might|would)\s+(?:i|we|you)\s+(?:please\s+)?(?:get|see|have|find|pull|view|look\s+at|show\s+me|give\s+me)\s+(?:(?:me|us)\s+)?(?:(?:some|any|the|all\s+(?:the|of\s+the))\s+)?(?:(?:data|numbers|stats|statistics|figures|info|information)\s+(?:on|about|for|regarding|of)\s+)?/i;
+
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const unopened = question.replace(REQUEST_OPENER, "");
+  if (unopened !== question && unopened.trim().length >= 8) return shadowAnswer(unopened, depsIn);
   const ud = UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
     const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
