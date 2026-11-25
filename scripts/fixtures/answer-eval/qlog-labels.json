@@ -30999,8 +30999,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -31013,7 +31012,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler"
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
    }
   },
   {
