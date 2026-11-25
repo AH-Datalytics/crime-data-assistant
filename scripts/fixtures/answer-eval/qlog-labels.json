@@ -205,7 +205,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 8 full years, 2018 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -216,7 +216,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -3329,7 +3329,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -3340,7 +3340,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -3717,7 +3717,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -3728,7 +3728,7 @@
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-09",
-    "notes": "Missing time period or scope: \"#1 should be answered\" (this is #1) (bad-declines review, 2026-11-09)"
+    "notes": "Missing time period or scope: \"#1 should be answered\" (this is #1) (bad-declines review, 2026-11-09) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -6816,7 +6816,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -6827,7 +6827,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -7088,7 +7088,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -7099,7 +7099,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -9035,7 +9035,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -9046,7 +9046,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -12372,7 +12372,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures for the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -12383,7 +12383,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series. One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series. One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. Last N years, monthly or rolling: keep the monthly source, full years ending December 2025. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -12756,7 +12756,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 20 full years, 2006 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -12767,7 +12767,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -13632,7 +13632,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -13643,7 +13643,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -14161,7 +14161,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -14172,7 +14172,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -14287,7 +14287,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -14298,7 +14298,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -15008,7 +15008,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures for the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -15019,7 +15019,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. Last N years, monthly or rolling: keep the monthly source, full years ending December 2025. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -15063,7 +15063,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 20 full years, 2006 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -15074,7 +15074,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -15986,7 +15986,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -15997,7 +15997,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -16563,7 +16563,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures for the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -16574,7 +16574,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. Last N years, monthly or rolling: keep the monthly source, full years ending December 2025. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -16748,7 +16748,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 7 full years, 2019 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -16759,7 +16759,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -18568,7 +18568,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -18579,7 +18579,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -20217,7 +20217,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -20228,7 +20228,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -20691,7 +20691,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -20702,7 +20702,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -21082,7 +21082,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -21093,7 +21093,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -23838,7 +23838,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 35 full years, 1991 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -23849,7 +23849,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -24000,7 +24000,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 70 full years, 1956 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -24011,7 +24011,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -25517,7 +25517,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -25528,7 +25528,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -25870,7 +25870,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -25881,7 +25881,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -28213,7 +28213,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 35 full years, 1991 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -28224,7 +28224,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -28346,7 +28346,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 25 full years, 2001 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -28357,7 +28357,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -29302,7 +29302,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -29313,7 +29313,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -30460,7 +30460,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 20 full years, 2006 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -30471,7 +30471,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -31378,7 +31378,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -31389,7 +31389,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -33104,7 +33104,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -33115,7 +33115,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -35036,7 +35036,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -35047,7 +35047,7 @@
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-11",
     "reviewed_by": "jeff-2026-11-11",
-    "notes": "\"Killings\" means murder (Jeff 2026-11-11: \"yes\"); big cities with no place are the whole country's (Jeff 2026-11-11)"
+    "notes": "\"Killings\" means murder (Jeff 2026-11-11: \"yes\"); big cities with no place are the whole country's (Jeff 2026-11-11) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -37676,7 +37676,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -37687,7 +37687,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -38109,7 +38109,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -38120,7 +38120,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -38264,7 +38264,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 40 full years, 1986 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -38275,7 +38275,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -42223,7 +42223,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -42234,7 +42234,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -42700,7 +42700,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 20 full years, 2006 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -42711,7 +42711,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -47566,7 +47566,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -47577,7 +47577,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -49378,7 +49378,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -49389,7 +49389,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -49586,7 +49586,7 @@
    "expected": {
     "outcome": "answer",
     "source": "shr",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -49597,7 +49597,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P53"
+    "notes": "P53 Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -49668,7 +49668,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -49679,7 +49679,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Convenience-store location detail requires NIBRS."
+    "notes": "Convenience-store location detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -50897,7 +50897,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -50908,7 +50908,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -52816,7 +52816,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -52827,7 +52827,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -53185,7 +53185,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "Yes or No from the last two full calendar years, with both counts (P299), and the by-year table",
+    "answer": "the figures asked for, the last 2 full years, 2024 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -53196,7 +53196,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -53850,7 +53850,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -53861,7 +53861,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -54536,7 +54536,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -54547,7 +54547,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -54786,7 +54786,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -54797,7 +54797,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -56830,7 +56830,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -56841,7 +56841,7 @@
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
     "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -57005,7 +57005,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -57016,7 +57016,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -59847,7 +59847,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -59858,7 +59858,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -64802,7 +64802,7 @@
    "expected": {
     "outcome": "answer",
     "source": "shr",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -64813,7 +64813,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P53"
+    "notes": "P53 Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -67333,7 +67333,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -67344,7 +67344,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -67618,7 +67618,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -67629,7 +67629,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -68420,7 +68420,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -68431,7 +68431,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -69357,7 +69357,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -69368,7 +69368,7 @@
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-11-cases",
     "reviewed_by": "jeff-2026-11-11-cases",
-    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; intimate partner violence counted by victim"
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; intimate partner violence counted by victim Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -69409,7 +69409,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -69420,7 +69420,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -69769,7 +69769,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures for the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -69780,7 +69780,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series. One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series. One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. Last N years, monthly or rolling: keep the monthly source, full years ending December 2025. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -71744,7 +71744,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -71755,7 +71755,7 @@
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
     "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -72021,7 +72021,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -72032,7 +72032,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
+    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -73179,7 +73179,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 25 full years, 2001 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -73190,7 +73190,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -75417,7 +75417,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -75428,7 +75428,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -79465,7 +79465,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -79476,7 +79476,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -80738,7 +80738,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 25 full years, 2001 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -80749,7 +80749,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -82212,7 +82212,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -82223,7 +82223,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
+    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -85399,7 +85399,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -85410,7 +85410,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -85610,7 +85610,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -85621,7 +85621,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -87194,7 +87194,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 4 full years, 2022 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -87205,7 +87205,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series; retain prior scope unless replaced."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series; retain prior scope unless replaced. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -87553,7 +87553,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 8 full years, 2018 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -87564,7 +87564,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -88685,7 +88685,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -88696,7 +88696,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Firearm detail requires NIBRS."
+    "notes": "Firearm detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -90317,7 +90317,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -90328,7 +90328,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -92087,7 +92087,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -92098,7 +92098,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -100576,7 +100576,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -100587,7 +100587,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -100884,7 +100884,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -100895,7 +100895,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -102990,7 +102990,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 10 full years, 2016 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -103001,7 +103001,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -103136,7 +103136,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -103147,7 +103147,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
     "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -105498,7 +105498,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, the last 3 full years, 2023 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -105509,7 +105509,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
     "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -106687,7 +106687,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, last year, which is 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -106698,7 +106698,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Firearm detail requires NIBRS."
+    "notes": "Firearm detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -107568,7 +107568,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures for the last 5 full years, 2021 to 2025; say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -107579,7 +107579,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. Last N years, monthly or rolling: keep the monthly source, full years ending December 2025. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
