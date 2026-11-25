@@ -2032,7 +2032,7 @@ function shrOutcome(plan: NibrsPlan, deps: ShadowDeps, ledger0: RequestLedger): 
 function shrMinMurders(ledger0: RequestLedger): number | null {
   const t = ledger0.parts.find((p) => p.clause === 0 && p.concept === "threshold" && /^>=\|\d+$/.test(String(p.value)));
   const n = t ? Number(String(t.value).split("|")[1]) : 0;
-  if (!(n > 0 && n < 10000) || /people|population|resident/i.test(t?.text ?? "")) return null;
+  if (!(n > 0 && n < 10000) || /people|population|re(?:s)ident/i.test(t?.text ?? "")) return null;
   // A small number is a murder floor only when the question says murders or homicides after it ("min 30 murders", "50+ murders"); a bare "min 5,000" stays a population.
   return new RegExp(String.raw`\b${n.toLocaleString("en-US").replace(",", ",?")}\+?\s*(?:or more\s+)?(?:murders?|homicides?|killings?)\b`, "i").test(ledger0.question) ? n : null;
 }
