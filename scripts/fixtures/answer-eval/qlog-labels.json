@@ -3610,7 +3610,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -3621,7 +3621,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only. Current city question: Current Trends, last 3 years to the latest month; Historical only if the agency is not in Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -13325,7 +13325,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -13336,7 +13336,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only. Current city question: Current Trends, last 3 years to the latest month; Historical only if the agency is not in Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -13544,7 +13544,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -13555,7 +13555,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"current\" is the latest complete year (P188) By rule from the question text; second labeler NIBRS Model 2026-11-22 One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"current\" is the latest complete year (P188) By rule from the question text; second labeler NIBRS Model 2026-11-22 One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only. Current city question: Current Trends, last 3 years to the latest month; Historical only if the agency is not in Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -70497,7 +70497,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -70508,7 +70508,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only. Current city question: Current Trends, last 3 years to the latest month; Historical only if the agency is not in Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -74730,7 +74730,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -74741,7 +74741,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only. Current city question: Current Trends, last 3 years to the latest month; Historical only if the agency is not in Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -79876,7 +79876,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -79887,7 +79887,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only. Current city question: Current Trends, last 3 years to the latest month; Historical only if the agency is not in Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
