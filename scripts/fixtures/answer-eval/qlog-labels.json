@@ -13559,10 +13559,9 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
-     "nibrs"
+     "rtci"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -13575,7 +13574,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"current\" is the latest complete year (P188) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; \"current\" is the latest complete year (P188) By rule from the question text; second labeler NIBRS Model 2026-11-22 One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
    }
   },
   {
