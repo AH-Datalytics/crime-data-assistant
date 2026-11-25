@@ -282,6 +282,12 @@ const PEER_ASK_TEXT = "Which cities should it be compared with? For example, cit
   for (const q of ["los angeles homicide rate in 2025 vs. other large cities", "Compare assault rates in Seattle vs other major cities", "murders in Denver and Portland in 2024"])
     assert.notEqual((ask(q) as { about?: string }).about, "which cities", q);
 }
+// P350 (Jeff 2026-11-24): a ranking of individual incidents declines with the plain "not available" sentence; totals by place are untouched.
+for (const q of ["provide the values and agencies for the top 20 shoplifting incidents with the highest values stolen in 2024", "top 10 incidents with the largest dollar loss in Detroit in 2024", "show the 5 largest individual burglaries in Texas in 2023"]) {
+  const o = ask(q) as { kind: string; reason?: string; explanation?: string };
+  assert.ok(o.kind === "decline" && o.reason === "unsupported_capability" && o.explanation === "That data is not available.", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+}
+assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer");
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
@@ -399,6 +405,18 @@ assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city
 assert.equal(ori(at("ambiguous:San Diego", "City of San Diego, California")), "CA0371100");
 assert.equal(ori(at("ambiguous:Los Angeles", "the city of Los Angeles")), "CA0194200");
 assert.equal(ori(at("ambiguous:St. Louis", "City of St. Louis")), "MOSPD0000");
+// P196 (Jeff 2026-11-22): a city named in a list of places is the city's police department, never the city-or-county ask.
+assert.equal(ori(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", true)), "CA0194200");
+assert.equal(ori(resolvePlace(places, "city:Los Angeles:", "Los Angeles", true)), "CA0194200");
+assert.equal(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", false).kind, "ask", "one place alone still asks");
+// Beside other places "New York" is the city (the state is not a same-name city, P28); alone it still asks; Washington in a list is Washington, D.C. (P238, Jeff 2026-11-22).
+assert.equal(resolvePlace(places, "ambiguous:New York", "New York", true).kind, "agency");
+assert.equal(resolvePlace(places, "ambiguous:New York", "New York", false).kind, "ask");
+assert.equal(ori(resolvePlace(places, "ambiguous:Washington", "Washington", true)), ori(resolvePlace(places, "city:Washington:DC", "Washington, D.C.", true)), "Washington in a list is Washington, D.C. (P238)");
+assert.equal(resolvePlace(places, "ambiguous:Washington", "Washington", false).kind, "ask", "a lone Washington still asks (P28)");
+assert.equal(resolvePlace(places, "ambiguous:Kansas City", "Kansas City", true).kind, "ask", "two cities of the name keep P28's ask");
+assert.equal(resolvePlace(places, "city:Columbus:OH", "Columbus", true).kind, "ask", "two cities of the name keep P28's ask");
+assert.equal(ori(resolvePlace(places, "county:Los Angeles County:CA", "Los Angeles County", true)), "CA0190000", "a county named stays the county");
 assert.deepEqual(named(at("ambiguous:San Diego", "San Diego, California")), ["San Diego Police Department", "San Diego County Sheriff's Office"]);
 assert.equal(at("ambiguous:Kansas City", "city of Kansas City").kind, "ask", "two states have a Kansas City");
 assert.equal(ori(at("county:St. Louis County:MO", "St. Louis County")), "MO0950000", "a county named stays the county");
@@ -940,7 +958,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   const cities = (q: string) => (as(shadowAnswer(q, cdeps), "historical") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } }).delivered;
   for (const q of ["murders in all American cities in 2024", "murders in all cities in the US in 2024", "murders in all U.S. cities in 2024"]) {
     const d = cities(q);
-    assert.equal(d.text[0], "United States Murder Count by City, Population 250,000 or More, 2024", q);
+    assert.equal(d.text[0], "Cities With the Most Murders, Population 250,000 or More, 2024", q);
     assert.equal(d.text[1], "The 5 cities with the most murders are shown.", q);
     assert.deepEqual(d.table.rows, [["New York City, NY", 450], ["Houston, TX", 400], ["Dallas, TX", 200], ["El Paso, TX", 30], ["Lubbock, TX", 25]], q);
     assert.deepEqual(d.table.columns.map((c) => c.header), ["Agency", "Murders"], q);
@@ -948,14 +966,14 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   }
   for (const q of ["murders in all Texas cities in 2024", "murders in every city in Texas in 2024"]) {
     const d = cities(q);
-    assert.equal(d.text[0], "Texas Murder Count by City, Population 250,000 or More, 2024", q);
+    assert.equal(d.text[0], "Cities in Texas With the Most Murders, Population 250,000 or More, 2024", q);
     assert.deepEqual(d.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"], q);
   }
-  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "United States Murder Rate by City, Population 250,000 or More, 2024");
+  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "Cities With the Highest Murder Rates, Population 250,000 or More, 2024");
   assert.equal(cities("murder rate in all U.S. cities 2024").text[1], "The 5 cities with the highest rates are shown.");
   // "Major cities" with no rank word, and no place, are the nation's, said (the old reading gave the national total).
   const major = cities("murders in major cities in 2024");
-  assert.equal(major.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
+  assert.equal(major.text[0], "Cities With the Most Murders, Population 250,000 or More, 2024");
   assert.ok(major.text.includes("No place was named, so these are cities across the United States."));
   // One year: none asks the year; several years are declined with the one-year ask.
   assert.equal(as(shadowAnswer("murders in all American cities", cdeps), "clarify").about, "which period");
@@ -973,7 +991,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
     "cannabis cultivation arrests in major us cities annually", "Share of vehicle burglaries where a firearm was stolen in big cities in Texas broken down by city",
     "murder by city in north carolina largest cities only", "locations of crimes in cities over 1M"]) assert.ok(!isSet(q), q);
   // Not changed: a ranking word, or a number, keeps the old readings.
-  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Texas Murder Count by City, Population 250,000 or More, 2024");
+  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Cities in Texas With the Most Murders, Population 250,000 or More, 2024");
   assert.match(cities("the 10 largest cities murders 2024").text[0], /^The 6 largest cities in the United States by population/);
 }
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
@@ -1101,8 +1119,14 @@ for (const q of ["Juvenile crime involving arson in Kansas", "Rates of juvenile 
   // PR 195 run: a national city ranking with no year asks the year (P05), never "a state or the nation together with other places";
   // "the annual number of murders" is by year (P06); a "why" about the data (no crime named) is not an explanation decline.
   const hdeps = { ...deps, execute: () => [], historical: { root: "/hist", release: "h", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1964 } } as unknown as ShadowDeps;
-  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"])
-    assert.equal(as(shadowAnswer(q, hdeps), "clarify").about, "which period", q);
+  // Jeff 2026-11-23 supersedes the year ask for a city ranking with a crime named: it is the latest complete year (2025), said; the stub has no data, so it reaches the 2025 ranking and declines there.
+  for (const q of ["what city has the highest murder rate in the us?", "which cities had the most murders nationwide?", "show me the top 10 cities with the highest murder in the us"]) {
+    const o = shadowAnswer(q, hdeps) as { kind: string; about?: string; explanation?: string };
+    assert.ok(!(o.kind === "clarify" && o.about === "which period"), q);
+    assert.ok(/2025/.test(o.explanation ?? ""), q);
+  }
+  // No crime named, or a ranking of states, keeps the period ask.
+  assert.equal((shadowAnswer("top 10 states by murder", hdeps) as { about?: string }).about, "which period");
   assert.ok(!/number of/.test(readQuestion("show me the annual number of murders in the us", 2026).text), "read as annual murders, a series by year");
   // A question about the data itself is answered from the release's agency lists (Jeff 2026-11-18, test-nibrs-coverage.ts), no longer asked "which place".
   assert.equal(shadowAnswer("why can't you tell me which states are not represented?", { ...deps, execute: () => [] }).kind, "coverage");
@@ -2177,7 +2201,7 @@ const tx = ok4("Which Texas cities had the most shoplifting in 2024?");
 assert.deepEqual(tx.delivered.table.rows, [["Houston Police Department", 108], ["Dallas Police Department", 84], ["TX9999900", 60]]);
 assert.ok(tx.delivered.text.includes("Austin Police Department isn't ranked because it has data for only 11 of the 12 months of 2024."), JSON.stringify(tx.delivered.text));
 assert.ok(tx.delivered.text.includes("Only agencies with data for all 12 months of 2024 are ranked, and ties are ordered by agency name."), JSON.stringify(tx.delivered.text));
-assert.equal(tx.delivered.text[0], "Texas Shoplifting Offenses by City, 2024");
+assert.equal(tx.delivered.text[0], "Cities in Texas With the Most Shoplifting Offenses, 2024");
 const txRate = ok4("Which Texas cities had the highest shoplifting rate in 2024?");
 assert.deepEqual(txRate.delivered.table.rows, [["Dallas Police Department", 6.5], ["Houston Police Department", 4.7]]);
 assert.ok(txRate.delivered.text.includes("TX9999900 isn't ranked because the FBI gives no population."), JSON.stringify(txRate.delivered.text));
@@ -2185,13 +2209,13 @@ assert.equal(as(ask("Which large Texas cities had the most shoplifting in 2024?"
 // Scoring increment 4: a ranking's filters, ranked statistic and P60 statements; a rate's denominator.
 const year24 = { from: "2024-01", to: "2024-12" };
 const txLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "state", name: "Texas", state: "TX" }], period: year24, measures: [{ name: "shoplifting", unit: "offense" }],
-  filters: ["city agencies", "agencies that reported every month of 2024"], groupings: ["agency"], statistic: "count", rank: { by: "count", direction: "top", limit: 20 } }, values: { status: "pending_build" },
+  filters: ["city agencies", "agencies that reported every month of 2024"], groupings: ["agency"], statistic: "count", rank: { by: "count", direction: "top", limit: 10 } }, values: { status: "pending_build" },
   statements: ["shows exactly 3 agencies", "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
     "orders ties alphabetically by agency name", "adds no other eligibility filter", "names its source at the end"] });
 assert.deepEqual(material(tx, txLabel), []);
 assert.ok(material({ ...tx, delivered: { ...tx.delivered, text: tx.delivered.text.filter((t) => !t.startsWith("Only agencies with data for")) } }, txLabel).includes("statement"), "the P60 rule must be said");
 assert.ok(material({ ...tx, delivered: { ...tx.delivered, table: { ...tx.delivered.table, rows: [["Houston Police Department", 108], ["Dallas Police Department", 84]] } } }, txLabel).includes("statement"), "the row count is checked");
-assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, rank: { by: "rate", direction: "top", limit: 20 } } } as Case["expected"])).includes("rank by"));
+assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, rank: { by: "rate", direction: "top", limit: 10 } } } as Case["expected"])).includes("rank by"));
 assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, filters: ["city agencies"] } } as Case["expected"])).includes("filters"), "the reporters rule is a filter of every ranking");
 const okRates = ok4("Shoplifting rates in Tulsa and Oklahoma City in 2024");
 const ratesLabel = (denominator: string) => label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Tulsa Police Department", state: "OK" }, { kind: "agency", name: "Oklahoma City Police Department", state: "OK" }],
@@ -3112,10 +3136,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const ask1 = as(shadowAnswer(q, rdeps), "clarify");
     assert.equal(ask1.about, "which period", q);
     const go = ask1.options[0].continuation!;
-    // The title reads the question back: the place, the measure, "by City", then the timeframe (Jeff 2026-11-21).
-    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("United States ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
+    // The title reads the question back: "Cities With the Most ...", then the timeframe (Jeff 2026-11-24).
+    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("Cities With the ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
   }
   assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
+  // Review 419 N2: a size written beside "most dangerous", "highest murder" or "top-N" is the limit; a stray number is not.
+  const limitOf = (q: string) => { const o = shadowAnswer(q, rdeps); return o.kind === "shr" ? (o.question.ranking as { limit?: number } | undefined)?.limit : `not shr: ${JSON.stringify(o).slice(0, 250)}`; };
+  assert.equal(limitOf("Big cities, top 5 by share of murders via firearm in 2024"), 5, "control: top 5");
+  assert.match(String(limitOf("Big cities, the 5 most dangerous by share of murders via firearm in 2024")), /^not shr: .*no agreed definition of safest or most dangerous/, "\"most dangerous\" is still declined, never a size");
+  assert.equal(limitOf("Big cities, the 5 highest by share of murders via firearm in 2024"), 5, "5 highest cities");
+  assert.equal(limitOf("Big cities, top-5 by share of murders via firearm in 2024"), 5, "top-5 cities");
+  assert.equal(limitOf("Big cities with the highest share of murders via firearm in 2024"), 10, "no number: the default");
   // Without a release it stays Homicide Reports' (the tab has them), as before.
   const old = shadowAnswer("Big cities with highest share of murders via firearm in 2024", deps);
   assert.ok(old.kind === "route" && old.source === "shr", JSON.stringify(old).slice(0, 200));
@@ -3608,6 +3639,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
 }
+// P196 (Jeff 2026-11-22, "Any 2+ places"): every answer with a city named beside other places names the agency it used.
+{
+  const o = ask("murder clearance by type in 2025 in Houston and Los Angeles") as { kind: string; delivered?: { text: string[] } };
+  if (o.kind === "answer") assert.ok(o.delivered!.text.includes("Los Angeles is read as the Los Angeles Police Department."), o.delivered!.text.join(" | "));
+  // Each city with a county agency of the name (Houston County, Dallas County) names the police department it used.
+  const dh = (ask("murder clearance by type in 2025 in Houston and Dallas") as { delivered?: { text: string[] } }).delivered?.text ?? [];
+  assert.ok(dh.includes("Dallas is read as the Dallas Police Department.") && dh.includes("Houston is read as the Houston Police Department."), dh.join(" | "));
+  // The nation or a state beside a city name is a place too (QL-ct-6cd2364e08): Baltimore is the city's police, not asked about the county.
+  assert.notEqual((ask("carjackings nationwide and in Baltimore in 2024") as { kind: string }).kind, "clarify");
+  // A name beside states only is the state (QL-hist-6f624e6886): New York in "Florida, Texas, and New York" is not the New York City Police Department.
+  const fl = ask("Compare robbery in Florida, Texas, and New York since 1990") as { kind: string; delivered?: { text: string[] } };
+  assert.notEqual(fl.kind, "clarify");
+  assert.ok(!(fl.delivered?.text ?? []).some((t) => /New York City Police Department/.test(t)), JSON.stringify(fl.delivered?.text));
+}
 // P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
 {
   const rd = (q: string) => readQuestion(q, 2026, "2026-09").text;
@@ -3903,6 +3948,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // The same wording as "by type by year", which answers.
   assert.equal(ask("Detroit murder clearances by year and clearance type in 2023 and 2024").kind, ask("Detroit murder clearances by type by year in 2023 and 2024").kind);
 }
+// Cities ranked with no rank word ("cities by murder rate"): the same ranking as "top cities", never "I couldn't use cities".
+{
+  for (const q of ["cities by murder rate", "cities by homicide rate in 2025", "homicide rates in cities 2019", "city homicide rates in 2024"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && o.reason === "reader"), q);
+  }
+}
 // P191 (Jeff 2026-11-21, reader class): clearance wording and "the entire US" are read, never "I didn't understand".
 {
   const readerDecline = (q: string) => { const o = ask(q); return o.kind === "decline" && o.reason === "reader"; };
@@ -4053,7 +4105,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/Population Over 50,000/.test(t) && /1 agency has no FBI population on file/.test(t) && !/Top 50/.test(t), `${q}: ${t.slice(0, 400)}`); }
   // "all", "every", "entire", "complete list" are the same ask with no cap; "every Texas city" is the state's cities, not Texas City.
   for (const q of ["Robberies in all Texas cities over 50,000 in 2024", "Robberies in every Texas city over 50,000 in 2024", "Show the complete list of Texas cities over 50,000 by robberies in 2024"]) {
-    const o = as(ask(q), "answer") as any; assert.ok(/Texas Robbery Offenses by City/.test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
+    const o = as(ask(q), "answer") as any; assert.ok(/Cities in Texas With the Most Robbery Offenses/.test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
   // Nothing qualifies: said, with the filter stated.
   for (const [q, f] of [["Robberies in Texas cities over 5,000,000 in 2024", "5,000,000"], ["Murders in Louisiana cities over 100,000 in 2024", "100,000"]]) {
     const o = as(ask(q), "decline") as any; assert.ok(new RegExp(`No city agency in \\w+ has a population of ${f} or more`).test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }

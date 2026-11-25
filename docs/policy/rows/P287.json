@@ -1,0 +1,12 @@
+{
+  "id": "P287",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"which cities had the most murders in 2024\", \"top 5 cities by robbery rate in 2023\", \"Texas cities with the most shoplifting in 2024\"",
+  "what the app does today": "A ranking question answers with a ranked table.",
+  "proposed behavior": "A ranking shows the top 10 by default, and a named number (\"top 5\") is honored. The title is plain Title Case, like \"Cities With the Most Murders, 2024\" or \"Cities in Texas With the Most Shoplifting Offenses, 2024\" (the place is said only for a state or region; a rate says \"Highest\" or \"Lowest\" and \"Rates\"). Agencies that did not report all 12 months are left out and named in a note (P60). The statistic is a count unless the question says \"rate\"; a rate ranking with no population named ranks agencies of 100,000 or more, said.",
+  "exact default or choices offered": "Top 10 rows (replaces D05's 20).",
+  "why": "Jeff 2026-11-24 (card \"Ranked table, Title Case title\", through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator); built in the rankings PR",
+  "test cases": "scripts/test-nibrs-shadow.ts (ranking titles)."
+}

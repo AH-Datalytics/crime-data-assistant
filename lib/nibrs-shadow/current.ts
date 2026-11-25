@@ -456,7 +456,9 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
     shown = r.ranked; leftOut = r.leftOut;
     const most = rq.pick.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes (the sample note, ties, who is left out), then the source.
-    lead = `${titleCase(where.replace(/^the /i, ""))} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.floorOver ? `Over ${(rq.minPopulation - 1).toLocaleString("en-US")}` : `${rq.minPopulation.toLocaleString("en-US")} or More`}` : ""}${capped ? `, Top ${rq.pick.limit} of ${entries.length.toLocaleString("en-US")} Agencies` : ""}, ${titleTimeframe(periodTitle({ from: rq.from, to: rq.to }, spanWords))}`;
+    // Jeff 2026-11-24 (ranked table card): "Cities With the Most Murders, 2026 Year to Date", the place said only for a state or region.
+    const inWhere = rq.state === "US" && !rq.region ? "" : ` in ${titleCase(where.replace(/^the /i, ""))}`;
+    lead = `${titleCase(`${unitPlural}${inWhere} with the ${most} ${rate ? `${SINGULAR[col]} rates` : WORDS[col]}`)}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.floorOver ? `Over ${(rq.minPopulation - 1).toLocaleString("en-US")}` : `${rq.minPopulation.toLocaleString("en-US")} or More`}` : ""}${capped ? `, Top ${rq.pick.limit} of ${entries.length.toLocaleString("en-US")} Agencies` : ""}, ${titleTimeframe(periodTitle({ from: rq.from, to: rq.to }, spanWords))}`;
     extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.${capped ? " Asking for all of them shows every row." : ""}`);
     if (r.tie?.truncated) extra.push(truncatedTieSentence(r.tie, rate));
     else if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
