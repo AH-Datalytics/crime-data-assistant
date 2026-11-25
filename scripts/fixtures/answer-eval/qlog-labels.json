@@ -13,7 +13,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -1032,7 +1033,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Postal crime data is not available."
+    "reason": "Postal crime data is not available.",
+    "wording": "Postal crime data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -1080,7 +1082,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -1102,7 +1105,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -1514,7 +1518,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -2090,7 +2095,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -2602,7 +2608,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -2911,7 +2918,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Cyber crime data is not available."
+    "reason": "Cyber crime data is not available.",
+    "wording": "Cyber crime data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -3115,7 +3123,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -3494,7 +3503,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -3538,7 +3548,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -3963,7 +3974,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -4381,7 +4393,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Cyber crime data is not available."
+    "reason": "Cyber crime data is not available.",
+    "wording": "Cyber crime data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -4928,7 +4941,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -5680,7 +5694,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -5837,7 +5852,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -6343,7 +6359,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -7738,7 +7755,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -7892,7 +7910,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -8151,7 +8170,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -8788,7 +8808,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -8894,7 +8915,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "White-collar crime data is not available."
+    "reason": "White-collar crime data is not available.",
+    "wording": "White-collar crime data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -8938,7 +8960,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -10315,7 +10338,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -11791,7 +11815,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -12306,7 +12331,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -12550,7 +12576,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Metro area data is not available."
+    "reason": "Metro area data is not available.",
+    "wording": "Metro area data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -12876,7 +12903,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -13656,7 +13684,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -14266,7 +14295,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -14314,7 +14344,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -14588,7 +14619,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -14694,7 +14726,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -16709,7 +16742,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -17280,7 +17314,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -17542,7 +17577,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -17889,7 +17925,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -18181,7 +18218,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -18308,7 +18346,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -18413,7 +18452,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -18519,7 +18559,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -19290,7 +19331,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -19531,7 +19573,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -20363,7 +20406,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -20385,7 +20429,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -20462,7 +20507,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -22344,7 +22390,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -22392,7 +22439,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -22627,7 +22675,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -25578,7 +25627,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -26673,7 +26723,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -27119,7 +27170,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -27244,7 +27296,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -27687,7 +27740,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -28109,7 +28163,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -28590,7 +28645,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -29340,7 +29396,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -29484,7 +29541,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -29693,7 +29751,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -30733,7 +30792,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -30968,7 +31028,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data for college campuses is not available."
+    "reason": "Data for college campuses is not available.",
+    "wording": "Data for college campuses is not available."
    },
    "label": {
     "status": "reviewed",
@@ -32209,7 +32270,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Cyber crime data is not available."
+    "reason": "Cyber crime data is not available.",
+    "wording": "Cyber crime data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -32710,7 +32772,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -33221,7 +33284,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -33431,7 +33495,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -36897,7 +36962,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -37357,7 +37423,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -37434,7 +37501,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -37540,7 +37608,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -38808,7 +38877,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -40232,7 +40302,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -41153,7 +41224,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -42143,7 +42215,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -42701,7 +42774,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -42913,7 +42987,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -44813,7 +44888,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -46016,7 +46092,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -47953,7 +48030,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -48975,7 +49053,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -50102,7 +50181,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -51506,7 +51586,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -51624,7 +51705,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -51884,7 +51966,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -52823,7 +52906,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -53969,7 +54053,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -54709,7 +54794,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -56532,7 +56618,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Cyber crime data is not available."
+    "reason": "Cyber crime data is not available.",
+    "wording": "Cyber crime data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -56860,7 +56947,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -57555,7 +57643,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -58846,7 +58935,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -60767,7 +60857,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data for college campuses is not available."
+    "reason": "Data for college campuses is not available.",
+    "wording": "Data for college campuses is not available."
    },
    "label": {
     "status": "reviewed",
@@ -61051,7 +61142,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -61310,7 +61402,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -61383,7 +61476,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -62222,7 +62316,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -62455,7 +62550,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -62532,7 +62628,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -63057,7 +63154,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -63157,7 +63255,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -65741,7 +65840,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Metro area data is not available."
+    "reason": "Metro area data is not available.",
+    "wording": "Metro area data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -65986,7 +66086,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -67469,7 +67570,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -67491,7 +67593,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -68036,7 +68139,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -68401,7 +68505,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -70905,7 +71010,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -71088,7 +71194,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -71559,7 +71666,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -72571,7 +72679,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -72593,7 +72702,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -72667,7 +72777,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -73186,7 +73297,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -73784,7 +73896,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -74003,7 +74116,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -74072,7 +74186,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -74412,7 +74527,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -74657,7 +74773,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -74704,7 +74821,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -75305,7 +75423,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -75486,7 +75605,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -75564,7 +75684,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I'm sorry, I didn't understand your question. Please try again."
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
@@ -76090,7 +76211,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -76362,7 +76484,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -77758,7 +77881,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -77780,7 +77904,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -77985,7 +78110,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -79184,7 +79310,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -79797,7 +79924,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -80057,7 +80185,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -80262,7 +80391,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -81331,7 +81461,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -81439,7 +81570,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Metro area data is not available."
+    "reason": "Metro area data is not available.",
+    "wording": "Metro area data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -81483,7 +81615,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -81943,7 +82076,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
+    "reason": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading.",
+    "wording": "Gang-related crime is poorly reported to the FBI, so counts of it could be misleading."
    },
    "label": {
     "status": "reviewed",
@@ -82355,7 +82489,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -82900,7 +83035,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -83359,7 +83495,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -84398,7 +84535,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -84866,7 +85004,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -86915,7 +87054,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -87804,7 +87944,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -88257,7 +88398,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -88402,7 +88544,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -88893,7 +89036,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -88915,7 +89059,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -89849,7 +89994,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -90273,7 +90419,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -91858,7 +92005,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Metro area data is not available."
+    "reason": "Metro area data is not available.",
+    "wording": "Metro area data is not available."
    },
    "label": {
     "status": "reviewed",
@@ -93353,7 +93501,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "I cannot answer that question because I am only able to answer questions related to crime data."
+    "reason": "I cannot answer that question because I am only able to answer questions related to crime data.",
+    "wording": "I cannot answer that question because I am only able to answer questions related to crime data."
    },
    "label": {
     "status": "reviewed",
@@ -93594,7 +93743,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -94040,7 +94190,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -94481,7 +94632,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data for college campuses is not available."
+    "reason": "Data for college campuses is not available.",
+    "wording": "Data for college campuses is not available."
    },
    "label": {
     "status": "reviewed",
@@ -97620,7 +97772,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Changing the chart isn't available here."
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
@@ -98263,7 +98416,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
+    "reason": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here.",
+    "wording": "Court outcomes and corrections (charges, convictions, sentences, recidivism) are not available here."
    },
    "label": {
     "status": "reviewed",
@@ -104935,7 +105089,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -105067,7 +105222,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -106176,7 +106332,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
+    "reason": "Data below the agency level (neighborhoods, districts, wards, beats) is not available.",
+    "wording": "Data below the agency level (neighborhoods, districts, wards, beats) is not available."
    },
    "label": {
     "status": "reviewed",
@@ -108802,7 +108959,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "There is no data available for <crime> in <place>."
+    "reason": "There is no data available for <crime> in <place>.",
+    "wording": "There is no data available for <crime> in <place>."
    },
    "label": {
     "status": "reviewed",
@@ -111545,7 +111703,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
@@ -112608,7 +112767,8 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
+    "reason": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm.",
+    "wording": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assaults involving a firearm."
    },
    "label": {
     "status": "reviewed",
