@@ -66,6 +66,22 @@ if (bad.length) {
   process.exit(1);
 }
 
+// 3b. duplicate ids in the policy-row id list (a union merge can double a line; the list is not sorted, so order is not checked)
+{
+  const seen = new Set();
+  const dup = [];
+  for (const raw of fs.readFileSync(path.join(ROOT, "scripts", "fixtures", "policy-row-ids.txt"), "utf8").split(/\r?\n/)) {
+    const id = raw.trim();
+    if (!id || id.startsWith("#")) continue;
+    if (seen.has(id)) dup.push(id);
+    seen.add(id);
+  }
+  if (dup.length) {
+    console.error(`prepush: FAILED: duplicate lines in policy-row-ids.txt: ${[...new Set(dup)].join(", ")}`);
+    process.exit(1);
+  }
+}
+
 // 4. policy rows
 run("policy rows", process.execPath, [path.join(ROOT, "scripts", "test-policy-rows.js")]);
 
