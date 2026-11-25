@@ -19,7 +19,7 @@ export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 
 export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "scope" | "shootings";
 /** `lookup`: a scope question that names an agency, a county or a state ("What agencies match Dallas County in Texas?"). `term`: the one term a definitions question names that has an FBI definition on hand. */
-export type CoverageLookup = { kind: "agency" | "county" | "state"; name: string; state?: string | null };
+export type CoverageLookup = { kind: "agency" | "county" | "state"; name: string; state?: string | null; /** The city the place resolver chose (Jeff 2026-11-25, "by city"): agencies are those whose agency-table city is this, in `state`. */ city?: string | null };
 export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean; lookup?: CoverageLookup | null; term?: CoverageTerm | null; program?: "srs" | "nibrs" | null; ucr?: boolean };
 export type CoverageTerm = "simple assault" | "violent crime" | "domestic violence" | "personal weapons" | "srs";
 export type CoverageAnswer = {
@@ -39,7 +39,7 @@ export const SOURCES_SENTENCE = "The data comes from the FBI's Uniform Crime Rep
 export const VIOLENT_NIBRS = "In NIBRS, violent crime is murder and nonnegligent manslaughter (09A), rape (11A, 11B and 11C), robbery (120) and aggravated assault (13A).";
 export const FBI_DEFINITIONS: Record<CoverageTerm, { title: string; text: string; source: string }> = {
   "domestic violence": { title: "Domestic Violence (NIBRS)", source: "Source: FBI NIBRS.",
-    text: "NIBRS has no domestic violence offense. Domestic violence is recorded through the victim-to-offender relationship codes (spouse, boyfriend or girlfriend, parent, child and other family). It is not the same as Family Offenses, Nonviolent (90F)." },
+    text: "NIBRS has no domestic violence offense. Domestic violence is recorded two ways: through the victim-to-offender relationship codes (spouse, boyfriend or girlfriend, parent, child and other family), and, for victims of aggravated assault (13A) and murder and nonnegligent manslaughter (09A) only, through circumstance code 06, Domestic Violence. It is not the same as Family Offenses, Nonviolent (90F)." },
   "personal weapons": { title: "Personal Weapons (NIBRS Weapon Code 40)", source: "Source: FBI NIBRS.",
     text: "Personal weapons are NIBRS weapon code 40: hands, fists, feet and teeth." },
   "srs": { title: "SRS (Summary Reporting System)", source: "Source: FBI SRS.",
@@ -155,6 +155,17 @@ function lookupAnswer(lk: CoverageLookup, d: CoverageDeps): { rows: string[][]; 
   const byPrefix = (prefix: string) => [...pl.names.keys()].filter((o) => o.startsWith(prefix)).sort();
   if (lk.kind === "agency") {
     const n = key(lk.name);
+    // Jeff 2026-11-25 ("by city"): the agencies whose agency-table city field is the place's, in its state; unnamed ORIs are listed by ORI.
+    if (lk.city && lk.state) {
+      const stc = orif(lk.state);
+      const byCity = d.execute(`SELECT DISTINCT ori FROM ${ay(d.root)} WHERE upper(city) = ${qs(lk.city.toUpperCase())} AND state_abbr IN (${qs(stc)}, ${qs(lk.state)})`).map((r) => String(r[0])).sort();
+      if (byCity.length) {
+        ciLive(byCity);
+        const rows = byCity.map(row);
+        const st = STATE_NAMES[lk.state] ?? lk.state;
+        return { rows, text: [`Agencies in ${lk.city}, ${st}`, `${rows.length} agencies in the FBI's agency list have ${lk.city} as their city.`, ...rows.map((r) => (r[1] ? `${r[0]}: ${r[1]} (${r[4]}).` : `${r[0]}: no agency name in the FBI list (${r[4]}).`)), COVERAGE_SOURCE] };
+      }
+    }
     const hits = [...pl.names.entries()].filter(([o, nm]) => nm.toLowerCase().includes(n) && (!lk.state || postal(o.slice(0, 2)) === lk.state)).map(([o]) => o).sort().slice(0, 20);
     const named = (index.size ? [...index.values()] : []).filter((a: any) => key(a.name) === n && (!lk.state || a.state === lk.state)).map((a: any) => a.ori);
     const oris = [...new Set([...named, ...hits])];
@@ -175,11 +186,11 @@ function lookupAnswer(lk: CoverageLookup, d: CoverageDeps): { rows: string[][]; 
       + `y AS (SELECT max(data_year) AS y FROM f), k AS (SELECT fips_county FROM f WHERE ori = ${qs(cty[0].ori)} AND data_year = (SELECT y FROM y)) `
       + `SELECT DISTINCT f.ori FROM f JOIN k USING (fips_county) WHERE f.data_year = (SELECT y FROM y) AND f.ori LIKE ${qs(`${stc}%`)}`).map((r) => String(r[0]));
     const oris = byPrefix(prefix);
-    const all = [...new Set([cty[0].ori, ...oris, ...byFips.filter((o) => pl.names.has(o))])].sort();
+    const all = [...new Set([cty[0].ori, ...oris, ...byFips])].sort();
     ciLive(all);
     const rows = all.map(row);
     const st = STATE_NAMES[cty[0].state] ?? cty[0].state;
-    return { rows, text: [`Agencies in ${lk.name} County, ${st}`, `${rows.length} agencies are in the county: those with the county code ${prefix} and those whose NIBRS records name it as their primary county. ${cty[0].ori} is the county agency.`, ...rows.map((r) => `${r[0]}: ${r[1]} (${r[3]}).`), COVERAGE_SOURCE] };
+    return { rows, text: [`Agencies in ${lk.name} County, ${st}`, `${rows.length} agencies are in the county: those with the county code ${prefix} and those whose NIBRS records name it as their primary county. ${cty[0].ori} is the county agency.`, ...rows.map((r) => (r[1] ? `${r[0]}: ${r[1]} (${r[3]}).` : `${r[0]}: no agency name in the FBI list (${r[3]}).`)), COVERAGE_SOURCE] };
   }
   const code = lk.name;
   const st = STATE_NAMES[code] ?? code;

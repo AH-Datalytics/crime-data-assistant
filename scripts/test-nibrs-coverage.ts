@@ -38,7 +38,10 @@ const execute = (sql: string): unknown[][] => {
     return rows;
   }
   // Agencies whose primary county (FIPS, ordinal 1) is the county agency's: Dallas Police carries TXDPD0000, not a TX057 code.
-  if (/agency_fips_county/.test(sql)) return [["TX0570000"], ["TXDPD0000"], ["TX0570100"]];
+  // TX0571600 has no name in agency-names.json: it is listed by its ORI, not dropped.
+  if (/agency_fips_county/.test(sql)) return [["TX0570000"], ["TXDPD0000"], ["TX0570100"], ["TX0571600"]];
+  // The agency table's city field (Jeff 2026-11-25, "by city"): the Nashville ORIs, one of them with no name on file.
+  if (/upper\(city\) = 'NASHVILLE'/.test(sql)) return [["TN0190100"], ["TN0190000"], ["TN0199999"]];
   // Crime Index agencies of a state, from the build's agency_crime table: all, and the cities among them.
   if (/count\(DISTINCT ori\), count\(DISTINCT CASE WHEN type = 'city'/.test(sql)) return [[1391, 1323]];
   if (/SELECT DISTINCT ori FROM read_parquet\('\/ci\/agency_crime.parquet'\)/.test(sql)) return [["TXDPD0000"]];
@@ -107,7 +110,7 @@ assert.match(ask("What is defined as violent crime").delivered.text[1], /murder 
   const txt = (q: string) => ask(q).delivered.text.join("\n");
   assert.match(ask("SRS definition please").delivered.text[1], /^SRS is the Summary Reporting System, the FBI's older summary reporting program\. It is a program, not an offense\.$/);
   for (const q of ["how is domestic violence defined in NIBRS?", "What constitutes domestic violence in nibrs?", "how is domestic violence defined?"])
-    assert.match(ask(q).delivered.text[1], /^NIBRS has no domestic violence offense\..*It is not the same as Family Offenses, Nonviolent \(90F\)\.$/, q);
+    assert.match(ask(q).delivered.text[1], /^NIBRS has no domestic violence offense\..*relationship codes.*circumstance code 06, Domestic Violence\. It is not the same as Family Offenses, Nonviolent \(90F\)\.$/, q);
   assert.match(ask('what counts as "personal weapons" in weapon type').delivered.text[1], /weapon code 40: hands, fists, feet and teeth/);
   // Violent crime: no program named gives both, each labeled; SRS or Crime Index gives SRS; NIBRS gives the codes.
   assert.ok(/SRS/.test(txt("What is defined as violent crime")) && /09A/.test(txt("What is defined as violent crime")));
@@ -117,8 +120,21 @@ assert.match(ask("What is defined as violent crime").delivered.text[1], /murder 
 // Scope lookups come from the agency lists: Nashville, Dallas County, Pennsylvania.
 const nash = ask("What is the exact agency name for Nashville in the dataset? Show me the agencies table entry.");
 assert.ok(nash.delivered.table.rows.some((r) => r[0] === "TN0190100"), JSON.stringify(nash.delivered.table.rows));
+assert.ok(sqls.some((s) => /upper\(city\) = 'NASHVILLE'/.test(s) && /state_abbr IN \('TN', 'TN'\)/.test(s)), "Nashville is listed by the agency table's city field, in Tennessee");
+assert.equal(nash.delivered.table.rows.length, 3);
+assert.deepEqual(nash.delivered.table.rows.find((r) => r[0] === "TN0199999")!.slice(0, 2), ["TN0199999", ""], "an unnamed ORI is listed by its ORI");
+assert.ok(nash.delivered.text.some((t) => t.startsWith("TN0199999: no agency name")), nash.delivered.text.join(" / "));
+assert.ok(nash.delivered.text[0] === "Agencies in Nashville, Tennessee" && nash.delivered.text.length === 6, nash.delivered.text.join(" / "));
+// A name two cities share asks which one, as the other place questions do (Richmond, Baltimore, Kansas City); a named state does not ask.
+for (const [nm, labels] of [["Richmond", ["Richmond, Virginia", "Richmond, California"]], ["Kansas City", ["Kansas City, Missouri", "Kansas City, Kansas"]]] as const) {
+  const o: any = shadowAnswer(`What is the exact agency name for ${nm} in the dataset? Show me the agencies table entry.`, deps);
+  assert.equal(o.kind, "clarify", nm);
+  assert.deepEqual(o.options.map((x: any) => x.label), labels, nm);
+  assert.equal(o.options[0].continuation.kind, "coverage", `${nm}: each button lists that state's agencies`);
+}
 const dal = ask("What agencies match Dallas County in Texas? Show me the agencies table entries.");
 assert.ok(dal.delivered.table.rows.some((r) => r[0] === "TX0570000") && dal.delivered.table.rows.some((r) => r[0] === "TXDPD0000"), JSON.stringify(dal.delivered.table.rows).slice(0, 300));
+assert.ok(dal.delivered.table.rows.some((r) => r[0] === "TX0571600" && r[1] === ""), "an unnamed ORI of the county is listed, not dropped");
 assert.ok(sqls.some((s) => /agency_fips_county/.test(s)), "county membership comes from the NIBRS batch header's primary county, not only the ORI prefix");
 assert.equal(dal.delivered.table.rows.find((r) => r[0] === "TXDPD0000")![4], "FBI NIBRS and Crime Index", "the Crime Index label comes from agency_crime");
 const pa = ask("which cities are represented in Pennsylvania?");
