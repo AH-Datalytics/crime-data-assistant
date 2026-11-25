@@ -1670,6 +1670,8 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
 for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
   assert.equal(ask(q).kind, "answer", q);
 }
+// Capability (ratios): a share of murders by a detail for each year or a range of years is Homicide Reports', routed, never "a share covers one period".
+for (const q of ["share of murders committed via firearm per year since 2000 in the United States", "Share of murders committed with a firearm, 2020 - 2026 in the United States", "share of juvenile murder victims per year in Chicago"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
 // Capability (ratios): a share of murders by a detail the reader has no word for (intraracial, organized crime, offender under 18) is Homicide Reports', routed; a robbery share still asks which part.
 for (const q of ["What share of homicides are intraracial in the United States", "share of murders involving organized crime in the United States", "Percentage of inter racial homicide in the United States"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
 assert.notEqual(shadowAnswer("what share of robberies were cleared by arrest in the United States", { ...deps, noDefaults: false }).kind, "route");
