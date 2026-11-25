@@ -1451,24 +1451,19 @@
    "question": "Robbery trends in midwest cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which cities",
+    "about_any": [
+     "which cities"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "notes": "a ranking or set of places (Crime Index or NIBRS) One source (Jeff 2026-11-25, unsure-116): unnamed group of cities: ask which cities."
    }
   },
   {
