@@ -18648,7 +18648,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -18659,7 +18659,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -26593,7 +26593,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -26604,7 +26604,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Police staffing and annual crime comparisons use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Police staffing and annual crime comparisons use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -34657,7 +34657,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -34668,7 +34668,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -35223,7 +35223,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -35234,7 +35234,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -35494,7 +35494,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -35505,7 +35505,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "284 final gate (2026-11-21): rule-based source/reading (P57 clearance rates, P155 national months, current year Current Trends, P09 assault, agency named), Codex second labeler One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -37947,7 +37947,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -37958,7 +37958,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Answer through 2025 and say 2026 is not available (Jeff audit rule). One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Answer through 2025 and say 2026 is not available (Jeff audit rule). One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -40763,7 +40763,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -40774,7 +40774,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -63868,7 +63868,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -63879,7 +63879,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -105945,7 +105945,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -105956,7 +105956,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. To present: Historical, through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
