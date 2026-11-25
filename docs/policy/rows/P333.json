@@ -1,0 +1,12 @@
+{
+  "id": "P333",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"what is the defanition of simple assault\", \"What is defined as violent crime\"",
+  "what the app does today": "A link to the FBI Crime Data Explorer for every definition question.",
+  "proposed behavior": "Simple assault: the FBI NIBRS offense 13B definition as published. Violent crime: the FBI SRS category (murder and nonnegligent manslaughter, rape, robbery and aggravated assault). Terms with no source from Jeff (domestic violence, personal weapons, SRS) keep the link until he supplies one; no definition is written by us.",
+  "exact default or choices offered": "None: one answer.",
+  "why": "Jeff 2026-11-25 via the Coordinator.",
+  "status": "Decided for simple assault and violent crime (Jeff 2026-11-25); domestic violence, personal weapons and SRS wait for his source.",
+  "test cases": "scripts/test-nibrs-coverage.ts (both definitions, the link kept for SRS)."
+}
