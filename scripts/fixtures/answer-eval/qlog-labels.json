@@ -83465,12 +83465,11 @@
    "previous": "Can I see murders rolling over 12 months nationally, 2018 to present?",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "historical",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "historical"
     ],
-    "answer": "the earlier question, changed as asked",
+    "answer": "yearly national murders from 1960; say earlier years are not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -83481,7 +83480,7 @@
     "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "notes": "a follow-up to an answerable question Back to 1940: yearly national murders from 1960, say earlier years are not available. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
