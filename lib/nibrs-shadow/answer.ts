@@ -915,6 +915,7 @@ export function withYearlyOffer(decl: ShadowOutcome, o: ShadowOutcome, deps: Sha
 /** Words asking a breakdown or a person detail that a Crime Index (or hate crime) figure cannot give: a default that lands on such a source would answer without it. */
 /** A clearance question (P182's exception): a clearance rate, offenses cleared, clearances by type, cleared by arrest or exception. */
 const CLEARANCE_WORDS = /\bclear(?:ance|ances|ed|ing)?\b/i;
+const WEAPON_WORDS = /\b(?:firearms?|guns?|handguns?|rifles?|shotguns?|knife|knives|weapons?)\b/i;
 /**
  * QL-nibrs-9aed2136c4 (Jeff 2026-11-22): "What percentage of murders are cleared by arrest vs exceptional" is asked for shares of the clearance types.
  * Narrow on purpose: a percentage word, a clearance word, and both "arrest" and "exceptional". Only such a question defaults a missing year to the
@@ -927,6 +928,9 @@ const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bsho
 const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:cities|agencies|places|states|counties|departments)\b|^\s*(?:compare[ds]?|comparison)\s+(?:it\s+|that\s+|this\s+)?(?:to|with|against)\b|^\s*(?:vs\.?|versus)\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
+/** E: a victim sex, a victim-offender relationship or a weapon, beside a word for the victims (or a relationship alone): a Homicide Reports question that names no crime. */
+const SHR_NO_CRIME = /\b(?:(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b[^.?]*\b(?:victims?|killed|deaths?|dead)\b|\b(?:victims?|killed|deaths?|dead)\b[^.?]*\b(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b)|\b(?:intimate|partners?|spouses?|boyfriends?|girlfriends?|wife|husband|relationships?)\b/i;
+const OFFENDER_WORD = /\b(?:offenders?|perpetrators?|suspects?|killers?|attackers?)\b/i;
 let defaultDepth = 0;
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
@@ -975,7 +979,22 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // P182's exception (Jeff 2026-11-21): a clearance question with no crime named keeps the ask (no violent-plus-property default).
       option = CLEARANCE_WORDS.test(question) ? undefined : find(/^Both$/);
       note = "No kind of crime was named, so violent crime and property crime are shown.";
+      // A weapon named with no crime ("how many firearms crimes in the usa"): weapons are recorded for violent crime, so only that button runs; it is the default, said.
+      const violentOnly = c.options.length === 1 && /^Violent crime$/.test(c.options[0].label);
+      if (!option && violentOnly && WEAPON_WORDS.test(question) && !CLEARANCE_WORDS.test(question)) {
+        option = c.options[0];
+        note = "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).";
+      }
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+      // E (Jeff 2026-11-24): a victim-sex, relationship or weapon word with no crime named is a homicide question, answered from Homicide Reports.
+      if (deps.shr && !CLEARANCE_WORDS.test(question) && SHR_NO_CRIME.test(question)) {
+        const q = c.question.replace(/[?.!\s]+$/, "");
+        defaultDepth++;
+        try {
+          const o = /\bvictims?\b/i.test(q) ? shadowAnswer(q.replace(/\bvictims?\b/i, (m) => `homicide ${m}`), deps) : shadowAnswer(`${q} homicides`, deps);
+          if (o.kind === "shr") { option = { label: "Homicide", continuation: o }; note = "No kind of crime was named, so homicide is shown from Homicide Reports."; }
+        } finally { defaultDepth--; }
+      }
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     if (!byStateRows) notes.push(note);
@@ -1066,6 +1085,12 @@ const ARRESTS_NOT_CRIMES = "Arrests do not equal crimes.";
 const JUVENILE_CRIME = /\bjuvenile\s+crimes?\b(?!\s+(?:victims?|offenders?|arrests?|rates?|trends?|levels?|numbers?|statistics?))/i; // "trend", "levels", "numbers" and "statistics" are P293's (the reader's rewrite, reading.ts)
 /** Kings County is a county in both New York and California (Jeff 2026-11-24): with no state named it is asked about, before anything else reads the question. */
 const KINGS_COUNTY = /\bkings\s+county\b(?!\s*,?\s*(?:new\s+york|ny|n\.y\.|california|ca|calif\.?)(?![a-z]))(?!\s+(?:sheriff|police|pd|so)\b)/i;
+/** P306: "typical dollar value" / "typical loss" (also amount, cost, worth); "typical" alone or with other nouns is not this ask. */
+const TYPICAL_VALUE = /\btypical\s+(?:dollar\s+)?(?:value|loss|amount|cost|worth)\b/i;
+const TYPICAL_ASK = "Do you mean the average or the median?";
+/** P305: peers named by wording ("similar cities", "peer cities", "3 agencies of similar size", "to other cities"). "Other large cities" is a different ask. */
+const PEER_CITIES = /\b(?:(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+)?(?:other\s+)?(?:(?:similar(?:ly)?(?:[-\s]?sized?|\s+situated)?|comparable|peer)\s+(?:cities|city|counties|agencies|departments|places)|(?:cities|counties|agencies|departments|places)\s+of\s+(?:a\s+)?(?:similar|comparable|the\s+same)\s+size)\b|\b(?:to|versus|vs\.?|against|with|than)\s+(?:the\s+)?other\s+(?:cities|counties|agencies|departments|places)\b/i;
+const PEER_ASK = "Which cities should it be compared with? For example, cities of similar size, or named cities.";
 function kingsCountyAsk(question: string): ShadowOutcome | null {
   const m = KINGS_COUNTY.exec(question);
   if (!m) return null;
@@ -1116,6 +1141,8 @@ function weaponRow(label: string): number {
  *  full calendar years (a part-year 2026 is not one), with the counts: "Yes. Carjackings fell from X in 2024 to Y in 2025." The by-year table stays under it. */
 const UP_DOWN_YES_NO = /^\s*(?:have|has|did)\s+(.+?)\s+(increased|decreased|gone\s+up|gone\s+down|risen|fallen|dropped|declined)\b\s*(.*?)\s*[?.!]*\s*$/i;
 const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?\b/i;
+/** P396: "(percent) change in <measure> in 2025" with one year and no second year. */
+const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
 /** "Midwest cities" with no ranking word is read as the whole region (the reader drops "cities"): whichever route answers, it says so once. */
@@ -1129,7 +1156,12 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   }
   return o;
 }
+/** A polite request opener ("can i get data on ...", "could I see ...") says nothing about the question; the question is what follows. */
+const REQUEST_OPENER = /^\s*(?:(?:hi|hello|hey)[,!]?\s+)?(?:please\s+)?(?:can|could|may|might|would)\s+(?:i|we|you)\s+(?:please\s+)?(?:get|see|have|find|pull|view|look\s+at|show\s+me|give\s+me)\s+(?:(?:me|us)\s+)?(?:(?:some|any|the|all\s+(?:the|of\s+the))\s+)?(?:(?:data|numbers|stats|statistics|figures|info|information)\s+(?:on|about|for|regarding|of)\s+)?/i;
+
 function shadowAnswerCore(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const unopened = question.replace(REQUEST_OPENER, "");
+  if (unopened !== question && unopened.trim().length >= 8) return shadowAnswer(unopened, depsIn);
   const ud = UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
     const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
@@ -1163,7 +1195,7 @@ function shadowAnswerCore(question: string, depsIn: ShadowDeps): ShadowOutcome {
       const m = first.match(/^(.*?) Murder Victims by Weapon, (.*)$/);
       const title = m ? `${m[1]} Weapon Types Used in Violent Crimes, Victims, ${m[2]}` : first;
       const rest = answers[0].delivered.text.slice(1).filter((x) => !/^A crime that falls in several/.test(x) && !/^Counts are /.test(x) && !/^Property crimes are counted by offense/.test(x));
-      const note = "Counts are victims; a victim of an offense with two weapons is counted in each weapon's row, so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
+      const note = "Counts are victims; a victim is counted once in each weapon row that applies (two firearms count once; a firearm and a knife count in both rows), so the rows can add up to more than the victims. Robbery is counted by victims in this table only.";
       const evidence = rows.flatMap((r, ri) => r.slice(1).map((v, ci) => ({ row: ri, statistic: (columns[ci + 1].binding as { as?: string }).as ?? "count", status: typeof v === "number" ? "VALUE" : "UNKNOWN" }))) as unknown as Delivered["evidence"];
       const o = answers[0];
       return { ...o, delivered: { ...o.delivered, table: { columns, rows }, evidence, chart: null, text: [title, ...rest, note] } as typeof o.delivered };
@@ -1188,6 +1220,34 @@ function shadowAnswerCore(question: string, depsIn: ShadowDeps): ShadowOutcome {
   }
   { const sr = shareOfRaceByYear(question, depsIn); if (sr) return sr; }
   { const kc = kingsCountyAsk(question); if (kc) return kc; }
+  // P306 (Jeff 2026-11-24): a "typical" dollar value or loss does not say which summary is meant; ask average or median.
+  { const ty = TYPICAL_VALUE.exec(question);
+    if (ty) {
+      const swap = (word: string) => question.replace(/\btypical\b/i, word);
+      return { kind: "clarify", about: "mean or median value", question: TYPICAL_ASK, options: [
+        { label: "Average", question: swap("average") },
+        { label: "Median", question: swap("median") },
+      ] };
+    }
+  }
+  // P305 (Jeff 2026-11-24): "other cities" / "similar cities" ask which cities to compare with; the app never picks a peer group itself.
+  // A place that has to be told apart (Richmond, Baltimore) is still asked first: the peer wording rides on each of its buttons.
+  { const pm = PEER_CITIES.exec(question);
+    if (pm) {
+      const stripped = question.replace(pm[0], " ").replace(/\s+(?:and|or|vs\.?|versus|against|compar\w*(?:\s+(?:it|them))?(?:\s+(?:to|with|against))?)\s*(?=[,?.]|$)/i, "").replace(/\s{2,}/g, " ");
+      const first = shadowAnswer(stripped, depsIn);
+      const peerText = pm[0].replace(/^(?:to|versus|vs\.?|against|with|than)\s+/i, "");
+      if (first.kind === "clarify" && /^which [A-Z]/.test(first.about) && first.options.every((o) => typeof o.question === "string" || typeof o.continuation === "object")) {
+        const placeName = first.about.slice("which ".length).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return { ...first, options: first.options.map((o) => {
+          const { continuation: _c, ...rest } = o;
+          const base = typeof o.question === "string" ? o.question : stripped.replace(new RegExp(placeName, "i"), o.label);
+          return { ...rest, question: `${base} compared to ${peerText}` };
+        }) };
+      }
+      return { kind: "clarify", about: "which cities", question: PEER_ASK, options: [{ label: "Name the cities", entry: "which cities" }] };
+    }
+  }
   if (JUVENILE_CRIME.test(question) && !/\b(?:victims?|offenders?|arrest\w*|murders?|homicides?|robbery|robberies|assaults?|burglar\w*|thefts?|rapes?|larcen\w*|shootings?|arsons?)\b/i.test(question) && !/\brates?\b/i.test(question)) { // a rates ask is never rewritten to arrests (P293)
     let q = question.replace(JUVENILE_CRIME, "juvenile arrests");
     // "trend of juvenile crime" asks for the years in a row, not for a crime to be named.
@@ -1198,6 +1258,15 @@ function shadowAnswerCore(question: string, depsIn: ShadowDeps): ShadowOutcome {
       // House form "Arrests of Arrestees Under 18" kept (Coordinator 2026-11-24: a global rewording is a separate card).
     }
     return o;
+  }
+  // P396 (Jeff 2026-11-24): "change in X in 2025", one year, is read as the year before to that year (2024 to 2025); the title says so.
+  { const one = SINGLE_YEAR_CHANGE.exec(question);
+    if (one && (question.match(/\b(?:19|20)\d{2}\b/g) ?? []).length === 1 && Number(one[2]) > 1930 && Number(one[2]) <= new Date().getFullYear()) {
+      const y = Number(one[2]);
+      const o = shadowAnswer(question.replace(one[0], `${one[1]} from ${y - 1} to ${y}`), depsIn);
+      const dl = (o as { delivered?: { text: string[] } }).delivered; if (dl && o.kind !== "decline" && o.kind !== "clarify") dl.text.splice(1, 0, `"Change in ${y}" is read as ${y - 1} to ${y}.`);
+      return o;
+    }
   }
   // P304 (Jeff 2026-11-24): one calendar day ("on May 24, 2025") is answered for its month, and the answer says so.
   { const days = [...question.matchAll(SINGLE_DAY_G)];
@@ -2413,6 +2482,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       ? fromLedger(Object.assign(withParts(ledger0, ledger0.parts.filter((p) => p !== part)), { people: { ...ppl0, ask: null, by: { who: "offender" as const, attr, paired: false } } }), deps, pins)
       : victims;
     if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    // E (Jeff 2026-11-24): a homicide question naming sex with no offender word is the victims' sex, said. Both a victim and an offender word still ask.
+    const vShown = attr === "sex" && victims.kind === "clarify" ? applyDefaults(ledger0.question, victims, deps) : victims;
+    if (attr === "sex" && vShown.kind === "shr" && !OFFENDER_WORD.test(ledger0.question) && !deps.noDefaults && !deps.checkingOffer) {
+      const note = "No victim or offender was named, so the victims' sex is shown.";
+      const t = vShown.delivered.text;
+      return { ...vShown, delivered: { ...vShown.delivered, text: [t[0], note, ...t.slice(1)] }, buttons: [...((vShown as { buttons?: ShadowOption[] }).buttons ?? []), { label: "Offenders' sex", continuation: offenders }] } as ShadowOutcome;
+    }
     // "Violent crime" by age: Jeff's words, "Offender" and "Victim" (2026-11-15; this question only).
     if (attr === "age" && /\bviolent\s+crimes?\b/i.test(ledger0.question))
       return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
@@ -2493,7 +2569,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const hasPartI = ledger0.parts.some((p) => p.clause === 0 && partI(p));
     // Nothing else asked: offenses is allowed, but no arrests, victims, breakdown, cohort, filter or source named.
     const onlyCrimeOverTime = ledger0.parts.every((p) => p.clause !== 0 || p.state === "context" || ["measure", "place", "period", "grain", "statistic"].includes(p.concept)
-      || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
+      || (p.concept === "unit" && p.value === "offenses") || partI(p)
+      // "Fairfax County Police Department": the reader splits the agency noun off a county or city place; it is the place's own agency, not a second ask.
+      || (p.concept === "entity" && p.value === "agency" && /^(?:police|sheriff'?s?)\s+(?:department|office)$/i.test(p.text.trim()) && clause0("place").length === 1 && /^(?:county|city):/.test(String(clause0("place")[0].value))) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
     // P301 (Jeff 2026-11-24, "clarify odd openers"): with no crime word and no Part I, only a bare place answers (an opener "show me" is fine);
@@ -2696,6 +2774,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const byStateRows = /\b(?:by|per|each|every|for\s+each)\s+state\b/i.test(ledger0.question);
     const nationDefault = deps.noDefaults ? null : withDefault(nationOption, byStateRows ? "" : "No place was named, so the United States is shown.", byStateRows ? [] : placeButtons, "place");
     if (nationDefault) return nationDefault;
+    // The nation's answer is another source's (Homicide Reports details): routed there, as with the United States named, never a place asked.
+    // Only for a question naming a race or ethnicity: every other no-place question keeps its place ask (Runner gate 2026-11-24).
+    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && /\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)) return nationOption.continuation;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.
     if (!isDeferred(nationOption) && nationOption.continuation?.kind === "decline" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "peer"))
@@ -2914,16 +2995,19 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P154 (Jeff 2026-11-19): "murders rolling over 12 months" is a series of rolling totals by month (not "the last 12 months", which stays one
     // total): from the first January with a full window (none named), or from the January of the year named; counts, Current Trends' months.
     const rollW = sp.window?.months ?? 12;
-    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && sp.statistic === "count" && rollW >= 2
+    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && (sp.statistic === "count" || sp.statistic === "rate") && rollW >= 2
       && (sp.period.form === "none" || sp.period.form === "since" || sp.period.form === "range" || sp.period.form === "year");
     if (rollingSeries) {
       const pf = sp.period;
-      const earliest = firstFullJanuary(cur.finalFirstMonth, rollW);
+      // A rate for a state or the nation starts in the published sample's months (2025-01 on), so its first default window is later.
+      const groupRate = sp.statistic === "rate" && sp.places.some((p) => p.kind === "national" || p.kind === "state");
+      const earliest = firstFullJanuary(groupRate ? cur.firstMonth : cur.finalFirstMonth, rollW);
       const cap = (m: string) => (m > cur.lastMonth ? cur.lastMonth : m);
       let from = pf.form === "since" ? `${pf.from}-01` : pf.form === "range" ? `${pf.from}-01` : pf.form === "year" ? `${pf.year}-01` : earliest;
       const to = pf.form === "range" ? cap(`${pf.to}-12`) : pf.form === "year" ? cap(`${pf.year}-12`) : cur.lastMonth;
       let outside: string | undefined;
-      if (from < earliest) {
+      // A start named before the first window a group rate can have is declined by the rate itself, not clipped.
+      if (from < earliest && !(groupRate && pf.form !== "none")) {
         const gone = [from, shiftMonth(cur.finalFirstMonth, -1)];
         outside = `Current Trends figures in the data cover ${monthName(cur.finalFirstMonth)} through ${monthName(cur.lastMonth)}; ${monthName(gone[0])} through ${monthName(gone[1])} ${gone[0] === gone[1] ? "is" : "are"} outside them.`;
         from = earliest;
@@ -2938,7 +3022,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const several = rp.length > 1;
       if (rp.every((p): p is CurrentPlace => p !== null) && (!several || rp.every((p) => p.kind === "agency")) && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).column) {
         const agencyIds = rp.flatMap((p) => (p.kind === "agency" ? [p.ori] : []));
-        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, ...(outside ? { outside } : {}),
+        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, statistic: sp.statistic === "rate" ? "rate" : "count", ...(outside ? { outside } : {}),
           ...(agencyIds.length ? { agencyLine: reportedBy(agencyIds.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
         if (r.kind === "current") return r;
         return decline(/outside them|not all in them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);

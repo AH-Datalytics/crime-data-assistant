@@ -389,6 +389,8 @@ const RULES: Rule[] = [
   // ---- rate and count statistics ----
   { concept: "statistic", value: () => "per100k", pattern: R(String.raw`\bper\s+100(?:,?000|\s*k|\s+thousand)(?:\s+${POP_WORD})?\b`) },
   { concept: "statistic", value: (m) => `scale:${m[1]}`, pattern: R(String.raw`\bper\s+(\d[\d,]*(?:\s*k\b)?|ten\s+thousand|million|one\s+million|thousand)(?:\s+${POP_WORD})?\b`) },
+  // "on 1000 persons" is the same ask as "per 1,000 people" (Jeff 2026-11-24): the fixed per-100,000 decline.
+  { concept: "statistic", value: (m) => `scale:${m[1]}`, pattern: R(String.raw`\bon\s+(1,?000|100|10,?000)\s+(?:people|persons|residents)\b`) },
   { concept: "statistic", value: () => "percapita", pattern: R(String.raw`\bper[-\s]capita\b`) },
   { concept: "statistic", value: () => "rate", pattern: R(String.raw`\b(?:incident\s+)?rates?\b`) },
   { concept: "statistic", value: () => "count", pattern: R(String.raw`\bhow\s+many\b|\b(?:total\s+)?(?:annual\s+)?(?:numbers?|counts?)(?:\s+of)?\b`) },

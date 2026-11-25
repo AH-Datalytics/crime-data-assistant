@@ -373,4 +373,19 @@ assert.equal(standsAlone("robberies in Paris, France in 2025"), true);
 assert.equal(standsAlone("robberies in Paris, France vs London, England in 2025"), true);
 assert.equal(standsAlone("compare to Paris, France"), false);
 
+// Row 1 (follow-up errors by cause, 2026-11-24): fragments the rules had no form for, or read wrongly.
+// A county's state written as "Washington State" goes with the county when "same for" replaces it (QL-ct-36ce0013c3).
+assert.equal(q(rw("calculate the percent change in violent crime rates for King County, Washington State from 2024-2025", "calculate the same for chicago, IL")),
+  "calculate the percent change in violent crime rates for chicago, IL from 2024-2025");
+// The other sex, with a lead-in and the person named (QL-nibrs-ee67a5bd50); a person the question does not name is still asked.
+assert.equal(q(rw("Texas domestic violence murders per year, 2019 to 2025, where the victim was female broken down by firearm and non-firearm", "now give me male victims")),
+  "Texas domestic violence murders per year, 2019 to 2025, where the victim was male broken down by firearm and non-firearm");
+assert.equal(rw("murders of female offenders in Texas in 2024", "now give me male victims").kind, "ask");
+assert.equal(rw("murders of victims with female offenders in Texas in 2024", "what about male victims").kind, "ask");
+// "how about the last 20 years" replaces a "last N years" period (QL-ct-f4129a6a05).
+assert.equal(q(rw("compare Seattle and Denver homicides over the last 10 years", "how about the last 20 years")), "compare Seattle and Denver homicides over the last 20 years");
+// A breakdown by bias type (QL-hc-4cef33c1eb, QL-nibrs-4cef33c1eb): added to the question.
+assert.equal(q(rw("hate crimes in California since 2010", "break it down by bias type")), "hate crimes in California since 2010 by bias");
+assert.equal(rw("hate crimes in California since 2010 by bias", "break it down by bias type").kind, "ask");
+
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
