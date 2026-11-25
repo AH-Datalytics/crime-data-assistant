@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, agencyMonthPopulations, agencyPopulation, answerCurrent, answerCurrentSeveral, answerCurrentChange, answerCurrentRolling, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -50,6 +50,66 @@ assert.equal(currentRate(88, 100000, 0), null);
   assert.equal(agencyPopulation(bld, "X", "2026-02", own), 100_000);
   assert.equal(agencyPopulation(bld, "X", "2027-02", own), null, "2027 does not carry");
   assert.equal(agencyPopulation(bld, "X", "2025-11", own), null, "a past month does not carry");
+}
+// A rolling rate (Jeff 2026-11-23, P269): the window's count over the month-weighted population. His example: the 12 months
+// ending March 2025 hold 220 murders; nine months at 576,000 and three at 569,000 weight to 574,250, so 38.3 per 100,000.
+{
+  const bld = { root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
+  const counts: Record<string, number> = {};
+  for (const m of months("2024-04", "2024-12")) counts[m] = 18; // 162
+  Object.assign(counts, { "2025-01": 20, "2025-02": 19, "2025-03": 19 }); // 58, so 220 in all
+  const fake = (sql: string): unknown[][] => {
+    if (sql.includes("UNION ALL")) return Object.entries(counts);
+    if (sql.includes("max(year)")) return [[2024]];
+    if (sql.includes("current_crime")) return [["2025-01", 569_000], ["2025-02", 569_000], ["2025-03", 569_000]];
+    return [[2024, 576_000]];
+  };
+  const place = { kind: "agency" as const, ori: "X", label: "Xville", name: "Xville", state: "TX" };
+  const r = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, fake);
+  assert.equal(r.kind, "current");
+  if (r.kind === "current") {
+    assert.deepEqual(r.delivered.table.rows, [["2025-03", 38.3]], "220 / 574,250 per 100,000");
+    assert.equal(r.delivered.table.columns[1].header, "Rolling 12-month murder rate per 100,000");
+    assert.ok(r.delivered.text.some((t) => t.includes("not scaled to a full year")));
+  }
+  // The same window as a count is unchanged.
+  const c = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12 }, bld, fake);
+  assert.ok(c.kind === "current" && c.delivered.table.rows[0][1] === 220);
+  // A month in the window with no population leaves the window blank and says so, never a shorter average.
+  // (the latest completed year is 2023 here, so February 2025 has no carried population either)
+  const nopop = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2023]] : sql.includes("current_crime") && !sql.includes("UNION ALL") ? [["2025-01", 569_000], ["2025-03", 569_000]] : fake(sql));
+  const b2 = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, nopop);
+  assert.ok(b2.kind === "current" && b2.delivered.table.rows[0][1] === null && b2.delivered.text.some((t) => t.includes("No population is available for February 2025")));
+  // A state or the nation whose windows start before the published sample does not get a rate.
+  const early = answerCurrentRolling({ measure: "murder", places: [{ kind: "group", states: null, label: "The United States" }], from: "2025-03", to: "2025-03", window: 12, statistic: "rate" }, bld, fake);
+  assert.equal(early.kind, "current-decline");
+  // Codex 454 finding 1: a sample agency with a count and no population leaves BOTH the count and the population (the read says so in its
+  // SQL), and the answer names it; the rate is the remaining agencies' count over their population.
+  {
+    const sqls: string[] = [];
+    const grp = (sql: string): unknown[][] => (sqls.push(sql), [["2025-01", 10, 4, 100_000, 0, 1], ["2025-02", 10, 4, 100_000, 0, 0], ["2025-03", 10, 4, 100_000, 0, 0]]);
+    const nation = { kind: "group" as const, states: null, label: "The United States" };
+    const g = answerCurrentRolling({ measure: "murder", places: [nation], from: "2025-03", to: "2025-03", window: 3, statistic: "rate" }, bld, grp);
+    assert.ok(sqls[0].includes("sum(murder_total) FILTER (WHERE population > 0)") && sqls[0].includes("sum(population) FILTER (WHERE population > 0)"), "no population: out of the count and the population");
+    assert.ok(g.kind === "current" && g.delivered.table.rows[0][1] === 30, JSON.stringify(g));
+    assert.ok(g.kind === "current" && g.delivered.text.some((t) => t.includes("no population in a month are left out of both the count and the population")), "named");
+    // Every agency without a population: no rate, never a count over nothing.
+    const none = answerCurrentRolling({ measure: "murder", places: [nation], from: "2025-03", to: "2025-03", window: 3, statistic: "rate" }, bld,
+      () => [["2025-01", null, 0, null, 0, 4], ["2025-02", null, 0, null, 0, 4], ["2025-03", null, 0, null, 0, 4]]);
+    assert.ok(none.kind === "current" && none.delivered.table.rows[0][1] === null);
+  }
+  // Codex 454 finding 2 (P281): a count month missing before the first month shown is named, with the windows it blanks.
+  {
+    const b3 = { root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-12", finalFirstMonth: "2017-01" };
+    const all = months("2025-02", "2026-12").filter((m) => m !== "2025-12").map((m) => [m, 5] as [string, number]);
+    const place = { kind: "agency" as const, ori: "X", label: "Xville", name: "Xville", state: "TX" };
+    const r = answerCurrentRolling({ measure: "murder", places: [place], from: "2026-01", to: "2026-12", window: 12 }, b3, (sql) => (sql.includes("UNION ALL") ? all : []));
+    assert.ok(r.kind === "current");
+    if (r.kind === "current") {
+      assert.ok(r.delivered.table.rows.slice(0, 11).every((x) => x[1] === null) && r.delivered.table.rows[11][1] === 60, "Jan-Nov 2026 blank, Dec 2026 holds 12 months");
+      assert.ok(r.delivered.text.some((t) => t.includes("December 2025") && t.includes("before the first month shown") && t.includes("first 11 12-month windows are blank")), r.delivered.text.join(" | "));
+    }
+  }
 }
 assert.equal(currentRate(null, 100000, 8), null);
 assert.equal(currentRate(5, 0, 8), null);
