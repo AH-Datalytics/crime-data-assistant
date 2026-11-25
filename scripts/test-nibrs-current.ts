@@ -75,6 +75,9 @@ assert.equal(currentRate(88, 100000, 0), null);
   // The same window as a count is unchanged.
   const c = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12 }, bld, fake);
   assert.ok(c.kind === "current" && c.delivered.table.rows[0][1] === 220);
+  // A rolling average series: the same window total over its 12 months, one decimal (220 / 12), headed and titled as an average.
+  const av = answerCurrentRolling({ measure: "murder", places: [place], from: "2025-03", to: "2025-03", window: 12, average: true }, bld, fake);
+  assert.ok(av.kind === "current" && av.delivered.table.rows[0][1] === 18.3 && /average/.test(String(av.delivered.table.columns[1].header)) && /Average/.test(av.delivered.text[0]), JSON.stringify(av.kind === "current" ? av.delivered : av));
   // A month in the window with no population leaves the window blank and says so, never a shorter average.
   // (the latest completed year is 2023 here, so February 2025 has no carried population either)
   const nopop = (sql: string): unknown[][] => (sql.includes("max(year)") ? [[2023]] : sql.includes("current_crime") && !sql.includes("UNION ALL") ? [["2025-01", 569_000], ["2025-03", 569_000]] : fake(sql));

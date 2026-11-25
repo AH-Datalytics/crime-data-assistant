@@ -67,7 +67,7 @@ import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { buildScorecard, type ScorecardPlace } from "./scorecard";
 import { detectAgencyScorecardQuestion } from "../scorecard-format";
-import { shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { change, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, combineHatePlaces, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild, type HateQuestion } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -1170,6 +1170,8 @@ const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
 /** A polite request opener ("can i get data on ...", "could I see ...") says nothing about the question; the question is what follows. */
+const YOY_MONTHLY = /\b(?:year[- ]over[- ]year|yoy)\s+(?:%|percent(?:age)?)\s+change\s+(?:in|of)\s+([a-z ]+?)\s+by\s+month(\s+(?:for|in)\s+[^.,?]+)?/i;
+const YOY_ROLLING = /\b(\d+)[- ]month\s+rolling\s+(?:%|percent(?:age)?)\s+change\s+in\s+([a-z ]+?)(\s+(?:in|for)\s+[^.,?]+?)?\s+(?:relative\s+to|vs\.?|versus|compared\s+(?:to|with))\s+(?:the\s+)?same\s+\d+\s+months?\s+(?:of\s+)?the\s+(?:previous|prior|last)\s+year/i;
 const REQUEST_OPENER = /^\s*(?:(?:hi|hello|hey)[,!]?\s+)?(?:please\s+)?(?:can|could|may|might|would)\s+(?:i|we|you)\s+(?:please\s+)?(?:get|see|have|find|pull|view|look\s+at|show\s+me|give\s+me)\s+(?:(?:me|us)\s+)?(?:(?:some|any|the|all\s+(?:the|of\s+the))\s+)?(?:(?:data|numbers|stats|statistics|figures|info|information)\s+(?:on|about|for|regarding|of)\s+)?/i;
 
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
@@ -1188,6 +1190,28 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
         ? `No. ${noun} were ${a.toLocaleString("en-US")} in ${first[0]} and ${b.toLocaleString("en-US")} in ${last[0]}.`
         : `${(b > a) === wantUp ? "Yes" : "No"}. ${noun} ${b > a ? "rose" : "fell"} from ${a.toLocaleString("en-US")} in ${first[0]} to ${b.toLocaleString("en-US")} in ${last[0]}.`;
       o.delivered = { ...o.delivered, text: [o.delivered.text[0], sentence, ...o.delivered.text.slice(1)] } as typeof o.delivered;
+      return o;
+    }
+    return o;
+  }
+  // Capability (YoY): "year over year % change in murders by month for Chicago" and "3 month rolling % change in murder relative to the same 3
+  // months the previous year" are read as the monthly (or rolling 3-month) series, each month then set against the month a year earlier:
+  // (this - last) / last, one decimal rounded away from zero, blank where the earlier month is zero or has no figure. The place is the
+  // question's; a rolling form with none is the nation's.
+  const yoy = YOY_MONTHLY.exec(question), yoyRoll = yoy ? null : YOY_ROLLING.exec(question);
+  if (yoy || yoyRoll) {
+    const since = yoy && !/(?:19|20)\d\d/.test(yoy[2] ?? "") && depsIn.current ? ` since ${depsIn.current.finalFirstMonth.slice(0, 4)}` : "";
+    const base = yoy ? `${yoy[1].trim()} by month${yoy[2] ?? ""}${since}` : `${yoyRoll![2].trim()} rolling over ${yoyRoll![1]} months${yoyRoll![3] ?? " nationally"}`;
+    const o = shadowAnswer(base, depsIn);
+    const t = (o.kind === "current" ? o.delivered.table : undefined) as { columns: { binding: unknown; header: string; ordered?: boolean }[]; rows: (string | number | null)[][] } | undefined;
+    if (o.kind === "current" && t && t.columns.length === 2 && t.rows.length >= 1) {
+      const byMonth = new Map(t.rows.map((r) => [String(r[0]), r[1] as number | null]));
+      const rows = t.rows.map((r) => [r[0], change(byMonth.get(shiftMonth(String(r[0]), -12)) ?? null, r[1] as number | null)] as (string | number | null)[]);
+      const noun = t.columns[1].header.replace(/^Rolling \d+-month /, "");
+      const header = yoyRoll ? `Rolling ${yoyRoll[1]}-month ${noun}, % change from the same months a year earlier` : `${noun}, % change from the same month a year earlier`;
+      const lead = yoyRoll ? `Rolling ${yoyRoll[1]}-Month % Change` : "Year-Over-Year % Change";
+      o.delivered = { ...o.delivered, table: { ...t, columns: [t.columns[0], { ...t.columns[1], header, binding: { kind: "statistic", as: "x" } }], rows },
+        text: [`${lead}: ${o.delivered.text[0]}`, ...o.delivered.text.slice(1)] } as typeof o.delivered;
       return o;
     }
     return o;
@@ -3041,7 +3065,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P154 (Jeff 2026-11-19): "murders rolling over 12 months" is a series of rolling totals by month (not "the last 12 months", which stays one
     // total): from the first January with a full window (none named), or from the January of the year named; counts, Current Trends' months.
     const rollW = sp.window?.months ?? 12;
-    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && (sp.statistic === "count" || sp.statistic === "rate") && rollW >= 2
+    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !(sp.window?.average && sp.statistic === "rate") && (sp.statistic === "count" || sp.statistic === "rate") && rollW >= 2
       && (sp.period.form === "none" || sp.period.form === "since" || sp.period.form === "range" || sp.period.form === "year");
     if (rollingSeries) {
       const pf = sp.period;
@@ -3068,7 +3092,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const several = rp.length > 1;
       if (rp.every((p): p is CurrentPlace => p !== null) && (!several || rp.every((p) => p.kind === "agency")) && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).column) {
         const agencyIds = rp.flatMap((p) => (p.kind === "agency" ? [p.ori] : []));
-        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, statistic: sp.statistic === "rate" ? "rate" : "count", ...(outside ? { outside } : {}),
+        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, statistic: sp.statistic === "rate" ? "rate" : "count", ...(sp.window?.average ? { average: true } : {}), ...(outside ? { outside } : {}),
           ...(agencyIds.length ? { agencyLine: reportedBy(agencyIds.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
         if (r.kind === "current") return r;
         return decline(/outside them|not all in them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);

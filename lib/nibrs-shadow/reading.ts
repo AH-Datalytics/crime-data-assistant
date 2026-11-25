@@ -285,7 +285,14 @@ const PHRASES: [RegExp, string][] = [
   [/\b(justifiable\s+(?:homicides?|killings?))\s+(?:committed\s+)?by\s+(?:the\s+)?(?:police|officers|law\s+enforcement|(?:private\s+)?(?:civilians?|citizens?))\b/gi, "$1"],
   // P165 (Jeff 2026-11-19): "what share of murders in Houston involved a firearm" is the murders by weapon, each weapon's share shown, with one
   // sentence for the firearms together. "What weapons were used in X" is X by weapon; "with a firearm used" is "with a firearm".
-  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:involved|involve|involving|(?:were\s+)?committed\s+(?:with|using|via)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?|knife|knives)\b([^?.]*)/gi, "share of $1 by weapon$2"],
+  // "ratio of male to female homicide victims" is those victims by sex; "on a year-over-year basis. Provide information for each year
+  // for which data is available" is by year; "the percent of assaults in X that are simple assaults" is assaults by type.
+  [/\bratio\s+of\s+male\s*(?:to|:|\/|vs\.?|versus)\s*female\s+((?:[a-z]+\s+){0,2}?victims)\b/gi, "$1 by sex"],
+  [/\s+on\s+a\s+year[-\s]over[-\s]year\s+basis\s*[?.]?/gi, " by year "],
+  [/[?.]?\s*provide\s+(?:information|data)\s+for\s+each\s+year\s+(?:for\s+which\s+)?(?:data\s+is\s+)?available\s*[?.]?/gi, " by year"],
+  [/\bby\s+year\s+by\s+year\b/gi, "by year"],
+  [/\b(?:what\s+is\s+the\s+)?(?:percent|percentage|share)\s+of\s+(assaults)\s+(in\s+[^?.]+?)\s+that\s+are\s+(?:simple|aggravated)\s+assaults\b/gi, "$1 $2 by type"],
+  [/\b(?:what\s+)?(?:share|percentage|percent|proportion)\s+of\s+([^?.]+?)\s+(?:have\s+|has\s+)?(?:involved|involve|involving|(?:were\s+)?committed\s+(?:with|using|via)|were\s+done\s+with|used)\s+(?:a\s+)?(?:firearms?|guns?|handguns?|knife|knives)\b([^?.]*)/gi, "share of $1 by weapon$2"],
   [/\bwhat\s+(?:types?\s+of\s+)?weapons?(?:\s+types?)?\s+(?:were|was|are|is)\s+(?:used|reported|involved)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
   // "what weapons do people use in robberies in Texas", "what weapons are most commonly used in ..." and "by weapons" are the same by-weapon question.
   [/\bwhat\s+(?:types?\s+of\s+)?weapons?\s+(?:do\s+(?:people|offenders|criminals|suspects)\s+use|are\s+(?:most\s+)?(?:commonly\s+|often\s+)?used)\s+(?:in|for|during)\s+([^?.]+)/gi, "$1 by weapon"],
