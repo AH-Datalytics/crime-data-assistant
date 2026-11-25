@@ -31,6 +31,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import { NOT_YET, plainReaderExplanation } from "./wording";
+import { RANK_DEFAULT_ROWS } from "./titles";
 import { DEMOGRAPHIC_RATE, negatedBefore, WHERE_MOST_ONCE } from "../nibrs-request-accounting";
 import type { Part, RequestLedger } from "../request-accounting";
 import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, restoreAgeWords, SHR_WORDS, type Flags } from "./reading";
@@ -928,6 +929,9 @@ const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bsho
 const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:cities|agencies|places|states|counties|departments)\b|^\s*(?:compare[ds]?|comparison)\s+(?:it\s+|that\s+|this\s+)?(?:to|with|against)\b|^\s*(?:vs\.?|versus)\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
+/** E: a victim sex, a victim-offender relationship or a weapon, beside a word for the victims (or a relationship alone): a Homicide Reports question that names no crime. */
+const SHR_NO_CRIME = /\b(?:(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b[^.?]*\b(?:victims?|killed|deaths?|dead)\b|\b(?:victims?|killed|deaths?|dead)\b[^.?]*\b(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b)|\b(?:intimate|partners?|spouses?|boyfriends?|girlfriends?|wife|husband|relationships?)\b/i;
+const OFFENDER_WORD = /\b(?:offenders?|perpetrators?|suspects?|killers?|attackers?)\b/i;
 let defaultDepth = 0;
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
@@ -983,6 +987,15 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         note = "No kind of crime was named, so violent crime is shown (weapons are recorded for violent crime).";
       }
       more.push(...c.options.filter((x: ShadowOption) => x.label !== "Both"));
+      // E (Jeff 2026-11-24): a victim-sex, relationship or weapon word with no crime named is a homicide question, answered from Homicide Reports.
+      if (deps.shr && !CLEARANCE_WORDS.test(question) && SHR_NO_CRIME.test(question)) {
+        const q = c.question.replace(/[?.!\s]+$/, "");
+        defaultDepth++;
+        try {
+          const o = /\bvictims?\b/i.test(q) ? shadowAnswer(q.replace(/\bvictims?\b/i, (m) => `homicide ${m}`), deps) : shadowAnswer(`${q} homicides`, deps);
+          if (o.kind === "shr") { option = { label: "Homicide", continuation: o }; note = "No kind of crime was named, so homicide is shown from Homicide Reports."; }
+        } finally { defaultDepth--; }
+      }
     }
     if (!option || isDeferred(option) || !option.continuation) { DEFAULT_MISSES.push({ site: c.about, why: !option ? "no default option" : "heavy" }); return o0; }
     if (!byStateRows) notes.push(note);
@@ -1133,7 +1146,12 @@ const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?
 const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
+/** A polite request opener ("can i get data on ...", "could I see ...") says nothing about the question; the question is what follows. */
+const REQUEST_OPENER = /^\s*(?:(?:hi|hello|hey)[,!]?\s+)?(?:please\s+)?(?:can|could|may|might|would)\s+(?:i|we|you)\s+(?:please\s+)?(?:get|see|have|find|pull|view|look\s+at|show\s+me|give\s+me)\s+(?:(?:me|us)\s+)?(?:(?:some|any|the|all\s+(?:the|of\s+the))\s+)?(?:(?:data|numbers|stats|statistics|figures|info|information)\s+(?:on|about|for|regarding|of)\s+)?/i;
+
 export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const unopened = question.replace(REQUEST_OPENER, "");
+  if (unopened !== question && unopened.trim().length >= 8) return shadowAnswer(unopened, depsIn);
   const ud = UP_DOWN_YES_NO.exec(question);
   if (ud && UP_DOWN_SPAN.test(ud[3]) && !/\bby\s+year\b/i.test(question)) {
     const o = shadowAnswer(`${ud[1]} ${ud[3]} by year`, depsIn);
@@ -2058,7 +2076,7 @@ function shrCityRanking(ledger: RequestLedger, ledger0: RequestLedger, deps: Sha
     return decline("outside_release_coverage", `Homicide Reports in the data run through ${latest.slice(0, 4)}, so ${fromY} is outside them.`);
   const to = toY >= Number(latest.slice(0, 4)) ? latest : `${toY}-12`;
   const a = answerShrRanking({ measure: crimes[0] as "murder" | "homicide" | "homicide_all", filters, share, from: `${fromY}-01`, to, direction: rankVal[1] === "bottom" ? "bottom" : "top",
-    limit: rankVal[2] ? Number(rankVal[2]) : nWord ? Number(sizeOf(nWord)) : 20, minPopulation: flags(ledger0).largeCities ? 250000 : null, ...(minTotal ? { minTotal } : {}) }, deps.shr, deps.historical, deps.execute);
+    limit: rankVal[2] ? Number(rankVal[2]) : nWord ? Number(sizeOf(nWord)) : RANK_DEFAULT_ROWS, minPopulation: flags(ledger0).largeCities ? 250000 : null, ...(minTotal ? { minTotal } : {}) }, deps.shr, deps.historical, deps.execute);
   return a.kind === "shr" ? a : decline("outside_release_coverage", a.explanation);
 }
 
@@ -2469,6 +2487,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       ? fromLedger(Object.assign(withParts(ledger0, ledger0.parts.filter((p) => p !== part)), { people: { ...ppl0, ask: null, by: { who: "offender" as const, attr, paired: false } } }), deps, pins)
       : victims;
     if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    // E (Jeff 2026-11-24): a homicide question naming sex with no offender word is the victims' sex, said. Both a victim and an offender word still ask.
+    const vShown = attr === "sex" && victims.kind === "clarify" ? applyDefaults(ledger0.question, victims, deps) : victims;
+    if (attr === "sex" && vShown.kind === "shr" && !OFFENDER_WORD.test(ledger0.question) && !deps.noDefaults && !deps.checkingOffer) {
+      const note = "No victim or offender was named, so the victims' sex is shown.";
+      const t = vShown.delivered.text;
+      return { ...vShown, delivered: { ...vShown.delivered, text: [t[0], note, ...t.slice(1)] }, buttons: [...((vShown as { buttons?: ShadowOption[] }).buttons ?? []), { label: "Offenders' sex", continuation: offenders }] } as ShadowOutcome;
+    }
     // "Violent crime" by age: Jeff's words, "Offender" and "Victim" (2026-11-15; this question only).
     if (attr === "age" && /\bviolent\s+crimes?\b/i.test(ledger0.question))
       return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
@@ -2549,7 +2574,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const hasPartI = ledger0.parts.some((p) => p.clause === 0 && partI(p));
     // Nothing else asked: offenses is allowed, but no arrests, victims, breakdown, cohort, filter or source named.
     const onlyCrimeOverTime = ledger0.parts.every((p) => p.clause !== 0 || p.state === "context" || ["measure", "place", "period", "grain", "statistic"].includes(p.concept)
-      || (p.concept === "unit" && p.value === "offenses") || partI(p) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
+      || (p.concept === "unit" && p.value === "offenses") || partI(p)
+      // "Fairfax County Police Department": the reader splits the agency noun off a county or city place; it is the place's own agency, not a second ask.
+      || (p.concept === "entity" && p.value === "agency" && /^(?:police|sheriff'?s?)\s+(?:department|office)$/i.test(p.text.trim()) && clause0("place").length === 1 && /^(?:county|city):/.test(String(clause0("place")[0].value))) || (p.state === "not-interpreted" && pureFillerOnly(p.text)))
       && clause0("statistic").every((p) => /^(?:count|rate|per100k|percapita)$/.test(String(p.value ?? "")));
     const f0 = flags(ledger0);
     // P301 (Jeff 2026-11-24, "clarify odd openers"): with no crime word and no Part I, only a bare place answers (an opener "show me" is fine);
@@ -2762,7 +2789,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (nationDefault) return nationDefault;
     // The nation's answer is another source's (Homicide Reports details): routed there, as with the United States named, never a place asked.
     // Only for a question naming a race or ethnicity: every other no-place question keeps its place ask (Runner gate 2026-11-24).
-    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && /\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)) return nationOption.continuation;
+    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && (/\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)
+      // A share of homicides by a Homicide Reports detail ("what share of murders involve a firearm") with no place is the nation's, routed the same way.
+      || (nationOption.continuation.source === "shr" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "share")))) return nationOption.continuation;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.
     if (!isDeferred(nationOption) && nationOption.continuation?.kind === "decline" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "peer"))
@@ -2981,16 +3010,19 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P154 (Jeff 2026-11-19): "murders rolling over 12 months" is a series of rolling totals by month (not "the last 12 months", which stays one
     // total): from the first January with a full window (none named), or from the January of the year named; counts, Current Trends' months.
     const rollW = sp.window?.months ?? 12;
-    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && sp.statistic === "count" && rollW >= 2
+    const rollingSeries = sp.grain === "rolling" && !flags(ledger0).last12 && !sp.window?.average && (sp.statistic === "count" || sp.statistic === "rate") && rollW >= 2
       && (sp.period.form === "none" || sp.period.form === "since" || sp.period.form === "range" || sp.period.form === "year");
     if (rollingSeries) {
       const pf = sp.period;
-      const earliest = firstFullJanuary(cur.finalFirstMonth, rollW);
+      // A rate for a state or the nation starts in the published sample's months (2025-01 on), so its first default window is later.
+      const groupRate = sp.statistic === "rate" && sp.places.some((p) => p.kind === "national" || p.kind === "state");
+      const earliest = firstFullJanuary(groupRate ? cur.firstMonth : cur.finalFirstMonth, rollW);
       const cap = (m: string) => (m > cur.lastMonth ? cur.lastMonth : m);
       let from = pf.form === "since" ? `${pf.from}-01` : pf.form === "range" ? `${pf.from}-01` : pf.form === "year" ? `${pf.year}-01` : earliest;
       const to = pf.form === "range" ? cap(`${pf.to}-12`) : pf.form === "year" ? cap(`${pf.year}-12`) : cur.lastMonth;
       let outside: string | undefined;
-      if (from < earliest) {
+      // A start named before the first window a group rate can have is declined by the rate itself, not clipped.
+      if (from < earliest && !(groupRate && pf.form !== "none")) {
         const gone = [from, shiftMonth(cur.finalFirstMonth, -1)];
         outside = `Current Trends figures in the data cover ${monthName(cur.finalFirstMonth)} through ${monthName(cur.lastMonth)}; ${monthName(gone[0])} through ${monthName(gone[1])} ${gone[0] === gone[1] ? "is" : "are"} outside them.`;
         from = earliest;
@@ -3005,7 +3037,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const several = rp.length > 1;
       if (rp.every((p): p is CurrentPlace => p !== null) && (!several || rp.every((p) => p.kind === "agency")) && !flags(ledger0).combined && !flags(ledger0).comparison && !flags(ledger0).column) {
         const agencyIds = rp.flatMap((p) => (p.kind === "agency" ? [p.ori] : []));
-        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, ...(outside ? { outside } : {}),
+        const r = answerCurrentRolling({ measure: sp.measures[0], places: rp as CurrentPlace[], from, to, window: rollW, statistic: sp.statistic === "rate" ? "rate" : "count", ...(outside ? { outside } : {}),
           ...(agencyIds.length ? { agencyLine: reportedBy(agencyIds.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
         if (r.kind === "current") return r;
         return decline(/outside them|not all in them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -3132,14 +3164,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
       const base = { measure: sp.measure, statistic: sp.statistic === "rate" ? "rate" as const : "count" as const, minPopulation: named ?? defaultFloor, floorAsked: named !== null };
       if (yrs && yrs[0] === yrs[1] && yrs[0] <= hb.lastYear && !toDate) {
-        const r = answerHistoricalRanking({ ...base, state: "US", year: yrs[0], direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, entity: sp.entity, region }, hb, deps.execute);
+        const r = answerHistoricalRanking({ ...base, state: "US", year: yrs[0], direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? RANK_DEFAULT_ROWS, entity: sp.entity, region }, hb, deps.execute);
         if (r.kind === "historical") return said(r);
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
       }
       const cur = deps.current;
       const ctSpan = yrs && yrs[0] === yrs[1] && cur ? currentYearSpan(yrs[0], cur, toDate) : null;
       if (ctSpan && cur) {
-        const r = answerCurrentRanking({ ...base, state: "US", from: ctSpan[0], to: ctSpan[1], pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 },
+        const r = answerCurrentRanking({ ...base, state: "US", from: ctSpan[0], to: ctSpan[1], pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? RANK_DEFAULT_ROWS },
           entity: sp.entity === "agency" ? "agency" : "city", region }, cur, hb.root, deps.execute, rankAgencies);
         if (r.kind === "current") return said(r);
         return decline("unsupported_capability", r.explanation);
@@ -3360,6 +3392,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const minPopulation = floorOf(sp) ?? defaultFloor;
     const countByDefault = sp.statistic === "count" && !sp.more?.length && !ledger0.parts.some((p) => p.clause === 0 && p.concept === "statistic")
       && !new RegExp(String.raw`\b(?:most|counts?|number|total)\b`, "i").test(ledger0.question);
+    // Capability state-city-list: a floor the question gave with no number to show is 50 rows (said: "Top 50 of N Agencies"); "all", "every",
+    // "complete list" or "entire" shows every row. A strict "over N" says "Over N" (the filter is N + 1, unchanged).
+    const askedAllRows = /\b(?:all|every|complete\s+list|entire)\b/i.test(ledger0.question);
+    const floorCut = sp.min && !sp.rank?.n;
+    const rankLimit = sp.rank?.n ?? (floorCut ? (askedAllRows ? ALL_CITIES_N : 50) : RANK_DEFAULT_ROWS);
+    const floorCapped = !!floorCut && !askedAllRows;
+    const floorOver = sp.min?.op === ">";
     const saidFloor = <T extends { delivered: { text: string[] } }>(r: T): T => {
       if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
       // Jeff: a crime named alone ("highest murder") is the count; the rate is offered.
@@ -3392,7 +3431,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // A year past Crime Index's last (2026) is Current Trends' (decision 4), on its own path.
     if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear && !toDate) {
       const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
-        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation, floorAsked: floorOf(sp) !== null,
+        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: rankLimit, minPopulation, floorAsked: floorOf(sp) !== null, floorOver, floorCapped,
         entity: sp.entity, ...(sp.more?.length ? { more: sp.more } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return saidFloor(r);
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -3404,7 +3443,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (toDate && !ctSpan) return decline("outside_release_coverage", "Year-to-date rankings come from Current Trends, which covers 2025 and 2026.");
     if (ctSpan && cur && sp.entity !== "state") {
       const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: ctSpan[0], to: ctSpan[1],
-        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation, floorAsked: floorOf(sp) !== null,
+        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: rankLimit }, minPopulation, floorAsked: floorOf(sp) !== null, floorOver, floorCapped,
         entity: sp.entity === "agency" ? "agency" : sp.entity === "county" ? "county" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
       if (r.kind === "current") return saidFloor(r);
       return decline("unsupported_capability", r.explanation);
@@ -3612,6 +3651,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       return m && Number(m[1]) < before.length ? { ...b, path: `${to(Number(m[1]))}${before[Number(m[1])].dimension === "geo.place" ? "" : m[2]}` } : b;
     });
   }
+  // Capability state-city-list (Jeff via coordinator 2026-11-24): a state's cities over a population the question gives show 50 rows
+  // (the answer says "Top 50 of N agencies"); "all", "every", "complete list" or "entire" shows every row.
+  const askedFloor = plan.geography.places[0]?.kind === "agency_set" && plan.geography.places[0].where.some((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+  const askedAll = /\b(?:all|every|complete\s+list|entire)\b/i.test(ledger0.question);
   // P08: "large" cities are 250,000 residents or more.
   const set0 = plan.geography.places[0];
   if (flags(ledger0).largeCities) {
@@ -3619,8 +3662,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     set0.where.push({ field: "agency.population", op: ">=", value: 250000 });
     plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities have a population of 250,000 or more" });
   }
-  // D05: a ranking with no number shows 20 rows.
-  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
+  // D05, changed by Jeff 2026-11-24 (ranked table card): a ranking with no number shows the top 10; a population floor the question gave still shows 50 (all, when asked for all).
+  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: askedFloor ? (askedAll ? null : 50) : RANK_DEFAULT_ROWS } : t));
   let parts2 = a.parts;
   const statements: AnswerStatement[] = [];
   const unbind = (drop: (p: (typeof parts2)[number]) => boolean) => {
@@ -4117,6 +4160,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   } };
   const authority = (v: string) => { const p = resolved.get(v); return p && p.kind === "agency" ? { oris: [p.ori] } : null; };
   const problems = [...validateOutcome({ kind: "plan", plan: checked }, DRAFT_LAYER, release, geo), ...validateBindings(plan, parts2, authority)];
+  // Capability state-city-list: a population filter no city agency of the state meets says so, with the filter stated.
+  const emptySet = checked.geography.places[0];
+  if (problems.length && problems.every((p) => p.rule === "R4") && emptySet?.kind === "agency_set" && emptySet.within.kind === "state") {
+    const f = emptySet.where.find((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+    if (f) return decline("unsupported_capability", `No city agency in ${stateName(emptySet.within.code)} has a population of ${Number(f.value).toLocaleString("en-US")} or more.`);
+  }
   if (problems.length) return notYet(`plan did not validate: ${problems.map((p) => `${p.rule} ${p.path}: ${p.message}`).join("; ")}`);
 
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.

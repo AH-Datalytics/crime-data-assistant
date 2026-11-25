@@ -43,8 +43,12 @@ write("current_final", ["ori", "year", "month", ...STEMS.map((s) => `${s}_total`
 // A state: components only matter (the card sums them); a nation likewise.
 const aggCols = ["state", "year", "population", ...STEMS.flatMap((s) => [`${s}_total`, `${s}_capita`])];
 const aggRow = (state: string | null, year: number, k: number) => [...(state === null ? [] : [state]), year, 1000000, ...STEMS.flatMap((_, i) => [k + i + (year - 2024) * 10, (k + i) / 10])];
-write("state_crime", aggCols, [aggRow("OH", 2024, 100), aggRow("OH", 2025, 100)]);
-write("nation_crime", aggCols.slice(1), [aggRow(null, 2024, 200), aggRow(null, 2025, 200)]);
+// The 2025 national property rate as the FBI publishes it is 1,534.8 while its parts (burglary 193.6... theft 1,144.1, motor 197.0) sum to 1,534.7: the card shows the published figure.
+const nationRow = (year: number) => { const r = aggRow(null, year, 200); r[3 + STEMS.indexOf("property") * 2] = 1534.8; r[3 + STEMS.indexOf("burglary") * 2] = 193.6; r[3 + STEMS.indexOf("theft") * 2] = 1144.1; r[3 + STEMS.indexOf("motor") * 2] = 197.0; return r; };
+// KY: no published violent_capita, so its violent rate falls back to the sum of its four parts.
+const kyRow = (year: number) => { const r: unknown[] = aggRow("KY", year, 300); r[3 + STEMS.indexOf("violent") * 2 + 1] = null; return r; };
+write("state_crime", aggCols, [aggRow("OH", 2024, 100), aggRow("OH", 2025, 100), kyRow(2024), kyRow(2025)]);
+write("nation_crime", aggCols.slice(1), [nationRow(2024), nationRow(2025)]);
 
 const build = { root: dir, release: "fixture", firstYear: 2020, lastYear: 2025, clearanceFirstYear: 2020 } as HistoricalBuild;
 const cell = (rows: unknown[][], label: string, col: number) => rows.find((r) => r[0] === label)?.[col];
@@ -88,6 +92,15 @@ const cell = (rows: unknown[][], label: string, col: number) => rows.find((r) =>
 {
   const r = buildScorecard(build, execute, { kind: "national" });
   check("national: a card, year 2025", r.kind === "card" && r.year === 2025, r);
+  if (r.kind === "card") {
+    const rows = r.table.rows as unknown[][];
+    check("national: property rate is the published 1,534.8, not the 1,534.7 sum of its parts", cell(rows, "Property Crime", 3) === 1534.8, cell(rows, "Property Crime", 3));
+    check("national: violent rate is the published violent_capita", cell(rows, "Violent Crime", 3) === 20, cell(rows, "Violent Crime", 3));
+  }
+}
+{
+  const r = buildScorecard(build, execute, { kind: "state", code: "KY", name: "Kentucky" });
+  check("state: a null violent_capita falls back to the sum of the four parts", r.kind === "card" && cell(r.table.rows as unknown[][], "Violent Crime", 3) === 121, r.kind === "card" ? cell(r.table.rows as unknown[][], "Violent Crime", 3) : r);
 }
 {
   const r = buildScorecard(build, execute, { kind: "state", code: "ZZ", name: "Nowhere" });

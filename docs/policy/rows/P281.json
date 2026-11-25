@@ -1,0 +1,12 @@
+{
+  "id": "P281",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Rolling 12-month murder rate in Chicago\", \"murder rate rolling over 12 months nationally\", \"Dallas murder rate rolling over 12 months since 2025\", \"murder rate rolling over 3 months in Chicago\"",
+  "what the app does today": "Declined (\"rolling windows of a rate, a breakdown, or several crimes\"), or one rate for the latest 12 months.",
+  "proposed behavior": "A rolling rate is a series by month, like the rolling totals of P154: each month's value is the count for that month and the months before it in the window, divided by the window's month-weighted population, per 100,000, one decimal. The month-weighted population gives each year's population a weight of its months in the window (nine months at 576,000 and three at 569,000 give 574,250, so 220 murders is 38.3), which is the mean of the window's monthly populations. Each month's population is the one P96 uses (the month's own row from January 2025; the same year's published population before it; the latest completed year's for the current year). The rate is not scaled to a full year, and one note says so. A window with a month that has no population, or no count, is blank, never a shorter average, and the note names the month. For a state or the nation the population is the published Consistent Reporting Agencies' (the sample flag), which exists from January 2025, so a rolling rate for them starts at the first January whose whole window is inside it (January 2026 for 12 months) and an earlier start is declined with that month named, not clipped. One place, or several agencies side by side; a mixed agency-and-state comparison stays declined. A 3-month window works the same way: a part-year rate is never annualized (P59, P96), and the same note says so (coordinator 2026-11-24).",
+  "exact default or choices offered": "The title reads the question back (\"Murder Rate Rolling Over 12 Months\"), the not-scaled note, notes only for blank months or populations, then the Source line.",
+  "why": "Jeff 2026-11-23 (through the coordinator): divide the window's count by a month-weighted population, each year's population weighted by its months in the window; add it beside P154.",
+  "status": "Decided 2026-11-23 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-current.ts (\"A rolling rate\"), scripts/test-nibrs-shadow.ts (\"P281\" comment: rolling rate)."
+}

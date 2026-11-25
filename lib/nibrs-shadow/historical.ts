@@ -445,6 +445,10 @@ export type HistoricalRankingQuestion = {
   minPopulation: number | null;
   /** The floor came from the question ("large", "all American cities", a number), so the title says it; a default floor is a note. */
   floorAsked?: boolean;
+  /** The floor was a strict over N (minPopulation is N + 1): the title says Over N. */
+  floorOver?: boolean;
+  /** The limit is the 50-row cut that a floor in the question gives (not a number the reader asked for): the title and a note say Top 50 of N. */
+  floorCapped?: boolean;
   /**
    * What is ranked (Jeff 2026-11-10, ranking decisions 1, 3 and 5): city agencies (Crime Index's geography type
    * "city", whatever the agency) in a state, or in the nation when `state` is "US"; every agency, city and county, when
@@ -483,7 +487,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
     return { ori: String(r[0]), name, state: national ? String(r[5]) : rq.state, population, value: v.rate, computed: v.computed, known: v.rate !== null };
   });
   const where = rq.region ? ucFirst(rq.region.name) : national ? "United States" : stateName(rq.state);
-  const floor = rq.minPopulation && !states ? ` with a population of ${fmt(rq.minPopulation)} or more` : "";
+  const floor = rq.minPopulation && !states ? (rq.floorOver ? ` with a population over ${fmt(rq.minPopulation - 1)}` : ` with a population of ${fmt(rq.minPopulation)} or more`) : "";
   const figure = rate ? `${m.name} rate` : `${m.name} figure`;
   const unit = states ? "states" : cities ? "city agencies" : counties ? "county agencies" : "agencies";
   if (!entries.length) return { kind: "historical-decline", explanation: `Crime Index has no ${unit}${floor} in ${where} for ${rq.year}.` };
@@ -493,11 +497,13 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const most = rq.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
   // A title that reads back the question's datapoints (Jeff 2026-11-17: "2024 Murder Rate by State"), then plain notes, then the source line.
-  const unitTitle = states ? "State" : counties ? "County Agency" : cities || rq.region ? "City" : "Agency";
+  const capped = !!rq.floorCapped && !states && entries.length > rq.limit;
   const unitPlural = states ? "states" : counties ? "county agencies" : cities || rq.region ? "cities" : "agencies";
-  const title = `${states ? "United States" : titleCase(where)} ${titleCase(`${m.name} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
+  // Jeff 2026-11-24 (ranked table card): "Cities With the Most Murders, 2024", the place said only when it is a state or region.
+  const inWhere = national && !rq.region ? "" : ` in ${titleCase(where)}`;
+  const title = `${titleCase(`${unitPlural}${inWhere} with the ${most} ${what}`)}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${rq.floorOver ? `Over ${fmt(rq.minPopulation - 1)}` : `${fmt(rq.minPopulation)} or More`}` : ""}${capped ? `, Top ${rq.limit} of ${fmt(entries.length)} Agencies` : ""}, ${titleTimeframe(String(rq.year))}`;
   const text = [title,
-    `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? "rates" : m.words} are shown.`,
+    `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? "rates" : m.words} are shown.${capped ? " Asking for all of them shows every row." : ""}`,
     states ? "The 50 states are ranked; the District of Columbia is not a state, so it is left out."
       : cities ? "Cities are Crime Index's city agencies, whatever the agency."
         : counties ? "County agencies are sheriffs and county police (Crime Index's county type), each on its own coverage, mostly unincorporated areas; cities in the county are not included."
@@ -544,7 +550,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
     const blanks = tableRows.filter((r) => r.slice(2).some((c) => c === null)).length;
     if (blanks) text.splice(2, 0, `${blanks === 1 ? "One agency has" : `${blanks} agencies have`} no figure for ${extra.length === 1 ? "that crime" : "one or more of the further crimes"} in ${rq.year}; ${blanks === 1 ? "its" : "their"} cell${blanks === 1 ? " is" : "s are"} left blank.`);
     const names = [m, ...extra.map((e) => e.m)].map((x) => x.name);
-    text[0] = `${states ? "United States" : titleCase(where)} ${andList(names.map((n) => titleCase(`${n} ${rate ? "rate" : "count"}`)))} by ${unitTitle}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${fmt(rq.minPopulation)} or More` : ""}, ${titleTimeframe(String(rq.year))}`;
+    text[0] = `${titleCase(`${unitPlural}${inWhere} with the ${most} ${andList(names.map((n) => `${n} ${rate ? "rate" : "count"}`))}`)}${rq.floorAsked && rq.minPopulation && !states ? `, Population ${rq.floorOver ? `Over ${fmt(rq.minPopulation - 1)}` : `${fmt(rq.minPopulation)} or More`}` : ""}${capped ? `, Top ${rq.limit} of ${fmt(entries.length)} Agencies` : ""}, ${titleTimeframe(String(rq.year))}`;
     text[1] = `The ${ranked.length} ${unitPlural} with the ${most} ${rate ? `${m.name} rates` : m.words} are shown, with ${andList(extra.map((e) => (rate ? `${e.m.name} rate` : e.m.words)))} beside it.`;
   }
   const agencies = ranked.map((a) => ({ ori: a.ori, label: a.name, name: a.name, state: a.state }));

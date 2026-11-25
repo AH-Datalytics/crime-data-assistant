@@ -59,13 +59,19 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   // The agencies: the named ones (label: the place; name: the FBI's), or the state's city agencies (with P08's floor),
   // each by its FBI name (a ranking lists agencies).
   let agencies: { ori: string; label: string; name: string; population: number | null }[];
+  // Capability state-city-list: city agencies with no FBI population on file can't be tested against a population filter; counted, said in a note.
+  let noPopCount = 0;
   if (set) {
     if (set.within.kind !== "state") return decline("This isn't available: this set of agencies.");
-    const floor = set.where.find((w) => w.field === "agency.population" && w.op === ">=");
+    // "Over 50,000" is the spec's ">" and "at least" its ">="; both are a population floor here (a strict ">" had been skipped, ranking every agency).
+    const floor = set.where.find((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+    const strict = floor?.op === ">";
     const lastYear = years[years.length - 1];
     const rows = deps.execute(agencyPopulationSql(root, { state: set.within.code, city: true }, [lastYear]));
-    agencies = rows.map((r) => { const name = agencyName(deps.places, String(r[0])); return { ori: String(r[0]), label: name, name, population: r[2] === null ? null : Number(r[2]) }; })
-      .filter((a) => !floor || (a.population ?? 0) >= Number(floor.value));
+    const all = rows.map((r) => { const name = agencyName(deps.places, String(r[0])); return { ori: String(r[0]), label: name, name, population: r[2] === null ? null : Number(r[2]) }; });
+    if (floor) noPopCount = all.filter((a) => !a.population).length;
+    agencies = all.filter((a) => !floor || (strict ? (a.population ?? 0) > Number(floor.value) : (a.population ?? 0) >= Number(floor.value)));
+    if (!agencies.length && floor) return decline(`No city agency in ${stateName(set.within.code)} has a population of ${fmt(Number(floor.value))} or more${noPopCount ? ` (${noPopCount} ${noPopCount === 1 ? "agency has" : "agencies have"} no FBI population on file)` : ""}.`);
   } else {
     agencies = plan.geography.places.map((p) => (p.kind === "agency" ? { ori: p.ori, label: p.label, name: agencyName(deps.places, p.ori), population: null } : { ori: "", label: "", name: "", population: null }));
   }
@@ -123,9 +129,13 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const floor = set.where.find((w) => w.field === "agency.population");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
     const most = rankT.direction === "top" ? (isRate ? "highest" : "most") : (isRate ? "lowest" : "fewest");
-    lines.push(`${where} ${titleCase(what)}${isRate ? " per 100,000" : ""} by City${floor ? `, Population ${fmt(Number(floor.value))} or More` : ""}, ${titleTimeframe(periodTitle(period, periodWords))}`);
+    // A floor the question gave and more agencies over it than the 50-row cap: "Top 50 of N agencies", and a note that asking for all shows every row.
+    const capped = !!floor && rankT.limit === 50 && agencies.length > 50;
+    // Jeff 2026-11-24 (ranked table card): "Cities in Texas With the Most Murders, 2024".
+    lines.push(`${titleCase(`cities in ${where} with the ${most} ${what}${isRate ? " per 100,000" : ""}`)}${floor ? `, Population ${floor.op === ">" ? "Over " : ""}${fmt(Number(floor.value))}${floor.op === ">" ? "" : " or More"}` : ""}${capped ? `, Top 50 of ${fmt(agencies.length)} Agencies` : ""}, ${titleTimeframe(periodTitle(period, periodWords))}`);
     partLine();
-    lines.push(`The ${ranked.length} agencies with the ${most} ${what}${isRate ? " per 100,000" : ""} are shown.`);
+    lines.push(`The ${ranked.length} agencies with the ${most} ${what}${isRate ? " per 100,000" : ""} are shown.${capped ? " Asking for all of them shows every row." : ""}`);
+    if (floor && noPopCount) lines.push(`${fmt(noPopCount)} ${noPopCount === 1 ? "agency has" : "agencies have"} no FBI population on file.`);
     const full = partYear ? `every month of ${when}` : `all 12 months of ${when}`;
     const someMonths = partYear ? `months of ${when}` : `12 months of ${when}`;
     lines.push(`Only agencies with data for ${full} are ranked, and ties are ordered by agency name.`);

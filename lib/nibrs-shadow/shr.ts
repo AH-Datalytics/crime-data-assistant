@@ -643,7 +643,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   const most = rk.direction === "top" ? (rk.share ? "highest" : "most") : (rk.share ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
   // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
-  const text = [`United States ${titleCase(what)} by City${rk.minPopulation ? `, Population ${fmt(rk.minPopulation)} or More` : ""}${rk.minTotal ? `, at Least ${fmt(rk.minTotal)} Murder Victims` : ""}, ${titleTimeframe(years)}`,
+  const text = [`${titleCase(`cities with the ${most} ${what}`)}${rk.minPopulation ? `, Population ${fmt(rk.minPopulation)} or More` : ""}${rk.minTotal ? `, at Least ${fmt(rk.minTotal)} Murder Victims` : ""}, ${titleTimeframe(years)}`,
     `City agencies that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""} are ranked, and ties are ordered by agency name.`];
   if (tie) { const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`; text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`); }
   // Jeff 2026-11-15: no left-out city is named; one plain note.
