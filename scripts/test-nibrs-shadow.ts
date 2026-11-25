@@ -1661,6 +1661,8 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
 for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
   assert.equal(ask(q).kind, "answer", q);
 }
+// Capability (ratios): a share of murders by a Homicide Reports detail with no place is the nation's, routed to Homicide Reports, never a place ask.
+for (const q of ["what share of murders involved a firearm", "share of murders committed with a firearm"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
 {
   const q = "Where do most robberies occur - residences, streets, or commercial buildings?";
@@ -4051,6 +4053,28 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   for (const q of ["How many Black or Hispanic people were murdered in Texas in 2024", "How many people were murdered in Texas in 2024 who were Black and Hispanic"]) {
     const t = readQuestion(q, 2026, "2026-09").text;
     assert.ok(/hispanic/i.test(t) && /black/i.test(t), `${q}: ${t.slice(0, 300)}`); } }
+// A state's cities over a population (Jeff 2026-11-24): one row per agency over the filter, ranked; 50 rows at most with
+// "Top 50 of N agencies" and a note that asking for all shows every row; every row when all is asked; agencies with no FBI
+// population left out and counted; zero qualifying says so with the filter stated.
+{ const texts = (o: any) => JSON.stringify(o.delivered?.text ?? o.explanation ?? o.question ?? o);
+  for (const q of ["Robberies in Texas cities over 50,000 in 2024", "Robberies in Texas cities with a population over 50,000 in 2024"]) {
+    const o = as(ask(q), "answer") as any; const t = texts(o);
+    assert.ok(/Population Over 50,000/.test(t) && /1 agency has no FBI population on file/.test(t) && !/Top 50/.test(t), `${q}: ${t.slice(0, 400)}`); }
+  // "all", "every", "entire", "complete list" are the same ask with no cap; "every Texas city" is the state's cities, not Texas City.
+  for (const q of ["Robberies in all Texas cities over 50,000 in 2024", "Robberies in every Texas city over 50,000 in 2024", "Show the complete list of Texas cities over 50,000 by robberies in 2024"]) {
+    const o = as(ask(q), "answer") as any; assert.ok(/Texas Robbery Offenses by City/.test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
+  // Nothing qualifies: said, with the filter stated.
+  for (const [q, f] of [["Robberies in Texas cities over 5,000,000 in 2024", "5,000,000"], ["Murders in Louisiana cities over 100,000 in 2024", "100,000"]]) {
+    const o = as(ask(q), "decline") as any; assert.ok(new RegExp(`No city agency in \\w+ has a population of ${f} or more`).test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
+  // More than 50 qualify: 50 rows, the title and a note say so; asking for all shows them all.
+  const added = Array.from({ length: 60 }, (_, i) => `TXZ${String(i).padStart(6, "0")}`);
+  for (const o of added) { TX[o] = `ZTOWN${o.slice(3)}`; POP[o] = 60_000 + 1_000 * Number(o.slice(3)); }
+  try {
+    const capped = texts(as(ask("Robberies in Texas cities over 50,000 in 2024"), "answer"));
+    assert.ok(/Top 50 of \d+ Agencies/.test(capped) && /shows every row/.test(capped), capped.slice(0, 500));
+    const all = texts(as(ask("Robberies in all Texas cities over 50,000 in 2024"), "answer"));
+    assert.ok(!/Top 50/.test(all) && !/shows every row/.test(all), all.slice(0, 500));
+  } finally { for (const o of added) { delete TX[o]; delete POP[o]; } } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
 
 // A polite request opener ("can i get data on ...") is dropped: the question is what follows, and it gets the answer the bare question gets.

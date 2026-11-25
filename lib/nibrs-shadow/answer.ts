@@ -2776,7 +2776,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (nationDefault) return nationDefault;
     // The nation's answer is another source's (Homicide Reports details): routed there, as with the United States named, never a place asked.
     // Only for a question naming a race or ethnicity: every other no-place question keeps its place ask (Runner gate 2026-11-24).
-    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && /\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)) return nationOption.continuation;
+    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && (/\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)
+      // A share of homicides by a Homicide Reports detail ("what share of murders involve a firearm") with no place is the nation's, routed the same way.
+      || (nationOption.continuation.source === "shr" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "share")))) return nationOption.continuation;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.
     if (!isDeferred(nationOption) && nationOption.continuation?.kind === "decline" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "peer"))
@@ -3377,6 +3379,13 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // 100,000 or more, said; a population or size named overrides it (replaces D05 for rate rankings). States: none.
     const defaultFloor = sp.statistic === "rate" && sp.entity !== "state" && floorOf(sp) === null ? 100000 : null;
     const minPopulation = floorOf(sp) ?? defaultFloor;
+    // Capability state-city-list: a floor the question gave with no number to show is 50 rows (said: "Top 50 of N Agencies"); "all", "every",
+    // "complete list" or "entire" shows every row. A strict "over N" says "Over N" (the filter is N + 1, unchanged).
+    const askedAllRows = /\b(?:all|every|complete\s+list|entire)\b/i.test(ledger0.question);
+    const floorCut = sp.min && !sp.rank?.n;
+    const rankLimit = sp.rank?.n ?? (floorCut ? (askedAllRows ? ALL_CITIES_N : 50) : 20);
+    const floorCapped = !!floorCut && !askedAllRows;
+    const floorOver = sp.min?.op === ">";
     const saidFloor = <T extends { delivered: { text: string[] } }>(r: T): T => {
       if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
       return r;
@@ -3398,7 +3407,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // A year past Crime Index's last (2026) is Current Trends' (decision 4), on its own path.
     if (yrs && yrs[0] === yrs[1] && yrs[0] <= deps.historical.lastYear && !toDate) {
       const r = answerHistoricalRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", year: yrs[0],
-        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, minPopulation, floorAsked: floorOf(sp) !== null,
+        statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top", limit: rankLimit, minPopulation, floorAsked: floorOf(sp) !== null, floorOver, floorCapped,
         entity: sp.entity }, deps.historical, deps.execute);
       if (r.kind === "historical") return saidFloor(r);
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -3410,7 +3419,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (toDate && !ctSpan) return decline("outside_release_coverage", "Year-to-date rankings come from Current Trends, which covers 2025 and 2026.");
     if (ctSpan && cur && sp.entity !== "state") {
       const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: ctSpan[0], to: ctSpan[1],
-        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation, floorAsked: floorOf(sp) !== null,
+        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: rankLimit }, minPopulation, floorAsked: floorOf(sp) !== null, floorOver, floorCapped,
         entity: sp.entity === "agency" ? "agency" : sp.entity === "county" ? "county" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
       if (r.kind === "current") return saidFloor(r);
       return decline("unsupported_capability", r.explanation);
@@ -3615,6 +3624,10 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       return m && Number(m[1]) < before.length ? { ...b, path: `${to(Number(m[1]))}${before[Number(m[1])].dimension === "geo.place" ? "" : m[2]}` } : b;
     });
   }
+  // Capability state-city-list (Jeff via coordinator 2026-11-24): a state's cities over a population the question gives show 50 rows
+  // (the answer says "Top 50 of N agencies"); "all", "every", "complete list" or "entire" shows every row.
+  const askedFloor = plan.geography.places[0]?.kind === "agency_set" && plan.geography.places[0].where.some((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+  const askedAll = /\b(?:all|every|complete\s+list|entire)\b/i.test(ledger0.question);
   // P08: "large" cities are 250,000 residents or more.
   const set0 = plan.geography.places[0];
   if (flags(ledger0).largeCities) {
@@ -3623,7 +3636,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities have a population of 250,000 or more" });
   }
   // D05: a ranking with no number shows 20 rows.
-  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
+  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: askedFloor ? (askedAll ? null : 50) : 20 } : t));
   let parts2 = a.parts;
   const statements: AnswerStatement[] = [];
   const unbind = (drop: (p: (typeof parts2)[number]) => boolean) => {
@@ -4120,6 +4133,12 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   } };
   const authority = (v: string) => { const p = resolved.get(v); return p && p.kind === "agency" ? { oris: [p.ori] } : null; };
   const problems = [...validateOutcome({ kind: "plan", plan: checked }, DRAFT_LAYER, release, geo), ...validateBindings(plan, parts2, authority)];
+  // Capability state-city-list: a population filter no city agency of the state meets says so, with the filter stated.
+  const emptySet = checked.geography.places[0];
+  if (problems.length && problems.every((p) => p.rule === "R4") && emptySet?.kind === "agency_set" && emptySet.within.kind === "state") {
+    const f = emptySet.where.find((w) => w.field === "agency.population" && (w.op === ">=" || w.op === ">"));
+    if (f) return decline("unsupported_capability", `No city agency in ${stateName(emptySet.within.code)} has a population of ${Number(f.value).toLocaleString("en-US")} or more.`);
+  }
   if (problems.length) return notYet(`plan did not validate: ${problems.map((p) => `${p.rule} ${p.path}: ${p.message}`).join("; ")}`);
 
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.

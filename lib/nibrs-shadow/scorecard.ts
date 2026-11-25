@@ -135,7 +135,8 @@ function aggregateCard(build: HistoricalBuild, execute: Execute, place: { kind: 
   const tableMax = num(execute(`SELECT max(year) FROM ${pq(build.root, file)}`)[0]?.[0]);
   if (tableMax !== null && latest < tableMax - SCORECARD_STALE_YEARS)
     return { kind: "none", explanation: `${name} has no recent year of complete FBI state-level data. Its most recent complete year is ${latest}, which is too far behind ${tableMax} to present as a current scorecard.` };
-  const read = (year: number) => execute(`SELECT ${parts.flatMap((s) => [`${s}_total`, `${s}_capita`]).join(", ")} FROM ${pq(build.root, file)} WHERE ${where} AND year = ${year}`)[0];
+  // The FBI publishes violent_capita and property_capita itself; read them after the part columns (P75: published rate first).
+  const read = (year: number) => execute(`SELECT ${[...parts.flatMap((s) => [`${s}_total`, `${s}_capita`]), "violent_capita", "property_capita"].join(", ")} FROM ${pq(build.root, file)} WHERE ${where} AND year = ${year}`)[0];
   const cur = read(latest), before = read(latest - 1);
   const field = (r: unknown[] | undefined, stem: string, what: 0 | 1) => (r ? num(r[parts.indexOf(stem) * 2 + what]) : null);
   const group = (r: unknown[] | undefined, stems: string[], what: 0 | 1): number | null => {
@@ -145,7 +146,8 @@ function aggregateCard(build: HistoricalBuild, execute: Execute, place: { kind: 
   };
   const rows = ROWS.map((r) => {
     const stems = r.stem === "violent" ? VIOLENT_PARTS : r.stem === "property" ? PROPERTY_PARTS : null;
-    const count = stems ? group(cur, stems, 0) : field(cur, r.stem, 0), rate = stems ? group(cur, stems, 1) : field(cur, r.stem, 1);
+    const published = stems && cur ? num(cur[parts.length * 2 + (r.stem === "violent" ? 0 : 1)]) : null;   // the whole's own published rate; the sum of rounded parts can be 0.1 off
+    const count = stems ? group(cur, stems, 0) : field(cur, r.stem, 0), rate = stems ? (published ?? group(cur, stems, 1)) : field(cur, r.stem, 1);
     const prior = stems ? group(before, stems, 0) : field(before, r.stem, 0);
     return { label: r.label, offenses: count, change: changePct(count, prior), rate: rate === null ? null : round1(rate), clearance: null };
   });

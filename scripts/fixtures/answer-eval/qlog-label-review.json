@@ -22018,15 +22018,12 @@
 }
 },
 "QL-shr-5c4bad9434": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "The sex breakdown does not identify which people.",
+"status": "reviewed",
+"by": "jeff-2026-11-24",
+"why": "defaults P180-P182 (Jeff 2026-11-24, PR 506): homicide sex with no victim or offender word shows the victims' sex, said; no place shows the United States, said.",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"victims or offenders",
-"place"
-]
+"outcome": "answer",
+"source": "shr"
 }
 },
 "QL-shr-5cd41bc94b": {

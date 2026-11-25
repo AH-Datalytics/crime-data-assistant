@@ -576,6 +576,16 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.equal(us.delivered.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
     assert.match(rsql[0], /agency_crime\.parquet'\) WHERE \(type = 'city' OR ori IN \('FL0160000'\)\) AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200'\) AND year = 2024 AND population >= 250000/);
   }
+  // A floor with no number to show (PR 507): capped, said in the title and a note; "Over" for a strict >.
+  const cap = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "count", direction: "top", limit: 3, minPopulation: 50001, floorAsked: true, floorOver: true, floorCapped: true }, build, rexec);
+  assert.ok(cap.kind === "historical", JSON.stringify(cap));
+  if (cap.kind === "historical") {
+    assert.equal(cap.delivered.text[0], "United States Murder Count by City, Population Over 50,000, Top 3 of 5 Agencies, 2024");
+    assert.ok(cap.delivered.text.includes("The 3 cities with the most murders are shown. Asking for all of them shows every row."), JSON.stringify(cap.delivered.text));
+  }
+  // Asked for all of them: no cap, no note.
+  const nocap = answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "count", direction: "top", limit: 100000, minPopulation: 50000, floorAsked: true, floorCapped: false }, build, rexec);
+  assert.ok(nocap.kind === "historical" && nocap.delivered.table.rows.length === 5 && !/Top \d+ of/.test(nocap.delivered.text[0]) && !nocap.delivered.text.some((t) => /shows every row/.test(t)), JSON.stringify(nocap));
   // Every agency, city and county: no type in the query.
   rsql.length = 0;
   answerHistoricalRanking({ measure: "murder", state: "CA", year: 2020, statistic: "count", direction: "top", limit: 10, minPopulation: null, entity: "agency" }, build, rexec);
