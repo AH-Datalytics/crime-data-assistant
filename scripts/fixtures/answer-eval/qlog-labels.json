@@ -95838,8 +95838,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -95852,7 +95851,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "notes": "a ranking or set of places (Crime Index or NIBRS) One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
    }
   },
   {
