@@ -138,7 +138,7 @@ for (const [fq, prev] of [["what states are not represented?", "what states are 
   const r: any = shadowFollowUp(prev, fq, deps);
   assert.equal(r.kind, "coverage", fq);
   const body = JSON.stringify([r.delivered.text, r.delivered.table]).toLowerCase();
-  assert.ok(!body.includes(fq.toLowerCase()) && !/new/.test(body), `${fq}: question text or "new" in the answer`);
+  assert.ok(!body.includes(fq.toLowerCase()) && !/\bnew\b/.test(body), `${fq}: question text or "new" in the answer`);
 }
 
 // What is not these: a figure with its own reading, a definition asked beside a figure, and plain questions.
