@@ -69,7 +69,7 @@ import { hateBuildAt } from "../lib/nibrs-shadow/hate";
 import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
-import { bucket, type Bucket, type Got, type Label } from "./qlog-bucket";
+import { bucket, sameOutcome, tableShape, type Bucket, type Got, type Label, type Table } from "./qlog-bucket";
 import { labelIdentity, readLabels, comparedLabelsFile, splitCompare, formatSplitCompare, appendTrend, sumCheck, DEFAULT_TREND_FILE } from "./scoreboard-v2";
 import { qualifies, readerBinding, readerKey, looksPersonal, validateProposal, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
@@ -227,19 +227,22 @@ export { tableDigest };
 
 /** What the engine did, in the label's terms. */
 function got(o: { kind: string } & Record<string, unknown>, ms: number, labelSource: string | null = null): Got {
+  const table = (o.delivered as { table?: Table } | undefined)?.table;
+  const answer = (source: string): Got => ({ kind: "answer", source, ms, digest: tableDigest(table?.rows), ...tableShape(table, deps.release.lastMonth) });
   switch (o.kind) {
     // A data coverage answer (coverage.ts) describes the data in general, not one tab's source: it fits the source the label names,
     // and stays unverified (its numbers have no independent check yet).
-    case "answer": return { kind: "answer", source: "nibrs", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
-    case "srs": case "historical": return { kind: "answer", source: "historical", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
-    case "current": return { kind: "answer", source: "rtci", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
-    case "coverage": return { kind: "answer", source: labelSource ?? "nibrs", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
-    case "hate": return { kind: "answer", source: "hate_crime", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
-    case "shr": return { kind: "answer", source: "shr", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
+    case "answer": return answer("nibrs");
+    case "srs": case "historical": return answer("historical");
+    case "current": return answer("rtci");
+    case "coverage": return answer(labelSource ?? "nibrs");
+    case "hate": return answer("hate_crime");
+    case "shr": return answer("shr");
     case "route": return { kind: "route", source: String(o.source), ms };
     case "clarify": return { kind: "clarify", source: null, about: String(o.about ?? ""), ms };
     case "proposal": return { kind: "proposal", source: null, ms };
-    case "decline": return { kind: "decline", source: null, reason: String(o.reason ?? ""), ms };
+    // reason is the engine's code; explanation is the sentence the reader sees (the labels' wording).
+    case "decline": return { kind: "decline", source: null, reason: String(o.reason ?? ""), ...(typeof o.explanation === "string" ? { text: o.explanation } : {}), ms };
     default: return { kind: o.kind, source: null, ms };
   }
 }
@@ -447,7 +450,7 @@ const COMPARE = arg("--compare");
 if (COMPARE) {
   const before = new Map<string, Got | null>(); readProgress(COMPARE, before);
   // The outcome itself, not where it came from (Codex review 01: a refused reading is an unchanged outcome).
-  const same = (a: Got | null, b: Got | null) => JSON.stringify({ ...a, ms: 0, via: undefined, read: undefined }) === JSON.stringify({ ...b, ms: 0, via: undefined, read: undefined });
+  const same = sameOutcome;
   const both = scored.filter((l) => before.has(l.id));
   const moved = new Map<string, number>();
   const diffs: string[] = [];
