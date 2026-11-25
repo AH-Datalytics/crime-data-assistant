@@ -50380,24 +50380,16 @@
    "question": "How does the murder rate for urban areas ( anything in an MSA county) compare to the murder rate for rural areas (anything in a Non-MSA county)",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "The data does not have metro versus rural breakdowns."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Urban vs rural: decline, no metro vs rural breakdowns in the dataset. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
