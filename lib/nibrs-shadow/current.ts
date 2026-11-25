@@ -403,6 +403,10 @@ export type CurrentRankQuestion = {
   minPopulation: number | null; entity: "city" | "agency" | "county";
   /** The floor came from the question (so the title says it); a default floor is a note. */
   floorAsked?: boolean;
+  /** The floor was a strict `over N` (`minPopulation` is N + 1): the title says `Over N`. */
+  floorOver?: boolean;
+  /** The limit is the 50-row cut a floor in the question gives: the title and a note say `Top 50 of N`. */
+  floorCapped?: boolean;
   /** A Census region: its states (`state` is then "US") and its name. */
   region?: { name: string; states: string[] };
 };
@@ -443,11 +447,12 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
   const extra: string[] = [];
   if (rq.pick.kind === "rank") {
     const r = rank(entries, rq.pick.direction, rq.pick.limit);
+    const capped = !!rq.floorCapped && entries.length > rq.pick.limit;
     shown = r.ranked; leftOut = r.leftOut;
     const most = rq.pick.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
     // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes (the sample note, ties, who is left out), then the source.
-    lead = `${titleCase(where.replace(/^the /i, ""))} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.minPopulation.toLocaleString("en-US")} or More` : ""}, ${titleTimeframe(periodTitle({ from: rq.from, to: rq.to }, spanWords))}`;
-    extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.`);
+    lead = `${titleCase(where.replace(/^the /i, ""))} ${titleCase(`${SINGULAR[col]} ${rate ? "rate" : "count"}`)} by ${unitTitle}${rq.floorAsked && rq.minPopulation ? `, Population ${rq.floorOver ? `Over ${(rq.minPopulation - 1).toLocaleString("en-US")}` : `${rq.minPopulation.toLocaleString("en-US")} or More`}` : ""}${capped ? `, Top ${rq.pick.limit} of ${entries.length.toLocaleString("en-US")} Agencies` : ""}, ${titleTimeframe(periodTitle({ from: rq.from, to: rq.to }, spanWords))}`;
+    extra.push(`The ${shown.length} ${unitPlural} with the ${most} ${rate ? "rates" : WORDS[col]} are shown, ${span}.${capped ? " Asking for all of them shows every row." : ""}`);
     if (r.tie?.truncated) extra.push(truncatedTieSentence(r.tie, rate));
     else if (r.tie) extra.push(`${r.tie.names.join(", ")} tie for place ${r.tie.position}, so ${r.tie.shown} agencies are shown.`);
   } else {
