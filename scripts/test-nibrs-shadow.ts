@@ -1149,7 +1149,8 @@ assert.deepEqual(MEASURE_CODES.homicide_all, ["09A", "09B", "09C"]);
   assert.ok(!(as(murder.o, "answer") as { delivered: { text: string[] } }).delivered.text.some((t) => /^Homicides here include/.test(t)));
   const everyText = (as(every.o, "answer") as { delivered: { text: string[] } }).delivered.text;
   assert.ok(everyText.includes("All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide."), everyText.join(" | "));
-  for (const q of ["all homicides in Texas in 2024", "all homicides in the United States in 2024"]) {
+  // Jeff 2026-11-25: "no on 09C, yes apply to state and national": state and national homicide is the murder series.
+  for (const q of ["homicides in Texas in 2024", "homicides in the United States in 2024", "all homicides in Texas in 2024", "all homicides in the United States in 2024"]) {
     const o = as(ask(q), "srs") as { delivered: { text: string[] } };
     assert.ok(/ murders in 2024\.$/.test(o.delivered.text[0]), `${q}: ${o.delivered.text[0]}`);
     assert.equal(o.delivered.text.length, 2, `${q}: no disclaimer, only the count and the source`);
