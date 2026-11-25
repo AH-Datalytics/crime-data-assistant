@@ -3985,3 +3985,21 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const t = readQuestion(q, 2026, "2026-09").text;
     assert.ok(/hispanic/i.test(t) && /black/i.test(t), `${q}: ${t.slice(0, 300)}`); } }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
+
+// A polite request opener ("can i get data on ...") is dropped: the question is what follows, and it gets the answer the bare question gets.
+{
+  const bare = "Murders in Houston according to NIBRS in 2019 and 2021";
+  const shown = (q: string) => JSON.stringify((shadowAnswer(q, deps) as any).delivered ?? shadowAnswer(q, deps));
+  const want = shown(bare);
+  assert.equal(shadowAnswer(bare, deps).kind, "answer", "the bare question answers");
+  for (const opener of ["can i get data on ", "Can I see ", "could you give me the numbers for ", "Hi, can I please get the data about ", "may i have ", "can i get the stats on "]) {
+    assert.equal(shown(`${opener}${bare[0].toLowerCase()}${bare.slice(1)}`), want, opener);
+  }
+  // Only an opener is dropped: a question that merely starts with "can" is read as written, and a bare opener is not emptied.
+  assert.notEqual(shown("can i get data on"), want, "nothing after the opener: not turned into an answer");
+  // Known edge (Coordinator 2026-11-24): "can I see the trends data library" has no crime question in it; it reads as the bare form does (a clarify), never an answer or a guess.
+  const lib = shadowAnswer("can I see the trends data library", deps);
+  assert.equal(lib.kind, "clarify", "the trends data library ask clarifies");
+  assert.equal((lib as any).about, "which place", "it asks which place");
+  assert.deepEqual((lib as any).options, (shadowAnswer("see the trends data library", deps) as any).options, "the opener changes nothing");
+}
