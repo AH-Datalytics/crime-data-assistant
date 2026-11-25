@@ -112,7 +112,8 @@ assert.ok(asianAll.delivered.text.some((t: string) => /Anti-Asian is shown from 
 assert.equal(modernFromNote({ year: 2015, biases: [{ name: "Anti-Asian", year: 2013 }, { name: "Anti-Arab", year: 2015 }] }), "Anti-Asian took its current meaning in 2013 and Anti-Arab took its current meaning in 2015, so the years are shown from 2015.", "mixed years each named, not one shared year");
 assert.match(modernFromNote({ year: 2015, biases: [{ name: "Anti-Arab", year: 2015 }, { name: "Anti-Jehovah's Witness", year: 2015 }] }), /shown from 2015, when the bias category took its current meaning/);
 const asianNy = ask("Compare anti-Asian hate crimes in California and New York by year");
-assert.equal(asianNy.kind, "clarify", "which New York is asked, as it is for anti-Jewish");
+// P196: a name beside states only is the state, so New York here answers as the state (no clarify).
+assert.equal(asianNy.kind, "hate", "New York beside a state is the state");
 assert.equal(as(ask("hate crimes in Texas in 1980"), "decline").explanation, "Hate crime data here start in 1991, so 1980 isn't included.");
 assert.equal(as(ask("hate crimes in Texas from 1960 to 1990"), "decline").explanation, "Hate crime data here start in 1991, so 1960 through 1990 aren't included.");
 assert.ok(as(ask("hate crimes in Texas by year from 1990 to 1993"), "hate").delivered.text.includes("Hate crime data by bias starts in 1991."));
@@ -191,14 +192,10 @@ assert.notEqual(rate.kind, "answer", "a rate is not built");
   const yr = as(ask("anti-Black hate crimes in Texas and Florida by year from 2022 to 2024"), "hate");
   assert.deepEqual(yr.delivered.table.columns.slice(0, 2).map((c) => c.header), ["Place", "Year"]);
   assert.equal(yr.delivered.table.rows.length, 6);
-  // New York is asked about first (the state or the city); either choice still answers both places.
+  // P196: New York beside another state is the state; it answers both places at once, no clarify.
   const ny = ask("hate crimes in New York and Texas in 2024");
-  assert.equal(ny.kind, "clarify");
-  for (const o of (ny as Extract<ShadowOutcome, { kind: "clarify" }>).options) {
-    const c = o.continuation as Extract<ShadowOutcome, { kind: "hate" }>;
-    assert.equal(c.kind, "hate");
-    assert.equal(c.delivered.table.rows.length, 2, "both places answered after the choice");
-  }
+  assert.equal(ny.kind, "hate");
+  assert.equal(as(ny, "hate").delivered.table.rows.length, 2, "both places answered");
   // The same place twice is not two places (declined); more than six places is declined.
   assert.equal(ask("anti-Black hate crimes in Texas and Texas in 2024").kind, "decline", "one place named twice is not a comparison");
   assert.equal(ask("hate crimes in Texas, Florida, Ohio, Iowa, Utah, Maine and Idaho in 2024").kind, "decline");
