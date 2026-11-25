@@ -3191,6 +3191,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) out.push([`${y}-${String(m).padStart(2, "0")}`, ori === "TXHPD0000" && y === 2026 && m === 8 ? null : 11]);
       return out;
     }
+    // An agency's population for a rolling rate: 1,000,000 in every month and year (the completed year is 2025).
+    if (/SELECT max\(year\) FROM read_parquet\('[^']*agency_crime/.test(sql)) return [[2025]];
+    if (/SELECT printf\('%04d-%02d', year, month\), population FROM/.test(sql)) return Array.from({ length: 20 }, (_, i) => [`${2025 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`, 1_000_000]);
+    if (/SELECT year, population FROM read_parquet\('[^']*agency_crime/.test(sql)) return [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025].map((y) => [y, 1_000_000]);
     return stub(sql);
   };
   const cdeps = { ...deps, execute: ctStub, current: { root: "/ct", release: "ct-test", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" } } as unknown as ShadowDeps;
@@ -3237,6 +3241,35 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const nat2 = roll("murders rolling over 12 months since 2024 nationally");
     assert.ok(nat2.delivered.text.includes("This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from February 2023 through August 2026."), nat2.delivered.text.join(" / "));
     assert.deepEqual(nat2.delivered.table.rows[0], ["2024-01", 36000]);
+    // A rolling rate (Jeff 2026-11-23, P281): the window's count over the month-weighted population, a series like the counts. A state or the
+    // nation is given from 2026-01 (the first full-lookback January in the published sample); an earlier start is declined, not clipped.
+    const rr = roll("murder rate rolling over 12 months nationally");
+    assert.deepEqual(rr.delivered.table.columns.map((c) => c.header), ["Month", "Rolling 12-month murder rate per 100,000"]);
+    assert.deepEqual(rr.delivered.table.rows[0], ["2026-01", 32.4], "36,000 murders over 111,272,916 people");
+    assert.ok(rr.delivered.text.some((t) => /not scaled to a full year/.test(t)), rr.delivered.text.join(" / "));
+    // A month where a sample agency has no count: the group's count and population no longer cover the same agencies, so every window with it is blank.
+    const gap = { ...cdeps, execute: (sql: string) => (/WHERE sample/.test(sql) ? ctStub(sql).map((r) => (r[0] === "2026-03" ? [r[0], r[1], r[2], r[3], 2] : r)) : ctStub(sql)) } as unknown as ShadowDeps;
+    const rg = shadowAnswer("murder rate rolling over 12 months nationally", gap);
+    assert.equal(rg.kind, "current", JSON.stringify(rg).slice(0, 300));
+    if (rg.kind === "current") {
+      const byMonth = new Map(rg.delivered.table.rows.map((r) => [r[0], r[1]]));
+      assert.equal(byMonth.get("2026-01"), 32.4);
+      assert.equal(byMonth.get("2026-03"), null, "a window with a blank-count month has no rate");
+      assert.equal(byMonth.get("2026-08"), null);
+    }
+    // A 3-month rate is the 3 months' count per 100,000, not annualized (coordinator 2026-11-24, P59/P96).
+    const rr3 = roll("murder rate rolling over 3 months nationally");
+    assert.deepEqual(rr3.delivered.table.columns.map((c) => c.header), ["Month", "Rolling 3-month murder rate per 100,000"]);
+    assert.ok(rr3.delivered.text.some((t) => /not scaled to a full year/.test(t)), rr3.delivered.text.join(" / "));
+    const rrEarly = shadowAnswer("murder rate rolling over 12 months since 2024 nationally", cdeps);
+    assert.equal(rrEarly.kind, "decline", JSON.stringify(rrEarly).slice(0, 300));
+    assert.ok(/given from January 2025/.test((rrEarly as { explanation: string }).explanation));
+    const rd = roll("Dallas murder rate rolling over 12 months since 2025");
+    assert.deepEqual(rd.delivered.table.columns.map((c) => c.header), ["Month", "Rolling 12-month murder rate per 100,000"]);
+    assert.equal(rd.delivered.text[0], "Dallas, Texas Murder Rate Rolling Over 12 Months, Jan 2025-Aug 2026");
+    assert.deepEqual(rd.delivered.table.rows[0], ["2025-01", 13.2], "132 murders over 1,000,000 people");
+    // 2026 months carry the completed year's population, so the last window is still 13.2.
+    assert.deepEqual(rd.delivered.table.rows[rd.delivered.table.rows.length - 1], ["2026-08", 13.2]);
     // The plain monthly national answer (P155): a span inside the published sample's life (2025-01 on) is the published sample; a span that
     // reaches before 2025 is the agencies with a figure in every month of it, said with the span.
     const m18 = roll("murders by month since 2018 nationally");
