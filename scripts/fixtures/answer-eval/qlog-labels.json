@@ -4050,8 +4050,7 @@
     "outcome": "answer",
     "source": "rtci",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "rtci"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -4064,7 +4063,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source (Jeff 2026-11-25, unsure-116): monthly or current figure, Current Trends only."
    }
   },
   {
