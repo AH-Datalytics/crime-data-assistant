@@ -94563,10 +94563,9 @@
     "outcome": "answer",
     "source": "rtci",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "rtci"
     ],
-    "answer": "the earlier question, changed as asked",
+    "answer": "monthly New Orleans murders from Current Trends, 2017 to the latest month",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -94577,7 +94576,7 @@
     "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The offered alternative is not present in the supplied context."
+    "notes": "second labeler unclear: The offered alternative is not present in the supplied context. Just what you can do: monthly New Orleans murders, Current Trends. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
