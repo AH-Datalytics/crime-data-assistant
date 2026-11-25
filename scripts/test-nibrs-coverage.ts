@@ -37,6 +37,11 @@ const execute = (sql: string): unknown[][] => {
     for (let yr = Number(y[1]); yr <= Number(y[2]); yr++) for (const s of ["AK", "WY", "NB", "NJ", "NC", "PR", "VI", "GM"]) rows.push([yr, s]);
     return rows;
   }
+  // Agencies whose primary county (FIPS, ordinal 1) is the county agency's: Dallas Police carries TXDPD0000, not a TX057 code.
+  if (/agency_fips_county/.test(sql)) return [["TX0570000"], ["TXDPD0000"], ["TX0570100"]];
+  // Crime Index agencies of a state, from the build's agency_crime table: all, and the cities among them.
+  if (/count\(DISTINCT ori\), count\(DISTINCT CASE WHEN type = 'city'/.test(sql)) return [[1391, 1323]];
+  if (/SELECT DISTINCT ori FROM read_parquet\('\/ci\/agency_crime.parquet'\)/.test(sql)) return [["TXDPD0000"]];
   return [];
 };
 const deps: ShadowDeps = {
@@ -102,7 +107,7 @@ assert.match(ask("What is defined as violent crime").delivered.text[1], /murder 
   const txt = (q: string) => ask(q).delivered.text.join("\n");
   assert.match(ask("SRS definition please").delivered.text[1], /^SRS is the Summary Reporting System, the FBI's older summary reporting program\. It is a program, not an offense\.$/);
   for (const q of ["how is domestic violence defined in NIBRS?", "What constitutes domestic violence in nibrs?", "how is domestic violence defined?"])
-    assert.match(ask(q).delivered.text[1], /^NIBRS has no domestic violence offense\..*Do not equate it with Family Offenses, Nonviolent \(90F\)\.$/, q);
+    assert.match(ask(q).delivered.text[1], /^NIBRS has no domestic violence offense\..*It is not the same as Family Offenses, Nonviolent \(90F\)\.$/, q);
   assert.match(ask('what counts as "personal weapons" in weapon type').delivered.text[1], /weapon code 40: hands, fists, feet and teeth/);
   // Violent crime: no program named gives both, each labeled; SRS or Crime Index gives SRS; NIBRS gives the codes.
   assert.ok(/SRS/.test(txt("What is defined as violent crime")) && /09A/.test(txt("What is defined as violent crime")));
@@ -113,9 +118,12 @@ assert.match(ask("What is defined as violent crime").delivered.text[1], /murder 
 const nash = ask("What is the exact agency name for Nashville in the dataset? Show me the agencies table entry.");
 assert.ok(nash.delivered.table.rows.some((r) => r[0] === "TN0190100"), JSON.stringify(nash.delivered.table.rows));
 const dal = ask("What agencies match Dallas County in Texas? Show me the agencies table entries.");
-assert.ok(dal.delivered.table.rows.some((r) => r[0] === "TX0570000") && dal.delivered.table.rows.every((r) => String(r[0]).startsWith("TX057")), JSON.stringify(dal.delivered.table.rows).slice(0, 300));
+assert.ok(dal.delivered.table.rows.some((r) => r[0] === "TX0570000") && dal.delivered.table.rows.some((r) => r[0] === "TXDPD0000"), JSON.stringify(dal.delivered.table.rows).slice(0, 300));
+assert.ok(sqls.some((s) => /agency_fips_county/.test(s)), "county membership comes from the NIBRS batch header's primary county, not only the ORI prefix");
+assert.equal(dal.delivered.table.rows.find((r) => r[0] === "TXDPD0000")![4], "FBI NIBRS and Crime Index", "the Crime Index label comes from agency_crime");
 const pa = ask("which cities are represented in Pennsylvania?");
-assert.match(pa.delivered.text[1], /^Pennsylvania has [\d,]+ agencies in the FBI's NIBRS agency list and [\d,]+ with Crime Index counts/);
+assert.match(pa.delivered.text[1], /^Pennsylvania has [\d,]+ agencies in the FBI's NIBRS agency list and 1,391 with Crime Index counts; 1,323 of the agencies in the index are cities\.$/);
+assert.ok(sqls.some((s) => /\/ci\/agency_crime\.parquet/.test(s) && /state IN \('PA', 'PA'\)/.test(s)), "the Crime Index count is read from the build's agency_crime table, not the fixture");
 
 // A question about how a definition changed is not a plain definition (QL-hist-9745b45647 and QL-hist-924349745b): it keeps its old reading.
 for (const q of ["any legal change of the definition of robbery or clearance rate historically", "has the definition of violent crime changed over time?", "how has rape been defined historically"])
@@ -125,6 +133,13 @@ assert.equal(ask("how is robbery defined?").shape, "definitions");
 // A follow-up about the data is answered on its own, whatever came before.
 const fu = shadowFollowUp("murders in Houston in 2024", "what states are not represented?", deps);
 assert.equal(fu.kind, "coverage");
+// The follow-up's own question and the word "new" are labels on the turn (rewrite, rewriteKind), never part of the answer's text or table (QL-ct-4a77c4a77c, 4a77ca6569, 6fee44a77c).
+for (const [fq, prev] of [["what states are not represented?", "what states are not represented?"], ["which states aren't in the data?", "what states are not represented?"], ["what states are not represented?", "which states do you have data for?"]]) {
+  const r: any = shadowFollowUp(prev, fq, deps);
+  assert.equal(r.kind, "coverage", fq);
+  const body = JSON.stringify([r.delivered.text, r.delivered.table]).toLowerCase();
+  assert.ok(!body.includes(fq.toLowerCase()) && !/new/.test(body), `${fq}: question text or "new" in the answer`);
+}
 
 // What is not these: a figure with its own reading, a definition asked beside a figure, and plain questions.
 const notCoverage = (q: string, p = false, m = false) => assert.equal(readCoverage(q, m, p), null, q);

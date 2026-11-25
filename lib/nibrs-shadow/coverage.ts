@@ -29,7 +29,7 @@ export type CoverageAnswer = {
   read: { table: string; release: string };
 };
 export type CoverageRelease = { id: string; firstMonth: string; lastMonth: string };
-export type CoverageDeps = { root: string; release: CoverageRelease; execute(sql: string): unknown[][]; crimeIndexYears?: { first: number; last: number } | null; places?: PlaceIndex };
+export type CoverageDeps = { root: string; release: CoverageRelease; execute(sql: string): unknown[][]; crimeIndexYears?: { first: number; last: number } | null; places?: PlaceIndex; /** The Crime Index build's folder (agency_crime.parquet): agency counts come from it, never from the fixture index. */ crimeIndexRoot?: string | null };
 
 /** The 50 states: DC, Puerto Rico and the territories do not count as states (Jeff 2026-11-25). */
 const FIFTY = Object.keys(STATE_NAMES).filter((c) => c !== "DC");
@@ -39,7 +39,7 @@ export const SOURCES_SENTENCE = "The data comes from the FBI's Uniform Crime Rep
 export const VIOLENT_NIBRS = "In NIBRS, violent crime is murder and nonnegligent manslaughter (09A), rape (11A, 11B and 11C), robbery (120) and aggravated assault (13A).";
 export const FBI_DEFINITIONS: Record<CoverageTerm, { title: string; text: string; source: string }> = {
   "domestic violence": { title: "Domestic Violence (NIBRS)", source: "Source: FBI NIBRS.",
-    text: "NIBRS has no domestic violence offense. Domestic violence is recorded through the victim-to-offender relationship codes (spouse, boyfriend or girlfriend, parent, child and other family). Do not equate it with Family Offenses, Nonviolent (90F)." },
+    text: "NIBRS has no domestic violence offense. Domestic violence is recorded through the victim-to-offender relationship codes (spouse, boyfriend or girlfriend, parent, child and other family). It is not the same as Family Offenses, Nonviolent (90F)." },
   "personal weapons": { title: "Personal Weapons (NIBRS Weapon Code 40)", source: "Source: FBI NIBRS.",
     text: "Personal weapons are NIBRS weapon code 40: hands, fists, feet and teeth." },
   "srs": { title: "SRS (Summary Reporting System)", source: "Source: FBI SRS.",
@@ -132,9 +132,18 @@ function lookupAnswer(lk: CoverageLookup, d: CoverageDeps): { rows: string[][]; 
   const index = new Map<string, { kind: string; sources?: string[]; state: string }>();
   for (const xs of pl.byName.values()) for (const a of xs) index.set(a.ori, a);
   const key = (x: string) => x.toLowerCase().replace(/\s+(county|parish)$/, "").trim();
+  const qs = (x: string) => `'${x.replace(/'/g, "''")}'`;
+  const acFile = d.crimeIndexRoot ? `read_parquet(${qs(`${d.crimeIndexRoot}/agency_crime.parquet`)})` : null;
+  /** Which of these ORIs have Crime Index counts: from the build's agency_crime table when it is on hand (the fixture index only when it is not). */
+  let liveCi: Set<string> | null = null;
+  const ciLive = (oris: string[]) => {
+    if (!acFile || !oris.length) return;
+    liveCi = new Set(d.execute(`SELECT DISTINCT ori FROM ${acFile} WHERE ori IN (${oris.map(qs).join(", ")})`).map((r) => String(r[0])));
+  };
   const row = (ori: string): string[] => {
     const i = index.get(ori);
-    const src = i?.sources?.includes("crime_index") ? "FBI NIBRS and Crime Index" : "FBI NIBRS";
+    const inCi = liveCi ? liveCi.has(ori) : !!i?.sources?.includes("crime_index");
+    const src = inCi ? "FBI NIBRS and Crime Index" : "FBI NIBRS";
     return [ori, pl.names.get(ori) ?? "", postal(ori.slice(0, 2)), typeOf(ori, i), src];
   };
   const byPrefix = (prefix: string) => [...pl.names.keys()].filter((o) => o.startsWith(prefix)).sort();
@@ -144,6 +153,7 @@ function lookupAnswer(lk: CoverageLookup, d: CoverageDeps): { rows: string[][]; 
     const named = (index.size ? [...index.values()] : []).filter((a: any) => key(a.name) === n && (!lk.state || a.state === lk.state)).map((a: any) => a.ori);
     const oris = [...new Set([...named, ...hits])];
     if (!oris.length) return null;
+    ciLive(oris);
     const rows = oris.map(row);
     return { rows, text: [`Agencies Named ${lk.name} in the Data`, ...rows.map((r) => `${r[0]}: ${r[1]}, ${STATE_NAMES[r[2]] ?? r[2]} (${r[4]}).`), COVERAGE_SOURCE] };
   }
@@ -152,21 +162,30 @@ function lookupAnswer(lk: CoverageLookup, d: CoverageDeps): { rows: string[][]; 
     const cty = [...index.values()].filter((a: any) => a.kind === "county" && key(a.name) === n && (!lk.state || a.state === lk.state)) as any[];
     if (!cty.length) return null;
     const prefix = cty[0].ori.slice(0, 5);
+    // The ORI prefix is the county's own code, but a city agency can carry another prefix (Dallas Police is TXDPD0000, not TX057...):
+    // an agency also belongs to the county its NIBRS batch header names as primary (FIPS county, ordinal 1), the rule the county-wide sums use.
+    const stc = orif(cty[0].state);
+    const byFips = d.execute(`WITH f AS (SELECT data_year, ori, fips_county FROM read_parquet(${qs(`${d.root}/agency_fips_county/**/*.parquet`)}, hive_partitioning = 1) WHERE ordinal = 1), `
+      + `y AS (SELECT max(data_year) AS y FROM f), k AS (SELECT fips_county FROM f WHERE ori = ${qs(cty[0].ori)} AND data_year = (SELECT y FROM y)) `
+      + `SELECT DISTINCT f.ori FROM f JOIN k USING (fips_county) WHERE f.data_year = (SELECT y FROM y) AND f.ori LIKE ${qs(`${stc}%`)}`).map((r) => String(r[0]));
     const oris = byPrefix(prefix);
-    const all = [...new Set([cty[0].ori, ...oris])];
+    const all = [...new Set([cty[0].ori, ...oris, ...byFips.filter((o) => pl.names.has(o))])].sort();
+    ciLive(all);
     const rows = all.map(row);
     const st = STATE_NAMES[cty[0].state] ?? cty[0].state;
-    return { rows, text: [`Agencies in ${lk.name} County, ${st}`, `${rows.length} agencies have the county code ${prefix}; ${cty[0].ori} is the county agency.`, ...rows.map((r) => `${r[0]}: ${r[1]} (${r[3]}).`), COVERAGE_SOURCE] };
+    return { rows, text: [`Agencies in ${lk.name} County, ${st}`, `${rows.length} agencies are in the county: those with the county code ${prefix} and those whose NIBRS records name it as their primary county. ${cty[0].ori} is the county agency.`, ...rows.map((r) => `${r[0]}: ${r[1]} (${r[3]}).`), COVERAGE_SOURCE] };
   }
   const code = lk.name;
   const st = STATE_NAMES[code] ?? code;
   const nibrsNamed = byPrefix(orif(code));
   const sql = d.execute(`SELECT count(DISTINCT ori) FROM ${ay(d.root)} WHERE state_abbr IN ('${orif(code)}', '${code}')`);
   const nibrs = Number(sql[0]?.[0]) > 0 ? Number(sql[0][0]) : nibrsNamed.length;
-  const ci = new Set([...index.values()].filter((a: any) => a.state === code && a.sources?.includes("crime_index")).map((a: any) => a.ori));
-  const cities = [...index.values()].filter((a: any) => a.state === code && a.kind === "city").length;
-  const rows = [["FBI NIBRS agency list", String(nibrs)], ["Crime Index", String(ci.size)]];
-  return { rows, text: [`Agencies in ${st}`, `${st} has ${fmt(nibrs)} agencies in the FBI's NIBRS agency list and ${fmt(ci.size)} with Crime Index counts; ${fmt(cities)} of the agencies in the index are cities.`, "Name a city to see its agency and the years it reports.", COVERAGE_SOURCE] };
+  // Crime Index agencies are counted from the build's agency_crime table (the release the answers read), not from the fixture index.
+  const live = acFile ? d.execute(`SELECT count(DISTINCT ori), count(DISTINCT CASE WHEN type = 'city' THEN ori END) FROM ${acFile} WHERE state IN (${qs(orif(code))}, ${qs(code)})`)[0] : null;
+  const ci = live ? Number(live[0]) : null, cities = live ? Number(live[1]) : null;
+  const rows = [["FBI NIBRS agency list", String(nibrs)], ...(ci === null ? [] : [["Crime Index", String(ci)]])];
+  const ciText = ci === null ? "" : ` and ${fmt(ci)} with Crime Index counts; ${fmt(cities!)} of the agencies in the index are cities`;
+  return { rows, text: [`Agencies in ${st}`, `${st} has ${fmt(nibrs)} agencies in the FBI's NIBRS agency list${ciText}.`, "Name a city to see its agency and the years it reports.", COVERAGE_SOURCE] };
 }
 
 const ams = (root: string) => `read_parquet('${root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true)`;
