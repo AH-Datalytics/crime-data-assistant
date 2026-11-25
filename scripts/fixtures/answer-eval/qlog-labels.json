@@ -68083,8 +68083,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -68097,7 +68096,7 @@
     "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates by year (P57) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; clearance rates by year (P57) By rule from the question text; second labeler NIBRS Model 2026-11-22 One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
    }
   },
   {
