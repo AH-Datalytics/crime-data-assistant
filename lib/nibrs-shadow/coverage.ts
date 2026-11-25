@@ -17,7 +17,7 @@ export const COVERAGE_SOURCE = "Source: FBI NIBRS.";
 /** The one constant Jeff chose for definitions (2026-11-18). */
 export const DEFINITIONS_LINK = "https://cde.ucr.cjis.gov/";
 
-export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "scope";
+export type CoverageShape = "agencies" | "states" | "years" | "sources" | "definitions" | "scope" | "shootings";
 /** `lookup`: a scope question that names an agency, a county or a state ("What agencies match Dallas County in Texas?"). `term`: the one term a definitions question names that has an FBI definition on hand. */
 export type CoverageLookup = { kind: "agency" | "county" | "state"; name: string; state?: string | null };
 export type CoverageQuestion = { shape: CoverageShape; state: string | null; from: number | null; to: number | null; byYear: boolean; lookup?: CoverageLookup | null; term?: CoverageTerm | null; program?: "srs" | "nibrs" | null; ucr?: boolean };
@@ -81,6 +81,10 @@ function termIn(t: string): CoverageTerm | null {
 }
 const DEFINED =/\bhow\s+(?:is|are|do\s+you\s+define|does\s+(?:nibrs|the\s+fbi|ucr)\s+define)\b.*\bdef[ia]n\w*\b|\bwhat\s+(?:is|are)\s+(?:the\s+)?def[ia]n\w+\s+of\b|\bdef[ia]nitions?\s+(?:of|please)\b|\bwhat\s+(?:is|are)\s+defined\s+as\b|\bwhat\s+(?:counts\s+as|constitutes)\b/i;
 
+/** Do you (or we) track, have, count or record shootings, or is there a dataset that does them. */
+const SHOOTINGS_CAPABILITY = /^\s*(?:do|does|can|could)\s+(?:you|we|they|i|this\s+(?:site|tool|app))\s+(?:have|track|count|record|show|cover|report|do)\b[^?]*\bshootings?\b|\b(?:any|what)\s+(?:dataset|data\s*set|data|source)s?\b[^?]*\bshootings?\b/i;
+const POLICE_WORDS = /\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i;
+
 /**
  * The question about the data the words ask, or null (the question is a figure, a place and a period, or something else).
  * `hasMeasure` / `hasPlace`: whether the reader finds a crime, or a place other than a state, in it ("how many agencies reported
@@ -111,6 +115,8 @@ export function readCoverage(question: string, hasMeasure: boolean, hasPlace: bo
     || /\bwhich\s+(?:cities|agencies)\s+(?:report|reports|submit|contribute)\w*\b(?:\s+(?:monthly|each\s+month))?/i.test(t)
     || /\bwhat\s+agencies\s+match\b/i.test(t) || /\bagencies\s+table\b/i.test(t)))
     return one("scope", { state: null, from: null, to: null, byYear: false, lookup: lookupIn(t) });
+  // P312 (Jeff 2026-11-25, labels QL-ct-9ac9544851, QL-hist-a02cdb1065, QL-ct-6c0cceecde): "do you track shootings?" is a yes/no question about the data, answered, never declined.
+  if (!hasPlace && SHOOTINGS_CAPABILITY.test(t) && !POLICE_WORDS.test(t)) return one("shootings", { state: null, from: null, to: null, byYear: false });
   if (hasMeasure || hasPlace) return null;
   // Agencies reporting.
   if (/\bhow\s+many\s+(?:law\s+enforcement\s+)?agen\w*\s+(?:have\s+|has\s+)?(?:reported|report|reporting|submit\w*|send\w*|contribut\w*|participat\w*|are\s+(?:in|included)|in\s+(?:the|this)\s+data)\b/i.test(t))
@@ -292,6 +298,15 @@ export function answerCoverage(cq: CoverageQuestion, d: CoverageDeps): CoverageA
     }
     return { kind: "coverage", shape: "scope", period: span0, meaning: meaning("coverage", null, []),
       delivered: { table: { columns: [txt("coverage.scope", "Coverage")], rows: [[sentence]] }, text: [sentence] }, read };
+  }
+
+  if (cq.shape === "shootings") {
+    const text = ["Shootings in the Data",
+      "No, not as a count of shootings: NIBRS doesn't count shootings as a category.",
+      "For fatal shootings, the Homicide Reports tab has firearm homicides.",
+      "The closest NIBRS figure is aggravated assault with a firearm, which also includes brandishing, pistol-whipping and threats, not only people who were shot.", COVERAGE_SOURCE];
+    return { kind: "coverage", shape: "shootings", period: span0, meaning: meaning("shootings", null, []),
+      delivered: { table: { columns: [txt("coverage.shootings", "Shootings")], rows: text.slice(1, 4).map((s) => [s]) }, text }, read };
   }
 
   if (cq.shape === "sources") {

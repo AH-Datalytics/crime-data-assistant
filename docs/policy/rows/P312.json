@@ -1,0 +1,12 @@
+{
+  "id": "P312",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"do you track shootings?\", \"do you have shootings data\", \"do we have any dataset that can do shootings\" (a yes/no question about the data, no place or crime).",
+  "what the app does today": "Declined as a request for shootings.",
+  "proposed behavior": "Answered as the yes/no question it is: NIBRS does not count shootings as a category; firearm homicides are on the Homicide Reports tab; the closest NIBRS figure is aggravated assault with a firearm, which also includes brandishing, pistol-whipping and threats. A shootings question with a place or a crime named keeps the existing ask (D14).",
+  "exact default or choices offered": "No ask; the answer.",
+  "why": "Jeff 2026-11-25: the shootings labels are right; the capability questions are answered, not declined.",
+  "status": "Decided 2026-11-25 (Jeff, through the coordinator); build: Engine",
+  "test cases": "QL-ct-9ac9544851, QL-hist-a02cdb1065, QL-ct-6c0cceecde."
+}
