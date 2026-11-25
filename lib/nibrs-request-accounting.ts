@@ -371,7 +371,11 @@ const RULES: Rule[] = [
   { concept: "period", value: (m) => `year:${m[1]}`, pattern: R(String.raw`\b(${YEAR})\b`) },
   // ---- population thresholds (accepted Historical forms) ----
   { concept: "threshold", value: (m) => thresholdValue(m[0]), pattern: R(String.raw`\(?\b(?:(?:with|having)\s+)?(?:an?\s+)?(?:(?:populations?|pop\.?)\s+(?:of\s+)?)?(?:at\s+least|over|above|more\s+than|greater\s+than|exceeding|under|below|less\s+than|fewer\s+than|at\s+most|min(?:imum)?(?:\s+of)?|max(?:imum)?(?:\s+of)?)\s+\d[\d,]*(?:\.\d+)?(?:\s*(?:k\b|thousand\b|m\b|million\b))?(?:\s*\+)?(?:\s+${POP_WORD})?(?:\s+or\s+(?:more|larger|greater))?\)?`),
-    when: (m) => /(?:population|pop\b|pop\.|people|residents|persons|inhabitants|\d\s*k\b|thousand|million|\bmin\b|\bmin(?:imum)?\b)/i.test(m[0]) },
+    // A bare "over 50,000" right after a place-type word ("Texas cities over 50,000") is a population floor too (capability state-city-list);
+    // only for a floor word and a figure of 1,000 or more, so "cities with over 5 murders" is still not read as one.
+    when: (m, q) => /(?:population|pop\b|pop\.|people|residents|persons|inhabitants|\d\s*k\b|thousand|million|\bmin\b|\bmin(?:imum)?\b)/i.test(m[0])
+      || (/^(?:at\s+least|over|above|more\s+than|greater\s+than|exceeding)\s+\d/i.test(m[0]) && Number(m[0].replace(/^\D+/, "").replace(/,/g, "").match(/^\d+/)?.[0] ?? 0) >= 1000
+        && /\b(?:cit(?:y|ies)|towns?|agencies|departments|jurisdictions)\s+$/i.test(q.slice(0, m.index))) },
   { concept: "threshold", value: (m) => thresholdValue(m[0]), pattern: R(String.raw`\b(?:of\s+)?\d[\d,]*\s*(?:k|thousand|million)?\s*(?:${POP_WORD}\s+)?(?:or\s+(?:more|larger|greater)|\+)(?:\s+${POP_WORD})?`),
     when: (m) => /(?:population|people|residents|persons|inhabitants|\d\s*k\b|thousand|million)/i.test(m[0]) },
   // ---- shares (the structure is read by the types from where the words sit) ----
@@ -419,7 +423,7 @@ const RULES: Rule[] = [
   ...MEASURES,
   { concept: "measure", value: () => "unspecified", pattern: R(String.raw`\bcrimes?\b|\boffen[cs]es?\b|\bcases\b`) },
   // ---- combine ----
-  { concept: "combine", value: () => "combine", pattern: R(String.raw`\b(?:combined|altogether|all\s+together|in\s+total|in\s+all|summed|sum\s+of|together)\b`) },
+  { concept: "combine", value: () => "combine", pattern: R(String.raw`\b(?:combined|altogether|all\s+together|in\s+total|in\s+all(?!\s+(?:[a-z.]+\s+){0,2}(?:cities|towns|agencies|departments|jurisdictions)\b)|summed|sum\s+of|together)\b`) },
   { concept: "combine", value: () => "combine", pattern: R(String.raw`\btotal\b`) },
   // ---- national and entity words ----
   { concept: "place", value: () => "national", pattern: R(String.raw`(?<![A-Za-z.])(?:U\.S(?:\.(?=[\s,])|\.A\.?(?=[\s,]))?|USA|US)(?![A-Za-z])`, "g") },
@@ -530,7 +534,7 @@ function recordWhich(ledger: RequestLedger): void {
 }
 
 /** NIBRS filler beyond the shared between-filler words: verbs and articles that never restrict. */
-const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use|metrics)$/i;
+const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|every|entire|complete|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use|metrics)$/i;
 
 /**
  * Stage 3b (GC-089, plan r1.3): conversational phrases that never restrict, recorded as context before the word filler:
@@ -550,7 +554,8 @@ function recordNibrsPhraseFiller(ledger: RequestLedger): void {
   }
 }
 
-const MULTI_WORD_FILLER = /^(?:you|have|has|had|me|the|a|an|do|does|did|i|can|could|see|show|give|get|find|list|please|metrics|in|for|is|are|was|were|there)$/i;
+// "in all Texas cities over 50,000" / "show the complete list of": all, every, entire and complete link words too (capability state-city-list; the rank answer reads them for "show every row").
+const MULTI_WORD_FILLER = /^(?:you|have|has|had|me|the|a|an|do|does|did|i|can|could|see|show|give|get|find|list|please|metrics|in|for|is|are|was|were|there|all|every|entire|complete)$/i;
 function recordNibrsFiller(ledger: RequestLedger): void {
   recordNibrsPhraseFiller(ledger);
   recordBetweenFiller(ledger);
