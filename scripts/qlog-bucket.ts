@@ -6,9 +6,98 @@ import fs from "node:fs";
 import path from "node:path";
 
 export type Label = { id: string; tab: string; kind: "first" | "follow-up"; times: number; question: string; previous: string | null;
-  expected: { outcome: "answer" | "clarify" | "decline" | "exclude"; source: string | null; about?: string; about_any?: string[]; source_any?: string[]; reason?: string };
+  expected: { outcome: "answer" | "clarify" | "decline" | "exclude"; source: string | null; about?: string; about_any?: string[]; source_any?: string[]; reason?: string;
+    /** The period the answer must show: from and to as "YYYY" or "YYYY-MM", to "latest" for the release's last month; or a span not checked here. */
+    period?: { from?: string; to?: string; span?: string };
+    /** A ranking shows exactly this many rows. */
+    top_n?: number;
+    /** Every place shown has at least this population. */
+    min_population?: number;
+    /** The sentence a decline must say; "<...>" stands for any words (a place, a crime). */
+    wording?: string };
   label: { status: string; rule: string; notes?: string } };
-export type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number; digest?: string; via?: string; read?: string };
+export type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number; digest?: string; via?: string; read?: string;
+  /** What the answer's table shows: its first and last period, its rows, its smallest population (null: no population column). */
+  period?: { from: string; to: string }; rows?: number; minPop?: number | null;
+  /** Some place shown has no population (so min_population cannot be confirmed). */
+  popGaps?: boolean;
+  /** The release's last month ("YYYY-MM"), for a label's period to "latest". */
+  latest?: string;
+  /** The sentence a decline said. */
+  text?: string };
+
+/**
+ * Whether an answer shows what the label's period, top_n and min_population ask for: "ok", "miss" (it shows something
+ * else: a wrong answer whatever its numbers), or "unknown" (the run did not record it, so it cannot be correct).
+ */
+export function shapeCheck(e: Label["expected"], g: Got): "ok" | "miss" | "unknown" {
+  let unknown = false;
+  const p = e.period;
+  // Compared as months: a year starts in its January and ends in its December ("2024" = "2024-01" to "2024-12").
+  const start = (s: string) => (/^\d{4}$/.test(s) ? `${s}-01` : s);
+  const end = (s: string) => (/^\d{4}$/.test(s) ? `${s}-12` : s);
+  if (p && (p.from || p.to)) {
+    if (!g.period) unknown = true;
+    else {
+      if (p.from && start(g.period.from) !== start(p.from)) return "miss";
+      const to = p.to === "latest" ? g.latest : p.to;
+      if (p.to && !to) unknown = true;
+      else if (to && end(g.period.to) !== end(to)) return "miss";
+    }
+  }
+  if (e.top_n !== undefined) {
+    if (g.rows === undefined) unknown = true;
+    else if (g.rows !== e.top_n) return "miss";
+  }
+  if (e.min_population !== undefined) {
+    // A known population under the floor is a miss; a place with none leaves it unconfirmed.
+    if (typeof g.minPop === "number" && g.minPop < e.min_population) return "miss";
+    if (typeof g.minPop !== "number" || g.popGaps !== false) unknown = true;
+  }
+  return unknown ? "unknown" : "ok";
+}
+
+export type Table = { columns?: { binding?: { kind?: string; dimension?: string }; header?: string }[]; rows?: unknown[][] };
+/**
+ * What an answer's table shows, for the labels' period, top_n and min_population: the first and last period (the time
+ * column's values, or year/month column headers when the periods run across), the row count, the smallest population.
+ */
+export function tableShape(t: Table | undefined, latest: string): Pick<Got, "period" | "rows" | "minPop" | "popGaps" | "latest"> {
+  if (!t || !Array.isArray(t.rows)) return { latest };
+  const cols = t.columns ?? [];
+  const isPeriod = (s: string) => /^\d{4}(?:-\d{2})?$/.test(s);
+  const ti = cols.findIndex((c) => c.binding?.kind === "grouping" && /^time\./.test(c.binding.dimension ?? ""));
+  const periods = (ti >= 0 ? t.rows.map((r) => String(r[ti] ?? "")) : cols.map((c) => String(c.header ?? ""))).filter(isPeriod).sort();
+  const pi = cols.findIndex((c) => /^population$/i.test(String(c.header ?? "").trim()));
+  const cells = pi >= 0 ? t.rows.map((r) => r[pi]) : [];
+  const pops = cells.filter((v): v is number => typeof v === "number");
+  return {
+    ...(periods.length ? { period: { from: periods[0], to: periods[periods.length - 1] } } : {}),
+    rows: t.rows.length, minPop: pops.length ? Math.min(...pops) : null, popGaps: pops.length < cells.length, latest,
+  };
+}
+
+const RECORDED = ["period", "rows", "minPop", "popGaps", "latest", "text"] as const;
+/**
+ * Whether two runs' outcomes are the same, where they came from aside. A field one run did not record (an older
+ * progress file) is left out; recorded by both, it is compared (a year header can change while the rows' digest does not).
+ */
+export function sameOutcome(a: Got | null, b: Got | null): boolean {
+  const strip = (g: Got | null, other: Got | null) => {
+    if (!g) return g;
+    const s: Record<string, unknown> = { ...g, ms: 0, via: undefined, read: undefined };
+    for (const k of RECORDED) if (!other || other[k] === undefined) s[k] = undefined;
+    return s;
+  };
+  return JSON.stringify(strip(a, b)) === JSON.stringify(strip(b, a));
+}
+
+const plain = (s: string) => s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim().toLowerCase();
+/** Whether a decline said the label's sentence ("<...>" matches any words; case, quotes and spacing aside). */
+export function wordingMatches(want: string, said: string): boolean {
+  const parts = plain(want).split(/<[^>]*>/).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`^${parts.join(".+?")}$`).test(plain(said));
+}
 /** The part a clarify asks about, in the label's words. */
 export function aboutClass(s: string): string {
   const t = s.toLowerCase();
@@ -53,7 +142,13 @@ export function bucket(l: Label, g: Got | null): Bucket {
   if (e.outcome === "answer") {
     const okSource = (x: string | null) => x === e.source || (!!x && (e.source_any ?? []).includes(x));
     // Verified (every shown number matched independent values, at this digest): correct.
-    if (kind === "answer") return !okSource(g.source) ? miss("wrong answer") : g.digest && VERIFIED[l.id]?.digest === g.digest ? "correct" : "unverified";
+    if (kind === "answer") {
+      if (!okSource(g.source)) return miss("wrong answer");
+      // The right numbers for the wrong period, or too many places, are a wrong answer.
+      const shape = shapeCheck(e, g);
+      if (shape === "miss") return miss("wrong answer");
+      return shape === "ok" && g.digest && VERIFIED[l.id]?.digest === g.digest ? "correct" : "unverified";
+    }
     if (kind === "route") return okSource(g.source) ? "unverified" : miss("bad decline");
     return miss(kind === "decline" ? "bad decline" : "wrong clarify");
   }
@@ -67,7 +162,12 @@ export function bucket(l: Label, g: Got | null): Bucket {
     if (kind === "decline" && (e.about === "the whole question") && g.reason === "reader") return "correct";
     return kind === "route" ? "unverified" : miss(kind === "answer" ? "wrong answer" : "bad decline");
   }
-  // A decline: any plain decline or route away is a decline; its reason is not checked yet.
+  // A decline: any plain decline or route away is a decline. Where the label gives the sentence, the decline must say it
+  // (a route says no sentence, and an older run recorded none: neither can be correct).
+  if (e.wording !== undefined && (kind === "decline" || kind === "route")) {
+    if (kind === "route" || g.text === undefined) return "unverified";
+    return wordingMatches(e.wording, g.text) ? "correct" : miss("bad decline");
+  }
   if (kind === "decline" || kind === "route") return "correct";
   return miss(kind === "answer" ? "wrong answer" : "wrong clarify");
 }

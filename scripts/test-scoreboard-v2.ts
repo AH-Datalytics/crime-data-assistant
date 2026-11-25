@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { bucket, type Label, type Got } from "./qlog-bucket";
+import { bucket, sameOutcome, tableShape, wordingMatches, VERIFIED, type Label, type Got } from "./qlog-bucket";
 import { labelIdentity, readLabels, comparedLabelsFile, splitCompare, formatSplitCompare, appendTrend, readTrend, formatTrend, sumCheck, TREND_COLUMNS, type TrendRow } from "./scoreboard-v2";
 
 let failed = 0;
@@ -18,8 +18,8 @@ const label = (id: string, outcome: Label["expected"]["outcome"] = "answer", kin
   expected: { outcome, source: "nibrs" }, label: { status: "reviewed", rule: "synthetic" },
 });
 const got = (kind: string): Got => ({ kind, source: "nibrs", ms: 1 });
-// Identical to the existing --compare answer equality.
-const same = (a: Got | null, b: Got | null) => JSON.stringify({ ...a, ms: 0, via: undefined, read: undefined }) === JSON.stringify({ ...b, ms: 0, via: undefined, read: undefined });
+// The --compare answer equality.
+const same = sameOutcome;
 
 try {
   check("blob and label versions", () => {
@@ -107,13 +107,13 @@ try {
     assert.equal(cli.stdout.trimEnd(), output);
   });
 
-  check("scorer unchanged from a2104bdb", () => {
+  check("counting unchanged from a2104bdb; labels without the new fields score as before", () => {
     // CI checks out a shallow clone, so the base revision may be absent; the git comparison is then skipped with a note.
+    // qlog-bucket.ts itself changed on purpose (the label fields period, top_n, min_population, wording): the fixed set
+    // below, whose labels have none of them, must still score exactly as recorded.
     const haveBase = spawnSync("git", ["cat-file", "-e", "a2104bdb^{commit}"], { cwd: repo, encoding: "utf8" }).status === 0;
-    if (!haveBase) console.log("  NOTE  revision a2104bdb is not in this clone (shallow checkout); the scorer-unchanged comparison is skipped here and runs in full clones");
+    if (!haveBase) console.log("  NOTE  revision a2104bdb is not in this clone (shallow checkout); the counting comparison is skipped here and runs in full clones");
     else {
-      const diff = spawnSync("git", ["diff", "--quiet", "a2104bdb", "--", "scripts/qlog-bucket.ts"], { cwd: repo, encoding: "utf8" });
-      assert.equal(diff.status, 0, diff.stderr);
       const base = spawnSync("git", ["show", "a2104bdb:scripts/run-qlog-scorecard.ts"], { cwd: repo, encoding: "utf8" });
       assert.equal(base.status, 0, base.stderr);
       const per = (text: string) => text.slice(text.indexOf("const per ="), text.indexOf("const rows = TABS"));
@@ -138,6 +138,87 @@ try {
       notRun: labels.filter(l => l.expected.outcome !== "exclude" && !done.has(l.id)).length }, {
       n: 7, c: { correct: 1, unverified: 1, "wrong answer": 1, "bad decline": 1, "wrong clarify": 1, "follow-up error": 1, error: 1 }, disputed: 1, notRun: 1,
     });
+  });
+
+  check("label fields: period, top_n, min_population", () => {
+    const VER = "verified-shape";
+    VERIFIED[VER] = { digest: "d1" };
+    try {
+      const l = (expected: Partial<Label["expected"]>): Label => ({ ...label(VER), expected: { outcome: "answer", source: "nibrs", ...expected } });
+      const a = (g: Partial<Got>): Got => ({ kind: "answer", source: "nibrs", ms: 1, digest: "d1", ...g });
+      const monthly = { period: { from: "2017-01", to: "latest" } };
+      // Verified numbers over the asked period: correct. Ending a month early, or starting in 2018: a wrong answer.
+      assert.equal(bucket(l(monthly), a({ period: { from: "2017-01", to: "2026-09" }, latest: "2026-09" })), "correct");
+      assert.equal(bucket(l(monthly), a({ period: { from: "2017-01", to: "2026-08" }, latest: "2026-09" })), "wrong answer");
+      assert.equal(bucket(l(monthly), a({ period: { from: "2018-01", to: "2026-09" }, latest: "2026-09" })), "wrong answer");
+      // A run that recorded no period (an older progress file) cannot be correct, nor wrong.
+      assert.equal(bucket(l(monthly), a({})), "unverified");
+      // A wrong period is wrong even with unverified numbers.
+      assert.equal(bucket(l(monthly), a({ digest: "other", period: { from: "2020-01", to: "2026-09" }, latest: "2026-09" })), "wrong answer");
+      // A fixed "to".
+      assert.equal(bucket(l({ period: { from: "2015", to: "2025" } }), a({ period: { from: "2015", to: "2025" } })), "correct");
+      // A span is not checked here: verified numbers stay correct.
+      assert.equal(bucket(l({ period: { span: "all_nibrs_years" } }), a({})), "correct");
+      assert.equal(bucket(l({ top_n: 10 }), a({ rows: 10 })), "correct");
+      assert.equal(bucket(l({ top_n: 10 }), a({ rows: 25 })), "wrong answer");
+      assert.equal(bucket(l({ top_n: 10 }), a({})), "unverified");
+      // A full year asked, a monthly table shown: the same period. One month short: wrong.
+      assert.equal(bucket(l({ period: { from: "2024", to: "2024" } }), a({ period: { from: "2024-01", to: "2024-12" } })), "correct");
+      assert.equal(bucket(l({ period: { from: "2024", to: "2024" } }), a({ period: { from: "2024-01", to: "2024-11" } })), "wrong answer");
+      assert.equal(bucket(l({ min_population: 50000 }), a({ minPop: 52000, popGaps: false })), "correct");
+      assert.equal(bucket(l({ min_population: 50000 }), a({ minPop: 31000, popGaps: false })), "wrong answer");
+      assert.equal(bucket(l({ min_population: 50000 }), a({ minPop: null })), "unverified");
+      // A place with no population: unconfirmed, unless a known one is already under the floor.
+      assert.equal(bucket(l({ min_population: 50000 }), a({ minPop: 60000, popGaps: true })), "unverified");
+      assert.equal(bucket(l({ min_population: 50000 }), a({ minPop: 31000, popGaps: true })), "wrong answer");
+      // A follow-up's wrong answer stays a wrong answer.
+      assert.equal(bucket({ ...l({ top_n: 5 }), kind: "follow-up" }, a({ rows: 6 })), "wrong answer");
+    } finally { delete VERIFIED[VER]; }
+  });
+
+  check("table shape", () => {
+    const year = { binding: { kind: "grouping", dimension: "time.year" }, header: "Year" };
+    const month = { binding: { kind: "grouping", dimension: "time.month" }, header: "Month" };
+    const stat = { binding: { kind: "statistic" }, header: "Murders" };
+    assert.deepEqual(tableShape({ columns: [month, stat], rows: [["2017-02", 1], ["2017-01", 2], ["2026-09", 3]] }, "2026-09"),
+      { period: { from: "2017-01", to: "2026-09" }, rows: 3, minPop: null, popGaps: false, latest: "2026-09" });
+    assert.deepEqual(tableShape({ columns: [{ header: "City" }, { header: "Population" }], rows: [["A", 60000], ["B", null]] }, "2026-09"),
+      { rows: 2, minPop: 60000, popGaps: true, latest: "2026-09" });
+    // Years across the columns (a place by year table), population column, a total row's blank period ignored.
+    assert.deepEqual(tableShape({ columns: [{ header: "City" }, { header: "Population" }, { header: "2023" }, { header: "2024" }], rows: [["A", 60000, 1, 2], ["B", 51000, 3, 4]] }, "2026-09"),
+      { period: { from: "2023", to: "2024" }, rows: 2, minPop: 51000, popGaps: false, latest: "2026-09" });
+    assert.deepEqual(tableShape({ columns: [year, stat], rows: [["2019", 1], [null, 2]] }, "2026-09").period, { from: "2019", to: "2019" });
+    assert.deepEqual(tableShape(undefined, "2026-09"), { latest: "2026-09" });
+  });
+
+  check("decline wording", () => {
+    const d = (wording?: string): Label => ({ ...label("w", "decline"), expected: { outcome: "decline", source: null, ...(wording ? { wording } : {}) } });
+    const g = (kind: string, text?: string): Got => ({ kind, source: null, ms: 1, ...(text !== undefined ? { text } : {}) });
+    assert.equal(bucket(d("Metro area data is not available."), g("decline", "Metro area data is not available.")), "correct");
+    assert.equal(bucket(d("Metro area data is not available."), g("decline", "  metro area data is  not available. ")), "correct");
+    assert.equal(bucket(d("I'm sorry, I didn't understand your question. Please try again."), g("decline", "I’m sorry, I didn’t understand your question. Please try again.")), "correct");
+    assert.equal(bucket(d("Metro area data is not available."), g("decline", "We don't track metro areas. For example, try a city.")), "bad decline");
+    assert.equal(bucket(d("There is no data available for <crime> in <place>."), g("decline", "There is no data available for arson in Gary, IN.")), "correct");
+    assert.equal(bucket(d("There is no data available for <crime> in <place>."), g("decline", "There is no data available.")), "bad decline");
+    // No sentence recorded (an older run), or a route: cannot be correct.
+    assert.equal(bucket(d("Metro area data is not available."), g("decline")), "unverified");
+    assert.equal(bucket(d("Metro area data is not available."), g("route")), "unverified");
+    // A label without wording: any decline, as before.
+    assert.equal(bucket(d(), g("decline", "anything")), "correct");
+    assert.equal(wordingMatches("Cost: $5 (a+b).", "cost: $5 (a+b)."), true);
+  });
+
+  check("compare ignores what an older run did not record", () => {
+    const old: Got = { kind: "decline", source: null, reason: "scope", ms: 5 };
+    assert.equal(sameOutcome(old, { ...old, ms: 9, text: "Metro area data is not available." }), true);
+    assert.equal(sameOutcome({ ...old, text: "A." }, { ...old, text: "B." }), false);
+    const ans: Got = { kind: "answer", source: "nibrs", ms: 1, digest: "d" };
+    assert.equal(sameOutcome(ans, { ...ans, period: { from: "2017", to: "2025" }, rows: 9, minPop: null, latest: "2026-09" }), true);
+    assert.equal(sameOutcome(ans, { ...ans, digest: "e" }), false);
+    // Recorded by both: a year header that moved while the rows' digest did not is a change.
+    const shaped: Got = { ...ans, period: { from: "2024", to: "2024" }, rows: 1, minPop: null, popGaps: false, latest: "2026-09" };
+    assert.equal(sameOutcome(shaped, { ...shaped, ms: 7 }), true);
+    assert.equal(sameOutcome(shaped, { ...shaped, period: { from: "2025", to: "2025" } }), false);
   });
 } finally {
   fs.rmSync(dir, { recursive: true, force: true });
