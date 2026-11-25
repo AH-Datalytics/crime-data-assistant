@@ -5163,7 +5163,7 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -5174,7 +5174,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Current trends requests recent current data."
+    "notes": "Current trends requests recent current data. Current question: last 3 years to the latest month; Current Trends if the agency is in it, else Historical. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -14659,7 +14659,7 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -14670,7 +14670,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Current trends asks for current data."
+    "notes": "Current trends asks for current data. Current question: last 3 years to the latest month; Current Trends if the agency is in it, else Historical. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -28478,7 +28478,7 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -28489,7 +28489,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Current trends requests current data."
+    "notes": "Current trends requests current data. Current question: last 3 years to the latest month; Current Trends if the agency is in it, else Historical. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
