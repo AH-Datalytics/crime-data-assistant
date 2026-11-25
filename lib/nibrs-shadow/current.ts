@@ -601,7 +601,7 @@ export function firstFullJanuary(first: Month, w: number): Month {
  * Current Trends' months; a window with a month that has no figure is blank, never a shorter sum. One place, a state or the nation,
  * or several agencies side by side. The first row is `from` (its window may start before it); no note says what a rolling total is.
  */
-export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace[]; from: Month; to: Month; window: number; statistic?: "count" | "rate"; outside?: string; agencyLine?: string }, b: CurrentBuild,
+export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace[]; from: Month; to: Month; window: number; statistic?: "count" | "rate"; average?: boolean; outside?: string; agencyLine?: string }, b: CurrentBuild,
   execute: (sql: string) => unknown[][]): CurrentAnswer | CurrentDecline {
   const col = CURRENT_MEASURE[cq.measure];
   if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
@@ -646,7 +646,8 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     const raw = span.map((m) => values.get(m) ?? null);
     const counts = span.map((m, i) => (i < w - 1 || raw.slice(i - w + 1, i + 1).some((v) => v === null) ? null : raw.slice(i - w + 1, i + 1).reduce<number>((s, v) => s + (v as number), 0)));
     // A rate: the window's count over the mean of its months' populations; a window with a month lacking a population has no rate.
-    const rolled = asRate ? counts.map((c, i) => {
+    // A rolling average (counts only): each window's total over its months, one decimal, the series form of the single-window average.
+    const rolled = cq.average && !asRate ? counts.map((c) => (c === null ? null : Math.round((10 * c) / w) / 10)) : asRate ? counts.map((c, i) => {
       const ps = i < w - 1 ? [] : span.slice(i - w + 1, i + 1).map((m) => pops.get(m) ?? null);
       return c === null || ps.length < w || ps.some((x) => x === null) ? null : currentRate(c, (ps as number[]).reduce((s, x) => s + x, 0) / w, w);
     }) : counts;
@@ -665,7 +666,7 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
   const hm = HISTORICAL_MEASURE[cq.measure];
   const names = per.map((x) => x.p.label);
   const listed = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
-  const header = asRate ? `Rolling ${w}-month ${SINGULAR[col]} rate per 100,000` : `Rolling ${w}-month ${words}`;
+  const header = asRate ? `Rolling ${w}-month ${SINGULAR[col]} rate per 100,000` : cq.average ? `Rolling ${w}-month average ${words} per month` : `Rolling ${w}-month ${words}`;
   const columns: ResultTable["columns"] = [...(several ? [{ binding: { kind: "grouping" as const, dimension: "geo.agency" }, header: "Place" }] : []),
     { binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }];
   const rows = per.flatMap((x) => shown.map(({ m, i }) => [...(several ? [x.p.kind === "agency" ? x.p.name : x.p.label] : []), m, x.rolled[i]] as (string | number | null)[]));
@@ -684,6 +685,6 @@ export function answerCurrentRolling(cq: { measure: string; places: CurrentPlace
     kind: "current", period, coverage: [], read: { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release },
     question: { measure: cq.measure, place: first, agencies: several && first.kind === "agency" ? cq.places.slice(1).filter((p): p is Extract<CurrentPlace, { kind: "agency" }> => p.kind === "agency") : undefined, from: cq.from, to, form: "months", statistic: asRate ? "rate" : "count" },
     meaning: { source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings: several ? ["agency", "month"] : ["month"], statistic: asRate ? "rate" : "count" },
-    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), asRate ? `Rolling ${w}-Month ${ucFirst(SINGULAR[col])} Rate` : `Rolling ${w}-Month ${ucFirst(words)}`, "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.outside ? [cq.outside] : []), ...rateLine, ...cohortLine, ...preLines, ...gapLines, ...dropLines, ...popLines, "Source: Crime Index."] },
+    delivered: { table: { columns, rows }, text: [seriesTitle(spanTitle(period.from, period.to), asRate ? `Rolling ${w}-Month ${ucFirst(SINGULAR[col])} Rate` : cq.average ? `Rolling ${w}-Month Average ${ucFirst(words)}` : `Rolling ${w}-Month ${ucFirst(words)}`, "Month", listed), ...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.outside ? [cq.outside] : []), ...rateLine, ...cohortLine, ...preLines, ...gapLines, ...dropLines, ...popLines, "Source: Crime Index."] },
   };
 }
