@@ -53054,12 +53054,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "historical",
     "source_any": [
-     "nibrs",
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "national rapes for 2025 and their share of violent crime",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -53070,7 +53069,7 @@
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-11-cases",
     "reviewed_by": "jeff-2026-11-11-cases",
-    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; rape counted by victim (crimes against people)"
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; rape counted by victim (crimes against people) Rape count and share: Historical, national 2025 count and share of violent crime. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
