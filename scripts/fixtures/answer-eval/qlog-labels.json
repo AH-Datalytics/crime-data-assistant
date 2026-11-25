@@ -9374,7 +9374,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; annual rate By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "Baltimore = Baltimore City Police Department (ORI MDBPD0000), plus the national figure, per P196 (Jeff 2026-11-22 \"Any 2+ places\": a city named beside another place is that city's police department; Jeff 2026-11-24 relabel clarify to answer): annual murder rate nationwide and for Baltimore City PD By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -31911,7 +31911,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "\"New York\" beside two states is the state (not a city), from Crime Index's state figures (P53) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "New York = the state of New York (a name beside other states only is the state, no ask; Jeff 2026-11-24, P196): robbery for Florida, Texas and the state of New York since 1990, from Crime Index's state figures (P53) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -47862,7 +47862,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "\"New York\" beside a state is the state; a state's hate crimes by year (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "New York = the state of New York (a name beside other states only is the state, no ask; Jeff 2026-11-24, P196): anti-Asian hate crimes for California and the state of New York by year (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
@@ -66568,7 +66568,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "\"New York\" beside a state is the state; a state's hate crimes in 2024 (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22"
+    "notes": "New York = the state of New York (a name beside other states only is the state, no ask; Jeff 2026-11-24, P196): anti-Black hate crimes for the state of New York and Texas in 2024 (P117) By rule from the question text; second labeler NIBRS Model 2026-11-22"
    }
   },
   {
