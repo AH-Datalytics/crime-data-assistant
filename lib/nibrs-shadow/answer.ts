@@ -67,7 +67,7 @@ import { answerClearanceTypePlaces } from "./clearance-places";
 import { COMPOSITE_PARTS, composeCrimeOverTime } from "./crime-over-time";
 import { buildScorecard, type ScorecardPlace } from "./scorecard";
 import { detectAgencyScorecardQuestion } from "../scorecard-format";
-import { change, shiftMonth, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { change, shiftMonth, agencyMonths, answerCurrentRolling, firstFullJanuary, answerCurrent, answerCurrentChange, answerCurrentSeveral, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 import { answerHate, combineHatePlaces, HATE_FIRST_YEAR, hateQuestionOf, notIncluded, type HateAnswer, type HateBuild, type HateQuestion } from "./hate";
 import { answerCoverage, readCoverage, type CoverageAnswer } from "./coverage";
 import { seriesTitle } from "./headline";
@@ -3165,9 +3165,16 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       // (Cleveland "murders YTD 2026 compared to 2025": Jan-Oct against Current Trends' Sep). Both spans are clipped to the same
       // months ending at Current Trends' latest month, and the answer names them.
       const monthsIn = (a: string, b: string) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(b.slice(5)) - Number(a.slice(5)) + 1;
+      // For one agency the end is the last month that agency has in Current Trends (Cleveland's data ends a month before the
+      // file's): trailing blank months are dropped; a blank month inside the span stays, and the change is declined as before.
       if (l[1] > cur.lastMonth && l[0] <= cur.lastMonth && monthsIn(...e) === monthsIn(...l)) {
-        const cut = monthsIn(l[1], cur.lastMonth) - 1; // negative: months dropped from the later span's end
-        l[1] = cur.lastMonth;
+        let end = cur.lastMonth;
+        if (place.kind === "agency") {
+          const have = agencyMonths(cur, place.ori, sp.measures[0], l[0], cur.lastMonth, deps.execute);
+          while (end > l[0] && have.get(end) === null) end = shiftMonth(end, -1);
+        }
+        const cut = monthsIn(l[1], end) - 1; // negative: months dropped from the later span's end
+        l[1] = end;
         e[1] = shiftMonth(e[1], cut);
       }
       if (e[0] >= first && l[1] <= cur.lastMonth) {

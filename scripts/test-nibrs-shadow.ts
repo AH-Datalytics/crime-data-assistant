@@ -3282,6 +3282,19 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       assert.ok(/January 2025 through August 2025/.test(t) && /January 2026 through August 2026/.test(t), t);
       assert.ok(!/September/.test(t), t);
     }
+    // One agency that ends a month before the file does (Cleveland: data to 2026-08 where the file runs to 09; here Houston to 2026-07 of 08):
+    // both spans end at the agency's own last month, and the answer names them.
+    const early = shadowAnswer("Houston murders YTD 2026 compared to 2025", cdeps);
+    assert.equal(early.kind, "current", JSON.stringify(early).slice(0, 400));
+    if (early.kind === "current") {
+      const t = early.delivered.text.join(" | ");
+      assert.ok(/January 2025 through July 2025/.test(t) && /January 2026 through July 2026/.test(t), t);
+      assert.ok(!/August/.test(t), t);
+    }
+    // A blank month inside the span keeps the no-change behavior: no current answer.
+    const gapDeps = { ...cdeps, execute: (sql: string) => (/current_crime\.parquet[\s\S]*UNION ALL/.test(sql) && /TXHPD0000/.test(sql) ? ctStub(sql).map((r) => (r[0] === "2026-03" ? [r[0], null] : r)) : ctStub(sql)) } as unknown as ShadowDeps;
+    const gap = shadowAnswer("Houston murders YTD 2026 compared to 2025", gapDeps);
+    assert.notEqual(gap.kind, "current", JSON.stringify(gap).slice(0, 300));
   }
   const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
   assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
