@@ -3161,6 +3161,15 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       const ym = (s: string) => s.slice(0, 7);
       const e: [string, string] = [ym(cmp.earlier.from), ym(cmp.earlier.to)], l: [string, string] = [ym(cmp.later.from), ym(cmp.later.to)];
       const first = place.kind === "group" ? cur.firstMonth : cur.finalFirstMonth;
+      // A year-to-date comparison is read through the reader's latest month (NIBRS's), which can run a month past Current Trends'
+      // (Cleveland "murders YTD 2026 compared to 2025": Jan-Oct against Current Trends' Sep). Both spans are clipped to the same
+      // months ending at Current Trends' latest month, and the answer names them.
+      const monthsIn = (a: string, b: string) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(b.slice(5)) - Number(a.slice(5)) + 1;
+      if (l[1] > cur.lastMonth && l[0] <= cur.lastMonth && monthsIn(...e) === monthsIn(...l)) {
+        const cut = monthsIn(l[1], cur.lastMonth) - 1; // negative: months dropped from the later span's end
+        l[1] = cur.lastMonth;
+        e[1] = shiftMonth(e[1], cut);
+      }
       if (e[0] >= first && l[1] <= cur.lastMonth) {
         const r = answerCurrentChange({ measure: sp.measures[0], place, from: l[0], to: l[1], form: "total",
           ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, e, l, cur, deps.execute);

@@ -3271,6 +3271,18 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
       assert.equal(yr.delivered.table.rows[12][1], 0);
     }
   }
+  // Cleveland fix (QL-ct-6ed74f2fd0, "cleveland OH murders YTD 2026 compared to 2025"): year to date is read through NIBRS's latest month (2026-09 here),
+  // a month past Current Trends' (2026-08). Both spans are clipped to the same months ending at Current Trends' last month, answered from Current
+  // Trends, and the answer names them.
+  {
+    const ytd = shadowAnswer("Dallas murders YTD 2026 compared to 2025", cdeps);
+    assert.equal(ytd.kind, "current", JSON.stringify(ytd).slice(0, 400));
+    if (ytd.kind === "current") {
+      const t = ytd.delivered.text.join(" | ");
+      assert.ok(/January 2025 through August 2025/.test(t) && /January 2026 through August 2026/.test(t), t);
+      assert.ok(!/September/.test(t), t);
+    }
+  }
   const sev = shadowAnswer("Dallas vs Houston murders per month", cdeps);
   assert.equal(sev.kind, "current", JSON.stringify(sev).slice(0, 300));
   if (sev.kind === "current") {
