@@ -63021,12 +63021,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "historical",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "yearly murders since 1960; say there are no monthly national murder totals, only a monthly sample",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -63037,7 +63036,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) National rolling 12-month since 1960: yearly Historical, and say monthly national murder totals do not exist, only a monthly sample. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
