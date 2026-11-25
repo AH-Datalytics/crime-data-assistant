@@ -48,7 +48,7 @@ async function runOne(): Promise<void> {
   const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), root);
   const cube = cubeOn ? cubeFromEnv({ ...process.env, NIBRS_CUBE: "on" }, root) : null;
   const exec = duckdbExecutor(python, { memoryLimit: memory, threads, timeoutMs: Number(arg("--timeout-ms", "900000")) });
-  const deps = { places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" }, target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute: exec } as unknown as ShadowDeps;
+  const deps = { places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" }, target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute: exec } as unknown as ShadowDeps;
   const t0 = performance.now();
   let kind = "", error = "";
   try {

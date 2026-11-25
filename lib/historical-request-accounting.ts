@@ -363,6 +363,9 @@ function recordStatewide(ledger: RequestLedger): void {
   }
 }
 
+const USA_WORDS = /(?<![A-Za-z.])(?:the\s+)?(usa|u\.s\.a\.?|u\.s\.)(?![A-Za-z])/gi;
+const WORD_CODES = new Set(["IN", "OR", "ME", "HI", "OK", "OH", "ID", "LA", "DE", "MA", "PA", "AL", "CO"]);
+
 export function recordPlaces(ledger: RequestLedger): void {
   const q0 = ledger.question;
   // Washington, D.C. is the city agency (as the accepted change paths read it); "District of Columbia" alone is the state row.
@@ -386,7 +389,8 @@ export function recordPlaces(ledger: RequestLedger): void {
     let start = mention.start + lead;
     let end = mention.end + lead;
     const before = CITY_OF.exec(q.slice(0, start));
-    if (before) start = before.index;
+    // "Show me the city of Charlotte": the opener already owns "the", so the place starts at "city" (an overlapping span is dropped).
+    if (before) start = ledger.overlaps([before.index, start]) ? before.index + before[0].search(/\bcity\b/i) : before.index;
     const after = AGENCY_NOUN.exec(q.slice(end));
     if (after) end += after[0].length;
     // Complete-turn fix (2026-10-23): a city-or-county name followed by the agency's own noun names that agency: "San
@@ -403,11 +407,19 @@ export function recordPlaces(ledger: RequestLedger): void {
         : `${kind}:${resolved.name}:${resolved.state ?? ""}`;
     ledger.record({ concept: "place", value, span: [start, end], explains: [[start, end]], rule: !resolved ? "place:ambiguous" : chosen ? `place:${kind}:agency-noun` : `place:${kind}` });
   }
-  // Bare state codes in a place position ("in TX").
+  // "usa", "u.s." and "u.s.a." in any case but all capitals (the resolver reads "USA"): the United States (follow-up errors row 4, 2026-11-24).
+  USA_WORDS.lastIndex = 0;
+  while ((m = USA_WORDS.exec(q0))) {
+    const span: [number, number] = [m.index, m.index + m[0].length];
+    if (m[1] !== m[1].toUpperCase() && !ledger.overlaps(span)) ledger.record({ concept: "place", value: "national", span, rule: "place:usa-any-case" });
+  }
+  // Bare state codes in a place position ("in TX"); in any case after in/for/of or an opening "show", except the codes that are also words.
   const CODES = Object.values(STATE_NAME_TO_ABBR as Record<string, string>).filter((c) => c !== "US");
-  const codeRe = new RegExp(String.raw`\b(?:in|for|of)\s+(${CODES.join("|")})\b`, "g");
+  const codeRe = new RegExp(String.raw`(?:\b(?:in|for|of)|^\s*(?:show|chart|graph|plot|list|get|give)(?:\s+me)?(?!\s+(?:in|for|of)\s))\s+(${CODES.join("|")})\b`, "gi");
   while ((m = codeRe.exec(q))) {
-    const code = m[1];
+    const code = m[1].toUpperCase();
+    // A code that is also a word counts only as before: capitals after in/for/of.
+    if (WORD_CODES.has(code) && !(m[1] === code && /^(?:in|for|of)\s/.test(m[0].trimStart()))) continue;
     const name = STATE_NAMES.find((n) => (STATE_NAME_TO_ABBR as Record<string, string>)[n] === code);
     if (!name) continue;
     const s = m.index + m[0].length - code.length;

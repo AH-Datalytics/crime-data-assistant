@@ -369,13 +369,22 @@ export const deterministicRewriter: FollowUpRewriter = {
         : ask("The number of agencies reporting goes with a state or national total (P72).");
     }
 
-    // A county asked for as a whole ("countywide total", "countywide", "for the whole county"): the previous question with "countywide" added
-    // (P70), when its place is a county.
+    // A county asked for as a whole ("countywide total", "countywide", "for the whole county"): the previous question with "countywide" added,
+    // when its place is a county, which P70 declines with the county's own agency offered (Jeff 2026-11-22: P70 wins over P135's old sum).
     // A county named anywhere in the previous question (a comparison of two places has no single span of place words).
     const countyPrev = /\b(?:county|parish)\b/i.test(placeWords(prev, prevParts.places)?.text ?? "") || (prevParts.places.length > 0 && /\b(?:county|parish)\b/i.test(prev));
     if (/^(?:the\s+)?(?:county[-\s]?wide|(?:for\s+)?the\s+(?:whole|entire)\s+county)(?:\s+(?:total|figure|number|count))?(?:\s+only)?$/i.test(f)) {
       if (!countyPrev || /\bcounty[-\s]?wide\b/i.test(prev)) return ask("Which county is meant, or whether it is already the whole county.");
-      return ok(`${prev.replace(/[?.!\s]+$/, "")}, countywide`, "P70: the whole county, every agency summed");
+      return ok(`${prev.replace(/[?.!\s]+$/, "")}, countywide`, "P70: a county-wide request, declined with the county's own agency offered");
+    }
+    // "<a county> as a whole" ("for tarrant county, tx as a whole" after a Fort Worth question): the county in place of the previous place, asked
+    // for county-wide, which P70 declines with the county's own agency offered (coordinator 2026-11-22: every gap blocks go-live).
+    {
+      const whole = /^(.*?\b(?:county|parish)\b.*?)[,\s]+as\s+a\s+whole$/i.exec(f);
+      if (whole) {
+        const inner = deterministicRewriter.rewrite(prev, whole[1], thisYear);
+        if (inner.kind === "rewrite") return ok(`${inner.question.replace(/[?.!\s]+$/, "")}, countywide`, "P70: a county-wide request, declined with the county's own agency offered");
+      }
     }
 
     // A rate in place of a count (P58, P59).
@@ -386,6 +395,9 @@ export const deterministicRewriter: FollowUpRewriter = {
       || /^(?:(?:use|show|give|switch to)(?: me)?(?: the| a)?|(?:change|switch) the (?:metric|measure) to)\s+(?:crime\s+)?rates?(?:\s+per\s+(?:100,?000|100k))?(?:\s+(?:of counts|rather than counts))?$/i.test(fl)) {
       if (/\brate\b|per (?:capita|100)/i.test(prev)) return ask("The previous answer is already a rate.");
       const m = prevParts.measures[0];
+      // A county-wide question stays one whatever is changed in it ("use rates" after "the countywide percent change in violent crimes in Cook
+      // County"): it is asked again, and P70 declines it with the county's own agency offered.
+      if (/\bcounty[-\s]?wide\b/i.test(prev)) return ok(prev, "P70: still a county-wide request, declined with the county's own agency offered");
       if (!m || prevParts.measures.length !== 1 || prev.indexOf(m.text) < 0) return ask("Which crime's rate is meant.");
       const at = prev.indexOf(m.text) + m.text.length;
       return ok(`${prev.slice(0, at)} rate${prev.slice(at)}`, "a count becomes a rate");
@@ -581,6 +593,27 @@ export const deterministicRewriter: FollowUpRewriter = {
     // A bare year after a lead-in ("show me 2023", "give me 2023") is the year alone, replaced or added below; the
     // lead-ins "show me", "give me" and "in" never route other words to the place and period forms.
     if (asPeriod !== f && /^(?:19|20)\d{2}$/.test(asPeriod)) f = asPeriod;
+    // A swap: "exclude Boston but include Baltimore", "remove Boston and add Baltimore", "replace Boston with Baltimore", "swap Boston for Baltimore":
+    // one place of the previous question out and another in, in the same spot (Engine 2.0 / coordinator 2026-11-22, QL-ct-0fa509b9b4). Both must be
+    // places the reader finds, the one out one of the previous question's places; anything else is asked.
+    const swap = /^(?:please\s+)?(?:(?:exclude|remove|drop|take out|leave out|without)\s+(.+?)\s*(?:,\s*)?(?:but|and|then|,)\s+(?:also\s+)?(?:include|add|use|put in)\s+(.+)|(?:replace|swap(?: out)?|change)\s+(.+?)\s+(?:with|for|by|to)\s+(.+))$/i.exec(f.replace(/[?.!\s]+$/, ""));
+    if (swap) {
+      const out = (swap[1] ?? swap[3]).replace(/^the\s+/i, "").trim(), into = (swap[2] ?? swap[4]).replace(/^the\s+/i, "").trim();
+      const one = (name: string) => { const t = partsOf(`Shoplifting in ${name}`); return t.places.length === 1 && t.places[0].text.replace(/^the\s+/i, "").toLowerCase() === name.toLowerCase()
+        && t.all.every((p) => ["measure", "place", "filler"].includes(p.concept)) ? t.places[0] : null; };
+      const po = one(out), pi = one(into);
+      if (!po || !pi) return ask(`What "${f}" changes in the previous question.`);
+      const at = prevParts.places.findIndex((p) => p.value === po.value);
+      const pw = placeWords(prev, prevParts.places);
+      if (at < 0 || !pw || prevParts.places.length < 2) return ask(`Which place to take out: ${out} is not one of the places in the previous question.`);
+      if (prevParts.places.some((p) => p.value === pi.value)) return ask(`${into} is already one of the places in the previous question.`);
+      if (/\bcombined\b/i.test(prev)) return ask(`Whether ${into} joins the combined total in place of ${out}.`);
+      // The place's words in the previous question as typed (the reader's spans are in its own rewritten text).
+      const words = prevParts.places[at].text.replace(/^the\s+/i, "").trim();
+      const found = new RegExp(`(?<![A-Za-z])${words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`, "i").exec(prev);
+      if (!found) return ask(`Which place to take out: ${out} is not written as such in the previous question.`);
+      return ok(prev.slice(0, found.index) + into + prev.slice(found.index + found[0].length), "one place replaced by another");
+    }
     // Two places side by side ("Chicago vs Memphis", "Memphis and Nashville", "compare Memphis and Nashville"): both
     // replace the previous question's place, and nothing else changes (coordinator 2026-11-02: deterministic, no model).
     const pair = /^(?:compare\s+)?(.+?)\s+(?:vs\.?|versus|and|with)\s+(.+?)$/i.exec(f);

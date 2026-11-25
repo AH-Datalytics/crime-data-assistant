@@ -1,0 +1,12 @@
+{
+ "id": "P245",
+ "topic": "Already decided",
+ "decision needed": "None: already decided",
+ "situation (example wording)": "\"over the last three (3) years\", \"back as far as you can\", \"going back as far as records allow\", \"from oldest data\", \"since the beginning\", \"2021 until 2025\", \"since 2019 until 2024\".",
+ "what the app does today": "A number word followed by its digits in parentheses reads as the number word; wordings for the whole record read as all years; \"until\" between two years reads as \"to\"; the rest of the question is answered as asked.",
+ "proposed behavior": "The period the words name is the period the engine already reads for the plain wording; no new period meaning is added.",
+ "exact default or choices offered": "None.",
+ "why": "Bad-declines plan family D1 (declines owner, 2026-11-23): the labels expect these answered; the periods are ones the engine already reads.",
+ "status": "Built in the D1 period-grammar change.",
+ "test cases": "scripts/test-nibrs-shadow-period-grammar.ts (4 labeled questions); open: summer, January to July, excluding a year, through April, since COVID-19, year to date with a crime word, \"over 12 months\" (need route or Jeff decisions). A single day is decided: see P304."
+}

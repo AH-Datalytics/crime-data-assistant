@@ -99,6 +99,16 @@ export class RequestLedger {
     this.taken = new Array(question.length).fill(false);
   }
 
+  /** An independent copy (own parts, obligations and coverage), so a cached ledger can be handed out again without one caller's changes reaching the next. */
+  clone(): RequestLedger {
+    const copy = new RequestLedger(this.question);
+    for (const p of this.parts) copy.parts.push({ ...p, span: [p.span[0], p.span[1]], explains: p.explains.map((s): Span => [s[0], s[1]]) });
+    for (const o of this.obligations) copy.obligations.push({ ...o, span: [o.span[0], o.span[1]] });
+    for (let i = 0; i < this.taken.length; i += 1) copy.taken[i] = this.taken[i];
+    copy.finalized = this.finalized;
+    return copy;
+  }
+
   overlaps([start, end]: Span): boolean {
     for (let i = start; i < end; i += 1) if (this.taken[i]) return true;
     return false;

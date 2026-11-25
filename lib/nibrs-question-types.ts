@@ -34,7 +34,7 @@ export const MEASURE_CODES: Record<string, string[]> = {
   person_crimes: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "36A", "36B", "100", "64A", "64B"],
   violent_crime: ["09A", "11A", "11B", "11C", "120", "13A"], property_crime: ["200", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240"],
   // NIBRS's assault offenses (coordinator 2026-11-06, a bare "assault" asked about): intimidation, and all three.
-  intimidation: ["13C"], assault_offenses: ["13A", "13B", "13C"],
+  intimidation: ["13C"], assault_offenses: ["13A", "13B", "13C"], kidnapping: ["100"],
   // Group B offenses (arrests only), 2026-11-11: each its own measure, as DUI is.
   disorderly_conduct: ["90C"], drunkenness: ["90E"], liquor_law: ["90G"], curfew_loitering: ["90B"], trespass: ["90J"],
   family_offense_nonviolent: ["90F"], peeping_tom: ["90H"], bad_checks: ["90A"], runaway: ["90I"], all_other_offenses: ["90Z"],
@@ -52,7 +52,7 @@ export const MEASURE_LABEL: Record<string, string> = {
   sex_offense: "sex offense", burglary: "burglary", theft_from_motor_vehicle: "theft from motor vehicle", motor_vehicle_theft: "motor vehicle theft",
   shoplifting: "shoplifting", theft: "theft", arson: "arson", drug_possession: "drug possession", dui: "DUI", violent_crime: "violent crime",
   property_crime: "property crime", domestic_violence: "domestic violence", hate_crime: "hate crime", carjacking: "carjacking",
-  motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", assault_offenses: "assault offense",
+  motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", kidnapping: "kidnapping", assault_offenses: "assault offense",
   disorderly_conduct: "disorderly conduct", drunkenness: "drunkenness", liquor_law: "liquor law violation", curfew_loitering: "curfew or loitering",
   trespass: "trespass of real property", family_offense_nonviolent: "nonviolent family offense", peeping_tom: "peeping tom", bad_checks: "bad checks",
   runaway: "runaway", all_other_offenses: "all other offenses", weapon_law: "weapon law violation",
@@ -72,7 +72,7 @@ export function filterLabel(dimValue: string): string {
     weapon: { 12: "handgun", 13: "rifle", 14: "shotgun", 20: "knife", firearm: "firearm" },
     drug: { E: "marijuana", L: "amphetamines/methamphetamine", A: "crack cocaine", B: "cocaine", D: "heroin" },
     dv: { intimate_partner: "intimate partner", family: "family" },
-    bias: { 21: "anti-Jewish", 12: "anti-Black", 11: "anti-White", 32: "anti-Hispanic", 14: "anti-Asian", 24: "anti-Islamic", 41: "anti-gay" },
+    bias: { 21: "anti-Jewish", 12: "anti-Black", 11: "anti-White", 32: "anti-Hispanic", 14: "anti-Asian", 24: "anti-Islamic", 41: "anti-gay", lgbtq: "anti-LGBTQ" },
     loss: { 7: "stolen", 5: "recovered", 4: "damaged", 6: "seized" },
     clearance: { A: "death of offender", B: "prosecution declined", C: "in custody elsewhere", D: "victim refused to cooperate", E: "juvenile, no custody", arrest: "by arrest", exceptional: "by exceptional means" },
     location: { 20: "residence/home", 13: "highway/road/alley/street", 22: "school/college", 18: "parking lot/garage", "07": "convenience store", 14: "hotel/motel", commercial: `commercial location types (${commercialList()})` },
@@ -110,7 +110,7 @@ export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null
 export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true;
   /** P194 (Jeff 2026-11-21): clearance by type for several named agencies, one row each, never summed (place is the first of them). */
   places?: NPlace[] };
-export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true };
+export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true; rank?: { dir: "top" | "bottom"; n: number | null } };
 export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency" | "county"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
 export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; statistic: "count" | "rate"; place: NPlace; earlier: number; later: number };
 export type NibrsSpec = SeriesSpec | BreakdownSpec | ShareSpec | RankSpec | ChangeSpec;
@@ -147,7 +147,7 @@ export function periodOf(p: Part): NPeriod | null {
   let m: RegExpExecArray | null;
   if ((m = /^year:(\d{4})$/.exec(v))) return { form: "year", year: Number(m[1]) };
   if ((m = /^(?:range|between):(\d{4}):(\d{4})$/.exec(v))) { const a = Number(m[1]); const b = Number(m[2]); return { form: "range", from: Math.min(a, b), to: Math.max(a, b) }; }
-  if ((m = /^years:(\d{4}):(\d{4})$/.exec(v))) return { form: "years", list: [Number(m[1]), Number(m[2])].sort() };
+  if ((m = /^years:(\d{4}(?::\d{4})+)$/.exec(v))) return { form: "years", list: [...new Set(m[1].split(":").map(Number))].sort((a, b) => a - b) };
   if ((m = /^month:(\d{4})-(\d{2})$/.exec(v))) return { form: "month", year: Number(m[1]), month: Number(m[2]) };
   if ((m = /^monthrange:(\d{4})-(\d{2}):(\d{4})-(\d{2})$/.exec(v))) return { form: "monthrange", from: [Number(m[1]), Number(m[2])], to: [Number(m[3]), Number(m[4])] };
   if ((m = /^since:(\d{4})$/.exec(v))) return { form: "since", from: Number(m[1]) };
@@ -248,8 +248,11 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   const monthPeriodParts = periodParts.filter((p) => /^month/.test(p.value ?? ""));
   const unitParts = of("unit");
 
+  // "Which states have the highest share of rapes cleared by exception in 2025?" (P203, P173): the share by state, not a count ranking.
+  const stateShareRanking = share.length > 0 && entityParts.some((p) => p.value === "state")
+    && of("filter").some((p) => /^clearance:/.test(p.value ?? "")) && !thresholdParts.length && !breakdowns.length && placeParts.every((p) => placeOf(p)?.kind === "national");
   // ---- N6: rankings (rank words, a threshold, or a list of entities) ----
-  if (rankParts.length || thresholdParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:")))) {
+  if (!stateShareRanking && (rankParts.length || thresholdParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:"))))) {
     take(rankParts); take(thresholdParts); take(entityParts); take(clearance);
     // Counties ranked (Jeff 2026-11-10): the county's own agency, the sheriff or county police.
     const entity0 = entityParts.map((p) => p.value)[0] ?? (rankParts.length ? null : null);
@@ -296,7 +299,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   // figure, so it keeps its own path (declined until two years are named), never answered as counts.
   const percentAsked = ledger.parts.some((p) => p.clause === 0 && ((p.concept === "punctuation" && p.text.trim() === "%") || (p.concept === "share" && /percent/i.test(p.text))))
     || changeParts.some((p) => /percent|%/i.test(p.text));
-  const overSpan = (periods[0]?.form === "since" || periods[0]?.form === "last") && periods.length === 1 && !of("versus").length && !percentAsked;
+  const overSpan = ((periods[0]?.form === "since" || periods[0]?.form === "last") && periods.length === 1 || periods.length === 0) && !of("versus").length && !percentAsked;
   if (changeParts.length && !rankParts.length && overSpan) take(changeParts);
   else if (changeParts.length && !rankParts.length) {
     take(changeParts);
@@ -314,22 +317,33 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     take(clearance);
     // "by state" on a nationwide clearance share: one share per state (gold GC-001). Only clearance shares are split.
     const byStateParts = listParts.filter((p) => p.value === "list:state");
-    const byState = byStateParts.length > 0 && places.length === 1 && places[0]!.kind === "national" && of("clearance-reason").length + filters.filter((f) => f.startsWith("clearance:")).length > 0;
+    const byState = stateShareRanking || (byStateParts.length > 0 && places.length === 1 && places[0]!.kind === "national" && of("clearance-reason").length + filters.filter((f) => f.startsWith("clearance:")).length > 0);
     if (byState) take(byStateParts);
-    if (measures.length !== 1 || one("one place")) return { kind: "none" };
+    if (stateShareRanking) { take(entityParts); take(rankParts); }
+    const shareRankVal = rankParts.map((p) => p.value ?? "").find((v) => /^(?:top|bottom):/.test(v));
+    const shareRank: { dir: "top" | "bottom"; n: number | null } = { dir: shareRankVal?.startsWith("bottom") ? "bottom" : "top", n: Number(shareRankVal?.split(":")[1]) || null };
+    const sharePlace = places[0] ?? (stateShareRanking ? { kind: "national" as const, label: "United States" as const } : null);
+    if (measures.length !== 1 || (stateShareRanking ? places.length > 1 : one("one place"))) return { kind: "none" };
     if (breakdowns.length) return breakdownDecision();
-    const shareTime = [...monthPeriodParts, ...periodParts.filter((p) => /^years:/.test(p.value ?? "")), ...grainParts, ...of("rolling"), ...of("combine")];
+    // Several years of a clearance share for a state or the nation are a row for each year (Jeff 2026-11-22), so a range or "each year" is not a refusal there.
+    const yearlyClearanceShare = places.length === 1 && (places[0]!.kind === "state" || places[0]!.kind === "national")
+      && of("clearance-reason").length + filters.filter((f) => f.startsWith("clearance:")).length > 0;
+    const shareTime = [...monthPeriodParts, ...(yearlyClearanceShare ? [] : periodParts.filter((p) => /^years:/.test(p.value ?? ""))),
+      ...(yearlyClearanceShare ? grainParts.filter((p) => p.value !== "year") : grainParts), ...of("rolling"), ...of("combine")];
+    if (yearlyClearanceShare) take(grainParts.filter((p) => p.value === "year"));
     if (shareTime.length) return declineParts(shareTime, (p) => cannot(p, "a share covers one period as a whole; ask for each year on its own."));
     const shareStart = share[0].span[0];
     const structural = /\b(?:share|percent(?:age)?|proportion|portion)\s+of\b/i.test(share[0].text) || /\b(?:what|which)\s+(?:share|percent(?:age)?|proportion|portion)\s+of\b/i.test(ledger.question.slice(shareStart));
     if (!structural) return { kind: "clarify", explanation: "Do you mean the share of all clearances, or the share of all offenses? Ask, for example, \"what share of rape clearances were prosecution declined\" or \"what share of rapes were cleared because prosecution was declined\"." };
     // The subset begins at the first linking word after the population ("were", "was", "that", "who", "involved").
     const tail = ledger.question.slice(shareStart);
-    const link = /\b(?:were|was|that|who|which|involved|involving|had)\b/i.exec(tail.slice(share[0].text.length));
+    const link = /\b(?:were|was|that|who|which|involved|involving|involve|involves|had|committed|cleared|deemed|carried\s+out)\b/i.exec(tail.slice(share[0].text.length));
     const subsetStart = link ? shareStart + share[0].text.length + link.index : Number.POSITIVE_INFINITY;
     const fparts = of("filter").concat(of("clearance-reason"));
-    const subset = fparts.filter((p) => p.span[0] >= subsetStart).map((p) => p.value!);
-    const population = fparts.filter((p) => p.span[0] < subsetStart).map((p) => p.value!);
+    let subset = fparts.filter((p) => p.span[0] >= subsetStart).map((p) => p.value!);
+    let population = fparts.filter((p) => p.span[0] < subsetStart).map((p) => p.value!);
+    // "share of rapes cleared by exception": the clearance condition after the crime is the part measured.
+    if (stateShareRanking && subset.length === 0 && population.length > 0 && population.every((f) => f.startsWith("clearance:"))) { subset = population; population = []; }
     if (subset.length === 0) return { kind: "clarify", explanation: "Which part of the total should the share measure? Name it after \"were\" or \"that\" (for example \"what share of robbery offenders were under 18\")." };
     if ([...population, ...subset].some((f) => f.startsWith("clearance:"))) {
       const notInClearance = [...fparts.filter((p) => !(p.value ?? "").startsWith("clearance:")), ...unitParts.filter((p) => p.value !== "offenses")];
@@ -340,7 +354,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     // r4: a clearance condition on the population ("rapes cleared by exceptional means") divides by those clearances,
     // however it is worded; otherwise the noun decides (clearances vs offenses).
     const clearancesDenominator = population.some((f) => f.startsWith("clearance:")) || clearance.some((p) => p.span[0] < subsetStart && p.value === "clearances");
-    return finish({ type: "share", measure: measures[0], unit, population, subset, denominator: clearancesDenominator ? "clearances" : "units", place: places[0]!, period: periods[0] ?? { form: "none" }, ...(byState ? { byState: true } : {}) });
+    return finish({ type: "share", measure: measures[0], unit, population, subset, denominator: clearancesDenominator ? "clearances" : "units", place: sharePlace!, period: periods[0] ?? { form: "none" }, ...(byState ? { byState: true } : {}), ...(stateShareRanking ? { rank: shareRank } : {}) });
   }
 
   // ---- N3 / N5 breakdowns ----

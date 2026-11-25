@@ -234,6 +234,14 @@ const WEAPON_TYPE: Dim = { col: "weapon_type", overlap: true, label: (v) => WEAP
 const VICTIM_WEAPON_TYPE: Dim = { ...WEAPON_TYPE, values: (v) => (v === "firearm" ? null : [v, `${v}A`]) };
 export const FIRST_WEAPON_NOTE = "Firearm here means the victim's first-listed weapon was a firearm: each victim is counted once, and a victim whose firearm was listed only second or third isn't counted.";
 /** The basis note for any answer that applies the firearm category to the count-once victim table (series, breakdown, share). */
+/**
+ * Owner decision (Jeff, 2026-11-23): person crimes by location or hour of day answer with OFFENSE counts, and the answer says
+ * so. NIBRS keeps location and time-of-day figures by offense only (no victim table exists), so a person-crime figure from
+ * those tables counts offenses, not victims. Text only: no route or counting change.
+ */
+export const OFFENSES_NOT_VICTIMS_NOTE = "These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.";
+const offensesNotVictimsNote = (codes: readonly string[], t: { key: string } | null | undefined): string | null =>
+  (t?.key === "offense_location" || t?.key === "offense_hour") && codes.length > 0 && codes.every((c) => PERSON_CODES.has(c)) ? OFFENSES_NOT_VICTIMS_NOTE : null;
 const firstWeaponNote = (filters: readonly string[], t: { key: string } | null | undefined): string | null => (filters.includes("weapon:firearm") && t?.key === "victim_demo" ? FIRST_WEAPON_NOTE : null);
 const DEMO = { sex: SEX, race: RACE, age: AGE, ethnicity: ETH, weapon: WEAPON_CATEGORY };
 const DEMO_CODES = new Set(["09A", "09B", "11A", "11B", "11C", "13A", "13B", "120"]);
@@ -764,6 +772,7 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
       usedTables.push(...tables);
       // Owner decision A: a firearm victim count from the demographics table states its first-listed-weapon basis.
       { const fw = tables.map((t) => firstWeaponNote(spec.filters ?? [], t)).find(Boolean); if (fw) notes.push(fw); }
+      { const ov = picked.map((p) => offensesNotVictimsNote(p.g.codes, p.t)).find(Boolean); if (ov) notes.push(ov); }
       const bounds = measuredBounds(ctx.db, tables[0]);
       if (!bounds) return { kind: "decline", explanation: "The latest year in this data can't be confirmed, so I haven't answered.", statements };
       const yr = yearsOf(spec.period, bounds, ctx.now);
@@ -1047,6 +1056,7 @@ async function compileBreakdown(spec: BreakdownSpec, ctx: CompileContext, run: R
   const notes: string[] = [];
   if (spec.dim === "hour") notes.push("Shares are of offenses with a recorded hour; offenses with no recorded hour aren't in NIBRS's time-of-day summary.");
   { const fw = firstWeaponNote(spec.filters, t); if (fw) notes.push(fw); } // owner decision A
+  { const ov = offensesNotVictimsNote(codes, t); if (ov) notes.push(ov); } // owner decision 2026-11-23: person crime by location/hour is offenses
   if (place.kind !== "agency") notes.push(cohortSentence(place, yr.years, ctx.db));
   if (yr.note) notes.push(yr.note);
   return { kind: "answer", columns: BREAKDOWN, rows, title: `${MEASURE_LABEL[spec.measure]} ${unitLabel} by ${dimName} — ${label}`, explanation: ["Counts from the NIBRS summary tables; unknown values stay visible as their own category.", restrictionSentence(spec.filters, unitLabel, [t]), ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].filter(Boolean).join(" "), statements, applied };
@@ -1163,11 +1173,20 @@ async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, st
     const label = byState ? "each state" : placeLabel(place, cq.agency);
     const rows = cq.incomplete ? [blank(label, cq.incomplete)] : cq.none && !byState ? [blank(label, cq.none)]
       : byState
-        ? denRows.filter((r) => r.cat !== "US").map((dr) => shareRow(numRows.find((nr) => nr.cat === dr.cat), dr, STATE_NAME_BY_CODE[String(dr.cat)] ?? String(dr.cat))).sort((a, b) => (String(a.place) < String(b.place) ? -1 : 1))
+        ? denRows.filter((r) => r.cat !== "US").map((dr) => shareRow(numRows.find((nr) => nr.cat === dr.cat), dr, STATE_NAME_BY_CODE[String(dr.cat)] ?? String(dr.cat))).sort((a, b) => {
+          if (spec.rank) {
+            // Ranked by share: states with nothing to divide go last, never as 0.
+            if (a.share === null || b.share === null) return a.share === b.share ? 0 : a.share === null ? 1 : -1;
+            const d = Number(b.share) - Number(a.share);
+            if (d) return spec.rank.dir === "bottom" ? -d : d;
+          }
+          return String(a.place) < String(b.place) ? -1 : 1;
+        }).slice(0, spec.rank?.n ?? undefined)
         : [shareRow(numRows[0], denRows[0], label)];
     const applied = appliedFrom([{ measure: spec.measure, ops: [num.rec, den.rec] }]);
     post(applied).set("share", true); // applied-site: share-computed
     for (const f of clearanceConditionsApplied(num.rec, den.rec, clearanceSubset, popClearance, denKind)) post(applied).push("filters", f); // applied-site: clearance-conditions-from-operand-columns
+    if (byState && spec.rank) post(applied).set("rank", { dir: spec.rank.dir, n: spec.rank.n ?? 0 }); // applied-site: rank-sort-and-slice
     if (byState) { post(applied).push("lists", "list:state"); applied.breakdowns = (applied.breakdowns ?? []).filter((b) => b !== "state"); } // applied-site: share-per-state
     const form = periodFormValue(spec.period); if (form) post(applied).push("periodValues", form); // applied-site: relative-period-resolved-by-years-of
     const stateNote = byState ? " Each state's share is of the clearance records its reporting agencies sent to NIBRS; states with no records for this offense and year aren't listed." : "";
@@ -1234,6 +1253,7 @@ async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, st
   const notes: string[] = [];
   if (place.kind !== "agency") notes.push(cohortSentence(place, yr.years, ctx.db));
   { const fw = firstWeaponNote([...spec.population, ...spec.subset], t); if (fw) notes.push(fw); } // owner decision A
+  { const ov = offensesNotVictimsNote(codes, t); if (ov) notes.push(ov); }
   return { kind: "answer", columns: SHARE, rows: [{ period, place: label, measure: spec.measure, unit: unitLabel, population, subset: subsetText, numerator, denominator, share: denominator ? r1((numerator / denominator) * 100) : null, note: denominator ? null : `no ${population} in this period` }],
     title: `${label}: ${subsetText} as a share of ${population}`, explanation: [`The share is of all ${population}${spec.population.length ? ` (${spec.population.map(filterLabel).join("; ")})` : ""}; the denominator is NIBRS's unique total for that population.`, ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
 }

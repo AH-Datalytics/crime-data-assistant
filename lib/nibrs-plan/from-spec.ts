@@ -113,7 +113,7 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
     case "dv": return DV[val] ? { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", DV[val])] } : null;
     case "relationship": return { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", [val])] };
     case "circumstance": return { kind: "exists", scope: "victim", entity: "victim_circumstance", where: [attr("victim_circumstance.circumstance", val.split("+"))] };
-    case "bias": return { kind: "exists", scope: "offense", entity: "offense_bias", where: [attr("offense_bias.bias", [val])] };
+    case "bias": return { kind: "exists", scope: "offense", entity: "offense_bias", where: [attr("offense_bias.bias", val === "lgbtq" ? ["41", "42", "43", "45", "71", "72"] : [val])] };
     case "clearance":
       return ["arrest", "exceptional"].includes(val) ? onEntity("offense", attr("offense.clearance_method", [val])) : onEntity("offense", attr("offense.clearance_type", [val]));
     default: return null;
@@ -288,7 +288,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       places = [p];
       periodValue = periodOf(spec.period, false);
       if (spec.byState) groupings.push({ dimension: "geo.state", unknown: "visible", absent: "show" });
+      // "Each year" on a clearance share (Jeff 2026-11-22): a row for each year, so the yearly grain is bound to a year grouping.
+      if (clearedSubset && ledger.parts.some((q) => q.clause === 0 && q.concept === "grain" && q.value === "year")) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
       statistics.push({ kind: "ratio", as: "share", numerator: "subset", denominator: "population" });
+      if (spec.rank) transforms.push({ kind: "rank", by: "share", direction: spec.rank.dir, per: [], limit: spec.rank.n });
       break;
     }
     case "rank": {

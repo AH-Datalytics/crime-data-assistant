@@ -1,0 +1,12 @@
+{
+  "id": "P205",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"burglaries in Westlake, Florida in 2024\", \"burglaries in Deltona, Florida in 2024\", \"Pontiac, Michigan\"",
+  "what the app does today": "\"Westlake, Florida\" answered Westlake, Ohio plus the state of Florida; \"Deltona, Florida\" was not understood, because the reader's own city list lacks cities the place index has.",
+  "proposed behavior": "A city named with its state is that state's agency of the name, checked against the place index (the one list of the cities the build has). If the index has no agency of the name in that state, the answer says it couldn't find \"City, State\"; it is never the same name in another state, and never the state alone with the city dropped. A name the reader split into words (\"Litchfield Park\") is read whole when the index has it in that state.",
+  "exact default or choices offered": "The agency in the named state, or one sentence saying it wasn't found there.",
+  "why": "Coordinator 2026-11-22 (urgent, Engine's finding): a city name with a state must never resolve to the same name in another state.",
+  "status": "Decided 2026-11-22 (through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"A city named with its state\")."
+}

@@ -296,6 +296,8 @@ export function ageFilterBins(lo: number, hi: number): string[] | null {
  */
 export function cubeUnits(a: CubeAsk): { sql: string } | null {
   if (a.conditioned) return null;
+  // Victims by weapon (Jeff 2026-11-24, P297) read the raw rows: the cube holds no victim-by-weapon cell.
+  if (a.attribute?.dimension === "offense_weapon.weapon") return null;
   const unit = a.kind === "offenders" ? "offender" : a.kind === "victims" ? "victim" : "arrestee";
   // Which cube, which rows.
   let cube: { root: string; years: number[] };
@@ -498,6 +500,20 @@ export function splitShadow(sql: string): { raw: string; cube: string } | null {
   if (!sql.startsWith(SHADOW_OPEN)) return null;
   const end = sql.indexOf(SHADOW_CLOSE);
   return end < 0 ? null : { cube: sql.slice(SHADOW_OPEN.length, end), raw: sql.slice(end + SHADOW_CLOSE.length) };
+}
+/**
+ * The statement with any shadow comment taken out wherever it sits. Some callers wrap a plan statement in a larger one (`WITH g AS MATERIALIZED (${sql}) ...`),
+ * which puts the shadow block inside the text instead of at its start; the comment is only carried text there, so what runs is what is left.
+ */
+export function withoutShadowComment(sql: string): string {
+  let out = "", at = 0;
+  for (;;) {
+    const open = sql.indexOf(SHADOW_OPEN, at);
+    const end = open < 0 ? -1 : sql.indexOf(SHADOW_CLOSE, open);
+    if (end < 0) return out + sql.slice(at);
+    out += sql.slice(at, open);
+    at = end + SHADOW_CLOSE.length;
+  }
 }
 /** Run a shadowed statement: raw rows come back; a difference or a failure of the cube side is logged, never thrown. */
 export function runShadow(sql: string, run: (s: string) => unknown[][], log: (line: string) => void): unknown[][] | null {

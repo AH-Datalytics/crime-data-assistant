@@ -4,9 +4,9 @@
   "decision needed": "None: already decided",
   "situation (example wording)": "\"Memphis murders in 1935\", \"Tennessee murders in 1950\"",
   "what the app does today": "The engine's Historical design started at 1960 (the archived snapshot's first year).",
-  "proposed behavior": "Historical covers each place from the earliest year Crime Index publishes for it: agencies' offenses and staffing from the 1930s (Memphis from 1932), states and the nation from 1958 (checked on crimeindex.org, 2026-11-01). A year Crime Index has no figures for is said to be outside its data. Until the pre-1960 snapshot is archived, the engine answers 1960 on and says earlier years aren't loaded yet, never that they don't exist.",
+  "proposed behavior": "Historical covers each place from the earliest year Crime Index publishes for it: agencies' offenses and staffing from the 1930s (Memphis from 1932), states and the nation from 1960 (1958-59 blank, partial archive rows; P198, Jeff 2026-11-22). A year Crime Index has no figures for is said to be outside its data. Until the pre-1960 snapshot is archived, the engine answers 1960 on and says earlier years aren't loaded yet, never that they don't exist.",
   "exact default or choices offered": "From the earliest year Crime Index publishes, for agencies, states and the nation.",
   "why": "Jeff: \"crime index data (staffing and offenses) should be available pre-1960 as well for agencies.\"",
-  "status": "Decided 2026-11-01 (Jeff)",
+  "status": "Decided 2026-11-01 (Jeff); states and the nation from 1960 by P198 (Jeff 2026-11-22)",
   "test cases": "Tests that cite this row: scripts/test-nibrs-historical.ts."
 }

@@ -1,0 +1,12 @@
+{
+  "id": "P292",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"which country do you cover\", \"which cities are represented in Pennsylvania?\", \"What agencies match Dallas County in Texas? Show me the agencies table entries.\"",
+  "what the app does today": "The question was read as a request for figures, or could not be read.",
+  "proposed behavior": "A question about which country, cities or agencies are covered is answered with one coverage sentence: \"Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.\" No list of cities or agencies is shown.",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow-open-ended.ts (P292); QL-ct-1c4ba03ba5, QL-ct-719bb881d8, QL-ct-66d93ac1e2."
+}

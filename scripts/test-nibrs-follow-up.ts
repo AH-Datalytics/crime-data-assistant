@@ -21,6 +21,16 @@ assert.equal(q(rw(P, "what about Nashville?")), "Shoplifting in Nashville by yea
 assert.equal(q(rw(P, "rate instead")), "Shoplifting rate in Memphis by year from 2021 to 2024");
 assert.equal(q(rw(P, "by month")), "Shoplifting in Memphis by month from 2021 to 2024");
 assert.equal(q(rw("carjackings in Memphis TN by month in 2025", "make it quarterly")), "carjackings in Memphis TN by quarter in 2025");
+// A swap in one follow-up (Engine 2.0 / coordinator 2026-11-22, QL-ct-0fa509b9b4): one place out, another in, in the same spot.
+const FIVE = "can you plot murders benchmarked to 2021 levels for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?";
+assert.equal(q(rw(FIVE, "exclude boston but include Baltimore")), "can you plot murders benchmarked to 2021 levels for the cities Philadelphia, New York, Baltimore, Los Angeles, and Chicago?");
+assert.equal(q(rw(FIVE, "remove Boston and add Baltimore")), q(rw(FIVE, "exclude boston but include Baltimore")));
+assert.equal(q(rw(FIVE, "replace Boston with Baltimore")), q(rw(FIVE, "exclude boston but include Baltimore")));
+assert.equal(q(rw("Murders in Memphis and Nashville in 2024", "exclude Memphis but include Knoxville")), "Murders in Knoxville and Nashville in 2024");
+// A place that is not in the previous question, or one already in it, or a single place, is asked about, never guessed.
+asked(rw(FIVE, "exclude Denver but include Baltimore"));
+asked(rw(FIVE, "exclude Boston but include Chicago"));
+asked(rw("Murders in Memphis in 2024", "exclude Memphis but include Knoxville"));
 // P72: a population column goes with a rate; agencies reporting with a state or national total.
 assert.equal(q(rw("Shoplifting rate in Wichita in 2024", "add a column for population")), "Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate");
 assert.equal(q(rw("Shoplifting in Kansas in 2024", "how many agencies reported")), "Shoplifting in Kansas in 2024, with the number of agencies reporting");
@@ -34,6 +44,9 @@ assert.equal(q(rw("how many murders in baltimore county this year", "countywide"
 assert.match(q(rw("compare murders between the City of St. Louis, and St. Louis County, MO from 1990 to the most recent data", "countywide total")), /, countywide$/);
 assert.match(q(rw("what is the trend of aggravated assaults with a firearm in DC and Prince George's County over the past 10 years", "countywide")), /, countywide$/);
 asked(rw("violent crime in Memphis in 2024", "countywide"));
+// P70 over P135 (Jeff 2026-11-22): "<county> as a whole" and a change to a county-wide question stay county-wide, so P70 declines them.
+assert.equal(q(rw("calculate percent change in violent crimes rates from 2024-2025 for Fort Worth, TX", "for tarrant county, tx as a whole")), "calculate percent change in violent crimes rates from 2024-2025 for tarrant county, tx, countywide");
+assert.equal(q(rw("calculate the countywide percent change in violent crimes in Cook County, IL from 2024-2025", "use rates")), "calculate the countywide percent change in violent crimes in Cook County, IL from 2024-2025");
 // After an answer about the data itself (definitions, sources, agencies reporting, states with no data) there is no figure to change: the follow-up is a
 // question of its own, never rebuilt into another question about the data (QL-nibrs-534978cb8e: "Carjackings per year" after "how is domestic violence defined?").
 for (const prevQ of ["how is domestic violence defined?", "where is this data taken from", "How many agencies reported NIBRS data in 2023?", "what states are not represented?"]) {

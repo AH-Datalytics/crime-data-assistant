@@ -1,0 +1,12 @@
+{
+  "id": "P305",
+  "topic": "Compare with other or similar cities",
+  "decision needed": "None: decided",
+  "situation (example wording)": "\"compared to similar cities\", \"versus peer cities\", \"to other cities\", \"against 3 agencies of similar size\", \"other cities of a similar size\".",
+  "what the app does today": "Peer wording kept the decline (P187, D16) that asked for named agencies, or answered the place alone.",
+  "proposed behavior": "The app asks \"Which cities should it be compared with? For example, cities of similar size, or named cities.\" with one button, \"Name the cities\". It never picks a peer group itself and never answers the place alone. A place that has to be told apart (Richmond, Baltimore) is asked first; each of its buttons keeps the peer wording so the cities are still asked afterwards. \"Other large cities\" or \"other major cities\" is a different ask and is not changed.",
+  "exact default or choices offered": "Question: \"Which cities should it be compared with? For example, cities of similar size, or named cities.\" Button: \"Name the cities\".",
+  "why": "Jeff 2026-11-24 (coordinator card, Q1 yes, Q2 no). Supersedes the peer part of P187 and D16.",
+  "status": "Decided 2026-11-24 (Jeff, by coordinator card)",
+  "test cases": "scripts/test-nibrs-shadow.ts: P305 block (six peer questions, Richmond first, three untouched comparisons)."
+}
