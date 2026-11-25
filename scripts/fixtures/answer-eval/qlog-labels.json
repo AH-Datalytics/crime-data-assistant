@@ -64883,7 +64883,8 @@
     "outcome": "answer",
     "source": "nibrs",
     "source_any": [
-     "nibrs"
+     "nibrs",
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -64896,7 +64897,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific. Plain national homicide count: the murder series (Historical, national 1960 on) is an accepted source. Jeff 2026-11-25: \"when people ask for city homicide figures we can treat that synonymous with murder for the historical and current data. Only with NIBRS and SHR data is homicide the sum of murder and manslaughter/justified\"; \"yes apply to state and national\" (homicide = the murder series for state and national questions too)."
    }
   },
   {
@@ -110413,6 +110414,11 @@
    "expected": {
     "outcome": "answer",
     "source": "shr",
+    "source_any": [
+     "shr",
+     "historical",
+     "rtci"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -110424,7 +110430,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "All homicides includes types beyond standard murder."
+    "notes": "Plain state homicide count: homicide = the murder series on Historical (to 2025) and Current Trends (2026); SHR also accepted. Jeff 2026-11-25: \"when people ask for city homicide figures we can treat that synonymous with murder for the historical and current data. Only with NIBRS and SHR data is homicide the sum of murder and manslaughter/justified\"; \"yes apply to state and national\" (homicide = the murder series for state and national questions too)."
    }
   },
   {
