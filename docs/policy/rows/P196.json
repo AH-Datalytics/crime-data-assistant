@@ -1,0 +1,12 @@
+{
+  "id": "P196",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"murders cleared by clearance type in 2025 in these cities: Chicago, IL, Los Angeles, CA, Houston, TX\", \"murders in Los Angeles and Baltimore\", \"compare property crime in NYC and LA\"",
+  "what the app does today": "Asked which Los Angeles (the police department or the County Sheriff's Department), or which Baltimore, for a city named beside other places.",
+  "proposed behavior": "Whenever a city is named beside other places (any two or more places), it means that city's police: the agency that polices the city (its police department; for a merged city-county, that merged agency, such as the Jacksonville Sheriff's Office or the Las Vegas Metropolitan Police Department), with no ask beside the county sheriff or county. Every such answer names the agency it used, in a note after the title (\"Los Angeles is read as the Los Angeles Police Department.\"), for each name a county agency also bears. A place the question itself names as a county or a sheriff's office stays the county. A single place on its own still asks (P28).",
+  "exact default or choices offered": "No ask; the police, named in the answer.",
+  "why": "Jeff 2026-11-22 (\"Any 2+ places\", through the coordinator): a city named beside other places means that city's police, named in the answer.",
+  "status": "Decided 2026-11-22 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P196\")."
+}

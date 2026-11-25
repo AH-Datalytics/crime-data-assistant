@@ -282,6 +282,12 @@ const PEER_ASK_TEXT = "Which cities should it be compared with? For example, cit
   for (const q of ["los angeles homicide rate in 2025 vs. other large cities", "Compare assault rates in Seattle vs other major cities", "murders in Denver and Portland in 2024"])
     assert.notEqual((ask(q) as { about?: string }).about, "which cities", q);
 }
+// P350 (Jeff 2026-11-24): a ranking of individual incidents declines with the plain "not available" sentence; totals by place are untouched.
+for (const q of ["provide the values and agencies for the top 20 shoplifting incidents with the highest values stolen in 2024", "top 10 incidents with the largest dollar loss in Detroit in 2024", "show the 5 largest individual burglaries in Texas in 2023"]) {
+  const o = ask(q) as { kind: string; reason?: string; explanation?: string };
+  assert.ok(o.kind === "decline" && o.reason === "unsupported_capability" && o.explanation === "That data is not available.", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+}
+assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer");
 // Kings County is a county in New York and in California (Jeff 2026-11-24): with no state named it is asked about, whatever the wording.
 {
   for (const q of ["show me trends on gun crime in Kings County since 2015", "murders in Kings County in 2024 according to NIBRS"]) {
@@ -399,6 +405,18 @@ assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city
 assert.equal(ori(at("ambiguous:San Diego", "City of San Diego, California")), "CA0371100");
 assert.equal(ori(at("ambiguous:Los Angeles", "the city of Los Angeles")), "CA0194200");
 assert.equal(ori(at("ambiguous:St. Louis", "City of St. Louis")), "MOSPD0000");
+// P196 (Jeff 2026-11-22): a city named in a list of places is the city's police department, never the city-or-county ask.
+assert.equal(ori(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", true)), "CA0194200");
+assert.equal(ori(resolvePlace(places, "city:Los Angeles:", "Los Angeles", true)), "CA0194200");
+assert.equal(resolvePlace(places, "ambiguous:Los Angeles", "Los Angeles", false).kind, "ask", "one place alone still asks");
+// Beside other places "New York" is the city (the state is not a same-name city, P28); alone it still asks; Washington in a list is Washington, D.C. (P238, Jeff 2026-11-22).
+assert.equal(resolvePlace(places, "ambiguous:New York", "New York", true).kind, "agency");
+assert.equal(resolvePlace(places, "ambiguous:New York", "New York", false).kind, "ask");
+assert.equal(ori(resolvePlace(places, "ambiguous:Washington", "Washington", true)), ori(resolvePlace(places, "city:Washington:DC", "Washington, D.C.", true)), "Washington in a list is Washington, D.C. (P238)");
+assert.equal(resolvePlace(places, "ambiguous:Washington", "Washington", false).kind, "ask", "a lone Washington still asks (P28)");
+assert.equal(resolvePlace(places, "ambiguous:Kansas City", "Kansas City", true).kind, "ask", "two cities of the name keep P28's ask");
+assert.equal(resolvePlace(places, "city:Columbus:OH", "Columbus", true).kind, "ask", "two cities of the name keep P28's ask");
+assert.equal(ori(resolvePlace(places, "county:Los Angeles County:CA", "Los Angeles County", true)), "CA0190000", "a county named stays the county");
 assert.deepEqual(named(at("ambiguous:San Diego", "San Diego, California")), ["San Diego Police Department", "San Diego County Sheriff's Office"]);
 assert.equal(at("ambiguous:Kansas City", "city of Kansas City").kind, "ask", "two states have a Kansas City");
 assert.equal(ori(at("county:St. Louis County:MO", "St. Louis County")), "MO0950000", "a county named stays the county");
@@ -1654,6 +1672,9 @@ for (const q of ["What weapons are most commonly used in aggravated assaults in 
 }
 // Capability (ratios): a share of murders by a detail for each year or a range of years is Homicide Reports', routed, never "a share covers one period".
 for (const q of ["share of murders committed via firearm per year since 2000 in the United States", "Share of murders committed with a firearm, 2020 - 2026 in the United States", "share of juvenile murder victims per year in Chicago"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
+// Capability (ratios): a share of murders by a detail the reader has no word for (intraracial, organized crime, offender under 18) is Homicide Reports', routed; a robbery share still asks which part.
+for (const q of ["What share of homicides are intraracial in the United States", "share of murders involving organized crime in the United States", "Percentage of inter racial homicide in the United States"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
+assert.notEqual(shadowAnswer("what share of robberies were cleared by arrest in the United States", { ...deps, noDefaults: false }).kind, "route");
 // Capability (ratios): a share of murders by a Homicide Reports detail with no place is the nation's, routed to Homicide Reports, never a place ask.
 for (const q of ["what share of murders involved a firearm", "share of murders committed with a firearm"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
@@ -3609,6 +3630,20 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.equal(t.delivered.table.rows.length, 7, JSON.stringify(t.delivered.table));
     assert.ok(t.delivered.table.rows.every((r) => r[1] === 0 && r[2] === 0));
   } finally { OMIT_TYPES = []; }
+}
+// P196 (Jeff 2026-11-22, "Any 2+ places"): every answer with a city named beside other places names the agency it used.
+{
+  const o = ask("murder clearance by type in 2025 in Houston and Los Angeles") as { kind: string; delivered?: { text: string[] } };
+  if (o.kind === "answer") assert.ok(o.delivered!.text.includes("Los Angeles is read as the Los Angeles Police Department."), o.delivered!.text.join(" | "));
+  // Each city with a county agency of the name (Houston County, Dallas County) names the police department it used.
+  const dh = (ask("murder clearance by type in 2025 in Houston and Dallas") as { delivered?: { text: string[] } }).delivered?.text ?? [];
+  assert.ok(dh.includes("Dallas is read as the Dallas Police Department.") && dh.includes("Houston is read as the Houston Police Department."), dh.join(" | "));
+  // The nation or a state beside a city name is a place too (QL-ct-6cd2364e08): Baltimore is the city's police, not asked about the county.
+  assert.notEqual((ask("carjackings nationwide and in Baltimore in 2024") as { kind: string }).kind, "clarify");
+  // A name beside states only is the state (QL-hist-6f624e6886): New York in "Florida, Texas, and New York" is not the New York City Police Department.
+  const fl = ask("Compare robbery in Florida, Texas, and New York since 1990") as { kind: string; delivered?: { text: string[] } };
+  assert.notEqual(fl.kind, "clarify");
+  assert.ok(!(fl.delivered?.text ?? []).some((t) => /New York City Police Department/.test(t)), JSON.stringify(fl.delivered?.text));
 }
 // P201 (Jeff 2026-11-22, reader batch from the 284 gate): ranking words are read: worst, the greatest number of, jurisdictions, "five cities".
 {
