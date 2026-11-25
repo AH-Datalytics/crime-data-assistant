@@ -515,7 +515,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   if (r.kind === "historical") {
     assert.deepEqual(r.delivered.table.rows, [["Houston", 91], ["Dallas", 59], ["Abilene", 48], ["Fort Worth", 48]]);
     // A title that reads back the question (Jeff 2026-11-17), then plain notes, then the source.
-    assert.equal(r.delivered.text[0], "Texas Murder Count by City, 1950");
+    assert.equal(r.delivered.text[0], "Cities in Texas With the Most Murders, 1950");
     assert.equal(r.delivered.text[1], "The 4 cities with the most murders are shown.");
     assert.equal(r.delivered.text[2], "Cities are Crime Index's city agencies, whatever the agency.");
     assert.ok(r.delivered.text.includes("Abilene and Fort Worth tie for 3rd, so 4 agencies are shown."), JSON.stringify(r.delivered.text));
@@ -573,7 +573,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   if (us.kind === "historical") {
     assert.deepEqual(us.delivered.table.rows, [["Chicago, IL", 461], ["New York City, NY", 356], ["Houston, TX", 334]]);
     // The floor the question carried is in the title; a default floor (not asked) is a note instead.
-    assert.equal(us.delivered.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
+    assert.equal(us.delivered.text[0], "Cities With the Most Murders, Population 250,000 or More, 2024");
     assert.match(rsql[0], /agency_crime\.parquet'\) WHERE \(type = 'city' OR ori IN \('FL0160000'\)\) AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200'\) AND year = 2024 AND population >= 250000/);
   }
   // Every agency, city and county: no type in the query.
@@ -658,7 +658,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(r.kind === "current", JSON.stringify(r));
   if (r.kind === "current") {
     assert.deepEqual(r.delivered.table.rows, [["Dallas", 89], ["San Antonio", 58]]);
-    assert.equal(r.delivered.text[0], "Texas Murder Count by City, Year to Date 2026");
+    assert.equal(r.delivered.text[0], "Cities in Texas With the Most Murders, Year to Date 2026");
     assert.ok(r.delivered.text.includes("The 2 cities with the most murders are shown, January 2026 through August 2026."), JSON.stringify(r.delivered.text));
     assert.ok(r.delivered.text.includes("Houston isn't ranked because a month is missing."), JSON.stringify(r.delivered.text));
     assert.ok(r.delivered.text.some((t) => /Only Current Trends' sample agencies are included/.test(t)));
@@ -678,7 +678,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const nat = answerCurrentRanking({ measure: "murder", state: "US", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 2 },
     minPopulation: 250000, floorAsked: true, entity: "city" }, cb, "/ci", cexec, rankAgencies);
   assert.ok(nat.kind === "current", JSON.stringify(nat));
-  if (nat.kind === "current") assert.equal(nat.delivered.text[0], "United States Murder Rate by City, Population 250,000 or More, Year to Date 2026");
+  if (nat.kind === "current") assert.equal(nat.delivered.text[0], "Cities With the Highest Murder Rates, Population 250,000 or More, Year to Date 2026");
   // A rate: per 100,000 of the latest month's population, not scaled to a full year.
   const rr =answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
     minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
