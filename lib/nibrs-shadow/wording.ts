@@ -70,6 +70,8 @@ export const REASONS: Record<string, (x: string) => string> = {
   "I can apply one minimum population (\"at least\" or \"over\"), not a maximum.": () => "A ranking can take one minimum population (\"at least\" or \"over\"), not a maximum.",
   "a ranking covers the nation or one state.": () => "A ranking covers the cities of one state or of the nation.",
   "a ranking covers a full year.": () => "A ranking covers one full year.",
+  "clearance rates are ranked on one crime at a time.": () => "Clearance rates are ranked one crime at a time.",
+  "states are ranked on one crime at a time; several crimes side by side are built for cities and agencies.": () => "States are ranked one crime at a time. Several crimes side by side are built for cities and agencies.",
   "states are ranked without a population minimum.": () => "States are ranked without a population minimum.",
   "a state ranking covers every state; it can't be limited to one place.": () => "A ranking of states covers every state; it can't be limited to one place.",
   "a combined category counts victims and offenses together, and states aren't ranked on a mixed count in this version.": () => "This group of crimes counts victims for some crimes and offenses for others, so states can't be ranked on it.",
