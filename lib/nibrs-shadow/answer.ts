@@ -2934,6 +2934,11 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const o = decline(readerReason(d.explanation), plainReaderExplanation(d.explanation), { alternative: offers[0] ?? null, detail: d.explanation });
     return offers.length > 1 ? { ...o, more: offers.slice(1) } as ShadowOutcome : o;
   }
+  // A share of murders or homicides for each year or a range of years ("share of murders by firearm per year since 2000") is a Homicide Reports
+  // detail by year: routed there, never refused as a share over a span (capability ratios, Jeff 2026-11-24).
+  if (d.kind === "decline" && !deps.noDefaults && !deps.shr && /share covers one period/i.test(d.explanation) && /\b(?:murders?|homicides?)\b/i.test(ledger0.question)
+    && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough)
+    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for each year comes from Homicide Reports, which count the homicides agencies reported to the FBI. Homicide Reports aren't available here. NIBRS has its own counts when asked for by name." };
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
   if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
     { alternative: askInstead(ledger.question, d.parts, Number(deps.release.lastMonth.slice(0, 4))), detail: d.explanation });
