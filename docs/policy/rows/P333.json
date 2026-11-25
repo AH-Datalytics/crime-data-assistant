@@ -1,0 +1,12 @@
+{
+  "id": "P333",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"what is the defanition of simple assault\", \"What is defined as violent crime\", \"how is domestic violence defined in NIBRS?\", \"what counts as personal weapons\", \"SRS definition please\"",
+  "what the app does today": "A link to the FBI Crime Data Explorer for every definition question.",
+  "proposed behavior": "Simple assault: the FBI NIBRS offense 13B definition as published. Domestic violence: NIBRS has no such offense; it is recorded through the victim-to-offender relationship codes, and is not the same as Family Offenses, Nonviolent (90F). Personal weapons: NIBRS weapon code 40, hands, fists, feet and teeth. SRS: the Summary Reporting System, the FBI's older summary reporting program (a program, not an offense). Violent crime has two definitions chosen by context: SRS or Crime Index context gives murder and nonnegligent manslaughter, rape, robbery and aggravated assault; NIBRS context gives the same four as codes (09A; 11A, 11B and 11C; 120; 13A); no context gives both, each labeled with its program. Any other term keeps the link.",
+  "exact default or choices offered": "None: one answer.",
+  "why": "Jeff 2026-11-25 via the Coordinator. The NIBRS violent set matches the product's violent crime composite (09A, 11A-C, 120, 13A).",
+  "status": "Decided (Jeff 2026-11-25).",
+  "test cases": "scripts/test-nibrs-coverage.ts (every term above, violent crime by program, the link kept for other terms)."
+}

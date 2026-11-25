@@ -1443,7 +1443,7 @@ function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
   const cq = readCoverage(question, hasMeasure, hasPlace);
   if (!cq) return null;
   return answerCoverage(cq, { root: deps.target.root, release: deps.release, execute: deps.execute,
-    crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null });
+    crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null, places: deps.places, crimeIndexRoot: deps.historical?.root ?? null });
 }
 
 /** P153 (Jeff 2026-11-18): a line, an annotation or a marker at a date on a chart ("with a line at August 2025", "add some kind of marker to show May 2020"). */

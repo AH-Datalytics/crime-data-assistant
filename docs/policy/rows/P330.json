@@ -1,0 +1,12 @@
+{
+  "id": "P330",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What states are not represented?\" (and the same asked other ways)",
+  "what the app does today": "Listed the states with no NIBRS data, then a second column of other places (DC, Guam, Puerto Rico, U.S. Virgin Islands) with none, and said \"every state and the District of Columbia\".",
+  "proposed behavior": "The answer counts the 50 states only. DC, Puerto Rico and the territories are not states and get no line or column. A state is listed in a year when none of its agencies reported any month (the any-month rule); when none is missing the answer says \"every one of the 50 states has reporting agencies\". The Source line stays FBI NIBRS.",
+  "exact default or choices offered": "None: one answer.",
+  "why": "Jeff 2026-11-25 (typed in the Coordinator session): \"DC, PR and USVI shouldn't count as states\".",
+  "status": "Decided (Jeff 2026-11-25). Open: his note that state questions start in 1960; the NIBRS agency lists begin with the release's first year, so the answer covers the years held and states that span.",
+  "test cases": "scripts/test-nibrs-coverage.ts (states rows, text lines, no DC/PR/territory words)."
+}

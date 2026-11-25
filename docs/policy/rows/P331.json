@@ -1,0 +1,12 @@
+{
+  "id": "P331",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Sources?\", \"where is this data taken from\", \"What is the source of this data?\", \"Where does this data come from? Is this UCR data?\"",
+  "what the app does today": "A paragraph naming Crime Index, NIBRS, Homicide Reports and hate crime statistics, with a table of four sources.",
+  "proposed behavior": "Exactly one sentence: \"The data comes from the FBI's Uniform Crime Report NIBRS, SHR and SRS programs as well as the Crime Index\". No other source names, no Source line. When the question asks \"Is this UCR data?\" the answer starts \"Yes.\" and then the sentence.",
+  "exact default or choices offered": "None: one answer.",
+  "why": "Jeff 2026-11-25 (typed in the Coordinator session), word for word.",
+  "status": "Decided (Jeff 2026-11-25).",
+  "test cases": "scripts/test-nibrs-coverage.ts (the four question wordings, the Yes. form)."
+}

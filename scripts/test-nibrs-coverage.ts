@@ -37,6 +37,11 @@ const execute = (sql: string): unknown[][] => {
     for (let yr = Number(y[1]); yr <= Number(y[2]); yr++) for (const s of ["AK", "WY", "NB", "NJ", "NC", "PR", "VI", "GM"]) rows.push([yr, s]);
     return rows;
   }
+  // Agencies whose primary county (FIPS, ordinal 1) is the county agency's: Dallas Police carries TXDPD0000, not a TX057 code.
+  if (/agency_fips_county/.test(sql)) return [["TX0570000"], ["TXDPD0000"], ["TX0570100"]];
+  // Crime Index agencies of a state, from the build's agency_crime table: all, and the cities among them.
+  if (/count\(DISTINCT ori\), count\(DISTINCT CASE WHEN type = 'city'/.test(sql)) return [[1391, 1323]];
+  if (/SELECT DISTINCT ori FROM read_parquet\('\/ci\/agency_crime.parquet'\)/.test(sql)) return [["TXDPD0000"]];
   return [];
 };
 const deps: ShadowDeps = {
@@ -70,11 +75,12 @@ assert.ok(ask("how many agencies reported NIBRS data in 2010?").delivered.text.i
 // States not represented: every year to the latest full year; Nebraska (NB) is a state with agencies, not a missing one.
 const st = ask("What states are not represented?");
 assert.equal(st.delivered.text[0], "States With No NIBRS Data by Year, 2017 to 2025");
-assert.deepEqual(st.delivered.table.rows[0], ["2017", "Alaska, Wyoming", "Guam, Puerto Rico, U.S. Virgin Islands"]);
-assert.deepEqual(st.delivered.table.rows[1], ["2018", "None", "Guam, Puerto Rico, U.S. Virgin Islands"]);
+assert.deepEqual(st.delivered.table.rows[0], ["2017", "Alaska, Wyoming"]);
+assert.deepEqual(st.delivered.table.rows[1], ["2018", "None"]);
 assert.equal(st.delivered.table.rows.length, 9);
-assert.ok(st.delivered.text.includes("In 2025 every state and the District of Columbia has reporting agencies."), st.delivered.text.join(" / "));
-assert.ok(st.delivered.text.includes("Guam, Puerto Rico and the U.S. Virgin Islands have no reporting agencies in 2025."), st.delivered.text.join(" / "));
+// Jeff 2026-11-25: DC, Puerto Rico and the territories are not states; no line for them.
+assert.ok(st.delivered.text.includes("In 2025 every one of the 50 states has reporting agencies."), st.delivered.text.join(" / "));
+assert.ok(!/District|Puerto|Guam|Virgin/.test(st.delivered.text.join(" ")), st.delivered.text.join(" / "));
 assert.equal(ask("which states aren't in the data in 2017?").delivered.text[0], "2017 States With No NIBRS Data");
 for (const q of ["which states aren't in the data?", "why can't you tell me which states are not represented?"]) assert.equal(ask(q).shape, "states", q);
 
@@ -85,14 +91,39 @@ assert.equal(ask("how far back does the data go?").shape, "years");
 
 // Sources and definitions: a pointer only; nothing is written out.
 const src = ask("Where do these numbers come from?");
-assert.deepEqual(src.delivered.text, ["Where the Numbers Come From", "Counts and rates for a place and year, 1930 to 2025, come from Crime Index.",
-  "Victims, offenders, weapons, arrests and clearances by month, January 2017 to September 2026, come from the FBI's NIBRS.",
-  "Homicide Reports come from the FBI's Supplementary Homicide Reports.", "Hate crimes come from FBI Hate Crime Statistics.", "Each answer ends with a Source line naming the one it used."]);
-for (const q of ["Sources?", "where is this data taken from", "What is the source of this data?"]) assert.equal(ask(q).shape, "sources", q);
-const def = ask("how is domestic violence defined?");
+const SENT = "The data comes from the FBI's Uniform Crime Report NIBRS, SHR and SRS programs as well as the Crime Index";
+assert.deepEqual(src.delivered.text, [SENT]);
+assert.deepEqual(ask("Where does this data come from?  Is this UCR data?").delivered.text, [`Yes. ${SENT}`]);
+for (const q of ["Sources?", "where is this data taken from", "What is the source of this data?"]) { assert.equal(ask(q).shape, "sources", q); assert.deepEqual(ask(q).delivered.text, [SENT], q); }
+// A term with no definition on hand keeps the link to the FBI's definitions.
+const def = ask("how is hate crime defined?");
 assert.ok(def.delivered.text.some((t) => t.includes(DEFINITIONS_LINK)) && DEFINITIONS_LINK === "https://cde.ucr.cjis.gov/");
 assert.ok(def.delivered.text.every((t) => t.length < 120), "no written definition");
 for (const q of ["what is the defanition of simple assault", "SRS definition please", "What counts as violent crime here?"]) assert.equal(ask(q).shape, "definitions", q);
+// FBI definitions on hand are as Jeff gave them.
+assert.match(ask("what is the defanition of simple assault").delivered.text[1], /^Simple Assault: An unlawful physical attack by one person upon another/);
+assert.match(ask("What is defined as violent crime").delivered.text[1], /murder and nonnegligent manslaughter, rape, robbery and aggravated assault\.$/);
+{
+  const txt = (q: string) => ask(q).delivered.text.join("\n");
+  assert.match(ask("SRS definition please").delivered.text[1], /^SRS is the Summary Reporting System, the FBI's older summary reporting program\. It is a program, not an offense\.$/);
+  for (const q of ["how is domestic violence defined in NIBRS?", "What constitutes domestic violence in nibrs?", "how is domestic violence defined?"])
+    assert.match(ask(q).delivered.text[1], /^NIBRS has no domestic violence offense\..*It is not the same as Family Offenses, Nonviolent \(90F\)\.$/, q);
+  assert.match(ask('what counts as "personal weapons" in weapon type').delivered.text[1], /weapon code 40: hands, fists, feet and teeth/);
+  // Violent crime: no program named gives both, each labeled; SRS or Crime Index gives SRS; NIBRS gives the codes.
+  assert.ok(/SRS/.test(txt("What is defined as violent crime")) && /09A/.test(txt("What is defined as violent crime")));
+  assert.ok(!/09A/.test(txt("how is violent crime defined in SRS?")) && /robbery and aggravated assault/.test(txt("how is violent crime defined in SRS?")));
+  assert.ok(/09A.*11A, 11B and 11C.*120.*13A/.test(txt("how is violent crime defined in NIBRS?")) && !/Summary Reporting/.test(txt("how is violent crime defined in NIBRS?")));
+}
+// Scope lookups come from the agency lists: Nashville, Dallas County, Pennsylvania.
+const nash = ask("What is the exact agency name for Nashville in the dataset? Show me the agencies table entry.");
+assert.ok(nash.delivered.table.rows.some((r) => r[0] === "TN0190100"), JSON.stringify(nash.delivered.table.rows));
+const dal = ask("What agencies match Dallas County in Texas? Show me the agencies table entries.");
+assert.ok(dal.delivered.table.rows.some((r) => r[0] === "TX0570000") && dal.delivered.table.rows.some((r) => r[0] === "TXDPD0000"), JSON.stringify(dal.delivered.table.rows).slice(0, 300));
+assert.ok(sqls.some((s) => /agency_fips_county/.test(s)), "county membership comes from the NIBRS batch header's primary county, not only the ORI prefix");
+assert.equal(dal.delivered.table.rows.find((r) => r[0] === "TXDPD0000")![4], "FBI NIBRS and Crime Index", "the Crime Index label comes from agency_crime");
+const pa = ask("which cities are represented in Pennsylvania?");
+assert.match(pa.delivered.text[1], /^Pennsylvania has [\d,]+ agencies in the FBI's NIBRS agency list and 1,391 with Crime Index counts; 1,323 of the agencies in the index are cities\.$/);
+assert.ok(sqls.some((s) => /\/ci\/agency_crime\.parquet/.test(s) && /state IN \('PA', 'PA'\)/.test(s)), "the Crime Index count is read from the build's agency_crime table, not the fixture");
 
 // A question about how a definition changed is not a plain definition (QL-hist-9745b45647 and QL-hist-924349745b): it keeps its old reading.
 for (const q of ["any legal change of the definition of robbery or clearance rate historically", "has the definition of violent crime changed over time?", "how has rape been defined historically"])
@@ -102,6 +133,13 @@ assert.equal(ask("how is robbery defined?").shape, "definitions");
 // A follow-up about the data is answered on its own, whatever came before.
 const fu = shadowFollowUp("murders in Houston in 2024", "what states are not represented?", deps);
 assert.equal(fu.kind, "coverage");
+// The follow-up's own question and the word "new" are labels on the turn (rewrite, rewriteKind), never part of the answer's text or table (QL-ct-4a77c4a77c, 4a77ca6569, 6fee44a77c).
+for (const [fq, prev] of [["what states are not represented?", "what states are not represented?"], ["which states aren't in the data?", "what states are not represented?"], ["what states are not represented?", "which states do you have data for?"]]) {
+  const r: any = shadowFollowUp(prev, fq, deps);
+  assert.equal(r.kind, "coverage", fq);
+  const body = JSON.stringify([r.delivered.text, r.delivered.table]).toLowerCase();
+  assert.ok(!body.includes(fq.toLowerCase()) && !/\bnew\b/.test(body), `${fq}: question text or "new" in the answer`);
+}
 
 // What is not these: a figure with its own reading, a definition asked beside a figure, and plain questions.
 const notCoverage = (q: string, p = false, m = false) => assert.equal(readCoverage(q, m, p), null, q);
