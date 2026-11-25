@@ -121,7 +121,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -132,7 +132,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -1901,7 +1901,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -1912,7 +1912,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -10106,7 +10106,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -10117,7 +10117,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -20023,7 +20023,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -20034,7 +20034,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; LA in a city list (P141); PG County is the county named; the last 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; LA in a city list (P141); PG County is the county named; the last 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -24080,7 +24080,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -24091,7 +24091,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -25053,7 +25053,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -25064,7 +25064,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -27949,7 +27949,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -27960,7 +27960,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -30544,7 +30544,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -30555,7 +30555,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -32286,7 +32286,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -32297,7 +32297,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -36227,7 +36227,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -36238,7 +36238,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -37470,7 +37470,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -37481,7 +37481,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; the past 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; the past 10 years By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -38565,7 +38565,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -38576,7 +38576,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -67775,7 +67775,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -67786,7 +67786,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -82126,7 +82126,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -82137,7 +82137,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "a ranking or set of places (Crime Index or NIBRS) One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -83177,7 +83177,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -83188,7 +83188,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230 (the follow-up stands alone, F1) By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230 (the follow-up stands alone, F1) By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -86480,7 +86480,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -86491,7 +86491,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -87655,7 +87655,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -87666,7 +87666,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230, at least 15 years, 2026 left out By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; as QL-ct-f412900230, at least 15 years, 2026 left out By rule from the question text; second labeler NIBRS Model 2026-11-22 One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -88814,7 +88814,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last N full years ending in 2025 (last year = 2025); say 2026 is not complete yet",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -88825,7 +88825,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Last year or last N years: Historical, last N full years ending 2025, say 2026 is not complete. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
