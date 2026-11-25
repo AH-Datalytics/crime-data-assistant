@@ -1,0 +1,12 @@
+{
+  "id": "P297",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"what weapon types were used in violent crimes in pennsylvania in 2025\"",
+  "what the app does today": "Declined (\"this breakdown (by two things at once, several crimes broken down, or a combined total by period), or this rate or share\").",
+  "proposed behavior": "The weapons used in violent crimes are one table, the weapon down the side in five rows and Murder | Rape | Robbery | Aggravated assault across. The rows: Firearm (handgun, rifle, shotgun, other or unknown firearm, merged), Knife or cutting instrument, Blunt object, Personal weapons (hands, fists, feet), Other or none/unknown. The unit is victims for all four crimes (Jeff 2026-11-24), the title names it. This table bypasses the murder-victims-by-weapon decline and P166 (offenses by weapon), and P11 (a property crime by offense): robbery is counted by victims here only, and the answer says so. A victim of an offense with two weapons counts in each weapon's row (any mention), so the rows can add up to more than the victims, and the answer says so.",
+  "exact default or choices offered": "Columns: Weapon | Murder | Rape | Robbery | Aggravated assault. Title: \"Pennsylvania Weapon Types Used in Violent Crimes, Victims, 2025\".",
+  "why": "Jeff 2026-11-24 (through the coordinator), QL-nibrs-1fdead656a: five rows with the firearm types merged; victims for all four crimes.",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (\"P297\")."
+}

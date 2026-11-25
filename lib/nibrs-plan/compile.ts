@@ -73,7 +73,7 @@ export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "u
  * names (several agencies, combined, or a state's agencies). Totals, combined sums, rates and rankings are rolled from
  * the grid (lib/nibrs-plan/transforms.ts), so each agency-month keeps its own status (D6).
  */
-export type CompileTarget = { root: string; builtYears: number[]; /** Data years an arrest question also reads (Jeff 2026-11-23: an arrest is counted in the year of its arrest date, and the year before holds late-reported ones); defaults to builtYears. */ arrestYears?: number[]; /** Probe only (scripts/gen-cube-measure-checks.ts): lets every measure reach a cube so the generator can see which forms would. Never set in production. */ cubeAllMeasures?: boolean; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
+export type CompileTarget = { root: string; builtYears: number[]; /** P297: only the weapon table reads victims by weapon (any mention); everywhere else it is declined (P166). */ victimWeapons?: boolean; /** Data years an arrest question also reads (Jeff 2026-11-23: an arrest is counted in the year of its arrest date, and the year before holds late-reported ones); defaults to builtYears. */ arrestYears?: number[]; /** Probe only (scripts/gen-cube-measure-checks.ts): lets every measure reach a cube so the generator can see which forms would. Never set in production. */ cubeAllMeasures?: boolean; agencies?: string[]; /** The cube to read counts from (tests); otherwise NIBRS_CUBE and NIBRS_CUBE_ROOT decide. */ cube?: CubeConfig | null };
 
 const CARJACK_VEHICLES = ["03", "05", "24", "28", "37"];
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -172,7 +172,7 @@ function groupableOf(r: AttributeRow): Groupable {
     case "paired": return pairAttr(c as (typeof OFFENDER_ATTRS)[number]);
     case "linked": {
       const ca = r.childAlias ?? "", table = r.table ?? "";
-      return { col: `${ca}.${c}`, multi: true, join: (read) => `LEFT JOIN ${read(table)} ${ca} ON ${r.keys === "victim" ? sameVictim(ca, r.alias) : sameOffense(ca, r.alias)}` };
+      return { col: `${ca}.${c}`, multi: true, join: (read) => `LEFT JOIN ${read(table)} ${ca} ON ${r.keys === "victim" ? sameVictim(ca, r.alias) : r.keys === "victim_offense" ? `${sameIncident(ca, "vo")} AND ${ca}.offense_code = vo.connected_offense` : sameOffense(ca, r.alias)}` };
     }
     case "clearance": return { col: CLEARANCE_COL[r.dimension], join: clearanceJoin(r.alias) };
     case "self": {
@@ -444,12 +444,16 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const joins: ((read: Read) => string)[] = [];
   for (const g of attrDims) {
     const d = GROUPABLE[entity][g.dimension];
-    if (!d) return no(`v0 cannot group ${entity} by ${g.dimension}`);
+    if (!d || (entity === "victim" && g.dimension === "offense_weapon.weapon" && !t.victimWeapons)) return no(`v0 cannot group ${entity} by ${g.dimension}`);
     if (!!d.multi !== !!g.multiValue) return no(`${g.dimension} ${d.multi ? "has several values per unit: group it as multi-valued" : "has one value per unit, not several"}`);
     if (!!d.age !== !!g.bins) return no(d.age ? `v0 groups ${g.dimension} in bins` : `v0 bins ages only, not ${g.dimension}`);
     const bins = g.bins ?? [];
     if (bins.some((b, i) => b.from > b.to || bins.some((c, j) => j !== i && b.from <= c.to && c.from <= b.to))) return no("age bins must not overlap (P5)");
-    groupCols.push(g.bins ? (d.binned ? d.binned(g.bins) : ageBins(d.col, g.bins)) : d.col);
+    // The violent-crime weapon table (victimWeapons): the grouping is the weapon GROUP (firearm 11-15, knife 20, blunt 30, personal 40, other),
+    // so the unit query's DISTINCT counts a victim once per group, not once per weapon code (a victim with a handgun and a rifle is one firearm victim).
+    const weaponGroup = entity === "victim" && g.dimension === "offense_weapon.weapon" && t.victimWeapons;
+    groupCols.push(weaponGroup ? `CASE WHEN ${d.col} IN ('11', '12', '13', '14', '15') THEN '11' WHEN ${d.col} = '20' THEN '20' WHEN ${d.col} = '30' THEN '30' WHEN ${d.col} = '40' THEN '40' ELSE '90' END`
+      : g.bins ? (d.binned ? d.binned(g.bins) : ageBins(d.col, g.bins)) : d.col);
     if (d.join) joins.push(d.join);
   }
   if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
@@ -574,7 +578,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const incidentFilter = (a: string) => restFilter(a) + ownFilter(a);
   const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter },
     // P120 (Jeff 2026-11-16): victims of a property crime with a victim age (juvenile robbery victims) are counted by victim.
-    plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age"));
+    // P297 (Jeff 2026-11-24): the violent-crime weapon table counts robbery by victim too.
+    plan.filters.some((f) => f.kind === "attribute" && f.dimension === "victim.age") || attrDims.some((g) => g.dimension === "offense_weapon.weapon"));
   if ("error" in units) return no(units.error);
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes

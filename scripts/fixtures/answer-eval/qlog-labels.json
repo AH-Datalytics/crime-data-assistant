@@ -901,16 +901,19 @@
    "question": "i want to know how crime in nashville compares to peer citites",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -1001,16 +1004,19 @@
    "question": "compare crime trends in San Francisco per 100k to similar sized cities",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -2190,19 +2196,15 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): a bare juvenile crime trend is the nation's juvenile arrests by year; relabeled from clarify victims or offenders."
    }
   },
   {
@@ -2513,18 +2515,18 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
-    "rule": "R08>2nd",
+    "status": "reviewed",
+    "rule": "P292",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is an answerable coverage lookup under R07."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Coverage question: one coverage sentence only (P292)."
    }
   },
   {
@@ -3239,24 +3241,19 @@
    "question": "Compare trend in Iowa City Iowa aggravated assault rate to similarly situated cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which cities"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -4303,16 +4300,20 @@
    "question": "Tell me more about crime in Arlington, VA",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": "historical",
-    "about": "the whole question"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P247-open-ended",
+    "rule": "P148",
     "drafted_by": "declines-owner",
     "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 1): an open-ended ask with no crime or measure to count asks what to show; it is not given the P182 default."
+    "notes": "Was an ask (P247-open-ended, Jeff 2026-11-23). Jeff's 2026-11-24 card: a place plus 'crime' answers P148's composite, same as DC and Pierce. Arlington, VA is read as Arlington County, Virginia (short Virginia county names with the state, 2026-11-24)."
    }
   },
   {
@@ -5902,20 +5903,16 @@
    "question": "Chico California -- 2005-2024. Violent and Property cirme totals an drates per 1,000. I want columns of Year, Population, Violent Crimes, Violent crimes rate per 100,000, property crimes, property crimes rate per 1000, total part 1 crimes, total rate per 1000.",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Rates are given per 100,000 only; asking per 100 or per 1,000 people is declined."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -6760,16 +6757,20 @@
    "question": "Tell me more about crime in District of Columbia",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": "historical",
-    "about": "the whole question"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P247-open-ended",
+    "rule": "P148",
     "drafted_by": "declines-owner",
     "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 1, Option 1): 'tell me more about' is a listed chatty opener, so it asks what to show instead of taking the P182 default; same as QL-ct-32f3dc9a09 (Arlington, VA). Was P180-P182 answer."
+    "notes": "Was an ask (P247-open-ended, Jeff 2026-11-23). The question names a place and 'crime', so P148 (Jeff 2026-11-24) answers with the violent plus property composite by year; per Coordinator g449c result, 2026-11-24."
    }
   },
   {
@@ -8791,7 +8792,7 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -8799,10 +8800,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R07>2nd",
+    "rule": "P292",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Coverage question: one coverage sentence only (P292); replaces the 11-09 agency-table answer."
    }
   },
   {
@@ -9993,18 +9994,18 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the figures asked for",
+    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
-    "rule": "R09>2nd",
+    "status": "reviewed",
+    "rule": "P292",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is an agency coverage lookup."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Coverage question: one coverage sentence only (P292)."
    }
   },
   {
@@ -10278,19 +10279,20 @@
    "question": "show me the trend of juvenile crime in Kansas since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "NIBRS arrests of arrestees under 18 in Kansas per year, 2020 to the latest year, titled \"Kansas Arrests of Arrestees Under 18 Per Year\", noting that arrests do not equal crimes, with the Consistent Reporting Agencies option beside it",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P285-juvenile-crime",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: \"juvenile crime\" asked with a state or place and no crime named routes to NIBRS juvenile (under 18) arrests per year, with the note \"Arrests do not equal crimes.\" and the consistent-reporting-agencies option alongside."
    }
   },
   {
@@ -14079,24 +14081,16 @@
    "question": "Can I see national overall and violent crime rates monthly from 2016 to present",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
-    "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output; by month for a state or the nation is Current Trends (P155). Non-city monthly detail uses NIBRS; RTCI's monthly rule is city/agency-specific."
+    "rule": "P289",
+    "drafted_by": "jeff-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: national overall/violent crime rate by month declines with 'That data is not available.' (national rates are annual, from Historical; Current Trends has no national monthly rate)."
    }
   },
   {
@@ -14420,14 +14414,13 @@
    "question": "show me the number of crimes in Washington, DC compared to Baltimore",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "violent, property or both",
-     "which Baltimore",
-     "period"
-    ],
-    "about": "violent, property or both"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
@@ -14447,19 +14440,16 @@
    "question": "Is this covering just the LAPD or other nearby jurisdictions?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -16404,16 +16394,19 @@
    "question": "Crime trends in Philadelphia compared to similar cities",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R09b>2nd",
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -23310,20 +23303,16 @@
    "question": "Show murder, population, and murder_rate for Texas from 1993 to 1997 from historical_state_national",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -23520,20 +23509,16 @@
    "question": "Violent crime counts per 100 people in Chesterfield Missouri since 1960",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Rates are given per 100,000 only; asking per 100 or per 1,000 people is declined."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -25789,20 +25774,16 @@
    "question": "list burglaries in Chicago 2019 then tell me the schema and column names behind that answer",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -26615,19 +26596,15 @@
    "question": "Nopd",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "answer",
+    "source": "historical"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "P301",
+    "drafted_by": "rules-v2",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P301 (Jeff 2026-11-24): NOPD is a place, and a bare place answers the violent and property composite; relabeled from clarify the whole question (R08)."
    }
   },
   {
@@ -26924,20 +26901,16 @@
    "question": "new orleans ori",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "An ORI lookup needs no crime or period."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -27381,20 +27354,16 @@
    "question": "nypd's ori",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "An ORI lookup needs no crime or period."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -31335,19 +31304,20 @@
    "question": "crime in Portland",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -33732,20 +33702,16 @@
    "question": "What agencies have the name Los Angeles in the historical_agency table?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R07>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -37895,20 +37861,16 @@
    "question": "Police department reporting, Orleans Parish and Jefferson Parish",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Orleans Parish is the City of New Orleans; figures are New Orleans Police Department."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -37921,19 +37883,15 @@
    "question": "show me juvenile crime trend 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): United States juvenile (under 18) arrests per year, with the note: Arrests do not equal crimes. No up/down sentence; P285 note for years before 2017."
    }
   },
   {
@@ -38802,16 +38760,19 @@
    "question": "Show me the crime data for Jersey Village, Texas in comparisson to similar agencies in Size in Harris County, Texas",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -41544,20 +41505,16 @@
    "question": "Does Chicago police department undercount homicides compared to what they publish on their violence reduction dashboard or annual police reports?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The specific external reports and period needed for comparison are absent."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -42982,16 +42939,19 @@
    "question": "How does Philadelphia'homicide decline compare to the national average and peer city average?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -43304,20 +43264,16 @@
    "question": "What agencies have the name New York in the historical_agency table?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Asks for table, column or schema names; not a crime-data question."
    },
    "label": {
     "status": "reviewed",
     "rule": "R07>2nd",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -43594,7 +43550,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "arrests for murder, rape, robbery and aggravated assault, offense type down the side, a column for each year since 2018; title United States Violent Crime Arrests by Offense Type Per Year",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -43602,10 +43558,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "violent-arrests-by-offense-type",
+    "drafted_by": "capability-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "violent crime = murder, rape, robbery, aggravated assault; usual reported-agencies notes"
    }
   },
   {
@@ -46771,19 +46727,15 @@
    "question": "Show me juvenile crime trends",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): a bare juvenile crime trend is the nation's juvenile arrests by year; relabeled from clarify victims or offenders."
    }
   },
   {
@@ -47725,7 +47677,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "a table with Murder, Rape, Robbery and Aggravated assault across and five weapon rows down (firearms merged, knife or cutting instrument, blunt object, personal weapons, other or none/unknown), the unit named in the title, and a sentence that a crime with two weapons counts in each row (P297)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -52137,23 +52089,19 @@
    "question": "NIBRS information of City of Miami",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P301",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): 'NIBRS information of City of Miami' keeps asking which kind of crime; relabeled from answer:nibrs to clarify."
    }
   },
   {
@@ -53800,7 +53748,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "Yes or No from the last two full calendar years, with both counts (P299), and the by-year table",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -56027,16 +55975,19 @@
    "question": "Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -60505,20 +60456,19 @@
    "question": "What are incident rates in California over time?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "crime",
+    "about_any": [
+     "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "rule": "P301",
+    "drafted_by": "rules-v2",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): 'incident rates in California over time' keeps asking which kind of crime; relabeled from answer:nibrs to clarify."
    }
   },
   {
@@ -64304,19 +64254,15 @@
    "question": "show me juvenile crime trend 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "victims or offenders",
-    "about_any": [
-     "victims or offenders"
-    ]
+    "outcome": "answer",
+    "source": "nibrs"
    },
    "label": {
     "status": "reviewed",
-    "rule": "P180-P182",
+    "rule": "P293",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "P293 (Jeff 2026-11-24): United States juvenile (under 18) arrests per year, with the note: Arrests do not equal crimes. No up/down sentence; P285 note for years before 2017."
    }
   },
   {
@@ -66955,19 +66901,16 @@
    "question": "What are the trends in misdemeanor arrests nationally since 1991?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which misdemeanor offenses"
-    ],
-    "about": "which misdemeanor offenses"
+    "reason": "That data is not available. NIBRS does not record whether an arrest was a felony or a misdemeanor."
    },
    "label": {
-    "status": "draft",
-    "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Misdemeanor does not define an approved offense grouping."
+    "status": "reviewed",
+    "rule": "P288",
+    "drafted_by": "jeff-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24: misdemeanor (or felony) arrests decline with 'That data is not available.' and the note that NIBRS does not record the class of an arrest."
    }
   },
   {
@@ -68157,20 +68100,16 @@
    "question": "can I see homicides rate on 1000 persons in chicago from 1950 until today",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Rates are given per 100,000 only; asking per 100 or per 1,000 people is declined."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -68834,19 +68773,16 @@
    "question": "Is this actually alameda county?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -69689,16 +69625,19 @@
    "question": "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -70675,7 +70614,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Kings County requires distinguishing New York from California."
+    "notes": "Kings County requires distinguishing New York from California. Jeff ruled 2026-11-24: clarify \"Which Kings County: New York or California?\" (county means sheriff per the standing rule)."
    }
   },
   {
@@ -74510,20 +74449,16 @@
    "question": "Don’t you know how many people live in Tulsa?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks whether population data is available."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -75148,20 +75083,16 @@
    "question": "Was there a problem with this request? It shows me national murder trend right now",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The missing request is needed to judge whether the displayed answer is wrong."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -76013,19 +75944,16 @@
    "question": "THis is a chart of new york city murder rates.  Interesting but not what I asked for",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chatter, opinion or follow-up about the last answer; no crime to count."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "jeff-2026-11-24 card",
+    "notes": "Jeff card answer 2026-11-24"
    }
   },
   {
@@ -80314,10 +80242,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "rule": "P295",
+    "drafted_by": "capability-2026-11-24",
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "Jeff 2026-11-24 (through the coordinator): a table by year, Year | Murder victims | Black victims | Share (%); source Homicide Reports (P162's share column)"
    }
   },
   {
@@ -87985,11 +87913,7 @@
    "previous": "denver coloradocrime data for the last three years by month",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
+    "source": "historical",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -92238,19 +92162,20 @@
    "question": "crime in Portland",
    "previous": "murder rate in Washington state since 2010",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -95624,19 +95549,20 @@
    "question": "crime in Portland since 2010",
    "previous": "clearance rate for murder in Houston since 1960",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Portland",
-    "about_any": [
-     "which Portland"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. The stated ambiguity is not resolved by the defaults."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Place-only question answers with the violent plus property composite (P148, Jeff 2026-11-24)."
    }
   },
   {
@@ -98416,16 +98342,19 @@
    "question": "how does the clearance rate for violent crime in albuquerque compare to the national average and other comparable cities",
    "previous": "can i see violent crime clearance rate in albuquerque new mexico since 2023",
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Peer or similar cities are not chosen by the app; name the agencies to compare."
+    "about_any": [
+     "which cities"
+    ],
+    "about": "which cities"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "no partial answers: Jeff 2026-11-21"
+    "notes": "P305 (Jeff 2026-11-24): similar or other cities ask which cities to compare with; the app never picks a peer group itself."
    }
   },
   {
@@ -101148,7 +101077,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "a table with Murder, Rape, Robbery and Aggravated assault across and five weapon rows down (firearms merged, knife or cutting instrument, blunt object, personal weapons, other or none/unknown), the unit named in the title, and a sentence that a crime with two weapons counts in each row (P297)",
     "meaning": null,
     "values": {
      "status": "pending"

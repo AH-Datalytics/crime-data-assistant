@@ -72,7 +72,7 @@ export function filterLabel(dimValue: string): string {
     weapon: { 12: "handgun", 13: "rifle", 14: "shotgun", 20: "knife", firearm: "firearm" },
     drug: { E: "marijuana", L: "amphetamines/methamphetamine", A: "crack cocaine", B: "cocaine", D: "heroin" },
     dv: { intimate_partner: "intimate partner", family: "family" },
-    bias: { 21: "anti-Jewish", 12: "anti-Black", 11: "anti-White", 32: "anti-Hispanic", 14: "anti-Asian", 24: "anti-Islamic", 41: "anti-gay" },
+    bias: { 21: "anti-Jewish", 12: "anti-Black", 11: "anti-White", 32: "anti-Hispanic", 14: "anti-Asian", 24: "anti-Islamic", 41: "anti-gay", lgbtq: "anti-LGBTQ" },
     loss: { 7: "stolen", 5: "recovered", 4: "damaged", 6: "seized" },
     clearance: { A: "death of offender", B: "prosecution declined", C: "in custody elsewhere", D: "victim refused to cooperate", E: "juvenile, no custody", arrest: "by arrest", exceptional: "by exceptional means" },
     location: { 20: "residence/home", 13: "highway/road/alley/street", 22: "school/college", 18: "parking lot/garage", "07": "convenience store", 14: "hotel/motel", commercial: `commercial location types (${commercialList()})` },
@@ -147,7 +147,7 @@ export function periodOf(p: Part): NPeriod | null {
   let m: RegExpExecArray | null;
   if ((m = /^year:(\d{4})$/.exec(v))) return { form: "year", year: Number(m[1]) };
   if ((m = /^(?:range|between):(\d{4}):(\d{4})$/.exec(v))) { const a = Number(m[1]); const b = Number(m[2]); return { form: "range", from: Math.min(a, b), to: Math.max(a, b) }; }
-  if ((m = /^years:(\d{4}):(\d{4})$/.exec(v))) return { form: "years", list: [Number(m[1]), Number(m[2])].sort() };
+  if ((m = /^years:(\d{4}(?::\d{4})+)$/.exec(v))) return { form: "years", list: [...new Set(m[1].split(":").map(Number))].sort((a, b) => a - b) };
   if ((m = /^month:(\d{4})-(\d{2})$/.exec(v))) return { form: "month", year: Number(m[1]), month: Number(m[2]) };
   if ((m = /^monthrange:(\d{4})-(\d{2}):(\d{4})-(\d{2})$/.exec(v))) return { form: "monthrange", from: [Number(m[1]), Number(m[2])], to: [Number(m[3]), Number(m[4])] };
   if ((m = /^since:(\d{4})$/.exec(v))) return { form: "since", from: Number(m[1]) };
