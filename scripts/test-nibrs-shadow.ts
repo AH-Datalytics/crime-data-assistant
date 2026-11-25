@@ -1670,6 +1670,9 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
 for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
   assert.equal(ask(q).kind, "answer", q);
 }
+// Capability (ratios): a share of murders by a detail the reader has no word for (intraracial, organized crime, offender under 18) is Homicide Reports', routed; a robbery share still asks which part.
+for (const q of ["What share of homicides are intraracial in the United States", "share of murders involving organized crime in the United States", "Percentage of inter racial homicide in the United States"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
+assert.notEqual(shadowAnswer("what share of robberies were cleared by arrest in the United States", { ...deps, noDefaults: false }).kind, "route");
 // Capability (ratios): a share of murders by a Homicide Reports detail with no place is the nation's, routed to Homicide Reports, never a place ask.
 for (const q of ["what share of murders involved a firearm", "share of murders committed with a firearm"]) assert.equal(shadowAnswer(q, { ...deps, noDefaults: false }).kind, "route", q);
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.

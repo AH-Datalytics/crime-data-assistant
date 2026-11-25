@@ -2996,6 +2996,11 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
   if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
     { alternative: askInstead(ledger.question, d.parts, Number(deps.release.lastMonth.slice(0, 4))), detail: d.explanation });
+  // A share of murders or homicides by a detail the reader has no word for ("intraracial", "involving organized crime", "any offender under 18")
+  // is a Homicide Reports detail: routed there, never a request to rephrase it (capability ratios, Jeff 2026-11-24).
+  if (d.kind === "clarify" && !deps.noDefaults && !deps.shr && /^Which part of the total/.test(d.explanation) && /\b(?:murders?|homicides?)\b/i.test(ledger0.question)
+    && !flags(ledger0).nibrsAsked && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough)
+    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details for a state or the nation comes from Homicide Reports, which count the homicides agencies reported to the FBI. Homicide Reports aren't available here. NIBRS has its own counts when asked for by name." };
   if (d.kind === "clarify") return decline("reader", d.explanation);
   // P53 (increment 5): a Part I offense for a state or the nation is the historical file's in a completed year
   // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the
