@@ -1535,13 +1535,10 @@ function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   // which ("fatal", "killed", "homicide"); a choice that would only be declined is not offered (bad-decline audit root
   // cause 2, 2026-11-06).
   const shooting = ledger.parts.find((p) => p.clause === 0 && p.concept === "shooting");
-  // P313 (Jeff 2026-11-25, labels QL-shr-6e9f56e1a8, QL-shr-820b9e683e): "police fatal shootings" is asked about, never declined: police officers killed, or people shot and killed by police.
+  // P313 (Jeff 2026-11-25, labels QL-shr-6e9f56e1a8, QL-shr-820b9e683e): "police fatal shootings" is declined: the FBI data used here doesn't collect them.
   const POLICE_SHOOTINGS = /\b(?:police|officer[-\s]involved|law\s+enforcement)\s+(?:fatal\s+)?shootings?\b|\bfatal\s+(?:police|officer[-\s]involved)\s+shootings?\b/i;
   if (!deps.rewritten && POLICE_SHOOTINGS.test(question) && !/\b(?:killed|officers?\s+killed|justifiable)\b/i.test(question.replace(POLICE_SHOOTINGS, ""))) {
-    const as = (to: string) => question.replace(POLICE_SHOOTINGS, to);
-    return { kind: "clarify", about: "Police fatal shootings: police officers killed, or people shot and killed by police.", question, options: [
-      { label: "Police officers killed", continuation: shadowAnswer(as("police officers killed"), { ...deps, rewritten: true }) },
-      { label: "People shot and killed by police", continuation: shadowAnswer(as("justifiable homicides by police"), { ...deps, rewritten: true }) }] };
+    return decline("unsupported_capability", "The FBI data used here doesn't collect fatal shootings by police or police officers killed.");
   }
   // Only bare "shooting(s)" beside nothing but a place, a period, a grain or a statistic: "shooting incidents" would
   // become victims, "police shootings" and "shootings of sheriffs" would lose who was shot (Codex root-causes reviews
