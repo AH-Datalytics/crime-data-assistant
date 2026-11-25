@@ -2239,6 +2239,9 @@ function monthSpan(sp: { period: NPeriod; grain: string }, b: CurrentBuild): [st
   if (p.form === "year") return [mm(p.year, 1), mm(p.year, 12)];
   if (p.form === "range") return [mm(p.from, 1), mm(p.to, 12)];
   if (p.form === "since") return [mm(p.from, 1), b.lastMonth];
+  // "The past N years" and "last year" are the completed years before the build's current year, as yearSpan reads them.
+  if (p.form === "last") return [mm(Number(b.lastMonth.slice(0, 4)) - p.n, 1), mm(Number(b.lastMonth.slice(0, 4)) - 1, 12)];
+  if (p.form === "lastyear") return [mm(Number(b.lastMonth.slice(0, 4)) - 1, 1), mm(Number(b.lastMonth.slice(0, 4)) - 1, 12)];
   if (p.form === "none") return [b.firstMonth, b.lastMonth];
   return null;
 }
@@ -3152,7 +3155,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // (Codex review 01.3: "September 2026"); one that crosses it keeps the months Current Trends has, the rest named.
     // A span that starts after Current Trends' latest month is declined with the months it holds, and NIBRS offered by name
     // (it may hold the latest month); it no longer falls to NIBRS by itself (Jeff 2026-11-15).
-    const afterCurrent = !!span && span[0] > cur.lastMonth && form !== "rolling" && form !== "ytd";
+    const afterCurrent = !!span &&span[0] > cur.lastMonth && form !== "rolling" && form !== "ytd";
     // Two spans compared (Codex review 01.4): both inside Current Trends' months, else it goes on.
     const cmp = flags(ledger0).comparison;
     // Whole completed years compared stay Historical's (Codex confirmation 01: "2025 compared with 2024"); part years and

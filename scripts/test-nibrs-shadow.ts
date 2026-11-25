@@ -3280,6 +3280,22 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(sev.delivered.text.some((t) => /^No figure is available for August 2026 for Houston, Texas: shown blank, not zero\.$/.test(t)));
     assert.equal(sev.delivered.text[sev.delivered.text.length - 1], "Source: Crime Index.");
   }
+  // "The past 5 years" by month (QL-ct-f960533ecf, Miami): the 5 completed years before the build's year, every month of them,
+  // from Crime Index, asked outright and as a follow-up; "last year" by month is the one completed year (2025 here).
+  {
+    const monthsOf = (r: ShadowOutcome, label: string) => {
+      assert.equal(r.kind, "current", `${label}: ${JSON.stringify(r).slice(0, 300)}`);
+      return (r as Extract<ShadowOutcome, { kind: "current" }>).delivered.table.rows.map((x) => String(x[0]));
+    };
+    const full = (from: number, to: number) => Array.from({ length: (to - from + 1) * 12 }, (_, i) => `${from + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`);
+    const five = full(2021, 2025);
+    const first = monthsOf(shadowAnswer("Dallas robberies per month for the past 5 years", cdeps), "past 5 years");
+    assert.deepEqual(first, five, "2021-01 through 2025-12");
+    const fu = shadowFollowUp("How is the Houston murder rate trending for the past 5 years?", "tell me about robberies per month in dallas", cdeps);
+    assert.deepEqual(monthsOf(fu as ShadowOutcome, "follow-up"), five, "the period carries into the follow-up and still reads by month");
+    assert.deepEqual(monthsOf(shadowAnswer("Dallas robberies last year by month", cdeps), "last year"), full(2025, 2025));
+    assert.deepEqual(monthsOf(shadowAnswer("Dallas robberies by month for the past 2 years", cdeps), "past 2 years"), full(2024, 2025));
+  }
   // P154 (Jeff 2026-11-19): rolling totals by month, from Current Trends. No timespan named: the first row is the first January with a full
   // window; "since 2019": January 2019; "since 2016" (before the data): the first full January and the outside sentence.
   {
