@@ -293,7 +293,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -304,7 +304,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series. One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. City monthly or rolling-month Part I series. One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -1634,7 +1634,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -1645,7 +1645,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -5509,7 +5509,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -5520,7 +5520,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -6187,7 +6187,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -6198,7 +6198,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -10444,7 +10444,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -10455,7 +10455,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -14080,7 +14080,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -14091,7 +14091,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -14797,7 +14797,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -14808,7 +14808,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -16968,7 +16968,7 @@
      "shr",
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -16979,7 +16979,7 @@
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
     "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11)"
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -18728,7 +18728,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -18739,7 +18739,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -20877,7 +20877,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -20888,7 +20888,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -24160,7 +24160,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -24171,7 +24171,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -25948,7 +25948,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -25959,7 +25959,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -26052,7 +26052,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -26063,7 +26063,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -27527,7 +27527,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, from 1960 through 2025; say earlier years and 2026 are not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -27538,7 +27538,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present, national: starts at 1960, through 2025; say earlier years and 2026 are not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -27898,7 +27898,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, from 1960 through 2025; say earlier years and 2026 are not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -27909,7 +27909,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present, national: starts at 1960, through 2025; say earlier years and 2026 are not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -30047,7 +30047,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -30058,7 +30058,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -36777,7 +36777,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -36788,7 +36788,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -40873,7 +40873,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -40884,7 +40884,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -41347,7 +41347,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -41358,7 +41358,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -45500,7 +45500,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -45511,7 +45511,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -57053,7 +57053,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -57064,7 +57064,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -57811,7 +57811,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -57822,7 +57822,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": ""
+    "notes": "To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -64641,7 +64641,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -64652,7 +64652,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": ""
+    "notes": "To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -65252,7 +65252,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -65263,7 +65263,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -67545,7 +67545,7 @@
     "source_any": [
      "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -67556,7 +67556,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -68886,7 +68886,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -68897,7 +68897,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -69688,7 +69688,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -69699,7 +69699,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -77984,7 +77984,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -77995,7 +77995,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "DUI/DWI arrests require NIBRS."
+    "notes": "DUI/DWI arrests require NIBRS. To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -89707,7 +89707,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the earlier question, changed as asked",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -89718,7 +89718,7 @@
     "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "notes": "a follow-up to an answerable question To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -89884,7 +89884,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -89895,7 +89895,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -91490,7 +91490,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -91501,7 +91501,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -91761,7 +91761,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -91772,7 +91772,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -91988,7 +91988,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -91999,7 +91999,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -92985,7 +92985,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -92996,7 +92996,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -94311,7 +94311,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "the monthly figures asked for, to the latest month available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -94322,7 +94322,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
@@ -97225,7 +97225,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, through 2025; say 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -97236,7 +97236,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule)"
    }
   },
   {
