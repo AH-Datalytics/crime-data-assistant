@@ -1652,6 +1652,19 @@ assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answ
 for (const q of ["What weapons are most commonly used in aggravated assaults in Houston in 2024?", "Aggravated assault by weapons in Houston in 2024", "What was the value of items stolen in burglaries in Philadelphia in 2024"]) {
   assert.equal(ask(q).kind, "answer", q);
 }
+// Capability (ratios cause 4): "ratio of male to female ... victims" is those victims by sex; "have involved firearms" and "on a year-over-year
+// basis. Provide information for each year ..." are read as the share by weapon and by year, not declined for words the reader did not know.
+for (const q of ["ratio of male to female homicide victims in philadelphia by year since 2010", "ratio of male:female homicide victims in philadelphia since 2010 by year",
+  "what is the percent of assaults in houston, texas that are simple assaults?", "What percentage of homicides in Durham, NC have involved firearms",
+  "what percentage of the miami police department's murders were committed with a firearm on a year-over-year basis?  Provide information for each year for which data is available."]) {
+  assert.notEqual(ask(q).kind, "decline", q);
+}
+{
+  const d = ask("What percentage of homicides in Durham, NC have involved firearms") as { kind: string; question?: string };
+  assert.equal(d.question, "share of homicides in Durham, NC by weapon");
+  const m = ask("what percentage of the miami police department's murders were committed with a firearm on a year-over-year basis?  Provide information for each year for which data is available.") as { question?: string };
+  assert.equal(m.question, "share of the miami police department's murders by weapon by year");
+}
 // Capability (loc-peak): "Where do most robberies occur - ..." is the nation's robberies by every location type, never grouped.
 {
   const q = "Where do most robberies occur - residences, streets, or commercial buildings?";
