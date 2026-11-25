@@ -11130,7 +11130,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -11141,7 +11141,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -13749,7 +13749,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -13760,7 +13760,7 @@
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "An annual series uses Historical with the unavailable current year named."
+    "notes": "An annual series uses Historical with the unavailable current year named. Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -15514,7 +15514,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. Jeff audit 2026-11-25: monthly Current Trends numbers, rtci only."
    }
   },
   {
@@ -15675,23 +15675,16 @@
    "question": "drugs",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Ask a question about the data, for example a crime, a place and a period."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Jeff audit 2026-11-25: a one-word message with no data request declines and asks for a data question."
    }
   },
   {
@@ -20529,19 +20522,16 @@
    "question": "Make the graph green",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "draft",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Green is a color rather than a place or crime."
+    "notes": "Green is a color rather than a place or crime. Audit rule 1 (Jeff 2026-11-25): a chart restyle declines, it does not ask a question."
    }
   },
   {
@@ -34646,7 +34636,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. Jeff audit 2026-11-25: Jeff kept the 11-24 answer for a place-only question (violent plus property composite); Historical only."
    }
   },
   {
@@ -37098,19 +37088,16 @@
    "question": "Make the graph blue",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "notes": "no crime, and no place or a word pointing back Jeff audit 2026-11-25: a chart restyle declines, it does not ask a question."
    }
   },
   {
@@ -40409,19 +40396,16 @@
    "question": "make each city a different color",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "notes": "no crime, and no place or a word pointing back Jeff audit 2026-11-25: a chart restyle declines, it does not ask a question."
    }
   },
   {
@@ -42412,7 +42396,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "murder, robbery and aggravated assault combined, from the yearly Crime Index numbers, 1960 to 2025",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -42423,7 +42407,7 @@
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Tend is a clear trend misspelling and D5 supplies all years."
+    "notes": "Tend is a clear trend misspelling and D5 supplies all years. Jeff audit 2026-11-25: violent crime without sexual offenses = murder + robbery + aggravated assault, 1960 to 2025."
    }
   },
   {
@@ -49354,8 +49338,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -49368,7 +49351,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Audit rule 5 (Jeff 2026-11-25): consistent-reporter questions use the yearly Crime Index; agencies in that dataset mostly reported all 12 months. Historical only."
    }
   },
   {
@@ -51209,8 +51192,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -51223,7 +51205,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Audit rule 5 (Jeff 2026-11-25): consistent-reporter questions use the yearly Crime Index; agencies in that dataset mostly reported all 12 months. Historical only."
    }
   },
   {
@@ -52223,8 +52205,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -52237,7 +52218,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "notes": "a ranking or set of places (Crime Index or NIBRS) Audit rule 5 (Jeff 2026-11-25): consistent-reporter questions use the yearly Crime Index; agencies in that dataset mostly reported all 12 months. Historical only."
    }
   },
   {
@@ -55310,8 +55291,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -55324,7 +55304,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Audit rule 5 (Jeff 2026-11-25): consistent-reporter questions use the yearly Crime Index; agencies in that dataset mostly reported all 12 months. Historical only."
    }
   },
   {
@@ -56252,7 +56232,7 @@
    "expected": {
     "outcome": "answer",
     "source": "nibrs",
-    "answer": "the figures asked for",
+    "answer": "a sentence that the New Orleans Police Department has no NIBRS data for January through June 2018",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -56263,7 +56243,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Jeff audit 2026-11-25: the correct answer says NOPD has no NIBRS data for that period."
    }
   },
   {
@@ -59879,7 +59859,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -59890,7 +59870,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a Part I figure by year (Crime Index) Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -63503,19 +63483,16 @@
    "question": "Please change the bar chart to a line chart",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing a chart this way isn't available here. The table can be sorted by clicking a column heading."
    },
    "label": {
     "status": "reviewed",
     "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "notes": "no crime, and no place or a word pointing back Audit rule 1 (Jeff 2026-11-25): a chart restyle declines, it does not ask a question."
    }
   },
   {
@@ -71225,24 +71202,19 @@
    "question": "Is the domestic violence homicide rate higher in the city of Las Vegas than it is in other comparably-sized American cities?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "source_any": [
-     "shr",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which cities",
+    "about_any": [
+     "which cities"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Jeff audit 2026-11-25: the chatbot does not pick comparably sized cities itself (Jeff 2026-11-24); it asks which cities to compare."
    }
   },
   {
@@ -74002,10 +73974,9 @@
     "outcome": "answer",
     "source": "shr",
     "source_any": [
-     "shr",
-     "nibrs"
+     "shr"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, from the FBI homicide reports for every year the data allows",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -74016,7 +73987,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Jeff audit 2026-11-25: FBI homicide reports, all years, SHR only."
    }
   },
   {
@@ -84050,7 +84021,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -84061,7 +84032,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "A multiyear annual span uses Historical with uncovered years named."
+    "notes": "A multiyear annual span uses Historical with uncovered years named. Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -84076,7 +84047,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -84087,7 +84058,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "A multiyear annual span uses Historical with uncovered years named."
+    "notes": "A multiyear annual span uses Historical with uncovered years named. Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -87471,7 +87442,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -87482,7 +87453,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Annual multiyear spans use Historical."
+    "notes": "Annual multiyear spans use Historical. Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -87746,7 +87717,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -87757,7 +87728,7 @@
     "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "An annual series uses Historical with unavailable years named."
+    "notes": "An annual series uses Historical with unavailable years named. Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -88321,18 +88292,21 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, from the yearly Crime Index numbers (1930 to 2025), with a sentence that 2026 is not available",
     "meaning": null,
     "values": {
      "status": "pending"
-    }
+    },
+    "source_any": [
+     "historical"
+    ]
    },
    "label": {
     "status": "draft",
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Annual multiyear spans use Historical."
+    "notes": "Annual multiyear spans use Historical. Jeff audit 2026-11-25: answer from the yearly Crime Index and say 2026 is not available."
    }
   },
   {
@@ -90408,7 +90382,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, with a sentence that 2026 is not available (the yearly data ends in 2025)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -90419,7 +90393,7 @@
     "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "An annual multiyear comparison uses Historical with uncovered years named."
+    "notes": "An annual multiyear comparison uses Historical with uncovered years named. Audit rule 4 (Jeff 2026-11-25): a period past the data answers what exists and says 2026 is not available."
    }
   },
   {
@@ -99907,10 +99881,9 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, from the yearly Crime Index numbers (1930 to 2025); agencies in that dataset mostly reported all 12 months",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -99921,7 +99894,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced. Jeff audit 2026-11-25: consistent reporters answer from the yearly Crime Index, Historical only."
    }
   },
   {
@@ -106627,8 +106600,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -106641,7 +106613,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data; retain prior scope unless replaced. Audit rule 5 (Jeff 2026-11-25): consistent-reporter questions use the yearly Crime Index; agencies in that dataset mostly reported all 12 months. Historical only."
    }
   },
   {
