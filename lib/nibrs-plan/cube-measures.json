@@ -132,6 +132,15 @@
         "intimidation offenses incidents by clearance type in Memphis, Tennessee in 2024"
       ]
     },
+    "kidnapping": {
+      "questions": [
+        "kidnapping offenses victims by sex in Memphis, Tennessee in 2024",
+        "kidnapping offenses offenders by sex in Memphis, Tennessee in 2024",
+        "kidnapping offenses arrests by sex in Memphis, Tennessee in 2024",
+        "kidnapping offenses by time of day in Memphis, Tennessee in 2024",
+        "kidnapping offenses incidents by clearance type in Memphis, Tennessee in 2024"
+      ]
+    },
     "liquor_law": {
       "questions": [
         "liquor law violations victims by sex in Memphis, Tennessee in 2024",

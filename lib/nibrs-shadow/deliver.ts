@@ -141,7 +141,9 @@ export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent man
 export const TIME_OF_DAY_LINE = "Morning is 6 AM to noon, afternoon noon to 6 PM, evening 6 PM to midnight and night midnight to 6 AM.";
 /** A victim's age for the NIBRS crimes against property (Jeff 2026-11-15, the short line). */
 export const PROPERTY_AGE_LINE = "Counts victims of NIBRS crimes against property, such as robbery, burglary, theft, fraud and vandalism. Businesses and other victims that are not people have no age and show as Unknown.";
-export const NIGHT_LINE = "Many agencies record midnight when the time is not known, so night may be overstated.";
+/** P280 (Jeff 2026-11-23, "Offenses with a note"): a crime against a person by location or by hour is counted by offense. */
+export const OFFENSES_NOT_VICTIMS_LINE = "These count offenses, not victims: NIBRS keeps location and time-of-day figures by offense.";
+export const NIGHT_LINE ="Many agencies record midnight when the time is not known, so night may be overstated.";
 export const MARIJUANA_WORDS = "where marijuana was recorded among the drugs";
 export const MARIJUANA_LINE = "Counts arrests on incidents where marijuana was recorded among the drugs.";
 /** Increment 7: a person condition in words: "under 18", "aged 18 to 24", "female", "recorded as Black". */
@@ -160,6 +162,7 @@ export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): st
   // Increment 7: with no condition on the incident, every arrest (standalone Group B arrests included).
   if (m.id === "arrests.all_crime") return [peopleFacts(plan).throughIncident ? "arrests on incidents" : "arrests", ...filters].join(" ");
   if (name === "drug_possession" && m.unit === "arrest" && filters.includes(MARIJUANA_WORDS)) return ["marijuana possession arrests", ...filters.filter((x) => x !== MARIJUANA_WORDS)].join(" ");
+  if (m.id === "offenses.drug_crimes") return ["drug crimes", ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
@@ -743,6 +746,26 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
   // A table of places or years with one figure each: a bar chart of the figure in the table's order (a ranking in rank order); months a line.
   const chart = grouping && rows.length > 1 && rows.some((r) => r.value !== null) ? { kind: grouping.dimension === "time.month" ? "line" as const : "bar" as const, x: grouping.header, y: [stat.header] } : null;
   return { table, evidence, chart, text, headline: text[0], answerStatements: statements, contractProblems };
+}
+
+/**
+ * A table of two groupings with one figure each, the rows in the order given (a block for each year, each ranked within it): the first
+ * grouping's column, the second's, the figure, then the supporting statistics row by row. No chart.
+ */
+export function deliverTable2(plan: NibrsPlan, g1: { dimension: string; header: string }, g2: { dimension: string; header: string }, stat: { as: string; header: string },
+  rows: { k1: string; k2: string; value: number | null; status: string }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = [],
+  supports: Support[] = []): Delivered {
+  const labels: Record<string, string> = { [`statistic:${stat.as}`]: stat.header, [`grouping:${g1.dimension}`]: g1.header, [`grouping:${g2.dimension}`]: g2.header };
+  const col = (g: { dimension: string; header: string }): ResultColumn => ({ binding: { kind: "grouping", dimension: g.dimension }, header: g.header, ...(g.dimension.startsWith("time.") ? { ordered: true as const } : {}) });
+  const tableCols: ResultColumn[] = [col(g1), col(g2), { binding: { kind: "statistic", as: stat.as }, header: stat.header }];
+  for (const s of supports) { labels[`statistic:${s.as}`] = s.header; tableCols.push({ binding: { kind: "statistic", as: s.as }, header: s.header }); }
+  const evidence: CellEvidence[] = rows.flatMap((r, i) => [{ row: i, statistic: stat.as, status: r.status as CellStatus }, ...supports.map((s) => ({ row: i, statistic: s.as, status: s.cells[i].status as CellStatus }))]);
+  const table: ResultTable = { columns: tableCols, rows: rows.map((r, i) => [r.k1, r.k2, r.value, ...supports.map((s) => s.cells[i].value)]) };
+  const text = [...lines, ...readings, ...shownStatements(statements), SOURCE_STATEMENT(release)];
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
+  for (const s of supports) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });
+  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
 }
 
 /**

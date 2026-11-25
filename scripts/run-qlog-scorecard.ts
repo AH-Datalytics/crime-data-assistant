@@ -60,6 +60,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { startReaderClock, noteDatabaseTime } from "../lib/reader-deadline";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor, SERVER as DUCKDB_SERVER } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
@@ -69,11 +70,15 @@ import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
 import { bucket, type Bucket, type Got, type Label } from "./qlog-bucket";
+import { labelIdentity, readLabels, comparedLabelsFile, splitCompare, formatSplitCompare, appendTrend, sumCheck, DEFAULT_TREND_FILE } from "./scoreboard-v2";
 import { qualifies, readerBinding, readerKey, looksPersonal, validateProposal, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const LABELS = arg("--labels")!, PROGRESS = arg("--progress")!;
 if (!LABELS || !PROGRESS) throw new Error("--labels and --progress are required");
+const identity = labelIdentity(LABELS);
+const identityLine = `labels: ${JSON.stringify(identity.version)}; blob: ${identity.blob}`;
+console.log(identityLine);
 const root = arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!;
 const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), root);
 // A query past the limit closes the executor for good (duckdb.ts); here a new one takes over, so one slow question
@@ -81,6 +86,9 @@ const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), roo
 // an error on the scorecard either way.
 const python = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!;
 const LIMIT_MS = Number(arg("--timeout-ms", "120000"));
+// The reader's own limit (reading the question, database time left out): a question whose reading takes longer is an error, never a hang.
+// The shard watchdog stops a reader that overruns this by --reader-kill-s (a backstop for a reading that never reaches a check).
+const READER_MS = Number(arg("--reader-limit-s", "150")) * 1000;
 // DuckDB's memory and threads (the runner laptop, 16 GB, was killed twice for low memory on uncached spot runs under
 // DuckDB's default, 80% of RAM): 4GB and 4 threads unless a flag or SCORECARD_DUCKDB_MEMORY / SCORECARD_DUCKDB_THREADS
 // says otherwise. They never change a query's rows, so the cache and run identities don't include them.
@@ -122,11 +130,19 @@ let nextMs: number | null = null;
 const TIMEOUT = /no answer within/;
 const live = (sql: string) => {
   if (nextMs !== null) { replace(nextMs); nextMs = null; }
+  // The database's time is not the reader's: the shard watchdog's reader limit and the reader's own clock both leave it out.
+  const began = Date.now();
+  markPhase("database");
   try { return exec(sql); } catch (e) {
     if (/no answer within|process exited/.test(String(e))) nextMs = LIMIT_MS;
     throw e;
-  }
+  } finally { noteDatabaseTime(Date.now() - began); markPhase("reader"); }
 };
+/** The label the shard is on, and whether it is reading the question or waiting for the database (the watchdog stops a reader that overruns). */
+let currentId = "";
+function markPhase(phase: "reader" | "database") {
+  if (SHARD && currentId) fs.writeFileSync(`${PROGRESS}.current`, phase === "database" ? `${currentId}\tdatabase` : currentId);
+}
 
 /**
  * What the cache's rows depend on: both data roots (every file's path from its root, size and time), the release, and
@@ -154,7 +170,7 @@ function buildFingerprint(): string {
  */
 function runFingerprint(): string {
   const labelsHash = createHash("sha256").update(fs.readFileSync(LABELS)).digest("hex");
-  const h = createHash("sha256").update(JSON.stringify({ spot: SPOT, labels: labelsHash, root, crimeIndex, release: release.id, limitMs: LIMIT_MS }));
+  const h = createHash("sha256").update(JSON.stringify({ spot: SPOT, labels: labelsHash, root, crimeIndex, release: release.id, limitMs: LIMIT_MS, readerMs: READER_MS }));
   const repo = path.join(__dirname, "..");
   const walk = (dir: string) => {
     if (!fs.existsSync(dir)) return;
@@ -201,7 +217,7 @@ const execute = (sql: string): unknown[][] => {
 };
 const deps: ShadowDeps = {
   places: loadPlaceIndex(), release: { ...release, asOf: "2026-11-04" },
-  target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+  target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
   execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute), shr: shrBuildAt(arg("--shr", process.env.NIBRS_SHR_ROOT ?? "") || undefined), hate: hateBuildAt(arg("--hate", process.env.NIBRS_HATE_ROOT ?? "") || undefined),
 } as ShadowDeps;
 
@@ -260,7 +276,7 @@ if (!SHARD) {
   const leftover = fs.existsSync(PROGRESS) || Array.from({ length: 64 }, (_, i) => shardFile(i)).some((f) => fs.existsSync(f));
   if (leftover && (!fs.existsSync(meta) || JSON.parse(fs.readFileSync(meta, "utf8")).fingerprint !== fp))
     throw new Error(`${PROGRESS} (or its shards) came from other code, labels or mode; use a new --progress`);
-  fs.writeFileSync(meta, JSON.stringify({ fingerprint: fp, spot: SPOT, labels: LABELS, cache: CACHE_DIR ?? null }));
+  fs.writeFileSync(meta, JSON.stringify({ fingerprint: fp, spot: SPOT, labels: path.resolve(LABELS), label_hash: identity.blob, label_version: identity.version, cache: CACHE_DIR ?? null }));
 }
 const done = new Map<string, Got | null>();
 readProgress(PROGRESS, done);
@@ -273,7 +289,7 @@ const limit = Number(arg("--limit", "0")) || Infinity;
 let shardFailed = false;
 if (WORKERS > 1 && !SHARD) {
   // N shards at once, each this script on every Nth label with its own DuckDB process, progress file and cache file.
-  const own = new Set(["--workers", "--progress", "--report", "--compare", "--shard-stall-min"]);
+  const own = new Set(["--workers", "--progress", "--report", "--compare", "--shard-stall-min", "--reader-kill-s"]);
   const rest: string[] = [];
   for (let i = 2; i < process.argv.length; i++) {
     if (own.has(process.argv[i])) { if (process.argv[i] !== "--report") i++; continue; }
@@ -284,7 +300,7 @@ if (WORKERS > 1 && !SHARD) {
   if (!rest.includes("--duckdb-memory") && !process.env.SCORECARD_DUCKDB_MEMORY) split.push("--duckdb-memory", `${Math.max(1, Math.floor((os.totalmem() / 2 ** 30) * 0.6 / WORKERS))}GB`);
   if (!rest.includes("--duckdb-threads") && !process.env.SCORECARD_DUCKDB_THREADS) split.push("--duckdb-threads", String(Math.max(1, Math.floor(os.cpus().length / WORKERS))));
   const cmds = Array.from({ length: WORKERS }, (_, i) => [process.execPath, ...process.execArgv, process.argv[1], ...rest, ...split, "--progress", shardFile(i), "--shard", `${i}/${WORKERS}`, "--done-from", PROGRESS]);
-  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, restarts: 2 };
+  const cfg = { cmds, progress: cmds.map((_, i) => shardFile(i)), current: cmds.map((_, i) => `${shardFile(i)}.current`), stallMs: Number(arg("--shard-stall-min", "20")) * 60_000, readerStallMs: Number(arg("--reader-kill-s", "180")) * 1000, restarts: 2 };
   const r = spawnSync(process.execPath, [path.join(__dirname, "scorecard-shards.cjs"), JSON.stringify(cfg)], { stdio: "inherit" });
   for (let i = 0; i < WORKERS; i++) readProgress(shardFile(i), done);
   if (r.status !== 0) { shardFailed = true; console.log("a shard stopped early; run again to finish (done questions are kept)"); }
@@ -307,6 +323,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
   if (ran >= limit || !mine(i)) return;
   if (done.has(l.id) || l.expected.outcome === "exclude") return;
   const t = Date.now();
+  currentId = l.id; startReaderClock(READER_MS);
   if (SHARD) fs.writeFileSync(`${PROGRESS}.current`, l.id);
   const once = () => (l.kind === "follow-up" && l.previous ? shadowFollowUp(l.previous, l.question, deps) : shadowAnswer(l.question, deps));
   let g: Got | null;
@@ -342,6 +359,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
     g = { kind: "error", source: null, reason: String(e).slice(0, 120), ms: Date.now() - t };
   }
   fs.appendFileSync(PROGRESS, JSON.stringify({ id: l.id, got: g }) + "\n");
+  currentId = ""; startReaderClock(null);
   if (SHARD) fs.writeFileSync(`${PROGRESS}.current`, "");
   done.set(l.id, g);
   if (++ran % 100 === 0) console.log(`${SHARD ? `shard ${SHARD[0]}: ` : ""}${ran} run (${done.size} of ${labels.length} labels done)${cacheOut ? `; queries from the cache ${hits}, from DuckDB ${misses}` : ""}`);
@@ -373,6 +391,13 @@ const table = [
   `| **All** | **${all.n}** | ${BUCKETS.map((b) => `**${all.c[b]}**`).join(" | ")} | **${all.reviewed}** | **${all.drafts}** | **${all.disputed}** | **${all.notRun}** |`,
 ].join("\n");
 console.log(table);
+// Headline: every non-excluded label, counted once (seven buckets incl. error + disputed + not run). A run whose parts do not add up fails.
+const labelTotal = labels.filter((l) => l.expected.outcome !== "exclude").length;
+const headline = `Labels: ${labelTotal.toLocaleString("en-US")} = ${all.n.toLocaleString("en-US")} scored (${BUCKETS.map((b) => `${all.c[b]} ${b}`).join(", ")}) + ${all.disputed} disputed + ${all.notRun} not run`;
+console.log(headline);
+const sumFailure = sumCheck(labelTotal, { ...Object.fromEntries(BUCKETS.map((b) => [b, all.c[b]])), disputed: all.disputed, "not run": all.notRun });
+console.log(sumFailure ?? `sum check: ok (${labelTotal})`);
+if (sumFailure) { process.exitCode = 1; throw new Error(sumFailure); }
 const incomplete = all.notRun > 0 || shardFailed;
 const gate = incomplete ? `NOT JUDGED: the run is incomplete (${all.notRun} questions not run${shardFailed ? ", a shard failed" : ""})`
   : all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
@@ -381,7 +406,20 @@ console.log(`hard gate (wrong answers = 0): ${gate}`);
 {
   const h = createHash("sha256");
   for (const l of scored) { const g = done.get(l.id) ?? null; h.update(`${l.id}\t${JSON.stringify(g ? { ...g, ms: 0 } : null)}\n`); }
-  console.log(`outcomes digest: ${h.digest("hex")} (${scored.length} labels, ${Math.round(scored.reduce((a, l) => a + (done.get(l.id)?.ms ?? 0), 0) / 1000)} s of question time)`);
+  const digest = h.digest("hex");
+  console.log(`outcomes digest: ${digest} (${scored.length} labels, ${Math.round(scored.reduce((a, l) => a + (done.get(l.id)?.ms ?? 0), 0) / 1000)} s of question time)`);
+  if (!SPOT && !process.argv.includes("--first") && !process.argv.includes("--limit") && !shardFailed
+    && !allLabels.some(l => l.expected.outcome !== "exclude" && !done.has(l.id)) && !process.argv.includes("--no-trend")) {
+    const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: path.join(__dirname, ".."), encoding: "utf8" });
+    const head = revision.status === 0 && /^[0-9a-f]{40}$/.test(revision.stdout.trim()) ? revision.stdout.trim() : "unknown";
+    const added = appendTrend(arg("--trend-file", DEFAULT_TREND_FILE)!, {
+      date: new Date().toISOString(), head, label_hash: identity.blob, labels: labelTotal, scored: all.n,
+      correct: all.c.correct, wrong: all.c["wrong answer"], bad_decline: all.c["bad decline"],
+      wrong_clarify: all.c["wrong clarify"], follow_up_error: all.c["follow-up error"],
+      unverified: all.c.unverified, error: all.c.error, disputed: all.disputed, not_run: all.notRun, digest,
+    });
+    console.log(added ? "trend: appended" : "trend: duplicate skipped");
+  }
 }
 if (READINGS) {
   // The Gemini reader's questions, by what happened: used (and the bucket it reached), or refused and why.
@@ -426,6 +464,10 @@ if (COMPARE) {
   console.log(`new wrong answers against ${COMPARE}: ${[...moved].filter(([k]) => /-> wrong answer$/.test(k) && !/^wrong answer ->/.test(k)).reduce((x, [, n]) => x + n, 0)}`);
   for (const [k, n] of [...moved].sort()) console.log(`  ${n}  ${k}`);
   for (const d of diffs) console.log(d);
+  const oldLabelsFile = comparedLabelsFile(COMPARE, arg("--compare-labels"));
+  if (!oldLabelsFile) console.log("label file of the compared run unknown: split not available");
+  else if (labelIdentity(oldLabelsFile).blob !== identity.blob)
+    console.log(formatSplitCompare(splitCompare(readLabels(oldLabelsFile), allLabels, before, done, bucket, same)));
 }
 
 // Per rule, for triage (local): each rule's buckets.
@@ -440,6 +482,8 @@ if (process.argv.includes("--report") && !incomplete) {
   const draftAll = all.n - all.drafts - all.reviewed === 0;
   const out = [
     `# Query-log scorecard${draftAll ? " (DRAFT: no label is confirmed yet)" : ""}`, "",
+    identityLine, "",
+    `**${headline}**`, "",
     "Every logged question gets one expected outcome: answer (with its source), clarify (with what is asked) or decline (with the plain reason). Labels come from written rules (scripts/draft-qlog-labels.py), never from the engine's output; this run compares the engine with them (scripts/run-qlog-scorecard.ts). The labels, with each question as written (Jeff 2026-11-04), are scripts/fixtures/answer-eval/qlog-labels.json, keyed by a hash of the normalized question; the rules are docs/reports/qlog-label-rules.md. The log copy itself stays outside the repo.", "",
     `Release ${deps.release.id}; run ${new Date().toISOString().slice(0, 10)}. A first question is the first row of each session in each tab; a follow-up is any later row, labeled with the row before it. Distinct questions per tab (the same words counted once; "times" in the label file says how often each was asked).`, "",
     `**Label status: ${all.n - all.drafts - all.reviewed} confirmed, ${all.reviewed} reviewed (two labelers agree: the rules and an independent second labeler), ${all.drafts} draft (a second-labeler correction, or a rule label not yet reviewed).** No label is confirmed, so this is still a draft scorecard: a miss here is a candidate, not a finding.`, "",

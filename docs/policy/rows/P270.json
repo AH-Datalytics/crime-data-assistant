@@ -1,0 +1,12 @@
+{
+ "id": "P270",
+ "topic": "Several states, or a state and the nation, in one question",
+ "decision needed": "None: follows the single-state answer",
+ "situation (example wording)": "\"Carjackings in Texas and Ohio in 2024\", \"carjackings in Texas and the United States by year\".",
+ "what the app does today": "Declined: a state or the nation together with other places.",
+ "proposed behavior": "One table with a Place column and a row for each place (and for each year or category when asked). Each place is its own state sum with its own coverage and evidence; places are never added together, and a rate is never summed across places. A state with an agency or county, a clearance share, Homicide Reports details, and Consistent Reporting Agencies for several places stay declined.",
+ "exact default or choices offered": "Rows in the order the places were named.",
+ "why": "The Coordinator, 2026-11-23: build the state or nation beside named places on its own branch; Jeff's goal is 100% of the logged labels.",
+ "status": "Built on branch nibrs-engine/state-beside-places; waits on the Runner's full gate and a Claude counting review. No change to compile.ts.",
+ "test cases": "scripts/test-nibrs-shadow.ts (P270 block): Texas and Ohio carjackings 2024 give [Texas 307, Ohio 120]; Texas and the United States give two rows; Houston and Texas, a clearance share for two states, and Texas named twice decline."
+}

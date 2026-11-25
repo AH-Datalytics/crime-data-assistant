@@ -48,7 +48,7 @@ export type Proposal = { replacements: Replacement[]; unhandled: string[] };
 export const MEASURE_WORDS: Record<string, [string, string]> = {
   murder: ["murder", "murders"], homicide: ["homicide", "homicides"], rape: ["rape", "rapes"], robbery: ["robbery", "robberies"],
   aggravated_assault: ["aggravated assault", "aggravated assaults"], simple_assault: ["simple assault", "simple assaults"],
-  intimidation: ["intimidation", "intimidation"], burglary: ["burglary", "burglaries"], theft: ["theft", "thefts"],
+  intimidation: ["intimidation", "intimidation"], kidnapping: ["kidnapping", "kidnappings"], burglary: ["burglary", "burglaries"], theft: ["theft", "thefts"],
   shoplifting: ["shoplifting", "shoplifting"], motor_vehicle_theft: ["motor vehicle theft", "motor vehicle thefts"],
   carjacking: ["carjacking", "carjackings"], arson: ["arson", "arsons"], violent_crime: ["violent crime", "violent crime"],
   property_crime: ["property crime", "property crime"], sex_offense: ["sex offense", "sex offenses"],

@@ -27,7 +27,7 @@ function shadowDeps(): ShadowDeps {
     // The bundled route has no source __dirname: the index is read from the project root.
     places: loadPlaceIndex(path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")),
     release: { id: rel.id, firstMonth: rel.firstMonth, lastMonth: rel.lastMonth, asOf: new Date().toISOString().slice(0, 10) },
-    target: { root: process.env.NIBRS_SHADOW_ROOT!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+    target: { root: process.env.NIBRS_SHADOW_ROOT!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
     execute,
     // Historical (P75-P79) and Current Trends: the Crime Index build, when NIBRS_HISTORICAL_ROOT names one.
     historical: historicalBuildAt(process.env.NIBRS_HISTORICAL_ROOT),

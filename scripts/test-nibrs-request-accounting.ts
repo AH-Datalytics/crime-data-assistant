@@ -123,5 +123,16 @@ check(has("robbery victims in Texas in 2025 by offender age", "breakdown", "offe
   check(r("show robberies from 2020 to 2024", "Memphis carjackings per month") === null, "a new measure is not a period-only follow-up");
   check(nibrsFollowupCheck({ question: "show it from 2020 to 2024", effective: "Memphis carjackings per month from 2020 to 2024", previousUserTurns: ["Memphis carjackings per month"], isFollowUp }) === null, "K2 accepts the rebuilt question (place, measure, grain carried)");
 }
+// Speed: the reader asks for one text's ledger many times; the repeats are served from a small cache, as independent copies with the same content.
+{
+  const q = "Robberies in Memphis in 2024";
+  const a = accountNibrsRequest(q), b = accountNibrsRequest(q);
+  check(a !== b && a.parts !== b.parts, "a repeated question gets its own ledger");
+  check(JSON.stringify(a.parts) === JSON.stringify(b.parts) && JSON.stringify(a.obligations) === JSON.stringify(b.obligations), "the copy has the same parts and obligations");
+  a.parts[0].clause = 99; a.parts.pop();
+  const c = accountNibrsRequest(q);
+  check(c.parts.length === b.parts.length && c.parts[0].clause === b.parts[0].clause, "changing one ledger does not reach the next one handed out");
+  check(c.isFinalized() && c.overlaps([0, 3]) === b.overlaps([0, 3]), "the copy keeps its finalized state and coverage");
+}
 console.log(`\n${checks - failures}/${checks} passed`);
 if (failures > 0) process.exit(1);

@@ -2484,6 +2484,15 @@
       "note": "NIBRS compiler increment 3: time transforms (period totals, two-period changes, rolling windows) from monthly cells under D6, P51, D17 and P55; pure, offline"
     },
     {
+      "id": "test-nibrs-shadow-place-aliases",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-place-aliases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "B1 place aliases: 14 labeled place spellings (town short names, Saint forms, State-after-comma, county sheriff in a state code, department names, Athens-Clarke) reach the route; stub DuckDB step, checked-in place index"
+    },
+    {
       "id": "test-nibrs-shadow",
       "tier": "F",
       "script": "scripts/test-nibrs-shadow.ts",
@@ -2589,7 +2598,16 @@
       "databases": [],
       "seed_profile": "empty",
       "requires": [],
-      "note": "The scorecard's shard launcher (scripts/scorecard-shards.cjs, run-qlog-scorecard.ts --workers N) with real child processes: shards that finish; a shard that stalls once is stopped by the watchdog (its process tree), the question it was on is recorded as an error and it resumes after it; a shard that keeps stalling is given up after its restarts; a shard that fails is a bad shard, not a stall. Offline: fake shards, no data, no DuckDB."
+      "note": "The scorecard's shard launcher (scripts/scorecard-shards.cjs, run-qlog-scorecard.ts --workers N) with real child processes: shards that finish; a shard that stalls once is stopped by the watchdog (its process tree), the question it was on is recorded as an error and it resumes after it; a shard that keeps stalling is given up after its restarts; a shard that fails is a bad shard, not a stall; a reader that overruns (the label alone in the current file) is stopped sooner, its question is an error and it uses up no restart, while a question waiting for the database is left to the stall limit; the reader's own clock (lib/reader-deadline.ts). Offline: fake shards, no data, no DuckDB."
+    },
+    {
+      "id": "test-scoreboard-v2",
+      "tier": "F",
+      "script": "scripts/test-scoreboard-v2.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The scorecard's label identity, trend file and compare split (scripts/scoreboard-v2.ts): label file blob hash and version, the three-way compare (label change, engine change, both changed), the trend rows and their reader, the sum check that fails a run whose buckets, disputed and not-run do not add up to the label count, and the scorer left byte-unchanged. Offline: synthetic labels, no data."
     },
     {
       "id": "test-nibrs-duckdb-executor",
@@ -2617,6 +2635,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "Current Trends in the new engine (P90, P91, decisions A-C): agency months, consistent group sums, cumulative totals never complete over unknown months; a stub executor stands in for DuckDB over the build, which is checked when present"
+    },
+    {
+      "id": "test-scorecard",
+      "tier": "F",
+      "script": "scripts/test-scorecard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The crime scorecard in the new engine (P215): agency, state and national cards from a tiny Crime Index fixture in temp parquet, blank change never 0.0, clearance never clamped, no clearance column above an agency, cards more than three years stale refused; needs the local Python with duckdb, skips without it"
     },
     {
       "id": "test-nibrs-shr",
@@ -2754,6 +2781,15 @@
       "note": "request accounting 2b r3: where a typed answer records what it applied (source scan of lib/nibrs-question-compiler.ts) and rate/presence operands on an in-memory database; no fixture database, no route, no network"
     },
     {
+      "id": "test-nibrs-offenses-note",
+      "tier": "F",
+      "script": "scripts/test-nibrs-offenses-note.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "owner 2026-11-23: person crime by location or hour answers say they count offenses, not victims; in-memory database only, no route, no network"
+    },
+    {
       "id": "test-current-request-accounting",
       "tier": "F",
       "script": "scripts/test-current-request-accounting.ts",
@@ -2808,6 +2844,15 @@
       "note": "Hate crimes in the new engine (Jeff 2026-11-15): answered from the hate crime export only, never NIBRS; the release manifest check, the bias code and distinct-incident SQL, the latest-date rule, the reporting caveat; a stub executor stands in for DuckDB"
     },
     {
+      "id": "test-round-half-away",
+      "tier": "F",
+      "script": "scripts/test-round-half-away.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "percent changes that land exactly on a half round away from zero for both signs (Jeff 2026-11-24, P294): -6.25 shows -6.3 and +6.25 shows +6.3; pure functions, no database, no model, no network"
+    },
+    {
       "id": "test-nibrs-coverage",
       "tier": "F",
       "script": "scripts/test-nibrs-coverage.ts",
@@ -2833,6 +2878,24 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "the fuzzy place search (lib/geo-fuzzy.ts) gives exactly the answers it gave before it was made fast, for 610 fixed inputs (scripts/fixtures/geo-fuzzy-golden.json); reads the place catalog only, no database, no model, no network"
+    },
+    {
+      "id": "test-nibrs-shadow-open-ended",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-open-ended.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "open-ended asks clarify and data-absent asks get a plain decline (Jeff 2026-11-23); 13 labeled questions plus neighbors; stub DuckDB step, checked-in place index."
+    },
+    {
+      "id": "test-nibrs-shadow-period-grammar",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow-period-grammar.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "D1 period grammar: number word with repeated digits, all-years wordings, until-as-to; 4 labeled questions reach the route; stub DuckDB step, checked-in place index."
     }
   ]
 }

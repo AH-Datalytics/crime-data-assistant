@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   const cube = arg("--cube", "off") === "on" ? cubeFromEnv({ ...process.env, NIBRS_CUBE: "on" }, root) : null;
   const exec = duckdbExecutor(python, { timeoutMs: 600_000 });
   const places = loadPlaceIndex();
-  const deps = { places, release: { ...release, asOf: "2026-11-04" }, target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute: exec } as unknown as ShadowDeps;
+  const deps = { places, release: { ...release, asOf: "2026-11-04" }, target: { root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], cube }, execute: exec } as unknown as ShadowDeps;
   const results: Result[] = [];
   for (const it of sample.sample) {
     const t0 = performance.now();

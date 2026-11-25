@@ -5568,7 +5568,14 @@
 },
 "QL-ct-df0e43158d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-df6a291291": {
 "status": "reviewed",
@@ -5717,7 +5724,14 @@
 },
 "QL-ct-e7610c3d67": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which San Diego"
+]
+}
 },
 "QL-ct-e763fe102b": {
 "status": "reviewed",
@@ -11110,7 +11124,15 @@
 },
 "QL-hist-c3b02ec3c0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (Jeff 2026-11-22: the live scorecard) national form and P180 (no place named is the United States, with the note): the nine rows Violent Crime, Murder, Rape, Robbery, Aggravated Assault, Property Crime, Burglary, Theft, Motor Vehicle Theft, no clearance column, the change column comparing the latest FBI year with the year before, both named; the note says the year (P181). By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical"
+]
+}
 },
 "QL-hist-c3fccec664": {
 "status": "reviewed",
@@ -11673,7 +11695,14 @@
 },
 "QL-hist-df0e43158d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-df3e4191cb": {
 "status": "reviewed",
@@ -11888,7 +11917,14 @@
 },
 "QL-hist-e7610c3d67": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P215 (a scorecard is one card for the latest year: no violent/property ask, no period ask) and P28 (city police vs county sheriff of the same name, 100,000+, asks which): the only ask is the agency, city police or county sheriff. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"which San Diego"
+]
+}
 },
 "QL-hist-e7af5fa70e": {
 "status": "reviewed",
@@ -15652,12 +15688,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-5e21cfbc08": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Crimes against persons is a defined NIBRS offense category.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P25/P70: the place is the Maricopa County Sheriff's Office (AZ0070000); crimes against persons is NIBRS-only and that agency has no NIBRS figure in any month 2017-2026 (NIBRSAI Engine, canon2), so P147's one-sentence decline, no other agency. By rule; second labeler NIBRS Model changed to decline 2026-11-22",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "every year is blank for this agency in NIBRS (the Maricopa County Sheriff's Office reports no NIBRS data), so the series is declined in one sentence (P147)"
 }
 },
 "QL-nibrs-5e57d301ac": {
@@ -16250,14 +16286,11 @@
 },
 "QL-nibrs-727aa15401": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): countywide juvenile arrests for Wayne County and Cuyahoga County, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-nibrs-72d1e3dfee": {
@@ -17479,12 +17512,15 @@
 }
 },
 "QL-nibrs-9598316bab": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance rates including exceptional-clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 (Jeff 2026-11-22: several years answer one row per year): the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year, from the clearance-by-type sums over the agencies that reported (P171). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-9613f5089b": {
@@ -17710,12 +17746,15 @@
 }
 },
 "QL-nibrs-9e3fd1095c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Crimes against persons is a defined NIBRS category.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70/P25 (frozen rule 10, P28): a plain county name is the county's own agency, here the Tarrant County Sheriff's Office (no county police department), with P70's note that the cities in the county aren't included; Jeff 2026-11-22 \"Maricopa County means the sheriff office\"; crimes against persons counted by victim (09A, 09B, 11A-D, 13A-C, 36A, 36B, 100, 64A, 64B; 09C left out), one row per year 2020-2025. By rule from the question text; second labeler NIBRS Model",
 "expected": {
 "outcome": "answer",
-"source": "nibrs"
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-9e8f0157d0": {
@@ -18045,14 +18084,11 @@
 },
 "QL-nibrs-aa40789134": {
 "status": "reviewed",
-"by": "jeff-2026-11-21",
-"why": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): countywide violent crimes by offender age in Bernalillo County, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs",
-"source_any": [
-"nibrs"
-]
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-nibrs-aa4461ea77": {
@@ -19079,12 +19115,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-cb75da0bdb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 several years: the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year (P171 sums). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-cba5a55b84": {
@@ -19384,12 +19423,15 @@
 }
 },
 "QL-nibrs-d40fc08288": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P18 prohibits state clearance shares.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P203 (one year, by state: the share of rape offenses cleared by exception, from the clearance-by-type sums over the agencies that reported, P171), every state ranked by share, highest first (P173; Jeff 2026-11-22), a state with nothing to divide blank, not 0. By rule from the question text; second labeler NIBRS Model 2026-11-22",
 "expected": {
-"outcome": "decline",
-"reason": "State clearance rates are unavailable."
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
 }
 },
 "QL-nibrs-d4532e17b1": {
@@ -19660,7 +19702,15 @@
 },
 "QL-nibrs-e04248e56d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-22",
+"why": "P203 several years: 'exceptional clearance rate for robbery in Texas' is read as the share of Texas robberies cleared by exception; no period is every year (P181), so one row per year (P171 sums); the reading is said in a note. By rule from the question text; second labeler NIBRS Model 2026-11-22",
+"expected": {
+"outcome": "answer",
+"source": "nibrs",
+"source_any": [
+"nibrs"
+]
+}
 },
 "QL-nibrs-e068021917": {
 "status": "draft",
@@ -25027,12 +25077,12 @@
 }
 },
 "QL-ct-4a3b18fe08": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Inherited countywide incident totals require NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"the same\" carries the previous question's \"countywide\" to Dallas County, a county-wide request (as its previous question, QL-ct-4a3b1f38eb), declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-4a77c4a77c": {
@@ -25151,12 +25201,12 @@
 }
 },
 "QL-ct-556bb5e68c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Countywide totals require P70 reporting-agency aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"for tarrant county, tx as a whole\" asks the whole county, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-56ce52a05c": {
@@ -25298,12 +25348,12 @@
 }
 },
 "QL-ct-6e331ab5fa": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Inherited countywide rates require reporting-agency aggregation.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): \"use rates\" keeps the previous question's countywide Cook County change, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-ct-6eed23fc44": {
@@ -27142,12 +27192,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-8ae8e7b9d6": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P70 countywide aggregation uses reporting agencies.",
+"status": "reviewed",
+"by": "jeff-2026-11-22",
+"why": "P70 (Jeff 2026-11-22: P70 wins over P135's old county sum): murder data aggregated for all St. Louis County agencies is a county-wide sum, declined with the county's own agency offered. By rule from the question text; second labeler NIBRS Model",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "county-wide sums are declined, with the county's own agency offered"
 }
 },
 "QL-hist-8e159c9ad6": {

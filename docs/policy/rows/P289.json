@@ -1,0 +1,12 @@
+{
+  "id": "P289",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"national overall and violent crime rates monthly from 2016 to present\"",
+  "what the app does today": "The question declined with a different message about sums of several crimes.",
+  "proposed behavior": "A national overall or violent crime rate by month declines: \"That data is not available.\" National overall and violent rates are annual (Historical); Current Trends has no national monthly rate.",
+  "exact default or choices offered": "None.",
+  "why": "Jeff 2026-11-24 (through the coordinator).",
+  "status": "Decided 2026-11-24 (Jeff, through the coordinator)",
+  "test cases": "scripts/test-nibrs-shadow.ts (national monthly rate); QL-ct-a5e93c1787."
+}

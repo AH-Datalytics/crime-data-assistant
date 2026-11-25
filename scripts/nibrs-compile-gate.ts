@@ -169,9 +169,10 @@ write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occur
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
+// January: a zero-report flag but one late incident row: the row wins (P183, Jeff 2026-11-21), a VALUE of 1.
 // February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
+  ["2025-01", [C(1, "VALUE")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(null, "NOT_REPORTED")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
@@ -280,6 +281,15 @@ const [[agencyMonths, offenses, incidents, differing]] = runSql(`WITH cj AS (
   SELECT count(*), sum(offenses), sum(incidents), count(*) FILTER (WHERE offenses <> incidents) FROM m`) as number[][];
 console.log(`carjacking offenses = incidents: ${agencyMonths} agency-months, ${offenses} offenses, ${incidents} incidents, ${differing} differing`);
 if (Number(differing) !== 0 || Number(offenses) !== Number(incidents)) failed++;
+// Jeff 2026-11-23: an arrest is counted in the year of its arrest date, so an arrest question also reads the year before (arrestYears); the agency-month status stays on the built years.
+{
+  const plan: NibrsPlan = { ...syn("offenses.motor_vehicle_theft", "offense"), timeBasis: "arrest_date", measures: [{ id: "arrests.motor_vehicle_theft", unit: "arrest", as: "n" }] };
+  const c = compilePlan(plan, SYN_PERIOD, { root: SYN, builtYears: [2025, 2026], arrestYears: [2024, 2025, 2026] });
+  const sql = c.kind === "query" ? c.query.sql : "";
+  const ok = /arrestee\/data_year=2024\//.test(sql) && !/agency_month_status\/data_year=2024\//.test(sql) && /agency_month_status\/data_year=2025\//.test(sql);
+  console.log(`arrests also read the year before: ${ok ? "ok" : "FAILED"}`);
+  if (!ok) failed++;
+}
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(failed ? `compile gate: ${failed} check(s) failed` : "compile gate: every check passed");
 process.exit(failed ? 1 : 0);

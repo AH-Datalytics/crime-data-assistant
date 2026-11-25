@@ -1,0 +1,12 @@
+{
+  "id": "P299",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"Have carjackings decreased in Rhode Island in the past two years?\"",
+  "what the app does today": "A have/has increased, decreased, gone up or gone down question over the past two to five years was not read.",
+  "proposed behavior": "Answered yes or no from the full calendar years, with the counts: \"Yes. Carjacking offenses fell from X in 2024 to Y in 2025.\" The by-year table stays under the sentence. A part-year 2026 is not counted. Equal counts answer \"No\", with both counts.",
+  "exact default or choices offered": "None.",
+  "why": "Coordinator ruling B, 2026-11-24 (QL-nibrs-58d3c67ab3).",
+  "status": "Decided 2026-11-24 (coordinator ruling)",
+  "test cases": "scripts/test-nibrs-shadow.ts: Have carjackings decreased in Rhode Island in the past two years."
+}

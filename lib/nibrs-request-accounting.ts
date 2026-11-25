@@ -142,6 +142,7 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "bias:14", pattern: R(String.raw`\banti[-\s]?asian\b`) },
   { concept: "filter", value: () => "bias:24", pattern: R(String.raw`\banti[-\s]?(?:islamic|muslim)\b`) },
   { concept: "filter", value: () => "bias:41", pattern: R(String.raw`\banti[-\s]?gay\b`) },
+  { concept: "filter", value: () => "bias:lgbtq", pattern: R(String.raw`\banti[-\s]?(?:lgbtq?\+?|lgbt|glbt|lgbtqia\+?)(?![a-z])|\banti[-\s]?lesbian,?\s*gay,?\s*bisexual,?\s*(?:and\s+)?transgender\b`) },
   // property loss
   { concept: "filter", value: () => "loss:7", pattern: R(String.raw`\bstolen\b`) },
   { concept: "filter", value: () => "loss:5", pattern: R(String.raw`\brecovered\b`) },
@@ -164,10 +165,12 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "location:07", pattern: R(String.raw`\b(?:at|in)\s+(?:a\s+|the\s+)?convenience\s+stores?\b`) },
   { concept: "filter", value: () => "location:14", pattern: R(String.raw`\b(?:at|in)\s+(?:a\s+|the\s+)?(?:hotels?|motels?)(?:\s*(?:\/|or|and)\s*motels?)?\b`) },
   // Stage 3b owner decision (plan r1.3): "commercial" = the business location types (lib/nibrs-codes.ts).
-  { concept: "filter", value: () => "location:commercial", pattern: R(String.raw`\bcommercial\b`) },
+  { concept: "filter", value: () => "location:commercial", pattern: R(String.raw`\bcommercial\b`), when: (_m, q) => !WHERE_MOST_ONCE.test(q) },
   { concept: "filter", value: () => "relationship:ST", pattern: R(String.raw`\bby\s+strangers\b|\bstrangers\b`) },
 ];
 
+const WHERE_MOST = R(String.raw`\bwhere\s+(?:do|does|did|are|were)\s+(?:most|the\s+most)(?=\s+[\w\s]*?\b(?:occur|occurs|happen|happens|take\s+place|committed)\b)`);
+export const WHERE_MOST_ONCE = R(WHERE_MOST.source, "i");
 /** Breakdown dimensions ("by X"). Two-dimension forms the source holds as one declared dimension come first. */
 const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "victim-offender-race", pattern: R(String.raw`\bby\s+(?:the\s+)?race\s+of\s+(?:the\s+)?victims?\s+and\s+(?:the\s+)?race\s+of\s+(?:the\s+)?offenders?\b|\bby\s+victim[-\s]offender\s+race\b`) },
@@ -184,11 +187,15 @@ const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "ethnicity", pattern: R(String.raw`\bby\s+ethnicity\b`) },
   { concept: "breakdown", value: () => "weapon", pattern: R(String.raw`\bby\s+weapon(?:\s+types?)?\b`) },
   { concept: "breakdown", value: () => "location", pattern: R(String.raw`\bby\s+location(?:\s+types?)?\b`) },
+  // "Where do most robberies occur - residences, streets, or commercial buildings?" asks for every location type, largest first.
+  { concept: "breakdown", value: () => "location", pattern: WHERE_MOST },
   { concept: "breakdown", value: () => "hour", pattern: R(String.raw`\bby\s+(?:hour(?:\s+of\s+(?:the\s+)?day)?|time\s+of\s+day)\b`) },
   { concept: "breakdown", value: () => "relationship", pattern: R(String.raw`\bby\s+relationship(?:\s+to\s+(?:the\s+)?offenders?)?\b`) },
   { concept: "breakdown", value: () => "circumstance", pattern: R(String.raw`\bby\s+circumstances?\b`) },
   { concept: "breakdown", value: () => "drug", pattern: R(String.raw`\bby\s+drug\s+(?:type|category)\b`) },
   { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\bby\s+bias(?:\s+motivation)?\b`) },
+  // Jeff 2026-11-24: "most common bias" (or motivation) is the table of every bias, largest first, with a sentence naming the top one.
+  { concept: "breakdown", value: () => "bias", pattern: R(String.raw`\b(?:the\s+)?(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)(?:\s*\/\s*(?:bias(?:es)?|motivations?)|\s+motivations?)?\b|\bwhat\s+(?:bias(?:es)?|motivations?)\b`) },
   // "and sex" right after another breakdown is a second breakdown (declined by the types: one breakdown only).
   { concept: "breakdown", value: () => "sex", pattern: R(String.raw`\band\s+(?:sex|gender)\b`), when: (m, q) => /\bby\s+\w+(?:\s+\w+)?\s*$/i.test(q.slice(0, m.index)) },
 ];
@@ -201,7 +208,7 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "property_value", pattern: R(String.raw`\bproperty\b`), when: (_m, q) => /\bvalue\b|\bworth\b|\bdollars?\b/i.test(q) },
   { concept: "measure", value: () => "carjacking", pattern: R(String.raw`\bcarjack(?:ing|ings|ed)?\b`) },
   { concept: "measure", value: () => "domestic_violence", pattern: R(String.raw`\bdomestic\s+violence\b|\b(?<![a-z])dv(?![a-z])\b|\bdomestic\b`) },
-  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b`) },
+  { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b|(?<=\b(?:anti[-\s]?[a-z]+|antisemitic)\s)incidents?\b|\b(?:most\s+(?:common|frequent|prevalent)|top|leading)\s+(?:bias(?:es)?|motivations?)\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
   // Group B offenses (arrests only), 2026-11-11.
   { concept: "measure", value: () => "disorderly_conduct", pattern: R(String.raw`\bdisorderly\s+conduct\b|\bdisorderly\b`) },
@@ -235,6 +242,7 @@ const MEASURES: Rule[] = [
   // offenses" are the three together; "intimidation" is its own.
   { concept: "measure", value: () => "assault_offenses", pattern: R(String.raw`\ball\s+assaults?\b|\bassault\s+offen[cs]es\b`) },
   { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
+  { concept: "measure", value: () => "kidnapping", pattern: R(String.raw`\bkidnap(?:ping|pings|ped)?s?\b`) },
   { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))(?![\s-]+(?:rifles?|weapons?|guns?|pistols?|style|offen[cs]es)\b)`) },
   { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
@@ -340,6 +348,8 @@ const RULES: Rule[] = [
   // ---- periods (the accepted Historical forms) ----
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `years:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(?:for|in)\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
+  // Three or more years named one by one ("in 2020, 2021, and 2022"): the same separate-years period, every year kept.
+  { concept: "period", value: (m) => `years:${m[0].match(/(?:19|20)\d{2}/g)!.join(":")}`, pattern: R(String.raw`\b(?:for|in)\s+${YEAR}(?:\s*,\s*${YEAR})+\s*,?\s*(?:and|or)\s+${YEAR}\b`) },
   { concept: "period", value: (m) => `between:${m[1]}:${m[2]}`, pattern: R(String.raw`\bbetween\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
   // Reader cluster 3 (2026-11-05): a year to the latest the source has, in the query log's words ("2018 to present",
   // "from 2014 to today", "to the most recent data", "through the most recent month", "to most current"): since that year.
@@ -379,6 +389,8 @@ const RULES: Rule[] = [
   // ---- rate and count statistics ----
   { concept: "statistic", value: () => "per100k", pattern: R(String.raw`\bper\s+100(?:,?000|\s*k|\s+thousand)(?:\s+${POP_WORD})?\b`) },
   { concept: "statistic", value: (m) => `scale:${m[1]}`, pattern: R(String.raw`\bper\s+(\d[\d,]*(?:\s*k\b)?|ten\s+thousand|million|one\s+million|thousand)(?:\s+${POP_WORD})?\b`) },
+  // "on 1000 persons" is the same ask as "per 1,000 people" (Jeff 2026-11-24): the fixed per-100,000 decline.
+  { concept: "statistic", value: (m) => `scale:${m[1]}`, pattern: R(String.raw`\bon\s+(1,?000|100|10,?000)\s+(?:people|persons|residents)\b`) },
   { concept: "statistic", value: () => "percapita", pattern: R(String.raw`\bper[-\s]capita\b`) },
   { concept: "statistic", value: () => "rate", pattern: R(String.raw`\b(?:incident\s+)?rates?\b`) },
   { concept: "statistic", value: () => "count", pattern: R(String.raw`\bhow\s+many\b|\b(?:total\s+)?(?:annual\s+)?(?:numbers?|counts?)(?:\s+of)?\b`) },
@@ -478,6 +490,20 @@ function recordCounties(ledger: RequestLedger): void {
 }
 
 /**
+ * Virginia counties named without the word "County" and with the state ("Arlington, VA", "Loudoun, Virginia"): the county, not
+ * the same-named city of another state the geo resolver prefers (Arlington, Texas) with the state left unread (Engine 2.0 2026-11-24).
+ * Only counties with no city of the name in Virginia; "Fairfax, VA" and "Richmond, VA" stay with the city rule.
+ */
+function recordShortVirginiaCounties(ledger: RequestLedger): void {
+  const re = /\b(Arlington|Loudoun|Prince\s+William|Henrico|Chesterfield)\s*,\s*(?:VA|Virginia)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(ledger.question))) {
+    const name = m[1].replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    ledger.record({ concept: "place", value: `county:${name} County:VA`, span: [m.index, m.index + m[0].length], rule: "place:county" });
+  }
+}
+
+/**
  * A season before a year ("Spring 2024", "summer of 2023") is never a place: "Spring" had answered Spring Township,
  * Pennsylvania (coordinator 2026-11-05). The reader has no season periods, so the word is named as not understood.
  */
@@ -511,9 +537,11 @@ const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of
  * a leading "OK", "(just) do it" (a follow-up's verb), a complaint about the last answer ("this is not even close"),
  * and "broken down" right before "by" (read as "by").
  */
-const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
+const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /^\s*summari[sz]e\b/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
 function recordNibrsPhraseFiller(ledger: RequestLedger): void {
-  for (const re of NIBRS_PHRASE_FILLER) {
+  // "Where do most robberies occur - residences, streets, or commercial buildings?": the verb and the list of example places never restrict.
+  const whereMost = WHERE_MOST_ONCE.test(ledger.question) ? [new RegExp(String.raw`\b(?:occur|occurs|happen|happens|take\s+place|committed)\b`, "i"), /\s[-–—:]\s*[a-z][a-z,\s]*?(?=\s*\??\s*$)/i] : [];
+  for (const re of [...NIBRS_PHRASE_FILLER, ...whereMost]) {
     const m = re.exec(ledger.question);
     if (!m) continue;
     const span: Span = [m.index, m.index + m[0].length];
@@ -584,7 +612,19 @@ function recordDemographicRate(ledger: RequestLedger): void {
  * same turn also asks for a number ("how many robberies ... and why?"), so the number is answered and the explanation
  * named (L7).
  */
+/** The reader asks for the same long text's ledger many times in one answer; place resolution makes each build slow, so the last few are kept and a copy is handed out. */
+const LEDGERS = new Map<string, RequestLedger>();
+const LEDGERS_KEPT = 8;
 export function accountNibrsRequest(question: string): RequestLedger {
+  const have = LEDGERS.get(question);
+  if (have) return have.clone();
+  const built = buildNibrsLedger(question);
+  if (LEDGERS.size >= LEDGERS_KEPT) LEDGERS.delete(LEDGERS.keys().next().value as string);
+  LEDGERS.set(question, built.clone());
+  return built;
+}
+
+function buildNibrsLedger(question: string): RequestLedger {
   const ledger = new RequestLedger(question);
   recordContext(ledger);
   // Before places: codes, decade words, rolling windows, months ("May 2025" is not a place), refused topics and the
@@ -594,6 +634,7 @@ export function accountNibrsRequest(question: string): RequestLedger {
   // The county rule first: it reads any state after "Sheriff's Office" (Codex place review 02).
   recordSeasons(ledger);
   recordCounties(ledger);
+  recordShortVirginiaCounties(ledger);
   recordCountySheriffs(ledger);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm) => ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });

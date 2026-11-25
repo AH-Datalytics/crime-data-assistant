@@ -48,7 +48,7 @@ export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
       const deps: ShadowDeps = {
         places: loadPlaceIndex(t.agenciesJson ?? path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")),
         release: { id: rel.id, firstMonth: rel.firstMonth, lastMonth: rel.lastMonth, asOf: new Date().toISOString().slice(0, 10) },
-        target: { root: t.root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+        target: { root: t.root, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026], arrestYears: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
         execute: exec,
       };
       b = { deps, exec, release: rel.id };

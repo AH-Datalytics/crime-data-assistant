@@ -71,11 +71,11 @@ for (const [name, card] of [["Ohio", ohio], ["United States", buildNationalScore
     `card ${violent.offenses} vs direct ${expectedViolent}`);
   check(`${name}: property count is the component sum`, property.offenses === expectedProperty,
     `card ${property.offenses} vs direct ${expectedProperty}`);
-  check(`${name}: violent rate is the summed official rates`,
-    violent.rate_per_100k === round1(row.murder_rate + row.rape_rate + row.robbery_rate + row.aggravated_assault_rate),
+  check(`${name}: violent rate is the count over the population`,
+    violent.rate_per_100k === round1(expectedViolent * 100000 / row.population),
     `card ${violent.rate_per_100k}`);
-  check(`${name}: property rate is the summed official rates`,
-    property.rate_per_100k === round1(row.burglary_rate + row.theft_rate + row.auto_theft_rate),
+  check(`${name}: property rate is the count over the population`,
+    property.rate_per_100k === round1(expectedProperty * 100000 / row.population),
     `card ${property.rate_per_100k}`);
 
   const murder = offenseRow(card, "Murder")!;
@@ -276,6 +276,24 @@ check("national detector rejects lowercase us", detectNationalScorecardQuestion(
   check("property total change computes when all prior components are valid",
     offenseRow(card, "Property Crime")?.offense_change_pct
       === round1(((2000 + 8000 + 900) - (1900 + 7500 + 850)) * 100 / (1900 + 7500 + 850)));
+
+  // P296: a group rate is count over population rounded once, not the sum of rounded component rates.
+  // Components 193.6 + 1144.1 + 197.0 sum to 1534.7; 5,245,768 over 341,784,860 is 1534.8.
+  const published = new Database(":memory:");
+  published.exec(`
+    CREATE TABLE historical_state_national (state TEXT, year INT, population INT,
+      murder INT, rape INT, robbery INT, aggravated_assault INT, burglary INT, theft INT, auto_theft INT,
+      murder_rate REAL, rape_rate REAL, robbery_rate REAL, aggravated_assault_rate REAL,
+      burglary_rate REAL, theft_rate REAL, auto_theft_rate REAL);
+    INSERT INTO historical_state_national VALUES
+      ('United States', 2025, 341784860, 14000, 125000, 500000, 780000, 661637, 3910000, 674131, 4.1, 36.1, 49.4, 238, 193.6, 1144.1, 197);
+  `);
+  const nat = buildNationalScorecard(published);
+  check("national property rate is the published 1534.8, not the 1534.7 rounded-component sum",
+    offenseRow(nat, "Property Crime")?.rate_per_100k === round1(5245768 * 100000 / 341784860)
+      && offenseRow(nat, "Property Crime")?.rate_per_100k === 1534.8,
+    `card ${offenseRow(nat, "Property Crime")?.rate_per_100k}`);
+  published.close();
 
   // No prior year at all: every change is unknown.
   const lone = new Database(":memory:");
