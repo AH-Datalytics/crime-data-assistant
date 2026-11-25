@@ -7524,12 +7524,12 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
-     "nibrs"
+     "rtci",
+     "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends (Historical only if the agency is not in Current Trends)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -7540,7 +7540,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. Current county question: Current Trends if the agency is in it, else Historical; last 3 years to the latest month. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -16897,12 +16897,12 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
-     "nibrs"
+     "rtci",
+     "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends (Historical only if the agency is not in Current Trends)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -16913,7 +16913,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. Current county question: Current Trends if the agency is in it, else Historical; last 3 years to the latest month. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
@@ -86496,12 +86496,12 @@
    "previous": "what are the crime trends for Fairfax County Virginia Police Department for the past three years?",
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "rtci",
     "source_any": [
-     "historical",
-     "nibrs"
+     "rtci",
+     "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "the last 3 years up to the most recent month available, from Current Trends (Historical only if the agency is not in Current Trends)",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -86512,7 +86512,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures; retain prior scope unless replaced. Current county question: Current Trends if the agency is in it, else Historical; last 3 years to the latest month. (Jeff 2026-11-25 label choices page)"
    }
   },
   {
