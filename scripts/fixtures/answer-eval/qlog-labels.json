@@ -111757,9 +111757,11 @@
     "source": "historical",
     "source_any": [
      "historical",
-     "nibrs"
+     "shr",
+     "nibrs",
+     "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "explains where the figures came from (which data and agencies); no new figures",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -111770,7 +111772,7 @@
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "notes": "a ranking or set of places (Crime Index or NIBRS) Source follow-up: explain the data and agencies behind the figures, no new figures, no particular source required (any source accepted). (Jeff 2026-11-25 label choices page)"
    }
   },
   {
