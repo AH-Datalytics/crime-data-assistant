@@ -75448,20 +75448,20 @@
    "question": "homicides by year and sex",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "victims or offenders",
-     "place"
-    ],
-    "about": "victims or offenders"
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
+    "status": "reviewed",
+    "rule": "P180-P182",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "The sex breakdown does not identify which people."
+    "reviewed_by": "jeff-2026-11-24",
+    "notes": "defaults P180-P182 (Jeff 2026-11-24, PR 506): homicide sex with no victim or offender word shows the victims' sex, said; no place shows the United States, said."
    }
   },
   {
