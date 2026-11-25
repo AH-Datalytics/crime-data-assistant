@@ -2739,7 +2739,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (nationDefault) return nationDefault;
     // The nation's answer is another source's (Homicide Reports details): routed there, as with the United States named, never a place asked.
     // Only for a question naming a race or ethnicity: every other no-place question keeps its place ask (Runner gate 2026-11-24).
-    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && /\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)) return nationOption.continuation;
+    if (!deps.noDefaults && !isDeferred(nationOption) && nationOption.continuation?.kind === "route" && (/\b(?:hispanic|latino|latina|latinx|black|white|asian)\b/i.test(ledger0.question)
+      // A share of homicides by a Homicide Reports detail ("what share of murders involve a firearm") with no place is the nation's, routed the same way.
+      || (nationOption.continuation.source === "shr" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "share")))) return nationOption.continuation;
     // P187 (no partial answers, Jeff 2026-11-21): peer or similar cities with no place named ("murders compared to peer cities") get the peer
     // decline, as with a place named, never an ask for a place that would answer without the peers.
     if (!isDeferred(nationOption) && nationOption.continuation?.kind === "decline" && ledger0.parts.some((p) => p.clause === 0 && p.concept === "peer"))
