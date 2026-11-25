@@ -958,7 +958,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   const cities = (q: string) => (as(shadowAnswer(q, cdeps), "historical") as unknown as { delivered: { table: { columns: { header: string }[]; rows: unknown[][] }; text: string[] } }).delivered;
   for (const q of ["murders in all American cities in 2024", "murders in all cities in the US in 2024", "murders in all U.S. cities in 2024"]) {
     const d = cities(q);
-    assert.equal(d.text[0], "United States Murder Count by City, Population 250,000 or More, 2024", q);
+    assert.equal(d.text[0], "Cities With the Most Murders, Population 250,000 or More, 2024", q);
     assert.equal(d.text[1], "The 5 cities with the most murders are shown.", q);
     assert.deepEqual(d.table.rows, [["New York City, NY", 450], ["Houston, TX", 400], ["Dallas, TX", 200], ["El Paso, TX", 30], ["Lubbock, TX", 25]], q);
     assert.deepEqual(d.table.columns.map((c) => c.header), ["Agency", "Murders"], q);
@@ -966,14 +966,14 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
   }
   for (const q of ["murders in all Texas cities in 2024", "murders in every city in Texas in 2024"]) {
     const d = cities(q);
-    assert.equal(d.text[0], "Texas Murder Count by City, Population 250,000 or More, 2024", q);
+    assert.equal(d.text[0], "Cities in Texas With the Most Murders, Population 250,000 or More, 2024", q);
     assert.deepEqual(d.table.rows.map((r) => r[0]), ["Houston", "Dallas", "El Paso", "Lubbock"], q);
   }
-  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "United States Murder Rate by City, Population 250,000 or More, 2024");
+  assert.equal(cities("murder rate in all U.S. cities 2024").text[0], "Cities With the Highest Murder Rates, Population 250,000 or More, 2024");
   assert.equal(cities("murder rate in all U.S. cities 2024").text[1], "The 5 cities with the highest rates are shown.");
   // "Major cities" with no rank word, and no place, are the nation's, said (the old reading gave the national total).
   const major = cities("murders in major cities in 2024");
-  assert.equal(major.text[0], "United States Murder Count by City, Population 250,000 or More, 2024");
+  assert.equal(major.text[0], "Cities With the Most Murders, Population 250,000 or More, 2024");
   assert.ok(major.text.includes("No place was named, so these are cities across the United States."));
   // One year: none asks the year; several years are declined with the one-year ask.
   assert.equal(as(shadowAnswer("murders in all American cities", cdeps), "clarify").about, "which period");
@@ -991,7 +991,7 @@ assert.ok(!/I didn't understand "I wanna/.test((ask("I wanna see murders in Hous
     "cannabis cultivation arrests in major us cities annually", "Share of vehicle burglaries where a firearm was stolen in big cities in Texas broken down by city",
     "murder by city in north carolina largest cities only", "locations of crimes in cities over 1M"]) assert.ok(!isSet(q), q);
   // Not changed: a ranking word, or a number, keeps the old readings.
-  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Texas Murder Count by City, Population 250,000 or More, 2024");
+  assert.equal(cities("which large Texas cities had the most murders in 2024").text[0], "Cities in Texas With the Most Murders, Population 250,000 or More, 2024");
   assert.match(cities("the 10 largest cities murders 2024").text[0], /^The 6 largest cities in the United States by population/);
 }
 // P120 (Jeff 2026-11-16): with a victim word, juvenile, minor, child and kid mean victims under 18 and teen means victims aged 13 to 19,
@@ -2195,7 +2195,7 @@ const tx = ok4("Which Texas cities had the most shoplifting in 2024?");
 assert.deepEqual(tx.delivered.table.rows, [["Houston Police Department", 108], ["Dallas Police Department", 84], ["TX9999900", 60]]);
 assert.ok(tx.delivered.text.includes("Austin Police Department isn't ranked because it has data for only 11 of the 12 months of 2024."), JSON.stringify(tx.delivered.text));
 assert.ok(tx.delivered.text.includes("Only agencies with data for all 12 months of 2024 are ranked, and ties are ordered by agency name."), JSON.stringify(tx.delivered.text));
-assert.equal(tx.delivered.text[0], "Texas Shoplifting Offenses by City, 2024");
+assert.equal(tx.delivered.text[0], "Cities in Texas With the Most Shoplifting Offenses, 2024");
 const txRate = ok4("Which Texas cities had the highest shoplifting rate in 2024?");
 assert.deepEqual(txRate.delivered.table.rows, [["Dallas Police Department", 6.5], ["Houston Police Department", 4.7]]);
 assert.ok(txRate.delivered.text.includes("TX9999900 isn't ranked because the FBI gives no population."), JSON.stringify(txRate.delivered.text));
@@ -2203,13 +2203,13 @@ assert.equal(as(ask("Which large Texas cities had the most shoplifting in 2024?"
 // Scoring increment 4: a ranking's filters, ranked statistic and P60 statements; a rate's denominator.
 const year24 = { from: "2024-01", to: "2024-12" };
 const txLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "state", name: "Texas", state: "TX" }], period: year24, measures: [{ name: "shoplifting", unit: "offense" }],
-  filters: ["city agencies", "agencies that reported every month of 2024"], groupings: ["agency"], statistic: "count", rank: { by: "count", direction: "top", limit: 20 } }, values: { status: "pending_build" },
+  filters: ["city agencies", "agencies that reported every month of 2024"], groupings: ["agency"], statistic: "count", rank: { by: "count", direction: "top", limit: 10 } }, values: { status: "pending_build" },
   statements: ["shows exactly 3 agencies", "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
     "orders ties alphabetically by agency name", "adds no other eligibility filter", "names its source at the end"] });
 assert.deepEqual(material(tx, txLabel), []);
 assert.ok(material({ ...tx, delivered: { ...tx.delivered, text: tx.delivered.text.filter((t) => !t.startsWith("Only agencies with data for")) } }, txLabel).includes("statement"), "the P60 rule must be said");
 assert.ok(material({ ...tx, delivered: { ...tx.delivered, table: { ...tx.delivered.table, rows: [["Houston Police Department", 108], ["Dallas Police Department", 84]] } } }, txLabel).includes("statement"), "the row count is checked");
-assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, rank: { by: "rate", direction: "top", limit: 20 } } } as Case["expected"])).includes("rank by"));
+assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, rank: { by: "rate", direction: "top", limit: 10 } } } as Case["expected"])).includes("rank by"));
 assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, filters: ["city agencies"] } } as Case["expected"])).includes("filters"), "the reporters rule is a filter of every ranking");
 const okRates = ok4("Shoplifting rates in Tulsa and Oklahoma City in 2024");
 const ratesLabel = (denominator: string) => label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Tulsa Police Department", state: "OK" }, { kind: "agency", name: "Oklahoma City Police Department", state: "OK" }],
@@ -3130,8 +3130,8 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const ask1 = as(shadowAnswer(q, rdeps), "clarify");
     assert.equal(ask1.about, "which period", q);
     const go = ask1.options[0].continuation!;
-    // The title reads the question back: the place, the measure, "by City", then the timeframe (Jeff 2026-11-21).
-    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("United States ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
+    // The title reads the question back: "Cities With the Most ...", then the timeframe (Jeff 2026-11-24).
+    assert.ok(go.kind === "shr" && go.delivered.text[0].includes(text) && go.delivered.text[0].startsWith("Cities With the ") && go.delivered.text[0].endsWith(", 2025"), `${q}: ${JSON.stringify(go).slice(0, 300)}`);
   }
   assert.equal(shadowAnswer("Show me which big cities had the highest share of firearm murders in 2024", rdeps).kind, "shr", "an opener and \"which\" are only words");
   // Without a release it stays Homicide Reports' (the tab has them), as before.
@@ -4085,7 +4085,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(/Population Over 50,000/.test(t) && /1 agency has no FBI population on file/.test(t) && !/Top 50/.test(t), `${q}: ${t.slice(0, 400)}`); }
   // "all", "every", "entire", "complete list" are the same ask with no cap; "every Texas city" is the state's cities, not Texas City.
   for (const q of ["Robberies in all Texas cities over 50,000 in 2024", "Robberies in every Texas city over 50,000 in 2024", "Show the complete list of Texas cities over 50,000 by robberies in 2024"]) {
-    const o = as(ask(q), "answer") as any; assert.ok(/Texas Robbery Offenses by City/.test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
+    const o = as(ask(q), "answer") as any; assert.ok(/Cities in Texas With the Most Robbery Offenses/.test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
   // Nothing qualifies: said, with the filter stated.
   for (const [q, f] of [["Robberies in Texas cities over 5,000,000 in 2024", "5,000,000"], ["Murders in Louisiana cities over 100,000 in 2024", "100,000"]]) {
     const o = as(ask(q), "decline") as any; assert.ok(new RegExp(`No city agency in \\w+ has a population of ${f} or more`).test(texts(o)), `${q}: ${texts(o).slice(0, 300)}`); }
