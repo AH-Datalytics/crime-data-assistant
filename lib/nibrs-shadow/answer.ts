@@ -1033,10 +1033,31 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
  * P188 (Jeff 2026-11-21): a loose word read as the meaning he decided ("current" is the latest complete year, "up" is the trend over five
  * years) is said in the answer: one note line for each, just before the source line, whichever source answered.
  */
+/**
+ * A city named beside other places is its police department, never asked about beside the county's sheriff (P196, Jeff 2026-11-22: "Any 2+ places"):
+ * the answer names the agency it used ("Los Angeles is read as the Los Angeles Police Department."), for a name the county's agency also bears.
+ */
+function listedAgencyNotes(ledger: RequestLedger, deps: ShadowDeps): string[] {
+  const places = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place");
+  if (places.length < 2 || !deps.places) return [];
+  const out: string[] = [];
+  const stateWords = new Set(Object.values(STATE_NAMES).map((n) => n.toLowerCase()));
+  for (const p of places) {
+    if (!/^(?:city|ambiguous):/.test(p.value ?? "")) continue;
+    // A name beside states only is the state (Florida, Texas and New York), not a police department.
+    if (stateWords.has(p.text.trim().toLowerCase().replace(/[,\s]+$/, "")) && places.every((o) => o === p || /^state:/.test(o.value ?? ""))) continue;
+    const r = resolvePlace(deps.places, p.value!, p.text, true);
+    if (r.kind !== "agency" || r.agency.kind !== "city") continue;
+    const sameName = (deps.places.byName.get(r.agency.name.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim()) ?? []).some((a) => a.kind === "county" && a.state === r.agency.state);
+    if (sameName) out.push(`${p.text.trim().replace(/[,\s]+$/, "")} is read as the ${agencyName(deps.places, r.agency.ori)}.`);
+  }
+  return out;
+}
 function withMeaningNotes(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome {
   const del = (o as { delivered?: { text?: unknown } }).delivered;
   if (!del || !Array.isArray(del.text)) return o;
-  const said = [...new Set((readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence))];
+  const read = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth);
+  const said = [...new Set([...(read.readings ?? []).filter((r) => r.kind === "meaning").map(readingSentence), ...listedAgencyNotes(read.ledger, deps)])];
   if (!said.length) return o;
   const text = del.text as string[];
   const at = text.length && /^Source/.test(text[text.length - 1]) ? text.length - 1 : text.length;
@@ -2498,15 +2519,22 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const resolved = new Map<string, Place>();
   let ask: { part: Part; name: string; candidates: Candidate[]; more?: boolean } | null = null;
   let unfound: Part | null = null;
-  // Two or more cities or counties named together: a city beside other places is the city (P196, Jeff 2026-11-22).
-  const inList = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "place" && !!p.value && /^(city|county|ambiguous):/.test(p.value)).length >= 2;
   const cityQualifiers = new Set<Part>();
+  const isListedPlace = (p: Part) => p.clause === 0 && p.concept === "place" && !!p.value && /^(city|county|ambiguous):/.test(p.value);
+  // Any 2+ places (P196): the nation or a state beside a city name counts as a place too ("annual murder rate nationwide and in Baltimore").
+  const placeParts = ledger0.parts.filter((p) => p.clause === 0 && p.concept === "place" && !!p.value);
+  const listedPlaces = placeParts.length > 1;
+  // A name beside states only is the state ("Florida, Texas, and New York": New York the state, not the city).
+  const stateNames = new Set(Object.values(STATE_NAMES).map((n) => n.toLowerCase()));
   const parts = ledger0.parts.map((p) => {
-    if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
+    if (!isListedPlace(p)) return p;
+    const named = /^(?:city|county|ambiguous):(.+?)(?::[A-Z]{2})?$/.exec(p.value!)?.[1]?.trim().toLowerCase();
+    if (listedPlaces && named && stateNames.has(named) && /^(?:ambiguous|city):/.test(p.value!))
+      if (placeParts.every((o) => o === p || /^state:/.test(o.value!))) return { ...p, value: `state:${Object.values(STATE_NAMES).find((n) => n.toLowerCase() === named)}` };
     const city = ledger0.parts.find((c) => c.clause === 0 && c.concept === "entity" && c.value === "city" && /^city$/i.test(c.text.trim())
       && c.span[0] >= p.span[1] && /^\s*$/.test(ledger0.question.slice(p.span[1], c.span[0])) && /^(city|ambiguous):/.test(p.value!));
     const pin = pins.get(p.span[0]) ?? deps.placePins?.get(p.text.trim().toLowerCase());
-    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, city ? `${p.text} city` : p.text, inList);
+    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value!, city ? `${p.text} city` : p.text, listedPlaces);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
     if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates, more: r.more }; return p; }
