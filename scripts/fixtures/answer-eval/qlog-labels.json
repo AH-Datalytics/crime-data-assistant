@@ -76417,21 +76417,16 @@
    "question": "What is the trend of police fatal shootings over the last",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "police victims or shootings by police",
-     "place",
-     "period"
-    ],
-    "about": "police victims or shootings by police"
+    "reason": "the FBI data used here does not collect fatal shootings by police or police officers killed"
    },
    "label": {
     "status": "draft",
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Police fatal shootings and the unfinished period are ambiguous."
+    "notes": "Jeff 2026-11-25: police fatal shootings decline, as that data isn't collected."
    }
   },
   {
@@ -77166,20 +77161,16 @@
    "question": "What is the trend of police fatal shootings since 2015",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "police victims or shootings by police",
-     "place"
-    ],
-    "about": "police victims or shootings by police"
+    "reason": "the FBI data used here does not collect fatal shootings by police or police officers killed"
    },
    "label": {
     "status": "draft",
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Police fatal shootings does not identify the role of police."
+    "notes": "Jeff 2026-11-25: police fatal shootings decline, as that data isn't collected."
    }
   },
   {
