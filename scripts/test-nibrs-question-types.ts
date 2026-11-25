@@ -67,6 +67,33 @@ check(r1?.type === "rank" && r1.statistic === "clearance_rate" && r1.rank?.n ===
 const r2 = spec("which state has the highest murder rate in 2025?");
 check(r2?.type === "rank" && r2.entity === "state" && r2.rank?.n === 1, "\"which state has the highest\" is the top 1");
 
+// Rankings group A (Jeff 2026-11-23): no entity word, or "by city", still ranks cities in the nation.
+const r3 = spec("Top 10 auto theft rates in 2025");
+check(r3?.type === "rank" && r3.entity === "city" && r3.statistic === "rate" && r3.rank?.n === 10 && r3.scope.kind === "national", "\"top 10 ... rates\" with no entity ranks cities");
+const r4 = spec("violent crime counts by city in 2025");
+check(r4?.type === "rank" && r4.entity === "city" && r4.statistic === "count" && r4.rank === null, "\"counts by city\" is a city ranking with the default size");
+
+// Rankings group B: several measures side by side; no crime named defaults to violent plus property.
+const r5 = spec("Top 10 cities in 2025 by murder rate and robbery rate");
+check(r5?.type === "rank" && r5.measure === "murder" && r5.more?.join() === "robbery", "two measures make one table, sorted by the first");
+const r6 = spec("Which cities have the highest crime rate in 2025?");
+check(r6?.type === "rank" && r6.measure === "violent_crime" && r6.more?.join() === "property_crime", "no crime named is violent plus property crime");
+check((spec("Which states have the highest murder rate and robbery rate in 2025?") as { type?: string; more?: unknown } | null)?.more === undefined, "a multi-measure state ranking is never built");
+
+// Review 419 item 2: near-misses keep their outcome; the no-entity "city" default must not take them.
+check(decide("top 5 weapons used in murders in 2025").kind === "decline", "\"top 5 weapons used in murders\" stays declined");
+check(decide("top 10 murder weapons").kind === "decline", "\"top 10 murder weapons\" stays declined");
+check(decide("most common offenses").kind === "none", "\"most common offenses\" stays unmatched");
+{
+  const t = decide("top 10 crimes in 2025");
+  check(t.kind === "spec" && t.spec.type === "rank" && t.spec.entity === "city" && t.spec.statistic === "count" && t.spec.rank?.n === 10
+    && t.spec.measure === "violent_crime" && t.spec.more?.join() === "property_crime" && t.spec.period.form === "year" && t.spec.period.year === 2025,
+  `"top 10 crimes in 2025" is the top 10 cities by violent and property crime counts (${JSON.stringify(t)})`);
+}
+// Item 1: a crime named alone ranks by count.
+const r7 = spec("highest murder in 2025");
+check(r7?.type === "rank" && r7.statistic === "count" && r7.measure === "murder", "\"highest murder\" alone is the count");
+
 // ---- N7 change ----
 const c1 = spec("change in robberies in Fort Worth, Texas from 2023 to 2025");
 check(c1?.type === "change" && c1.earlier === 2023 && c1.later === 2025, "N7: the earlier year is the base");

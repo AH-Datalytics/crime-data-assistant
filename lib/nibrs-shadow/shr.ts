@@ -599,7 +599,7 @@ export function filterWords(f: ShrFilter): string {
  * population asked (the same set as every other city ranking, citySql); only agencies that filed Homicide Reports in
  * every year of the period are ranked, so no city is compared on a partial period (S3: a filing gap is blank, never 0).
  */
-export type ShrRanking = { measure: "murder" | "homicide" | "homicide_all"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
+export type ShrRanking = { measure: "murder" | "homicide" | "homicide_all"; filters: ShrFilter[]; share: boolean; from: string; to: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null; /** Cities with at least this many murder victims in the period (the question's "min 30 murders"). */ minTotal?: number };
 
 export function shrRankingSql(rk: ShrRanking, build: ShrBuild, hist: HistoricalBuild): string {
   const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: [], breakdown: null, share: false };
@@ -623,14 +623,14 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   if (rk.filters.some((f) => f.dim.startsWith("offender.")))
     return { kind: "shr-decline", explanation: "This isn't available: cities ranked by the offenders' details." };
   const got = execute(shrRankingSql(rk, build, hist));
-  const entries = got.map((r) => {
+  const entries = got.filter((r) => !rk.minTotal || Number(r[5]) >= rk.minTotal).map((r) => {
     const total = Number(r[5]), matched = Number(r[6]), filedAll = r[4] === true || r[4] === 1;
     const value = !filedAll ? null : rk.share ? (total > 0 ? Math.round((matched * 1000) / total) / 10 : null) : matched;
     return { ori: String(r[0]), name: `${String(r[1])}, ${ORI_STATE[String(r[2])] ?? String(r[2])}`, state: ORI_STATE[String(r[2])] ?? String(r[2]), population: num(r[3]), value, known: value !== null, filedAll, total, matched };
   });
   const sq: ShrQuestion = { measure: rk.measure, unit: "victims", place: { kind: "national" }, from: rk.from, to: rk.to, grain: "total", filters: rk.filters, breakdown: null, share: rk.share,
     ranking: { direction: rk.direction, limit: rk.limit, minPopulation: rk.minPopulation } };
-  const floor = rk.minPopulation ? ` with a population of ${fmt(rk.minPopulation)} or more` : "";
+  const floor = (rk.minPopulation ? ` with a population of ${fmt(rk.minPopulation)} or more` : "") + (rk.minTotal ? ` and at least ${fmt(rk.minTotal)} murder victims` : "");
   const years = periodWords(rk.from, rk.to);
   if (!entries.length) return { kind: "shr-decline", explanation: `Crime Index has no city agencies${floor} to rank for ${years}.` };
   if (!entries.some((e) => e.filedAll)) return { kind: "shr-decline", explanation: `No city agency${floor} filed Homicide Reports in every year of ${years}.` };
@@ -643,7 +643,7 @@ export function answerShrRanking(rk: ShrRanking, build: ShrBuild, hist: Historic
   const most = rk.direction === "top" ? (rk.share ? "highest" : "most") : (rk.share ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
   // A title that reads back the question's datapoints (Jeff 2026-11-17), then plain notes, then the source line.
-  const text = [`United States ${titleCase(what)} by City${rk.minPopulation ? `, Population ${fmt(rk.minPopulation)} or More` : ""}, ${titleTimeframe(years)}`,
+  const text = [`${titleCase(`cities with the ${most} ${what}`)}${rk.minPopulation ? `, Population ${fmt(rk.minPopulation)} or More` : ""}${rk.minTotal ? `, at Least ${fmt(rk.minTotal)} Murder Victims` : ""}, ${titleTimeframe(years)}`,
     `City agencies that filed Homicide Reports in ${fromY === toY ? fromY : `every year from ${fromY} to ${toY}`}${rk.share ? " and had at least one murder victim" : ""} are ranked, and ties are ordered by agency name.`];
   if (tie) { const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`; text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`); }
   // Jeff 2026-11-15: no left-out city is named; one plain note.

@@ -131,7 +131,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const most = rankT.direction === "top" ? (isRate ? "highest" : "most") : (isRate ? "lowest" : "fewest");
     // A floor the question gave and more agencies over it than the 50-row cap: "Top 50 of N agencies", and a note that asking for all shows every row.
     const capped = !!floor && rankT.limit === 50 && agencies.length > 50;
-    lines.push(`${where} ${titleCase(what)}${isRate ? " per 100,000" : ""} by City${floor ? `, Population ${floor.op === ">" ? "Over " : ""}${fmt(Number(floor.value))}${floor.op === ">" ? "" : " or More"}` : ""}${capped ? `, Top 50 of ${fmt(agencies.length)} Agencies` : ""}, ${titleTimeframe(periodTitle(period, periodWords))}`);
+    // Jeff 2026-11-24 (ranked table card): "Cities in Texas With the Most Murders, 2024".
+    lines.push(`${titleCase(`cities in ${where} with the ${most} ${what}${isRate ? " per 100,000" : ""}`)}${floor ? `, Population ${floor.op === ">" ? "Over " : ""}${fmt(Number(floor.value))}${floor.op === ">" ? "" : " or More"}` : ""}${capped ? `, Top 50 of ${fmt(agencies.length)} Agencies` : ""}, ${titleTimeframe(periodTitle(period, periodWords))}`);
     partLine();
     lines.push(`The ${ranked.length} agencies with the ${most} ${what}${isRate ? " per 100,000" : ""} are shown.${capped ? " Asking for all of them shows every row." : ""}`);
     if (floor && noPopCount) lines.push(`${fmt(noPopCount)} ${noPopCount === 1 ? "agency has" : "agencies have"} no FBI population on file.`);
