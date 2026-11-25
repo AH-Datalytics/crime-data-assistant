@@ -23037,8 +23037,7 @@
     "outcome": "answer",
     "source": "historical",
     "source_any": [
-     "historical",
-     "nibrs"
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -23051,7 +23050,7 @@
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data."
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Annual Part I counts or rates use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
    }
   },
   {
