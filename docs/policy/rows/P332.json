@@ -1,0 +1,12 @@
+{
+  "id": "P332",
+  "topic": "Already decided",
+  "decision needed": "None: already decided",
+  "situation (example wording)": "\"What is the exact agency name for Nashville in the dataset?\", \"What agencies match Dallas County in Texas?\", \"which cities are represented in Pennsylvania?\"",
+  "what the app does today": "The generic line \"Current Trends covers United States agencies that report monthly ... ask about a city to see if it is included.\" for all three.",
+  "proposed behavior": "A lookup from the agency lists. An agency or county question lists the matching ORIs with name, state, type and source (Nashville: TN0190100, the Metropolitan Nashville Police Department; Dallas County: the county agency TX0570000, every agency under county code TX057 and every agency whose NIBRS records name the county as primary, such as Dallas Police TXDPD0000). A state question gives the agency count in the FBI's NIBRS agency list and the count with Crime Index counts, naming which is which, both counted from the release tables the answers read (agency_year and the Crime Index build's agency_crime), never from a fixture. With no match the generic line stays.",
+  "exact default or choices offered": "None: one answer.",
+  "why": "Jeff 2026-11-25 via the Coordinator: replace the generic coverage line with real lookups.",
+  "status": "Decided (Jeff 2026-11-25). Pennsylvania Crime Index count now read from agency_crime (1,391 ORIs on the 2026-11-19 build).",
+  "test cases": "scripts/test-nibrs-coverage.ts (Nashville, Dallas County, Pennsylvania)."
+}
