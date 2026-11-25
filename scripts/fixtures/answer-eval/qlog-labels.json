@@ -47382,23 +47382,16 @@
    "question": "provide the values and agencies for the top 20 shoplifting incidents with the highest values stolen in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "That data is not available."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
     "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS."
+    "notes": "P307 (Jeff 2026-11-24): a ranking of individual incidents declines for now; the site shows totals by place, not incident rows."
    }
   },
   {

@@ -184,6 +184,8 @@ export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
 /** Asks about how the data is built or what it holds that no table answers (Jeff 2026-11-23): one plain sentence, whatever crime is named. */
 const DATA_ABSENT = /\buse\s+of\s+force\b|\bnibrs[\s-]+compliant\b|\bunweighted\b|\bhierarchy\s+rule\b|\bwhy\b[^?]*\bdata\b[^?]*\b(?:go|goes|start|starts|begin|begins)\s+back\b/i;
 const DATA_ABSENT_TEXT = "That data is not available.";
+/** P307 (Jeff 2026-11-24): a ranking of individual incidents ("top 20 shoplifting incidents with the highest values stolen") declines; the site shows totals by place, not incident rows. */
+const INCIDENT_RANKING = /\b(?:top|highest|largest|biggest|costliest|most\s+expensive)\s+(?:\d+\s+)?(?:individual\s+)?[^?.]*?\bincidents?\b[^?.]*\b(?:highest|largest|biggest|greatest|most)\s+(?:dollar\s+)?(?:values?|loss(?:es)?|amounts?)\b|\b(?:top|highest|largest|biggest)\s+(?:\d+\s+)?individual\s+[a-z]+\b/i;
 /** Jeff 2026-11-24: misdemeanor/felony arrests (NIBRS does not record the class of an arrest) and a national overall/violent rate by month (national rates are annual, from Historical). */
 const MISDEMEANOR_ARREST = /\b(?:misdemeanou?rs?|felony|felonies)\s+arrests?\b|\barrests?\s+(?:for|of|as)\s+(?:a\s+)?(?:misdemeanou?rs?|felony|felonies)\b/i;
 const DAILY_WORDS = /\bper\s+day\b|\beach\s+day\b|\bby\s+(?:the\s+)?day\b|\bday[-\s]by[-\s]day\b|\bdaily\b/i;
@@ -1257,6 +1259,7 @@ export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcom
   if (DATA_ABSENT.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (MISDEMEANOR_ARREST.test(question)) return decline("unsupported_capability", MISDEMEANOR_TEXT);
   if (NATIONAL_MONTHLY_RATE.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
+  if (INCIDENT_RANKING.test(question)) return decline("unsupported_capability", DATA_ABSENT_TEXT);
   if (!depsIn.rewritten && !depsIn.checkingOffer && !DATA_ABSENT.test(question) && isOpenEnded(question, Number(depsIn.release.lastMonth.slice(0, 4))))
     return { kind: "clarify", about: "which part to show", question, options: [{ label: "Name a crime", entry: "which crime" }, { label: "Name a place", entry: "which city or agency" }, { label: "Name the years", entry: "which years" }] };
   { const pm = peakMeasure(question); if (pm && depsIn.historical) { const r = answerSrsPeak(pm); if (r.kind === "srs") return r as ShadowOutcome; } }
