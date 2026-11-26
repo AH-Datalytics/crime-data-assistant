@@ -866,7 +866,7 @@
     "source_any": [
      "rtci"
     ],
-    "answer": "the figures asked for",
+    "answer": "Murders January through July 2021 for Baltimore city, Los Angeles, New York City and DC from Current Trends; says Oakland has no monthly data for 2021.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -876,8 +876,8 @@
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-22",
-    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state (P28); through July is P126 By rule from the question text; second labeler NIBRS Model 2026-11-22 Monthly city count, 2017 or later: Current Trends only (Coordinator, Jeff 2026-11-25; Current Trends monthly data runs Jan 2017 to Sep 2026)."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "P196 (Jeff 2026-11-22 \"Any 2+ places\"): a city named beside another place is that city's police department; Los Angeles, California names its state (P28); through July is P126 By rule from the question text; second labeler NIBRS Model 2026-11-22 Monthly city count, 2017 or later: Current Trends only (Coordinator, Jeff 2026-11-25; Current Trends monthly data runs Jan 2017 to Sep 2026). | Owner card 2026-11-26: Oakland has no 2021 monthly data in Current Trends or Homicide Reports (Runner 2026-11-26): say so and give the 2021 yearly total"
    }
   },
   {
@@ -1252,19 +1252,22 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "the figures asked for, from 1985 on",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Summer-only figures require monthly data rather than annual Historical totals."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "Summer-only figures require monthly data rather than annual Historical totals. | Owner card 2026-11-26: open-ended history for one city: Homicide Reports from 1985"
    }
   },
   {
@@ -2286,16 +2289,19 @@
    "question": "can you plot shootings and murders since 2018 indexed to 2018?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "no choice of the shootings ask can run for this question (indexing)"
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
+    "about_any": [
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09s",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-16",
-    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator). | Owner card 2026-11-26: shootings get the choose-one line (owner wording 2026-11-26)"
    }
   },
   {
@@ -4697,9 +4703,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -4707,7 +4713,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -8872,8 +8878,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "answer": "one coverage sentence: Current Trends covers United States agencies that report monthly, 2017 to present; ask about a city to see if it is included.",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "List of the law enforcement agencies in Dallas County, Texas",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -8883,8 +8892,8 @@
     "status": "reviewed",
     "rule": "P292",
     "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-24",
-    "notes": "Coverage question: one coverage sentence only (P292); replaces the 11-09 agency-table answer."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "Coverage question: one coverage sentence only (P292); replaces the 11-09 agency-table answer. | Owner card 2026-11-26: agency table for a county lists agencies from NIBRS"
    }
   },
   {
@@ -10641,7 +10650,10 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "methodology",
+    "source_any": [
+     "methodology"
+    ],
     "answer": "the FBI's definition, named as the FBI's",
     "meaning": null,
     "values": {
@@ -10652,8 +10664,8 @@
     "status": "reviewed",
     "rule": "R06",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D1 (Jeff 2026-11-04): FBI definitions"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D1 (Jeff 2026-11-04): FBI definitions | Owner card 2026-11-26: definition/data-source questions answer from methodology"
    }
   },
   {
@@ -12333,19 +12345,22 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
+    "source": "methodology",
+    "source_any": [
+     "methodology"
+    ],
+    "answer": "an explanation from the FBI NIBRS user manual, the SRS user manual or the UCR Handbook",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks for the source of the data."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "This asks for the source of the data. | Owner card 2026-11-26: definition/data-source questions answer from methodology"
    }
   },
   {
@@ -12384,19 +12399,23 @@
    "question": "el paso, texas thefts compared to other texas large cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which cities",
-    "about_any": [
-     "which cities"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "thefts in El Paso (the city) compared with other large Texas cities, by year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R11",
     "drafted_by": "rules-v1",
-    "reviewed_by": "full-check-2026-11-26",
-    "notes": "several places have this name (P26 for New York) | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: El Paso beside other cities is the city (11-25); 'other texas large cities' asks which cities (P305, Card 29, same as 'los angeles homicide rate in 2025 vs. other large cities'); period is never asked"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "several places have this name (P26 for New York) | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: El Paso beside other cities is the city (11-25); 'other texas large cities' asks which cities (P305, Card 29, same as 'los angeles homicide rate in 2025 vs. other large cities'); period is never asked | Owner card 2026-11-26: El Paso, Texas alone asks which El Paso; beside other Texas cities it is the city"
    }
   },
   {
@@ -12600,17 +12619,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "the whole question",
     "about_any": [
-     "which Kansas City"
-    ],
-    "about": "which Kansas City"
+     "the whole question"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-25 family rulings",
-    "notes": "Card 4 and two-place rule: Kansas City always asks; no crime question (Jeff 2026-11-25 family rulings)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "Card 4 and two-place rule: Kansas City always asks; no crime question (Jeff 2026-11-25 family rulings) | Owner card 2026-11-26: no crime named: generic line before which Kansas City"
    }
   },
   {
@@ -14017,16 +14036,19 @@
    "question": "Can you compare shootings in the cities of New York, Philadelphia, Boston, Los Angeles, Chicago, and Baltimore for the years 2018-2025?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "no choice of the shootings ask can run for this question (several cities)"
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
+    "about_any": [
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09s",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-16",
-    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator)."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "P102 asks only when at least one choice runs; none does for this question (Jeff 2026-11-16, through the coordinator). | Owner card 2026-11-26: shootings get the choose-one line (owner wording 2026-11-26)"
    }
   },
   {
@@ -14216,19 +14238,26 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci",
+     "nibrs",
+     "shr",
+     "hate_crime"
+    ],
+    "answer": "a lookup (coverage): says which states are missing, by dataset",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This is a coverage lookup under R07."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "This is a coverage lookup under R07. | Owner card 2026-11-26: coverage questions name no dataset: coverage lookup across all datasets"
    }
   },
   {
@@ -22340,8 +22369,15 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "hate_crime",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci",
+     "nibrs",
+     "shr",
+     "hate_crime"
+    ],
+    "answer": "a lookup (coverage): says which datasets have New York City data",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -22351,8 +22387,8 @@
     "status": "reviewed",
     "rule": "R07",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a capability gap today | Owner card 2026-11-26: coverage questions name no dataset: coverage lookup across all datasets"
    }
   },
   {
@@ -27307,23 +27343,19 @@
    "question": "Where are the crime trends?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. | Owner card 2026-11-26: bare crime with no place gets the generic line"
    }
   },
   {
@@ -27874,23 +27906,19 @@
    "question": "crime data",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. P182 supplies violent and property crime; use historical annual figures. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. | Owner card 2026-11-26: bare crime with no place gets the generic line"
    }
   },
   {
@@ -29756,19 +29784,22 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
+    "source": "methodology",
+    "source_any": [
+     "methodology"
+    ],
+    "answer": "an explanation from the FBI NIBRS user manual, the SRS user manual or the UCR Handbook",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks about data availability."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "This asks about data availability. | Owner card 2026-11-26: definition/data-source questions answer from methodology"
    }
   },
   {
@@ -33534,7 +33565,7 @@
     "source_any": [
      "historical"
     ],
-    "answer": "the figures asked for",
+    "answer": "Berkeley and national clearance rates; says state and regional clearance rates are not available.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -33544,8 +33575,8 @@
     "status": "reviewed",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "jeff-2026-11-25 label review",
-    "notes": "P18 prohibits the requested statewide comparison. A7: answerable, not a decline (Jeff 2026-11-25 label review)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "P18 prohibits the requested statewide comparison. A7: answerable, not a decline (Jeff 2026-11-25 label review) | Owner card 2026-11-26: answer what exists, say state and regional are not available"
    }
   },
   {
@@ -35348,23 +35379,16 @@
    "question": "Can I create an accurate crime rate for every county in the United States from 2009-2023?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Use historical annual agency coverage for the requested reporting comparison. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Use historical annual agency coverage for the requested reporting comparison. One source per plain city count or rate (Jeff 2026-11-25): yearly figure, Historical only. | Owner card 2026-11-26: county-wide sums get the county decline"
    }
   },
   {
@@ -35806,20 +35830,19 @@
    "question": "do you have shootings data",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
+    "about_any": [
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks about data capabilities rather than a shooting count."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "This asks about data capabilities rather than a shooting count. | Owner card 2026-11-26: shootings get the choose-one line (owner wording 2026-11-26)"
    }
   },
   {
@@ -38995,23 +39018,19 @@
    "question": "El paso texas scorecard",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the violent and property crime composite for the place, by year",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which El Paso",
+    "about_any": [
+     "which El Paso"
+    ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R09",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-25 label review",
-    "notes": "D31 G111: El Paso, Texas is the only El Paso agency; place only = composite (Jeff 2026-11-25 label review)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D31 G111: El Paso, Texas is the only El Paso agency; place only = composite (Jeff 2026-11-25 label review) | Owner card 2026-11-26: El Paso, Texas alone asks which El Paso; beside other Texas cities it is the city"
    }
   },
   {
@@ -39610,23 +39629,16 @@
    "question": "Police Staffing Per Year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Staffing is reported by individual agencies; there is no state or national staffing total."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Police staffing and annual crime comparisons use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Police staffing and annual crime comparisons use historical data. One source (Jeff 2026-11-25, unsure-116): yearly figure, Historical only. | Owner card 2026-11-26: no-place staffing gets the staffing decline"
    }
   },
   {
@@ -40068,19 +40080,22 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
+    "source": "methodology",
+    "source_any": [
+     "methodology"
+    ],
+    "answer": "an explanation from the FBI NIBRS user manual, the SRS user manual or the UCR Handbook",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R03>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D1 permits explaining data methods and limitations."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D1 permits explaining data methods and limitations. | Owner card 2026-11-26: definition/data-source questions answer from methodology"
    }
   },
   {
@@ -45162,9 +45177,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -45172,7 +45187,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -48105,16 +48120,23 @@
    "question": "How many agencies in PA are NIBRS compliant?",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "That data is not available."
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the number of Pennsylvania agencies reporting to NIBRS; does not equate reporting with compliance certification",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P247-data-absent",
     "drafted_by": "declines-owner",
-    "reviewed_by": "jeff-2026-11-23",
-    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "Jeff 2026-11-23 (declines owner Group 2): the data is not in the release; plain decline. | Owner card 2026-11-26: NIBRS agency count answered from NIBRS"
    }
   },
   {
@@ -52764,9 +52786,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -52774,7 +52796,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -58349,9 +58371,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -58359,7 +58381,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -59041,9 +59063,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -59051,7 +59073,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -59759,9 +59781,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -59769,7 +59791,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -61552,9 +61574,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -61562,7 +61584,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -62440,9 +62462,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -62450,7 +62472,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -64233,23 +64255,17 @@
    "question": "show me attempted murders",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "source_any": [
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Attempted murders are not separately available in these data.",
+    "wording": "Attempted murders are not separately available in these data."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Attempted murder is classified with assaults, requiring NIBRS incident detail."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Attempted murder is classified with assaults, requiring NIBRS incident detail. | Owner card 2026-11-26: attempted murders declined"
    }
   },
   {
@@ -67010,9 +67026,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -67020,7 +67036,7 @@
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "The misspelling denotes shootings and requires D14 clarification. | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "The misspelling denotes shootings and requires D14 clarification. | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -67545,9 +67561,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -67555,7 +67571,7 @@
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "Gunshot victimization needs the D14 distinction. | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "Gunshot victimization needs the D14 distinction. | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -73358,17 +73374,23 @@
    "question": "murders per month in 2021 in Oakland",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "There is no data available for <crime> in <place>.",
-    "wording": "There is no data available for <crime> in <place>."
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "Says there is no monthly 2021 murder data for Oakland and gives the 2021 yearly total (127 murders).",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-25 label review",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) G155: one plain decline sentence (B4) (Jeff 2026-11-25 label review)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) G155: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Owner card 2026-11-26: Oakland has no 2021 monthly data in Current Trends or Homicide Reports (Runner 2026-11-26): say so and give the 2021 yearly total"
    }
   },
   {
@@ -73409,9 +73431,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -73419,7 +73441,7 @@
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "People shot supplies the measure; no separate crime clarification is needed. | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "People shot supplies the measure; no separate crime clarification is needed. | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -75283,9 +75305,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -75293,7 +75315,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -75358,9 +75380,9 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -75368,7 +75390,7 @@
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "spot-check-2026-11-25",
-    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) Spot check (2026-11-25): Card 22: gun violence gets the same choose-one question as shootings (Jeff 2026-11-25 family rulings). Family sweep (2026-11-25): aligned to the standard shootings decline. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree)."
+    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) Spot check (2026-11-25): Card 22: gun violence gets the same choose-one question as shootings (Jeff 2026-11-25 family rulings). Family sweep (2026-11-25): aligned to the standard shootings decline. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree). | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -76064,9 +76086,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -76074,7 +76096,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -76350,9 +76372,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -76360,7 +76382,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -76727,16 +76749,23 @@
    "question": "Show the rolling 12-month total of homicides involving offenders under age 18 and offenders age 50 and older",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Rolling demographic breakdowns are unsupported."
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "United States rolling 12-month murders with offenders under 18 and with offenders 50 and older",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P89 explicitly leaves rolling breakdowns declined."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "P89 explicitly leaves rolling breakdowns declined. | Owner card 2026-11-26: rolling murders by offender age answered from Homicide Reports"
    }
   },
   {
@@ -78465,9 +78494,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -78475,7 +78504,7 @@
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Full check 2026-11-26 (Fable + Codex): 11-25 family ruling: 'gun violence' gets the same choose-one question as 'shootings' (as in shr-53b3a9db91)"
+    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Full check 2026-11-26 (Fable + Codex): 11-25 family ruling: 'gun violence' gets the same choose-one question as 'shootings' (as in shr-53b3a9db91) | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -78591,9 +78620,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -78601,7 +78630,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -78696,9 +78725,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -78706,7 +78735,7 @@
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Full check 2026-11-26 (Fable + Codex): 11-25 family ruling: 'gun violence' gets the same choose-one question as 'shootings' (as in shr-53b3a9db91)"
+    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Full check 2026-11-26 (Fable + Codex): 11-25 family ruling: 'gun violence' gets the same choose-one question as 'shootings' (as in shr-53b3a9db91) | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -79275,8 +79304,13 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "shr",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "shr",
+     "nibrs"
+    ],
+    "answer": "a lookup (coverage): says which datasets have data by age for 2003 through 2025",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -79286,8 +79320,8 @@
     "status": "reviewed",
     "rule": "R07",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a capability gap today | Owner card 2026-11-26: coverage questions name no dataset: coverage lookup across all datasets"
    }
   },
   {
@@ -79507,8 +79541,15 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "shr",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci",
+     "nibrs",
+     "shr",
+     "hate_crime"
+    ],
+    "answer": "a lookup (coverage): says which datasets have New York City data",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -79518,8 +79559,8 @@
     "status": "reviewed",
     "rule": "R07",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a capability gap today | Owner card 2026-11-26: coverage questions name no dataset: coverage lookup across all datasets"
    }
   },
   {
@@ -79640,9 +79681,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -79650,7 +79691,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -81978,11 +82019,11 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci"
+     "shr"
     ],
-    "answer": "the figures asked for",
+    "answer": "the figures asked for, from 1985 on",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -81992,8 +82033,8 @@
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) One source per plain city count or rate (Jeff 2026-11-25): monthly or recent figure, Current Trends only. | Owner card 2026-11-26: open-ended history for one city: Homicide Reports from 1985"
    }
   },
   {
@@ -82089,9 +82130,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
      "place"
     ]
    },
@@ -82100,7 +82141,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -82163,9 +82204,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -82173,7 +82214,7 @@
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "audit-2026-11-26",
-    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) Audit 2026-11-26 (both checkers agree): family ruling 11-25: gun violence gets the shootings choose-one question, not a decline."
+    "notes": "P31 explicitly declines gun violence. G165: one plain decline sentence (B4) (Jeff 2026-11-25 label review) Audit 2026-11-26 (both checkers agree): family ruling 11-25: gun violence gets the shootings choose-one question, not a decline. | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -82451,9 +82492,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -82461,7 +82502,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -82568,8 +82609,12 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "shr",
-    "answer": "the FBI's definition, named as the FBI's",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "rtci"
+    ],
+    "answer": "a lookup (coverage): says which months of 2026 each dataset has",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -82579,8 +82624,8 @@
     "status": "reviewed",
     "rule": "R06",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D1 (Jeff 2026-11-04): FBI definitions"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D1 (Jeff 2026-11-04): FBI definitions | Owner card 2026-11-26: coverage questions name no dataset: coverage lookup across all datasets"
    }
   },
   {
@@ -82707,9 +82752,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -82717,7 +82762,7 @@
     "rule": "R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -84040,17 +84085,23 @@
    "question": "murders per month in 2021 in Oakland",
    "previous": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "There is no data available for <crime> in <place>.",
-    "wording": "There is no data available for <crime> in <place>."
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "Says there is no monthly 2021 murder data for Oakland and gives the 2021 yearly total (127 murders).",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-25 label review",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) G155: one plain decline sentence (B4) (Jeff 2026-11-25 label review)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) G155: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Owner card 2026-11-26: Oakland has no 2021 monthly data in Current Trends or Homicide Reports (Runner 2026-11-26): say so and give the 2021 yearly total"
    }
   },
   {
@@ -88231,15 +88282,16 @@
    "question": "countywide total",
    "previous": "calculate for marion county, indiana",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out | Owner card 2026-11-26: county-wide sums get the county decline"
    }
   },
   {
@@ -88987,9 +89039,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -88997,7 +89049,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "The new shooting measure and inherited Baltimore both remain ambiguous. | Full check 2026-11-26 (Fable + Codex): 11-25 family rulings: Baltimore beside other places is Baltimore city, so 'which Baltimore' is not an accepted ask; shootings get the standard choose-one line"
+    "notes": "The new shooting measure and inherited Baltimore both remain ambiguous. | Full check 2026-11-26 (Fable + Codex): 11-25 family rulings: Baltimore beside other places is Baltimore city, so 'which Baltimore' is not an accepted ask; shootings get the standard choose-one line | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -89311,11 +89363,13 @@
    "previous": "Show me Louisville Kentucky data",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "historical",
     "source_any": [
+     "historical",
      "rtci"
     ],
-    "answer": "Says the latest month of Louisville, Kentucky data in Current Trends",
+    "answer": "says the latest year (and latest month in Current Trends) of the Louisville, Kentucky data",
+    "meaning": null,
     "values": {
      "status": "pending"
     }
@@ -89324,8 +89378,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a true reply; data coverage/source question, no ruling says answer or leave out; proposed = answer."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a true reply; data coverage/source question, no ruling says answer or leave out; proposed = answer. | Owner card 2026-11-26: coverage questions name no dataset: coverage lookup across all datasets"
    }
   },
   {
@@ -90071,11 +90125,12 @@
    "previous": "do you have this data for may 2026",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "methodology",
     "source_any": [
-     "rtci"
+     "methodology"
     ],
-    "answer": "Names the source of the data (Crime Index Current Trends)",
+    "answer": "an explanation from the FBI NIBRS user manual, the SRS user manual or the UCR Handbook",
+    "meaning": null,
     "values": {
      "status": "pending"
     }
@@ -90084,8 +90139,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a true reply; data coverage/source question, no ruling says answer or leave out; proposed = answer."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a true reply; data coverage/source question, no ruling says answer or leave out; proposed = answer. | Owner card 2026-11-26: definition/data-source questions answer from methodology"
    }
   },
   {
@@ -94287,8 +94342,11 @@
    "previous": "I want to know the percent of each of the index crimes that were cleared at the national level in 2024",
    "expected": {
     "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
+    "source": "methodology",
+    "source_any": [
+     "methodology"
+    ],
+    "answer": "an explanation from the FBI NIBRS user manual, the SRS user manual or the UCR Handbook",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -94298,8 +94356,8 @@
     "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a follow-up to an answerable question | Owner card 2026-11-26: definition/data-source questions answer from methodology"
    }
   },
   {
@@ -95563,9 +95621,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -95573,7 +95631,7 @@
     "rule": "F1+R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -98858,15 +98916,23 @@
    "question": "first six months of each calendar year",
    "previous": "Baltimore city homicides",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci"
+    ],
+    "answer": "Baltimore city homicides, January through June of each year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out | Owner card 2026-11-26: short reply after a real earlier question is answered"
    }
   },
   {
@@ -99625,15 +99691,23 @@
    "question": "murder rate",
    "previous": "murders",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "United States murder rate per year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out | Owner card 2026-11-26: short reply after a real earlier question is answered"
    }
   },
   {
@@ -101639,9 +101713,9 @@
    "previous": "Washington State",
    "expected": {
     "outcome": "clarify",
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -101649,7 +101723,7 @@
     "rule": "F4",
     "drafted_by": "rules-v1",
     "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up (Washington State carried over); shootings get the choose-one question. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree)."
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up (Washington State carried over); shootings get the choose-one question. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree). | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -105954,15 +106028,16 @@
    "question": "countywide total",
    "previous": "show me violent crime incidents by offender age for tarrant county, texas",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "decline",
+    "source": null,
+    "reason": "county-wide sums are declined, with the county's own agency offered"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out | Owner card 2026-11-26: county-wide sums get the county decline"
    }
   },
   {
@@ -109430,15 +109505,23 @@
    "question": "Show as a rate",
    "previous": "Intimate partner homicide from 2022 to 2025",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "United States intimate partner homicides per 100,000 people, 2022 to 2025",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out | Owner card 2026-11-26: short reply after a real earlier question is answered"
    }
   },
   {
@@ -110971,17 +111054,23 @@
    "question": "murders per month in 2021 in Oakland",
    "previous": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "There is no data available for <crime> in <place>.",
-    "wording": "There is no data available for <crime> in <place>."
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "Says there is no monthly 2021 murder data for Oakland and gives the 2021 yearly total (127 murders).",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "jeff-2026-11-25 label review",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) G155: one plain decline sentence (B4) (Jeff 2026-11-25 label review)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place) G155: one plain decline sentence (B4) (Jeff 2026-11-25 label review) | Owner card 2026-11-26: Oakland has no 2021 monthly data in Current Trends or Homicide Reports (Runner 2026-11-26): say so and give the 2021 yearly total"
    }
   },
   {
@@ -111177,15 +111266,23 @@
    "question": "Show me just 2023 to 2025",
    "previous": "What percentage of homicides in Durham, NC have involved firearms",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "share of homicides in Durham, NC that involved firearms, 2023 to 2025",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out | Owner card 2026-11-26: short reply after a real earlier question is answered"
    }
   },
   {
@@ -111552,9 +111649,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -111562,7 +111659,7 @@
     "rule": "F1+R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "full-check-2026-11-26",
-    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks"
+    "notes": "D14 | Full check 2026-11-26 (Fable + Codex): sibling of a full-check fix: D14 / 11-25: shootings get the choose-one question only; a missing period is never asked and no place means national, so 'place' and 'period' are removed from the accepted asks | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -112788,16 +112885,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ],
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-25 family rulings",
-    "notes": "Card 22: gun violence gets the same choose-one question as shootings (Jeff 2026-11-25 family rulings)"
+    "notes": "Card 22: gun violence gets the same choose-one question as shootings (Jeff 2026-11-25 family rulings) | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -113164,9 +113261,9 @@
    "previous": "how many shootings every year since 2000",
    "expected": {
     "outcome": "clarify",
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -113174,7 +113271,7 @@
     "rule": "F4",
     "drafted_by": "rules-v1",
     "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up on a 'shootings' question; shootings get the choose-one question. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree)."
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up on a 'shootings' question; shootings get the choose-one question. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree). | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -113857,16 +113954,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ],
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": "jeff-2026-11-25 family rulings",
-    "notes": "Card 22: gun violence gets the same choose-one question as shootings (Jeff 2026-11-25 family rulings)"
+    "notes": "Card 22: gun violence gets the same choose-one question as shootings (Jeff 2026-11-25 family rulings) | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -113983,9 +114080,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -113993,7 +114090,7 @@
     "rule": "F1+R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -115042,9 +115139,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -115052,7 +115149,7 @@
     "rule": "F1+R09s",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D14"
+    "notes": "D14 | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
@@ -115520,9 +115617,9 @@
    "previous": "shooting incidents in Houston",
    "expected": {
     "outcome": "clarify",
-    "about": "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS).",
+    "about": "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS).",
     "about_any": [
-     "Non-fatal shooting data is not available. You can choose firearm murders or aggravated assault involving a firearm (NIBRS)."
+     "Non-fatal shooting data is not available. You can choose firearm murders (SHR or NIBRS) or aggravated assault involving a firearm (NIBRS)."
     ]
    },
    "label": {
@@ -115530,7 +115627,7 @@
     "rule": "F4",
     "drafted_by": "rules-v1",
     "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up; 'people shot' gets the shootings choose-one question. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree)."
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up; 'people shot' gets the shootings choose-one question. Checker fix (2026-11-25): shootings: choose-one clarify, not decline (Fable and Codex agree). | Owner card 2026-11-26: shootings line now names SHR or NIBRS for firearm murders."
    }
   },
   {
