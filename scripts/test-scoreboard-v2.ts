@@ -208,6 +208,17 @@ try {
     assert.equal(wordingMatches("Cost: $5 (a+b).", "cost: $5 (a+b)."), true);
   });
 
+  check("coverage replies: source coverage, methodology or nibrs labels only, never verified", () => {
+    const cov: Got = { kind: "answer", source: "coverage", ms: 1, digest: "d" };
+    const lab = (source: string, id = "cov"): Label => ({ ...label(id), expected: { outcome: "answer", source } });
+    assert.equal(bucket(lab("methodology"), cov), "unverified");
+    assert.equal(bucket(lab("nibrs"), cov), "unverified");
+    assert.equal(bucket(lab("historical"), cov), "wrong answer");
+    assert.equal(bucket(lab("rtci"), cov), "wrong answer");
+    assert.equal(bucket({ ...lab("shr"), expected: { outcome: "answer", source: "shr", source_any: ["nibrs"] } }, cov), "unverified");
+    assert.equal(bucket({ ...lab("rtci", "first"), kind: "follow-up" }, cov), "wrong answer");
+  });
+
   check("compare ignores what an older run did not record", () => {
     const old: Got = { kind: "decline", source: null, reason: "scope", ms: 5 };
     assert.equal(sameOutcome(old, { ...old, ms: 9, text: "Metro area data is not available." }), true);
