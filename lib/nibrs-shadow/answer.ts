@@ -935,7 +935,7 @@ const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee
 /** A NIBRS breakdown or comparison (Jeff 2026-11-25: with no period it covers every year the place has): a split by a person or weapon, NIBRS named, or the clearance types. */
 // A percentage or share with no year keeps the latest complete year, and says so (Jeff 2026-11-26); only count breakdowns cover every NIBRS year.
 const shareAsk = (typed: string): boolean => /\b(?:percent(?:age)?s?|shares?|proportions?|ratios?)\b|%/i.test(typed);
-const nibrsBreakdownAsk = (typed: string): boolean => !shareAsk(typed) && /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\bnibrs\b|\bexceptional\b/i.test(typed);
+const nibrsBreakdownAsk = (typed: string): boolean => !shareAsk(typed) && /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\bnibrs\b|\bexceptional\b|\bweapons?\b/i.test(typed);
 /** The builders' side of the same test: the reader's trimmed question can lose the words (NIBRS, a clearance type), so its parts and flags are read too. */
 function nibrsEveryAsk(l: RequestLedger, deps: ShadowDeps): boolean {
   return nibrsBreakdownAsk(`${l.question}\n${deps.guardText ?? ""}`) || !!flags(l).nibrsAsked || l.parts.some((p) => p.clause === 0 && /\bexceptional\b/i.test(p.text));
@@ -1069,7 +1069,9 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
   // A latest-year default ("No year was given, so the latest complete year, 2025, is shown.") means the answer is one year, so an earlier every-year default in the same chain is not said.
   const latestYear = [...notes, ...x.delivered.text].some((n) => /^No year was given, so the latest complete year/.test(n));
-  const nibrsYears = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `NIBRS data covers ${first.slice(0, 4)} to ${last.slice(0, 4)}, so every year is shown.` : "";
+  // The years come from the title's span ("..., 2017-2025"), since a breakdown's first column is not always the year.
+  const titleSpan = /(?:^|, )(\d{4})-(\d{4})$/.exec(String(x.delivered.text[0] ?? ""));
+  const nibrsYears = titleSpan && titleSpan[1] !== titleSpan[2] ? `NIBRS data covers ${titleSpan[1]} to ${titleSpan[2]}, so every year is shown.` : /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `NIBRS data covers ${first.slice(0, 4)} to ${last.slice(0, 4)}, so every year is shown.` : "";
   const say = notes.filter((n) => n || !latestYear).map((n) => (n === NIBRS_EVERY_NOTE ? nibrsYears : n ? n : `No years were given, so every year in the data is shown${span}.`)).filter((n) => n);
   // A sentence the answer already carries is not said twice (a series built "by year" says its own "No years were given").
   const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1).filter((t) => !(latestYear && /^No years were given/.test(t)))];
