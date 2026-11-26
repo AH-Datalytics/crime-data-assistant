@@ -84703,15 +84703,18 @@
    "question": "exclude 2026",
    "previous": "add labels",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "clarify",
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 3: no crime -> generic line."
    }
   },
   {
@@ -84879,11 +84882,11 @@
    "previous": "What is the trend for crime on transit systems?",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "historical",
     "source_any": [
-     "rtci"
+     "historical"
     ],
-    "answer": "San Francisco Bay Area Rapid Transit District police: violent and property crime, monthly from January 2017 to the latest month",
+    "answer": "San Francisco Bay Area Rapid Transit District police: violent and property crime by year, every year in the data",
     "values": {
      "status": "pending"
     }
@@ -84892,8 +84895,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up naming one agency; place alone = violent + property composite. Checker fix (2026-11-25): one source only (Fable and Codex agree)."
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up naming one agency; place alone = violent + property composite. Checker fix (2026-11-25): one source only (Fable and Codex agree). Owner card (2026-11-25): card 2: place alone -> Crime Index yearly composite."
    }
   },
   {
@@ -84928,15 +84931,22 @@
    "question": "what do you have on PPD?",
    "previous": "can you cite the weekly compstat reports from Paterson Police Dept. in NJ?",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "Paterson, NJ Police Department: violent and property crime by year, every year in the data",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 2: place alone -> Crime Index yearly composite."
    }
   },
   {
@@ -85350,15 +85360,22 @@
    "question": "Why is cybercrime not included when we say \"crime\"?",
    "previous": "How do the trends in violent crime compare to trends of cybercrime?",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "Explains why cybercrime is not part of the crime totals: Crime Index covers 7 Part I offenses (arson is not estimated nationally), from the SRS manual",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 9: methodology answered, one source."
    }
   },
   {
@@ -86404,15 +86421,22 @@
    "question": "Are aggravated assaults going up",
    "previous": "Are vehicle deaths increasing",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "United States aggravated assaults per year, 1960-2025",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 1: national, no period -> Crime Index yearly."
    }
   },
   {
@@ -88707,15 +88731,22 @@
    "question": "add San Jose",
    "previous": "San Francisco, Phoenix, Philadelphia",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "San Francisco, Phoenix, Philadelphia and San Jose: violent and property crime by year, every year in the data",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 2: place alone -> Crime Index yearly composite."
    }
   },
   {
@@ -90244,15 +90275,18 @@
    "question": "which sates have the greatest decrease 12  month rolling june 2019 to 12 month rolling june 2026",
    "previous": "in r raw numbers have it be 12 month rolling average from june 2026",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "clarify",
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 15: unclear -> generic line."
    }
   },
   {
@@ -90265,15 +90299,22 @@
    "question": "Are sexual assaults increasing",
    "previous": "Are juvenile victims of gun crimes increasing",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "United States rape per year, 1960-2025 (revised definition from 2013 on)",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): cards 1, 6, 17: sexual assaults = rape, all victims, Crime Index yearly."
    }
   },
   {
@@ -90552,11 +90593,11 @@
    "previous": "Tacoma",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "historical",
     "source_any": [
-     "rtci"
+     "historical"
     ],
-    "answer": "Tacoma: violent and property crime, monthly from January 2017 to the latest month",
+    "answer": "Tacoma: violent and property crime by year, every year in the data",
     "values": {
      "status": "pending"
     }
@@ -90565,8 +90606,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up read with previous (Tacoma); no crime named = composite. Checker fix (2026-11-25): one source only (Fable and Codex agree)."
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up read with previous (Tacoma); no crime named = composite. Checker fix (2026-11-25): one source only (Fable and Codex agree). Owner card (2026-11-25): card 2: place alone -> Crime Index yearly composite."
    }
   },
   {
@@ -91281,15 +91322,22 @@
    "question": "now violent crime",
    "previous": "give me nationwide",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical"
+    ],
+    "answer": "United States violent crime per year, 1960-2025",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 1: national, no period -> Crime Index yearly."
    }
   },
   {
@@ -91576,15 +91624,22 @@
    "question": "anti-Hispanic hate crime trend",
    "previous": "bias-motivated crimes by state",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "hate_crime",
+    "source_any": [
+     "hate_crime"
+    ],
+    "answer": "United States anti-Hispanic hate crime incidents per year, every year in the data",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 6: full new question stands alone."
    }
   },
   {
@@ -97230,15 +97285,16 @@
    "question": "Clearance rate",
    "previous": "Annual Drug arrests 1980-2022",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "decline",
+    "reason": "Clearance rates are available for Part I crimes, not drug offenses.",
+    "wording": "Clearance rates are available for Part I crimes, not drug offenses."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 10: drug clearance rate declined."
    }
   },
   {
@@ -98070,15 +98126,16 @@
    "question": "Can you frame the graph as officers per.murder per 100k?",
    "previous": "How does this compare to homicide rate?",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "decline",
+    "reason": "The app answers one dataset at a time, so staffing and a crime can't be in the same question.",
+    "wording": "The app answers one dataset at a time, so staffing and a crime can't be in the same question."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 16: staffing and crime in one question declined."
    }
   },
   {
@@ -99638,19 +99695,16 @@
    "question": "compare with statewide violent crime rate in maryland",
    "previous": "countywide total",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "decline",
+    "reason": "Countywide sums across all agencies are not available.",
+    "wording": "Countywide sums across all agencies are not available."
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question."
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Owner card (2026-11-25): card 5: P70 applies to the countywide follow-up."
    }
   },
   {
@@ -101259,15 +101313,22 @@
    "question": "break this down by year",
    "previous": "show the total population in cities that reported continuously from 2015 to 2025 by state",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "total population of cities that reported continuously 2015-2025, by state and by year",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 8: coverage questions are answered."
    }
   },
   {
@@ -102204,19 +102265,16 @@
    "question": "Disparities in arrests vs clearances by race",
    "previous": "c",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "decline",
+    "reason": "That data is not available.",
+    "wording": "That data is not available."
    },
    "label": {
     "status": "reviewed",
     "rule": "F5",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to a question that was declined or excluded"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "a follow-up to a question that was declined or excluded Owner card (2026-11-25): card 12: arrests vs clearances by race declined."
    }
   },
   {
@@ -102409,15 +102467,18 @@
    "question": "show me the same for dallas county, texas",
    "previous": "disaggregate by year",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "clarify",
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 3: no crime -> generic line."
    }
   },
   {
@@ -103416,15 +103477,22 @@
    "question": "show participation over time",
    "previous": "just anti-Asian incidents",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "hate_crime",
+    "source_any": [
+     "hate_crime"
+    ],
+    "answer": "number of agencies taking part in hate crime reporting by year",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 8: coverage questions are answered."
    }
   },
   {
@@ -106265,15 +106333,16 @@
    "question": "show me reckless endangerment and harrassment",
    "previous": "show me the ratio of attempted to completed murders",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "decline",
+    "reason": "That data is not available.",
+    "wording": "That data is not available."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 13: reckless endangerment and harassment declined."
    }
   },
   {
@@ -106435,15 +106504,18 @@
    "question": "can you go back to 2007, including only agencies which reported for the whole of that time?",
    "previous": "#1 is good",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "clarify",
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 3: no crime -> generic line."
    }
   },
   {
@@ -106609,15 +106681,22 @@
    "question": "how many records mentioned gambling related violence by year",
    "previous": "how many records mentioned gambling or betting",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "United States gambling offenses (39A-39D) by year",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 14: gambling violence = NIBRS gambling offenses."
    }
   },
   {
@@ -107304,15 +107383,18 @@
    "question": "Show me the same for Mendy county, Texas",
    "previous": "Show me the same for Travis county, Texas",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "clarify",
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 3: no crime -> generic line."
    }
   },
   {
@@ -108455,15 +108537,22 @@
    "question": "can you explain the rise from 2017 to 2025 being so dramatic after being flat since 2007",
    "previous": "show me intimidations",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "Explains reporting/coverage limitations when interpreting the intimidation trend; does not infer a cause from counts alone.",
+    "values": {
+     "status": "pending"
+    },
+    "source_any": [
+     "nibrs"
+    ]
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 9: explain coverage growth, no guessed causes."
    }
   },
   {
@@ -108691,15 +108780,22 @@
    "question": "show me the total population served by law enforcement agencies that reported every year from 2015 through 2025",
    "previous": "show a separate query for weapon law violations by age group",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "Total population served by agencies that reported every year, 2015-2025",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 8: coverage questions are answered."
    }
   },
   {
@@ -108738,15 +108834,22 @@
    "question": "which agencies in wayne county, michigan reported to nibrs in 2025",
    "previous": "show me juvenile arrests in wayne county, michigan by reporting agency",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "Agencies in Wayne County, Michigan that reported to NIBRS in 2025",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 8: coverage questions are answered."
    }
   },
   {
@@ -109045,15 +109148,16 @@
    "question": "Show same data for juveniles only",
    "previous": "Can you show the data as a rate based on per 100,000 population?",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "decline",
+    "reason": "Rates are available for places, not for groups of people.",
+    "wording": "Rates are available for places, not for groups of people."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 4: juvenile rate -> group-rate decline."
    }
   },
   {
@@ -110900,19 +111004,22 @@
    "question": "what firearms have been used by subjects",
    "previous": "ok",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "United States homicides by firearm type (handgun, rifle, shotgun, other) by year",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F5",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to a question that was declined or excluded"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "a follow-up to a question that was declined or excluded Owner card (2026-11-25): card 11: no place -> national."
    }
   },
   {
@@ -111179,15 +111286,22 @@
    "question": "what is the homicide victimization level for women",
    "previous": "can we do a rolling 12 months for this data for the time period you have it?",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
+    "answer": "United States female homicide victims by year",
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "reviewed_by": "owner-cards-2026-11-25",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card (2026-11-25): card 6: full new question stands alone."
    }
   },
   {
