@@ -933,7 +933,9 @@ const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bsho
 const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:cities|agencies|places|states|counties|departments)\b|^\s*(?:compare[ds]?|comparison)\s+(?:it\s+|that\s+|this\s+)?(?:to|with|against)\b|^\s*(?:vs\.?|versus)\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
 /** A NIBRS breakdown or comparison (Jeff 2026-11-25: with no period it covers every year the place has): a split by a person or weapon, NIBRS named, or the clearance types. */
-const nibrsBreakdownAsk = (typed: string): boolean => /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\bnibrs\b|\bexceptional\b/i.test(typed);
+// A percentage or share with no year keeps the latest complete year, and says so (Jeff 2026-11-26); only count breakdowns cover every NIBRS year.
+const shareAsk = (typed: string): boolean => /\b(?:percent(?:age)?s?|shares?|proportions?|ratios?)\b|%/i.test(typed);
+const nibrsBreakdownAsk = (typed: string): boolean => !shareAsk(typed) && /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\bnibrs\b|\bexceptional\b/i.test(typed);
 /** The builders' side of the same test: the reader's trimmed question can lose the words (NIBRS, a clearance type), so its parts and flags are read too. */
 function nibrsEveryAsk(l: RequestLedger, deps: ShadowDeps): boolean {
   return nibrsBreakdownAsk(`${l.question}\n${deps.guardText ?? ""}`) || !!flags(l).nibrsAsked || l.parts.some((p) => p.clause === 0 && /\bexceptional\b/i.test(p.text));

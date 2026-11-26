@@ -3865,6 +3865,9 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   // every-year series is Crime Index data that cannot split clearance types, so the latest-year NIBRS answer is given, with the year said.
   const arrCount = liveAsk("how many murders were cleared by arrest vs exceptional nationally") as unknown as Partial<Out>;
   assert.ok(!(arrCount.delivered ? cols(arrCount as Out) : []).some((c) => /^Share of/.test(c.header)) && !(arrCount.delivered?.text ?? []).some((t) => /^No year was given/.test(t)) && arrCount.kind === "answer", JSON.stringify(arrCount.delivered?.text));
+  // A percentage with no year keeps the latest complete year (Jeff 2026-11-26, QL-nibrs-9aed2136c4): the every-year default is for count breakdowns only.
+  const arrPctNoYear = liveAsk("What percentage of murders are cleared by arrest vs exceptional nationally?") as unknown as Partial<Out> & { options?: { label: string; everyNibrsYear?: boolean }[] };
+  assert.ok(!(arrPctNoYear.delivered?.text ?? []).some((t) => /^NIBRS data covers/.test(t)) && !(arrPctNoYear.delivered?.table?.rows ?? []).some((r) => /^20\d\d$/.test(String(r[0])) && String(r[0]) !== "2025"), JSON.stringify(arrPctNoYear.delivered?.text));
   const arrYear = as(liveAsk("What percentage of murders are cleared by arrest vs exceptional nationally in 2024?"), "answer") as unknown as Out;
   assert.ok(!arrYear.delivered.text.some((t) => /No year was given/.test(t)) && /Clearance Type, 2024$/.test(arrYear.delivered.text[0]), arrYear.delivered.text.join(" | "));
   const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
