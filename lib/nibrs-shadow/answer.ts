@@ -985,8 +985,10 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         note = NIBRS_EVERY_NOTE;
       } else option = c.options.find((x: ShadowOption) => !x.everyNibrsYear && /^Every year available$/.test(x.label));
       // The reader can drop the NIBRS words from the ask's question (a clearance type), so no ledger button exists: the typed question itself is asked over the NIBRS years.
+      let everyYearTried = false;
       const lcyBtn = /\((\d{4})\)/.exec(c.options.find((x: ShadowOption) => /^The latest complete year/.test(x.label))?.label ?? "");
       if (!option && lcyBtn && !deps.shareAsked && nibrsBreakdownAsk(typedText) && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(question)) {
+        everyYearTried = true;
         defaultDepth++;
         try {
           const o = deferHeavy("Every year available", (d) => shadowAnswer(`${question.replace(/[?.!\s]+$/, "")} from 2017 to ${lcyBtn[1]}`, d), deps, { everyNibrsYear: true });
@@ -1010,7 +1012,8 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         if (latestBtn && !isDeferred(latestBtn) && latestBtn.continuation && ANSWER_KINDS.includes(latestBtn.continuation.kind) && !sourceBlocks(latestBtn.continuation.kind, typedText)) option = undefined;
       }
       // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
-      if (!option) {
+      // The typed question could not run over every year (several agencies by year): the ask stands, never a latest-year answer to a count breakdown.
+      if (!option && !everyYearTried) {
         const latest = find(/^The latest complete year \((\d{4})\)$/);
         if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
         else {

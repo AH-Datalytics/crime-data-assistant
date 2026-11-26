@@ -3650,11 +3650,11 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const plainWith = applyDefaults(plainQ, ask("which period", plainQ, [everyBtn, latestBtn, { label: "Another year", entry: "which year" }]), live);
   const plainWithout = applyDefaults(plainQ, ask("which period", plainQ, [latestBtn, { label: "Another year", entry: "which year" }]), live);
   assert.deepEqual(text(plainWith), text(plainWithout));
-  // The every-year button is not taken when it is deferred-heavy, a decline or Crime Index data: the latest-year button answers as before.
+  // A NIBRS count breakdown that cannot run over every year keeps its ask: never a latest-year answer (Coordinator 2026-11-26).
   const viaLatest = applyDefaults(blindQ, ask("which period", blindQ, [{ label: "The latest complete year (2025)", continuation: nibrsOf() }, { label: "Another year", entry: "which year" }]), blind);
-  assert.equal(text(viaLatest)[1], "No year was given, so the latest complete year, 2025, is shown.");
+  assert.equal(viaLatest.kind, "clarify");
   const e2e = applyDefaults("Compare murders in Houston and Dallas in NIBRS", ask0("Compare murders in Houston and Dallas in NIBRS"), live);
-  assert.ok(e2e.kind !== "clarify", JSON.stringify(e2e)); // several agencies by year is declined by the engine, so the comparison keeps its latest-year answer (the every-year button is dropped with the decline)
+  assert.equal(e2e.kind, "clarify"); // several agencies by year is declined by the engine: the comparison keeps its period ask, never a latest-year answer (known gap)
   // The guard blocks the fallback too (the latest-year button is Crime Index data): the ask stays.
   assert.equal(applyDefaults(blindQ, ask("which period", blindQ, [{ label: "The latest complete year (2025)", continuation: answerOf(["2025"]) }, { label: "Another year", entry: "which year" }]), blind).kind, "clarify");
   // The fallback never goes past a decline.
