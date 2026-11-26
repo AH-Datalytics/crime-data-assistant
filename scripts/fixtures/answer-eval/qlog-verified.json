@@ -3459,13 +3459,6 @@
    "date": "2026-11-20",
    "numbers": 105
   },
-  "QL-shr-ea74a11e4f": {
-   "digest": "083fa887ad4c6b9d",
-   "by": "runner-codex-blind",
-   "batch": "pr544-2026-11-26",
-   "date": "2026-11-26",
-   "numbers": 9
-  },
   "QL-shr-eda390f9c8": {
    "digest": "4c47528716b34c5b",
    "by": "model-canonical",
@@ -8597,13 +8590,6 @@
    "batch": "loop2-20261122",
    "date": "2026-11-22",
    "numbers": 66
-  },
-  "QL-nibrs-49190e8d45": {
-   "digest": "e76f5b0e6d3cc2dc",
-   "by": "runner-codex-blind",
-   "batch": "pr544-2026-11-26",
-   "date": "2026-11-26",
-   "numbers": 10
   },
   "QL-nibrs-503fb44d05": {
    "digest": "87189e7862ece77d",
