@@ -403,7 +403,7 @@
   "QL-nibrs-39d95826db": {
    "digest": "6cb4bf8fbdca5858",
    "by": "runner-recount",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -648,7 +648,7 @@
   "QL-nibrs-7fbcaf2d53": {
    "digest": "6cb4bf8fbdca5858",
    "by": "runner-recount",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -3462,7 +3462,7 @@
   "QL-shr-ea74a11e4f": {
    "digest": "083fa887ad4c6b9d",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 9
   },
@@ -4939,7 +4939,7 @@
   "QL-hist-9c58989da2": {
    "digest": "acb4e9959cd70fa5",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -4981,7 +4981,7 @@
   "QL-shr-cf22c622eb": {
    "digest": "9483cc09d8d9fd5a",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -7516,7 +7516,7 @@
   "QL-hc-c16d6ebdc4": {
    "digest": "363b431fb2d7c2f8",
    "by": "runner-recount",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 8
   },
@@ -7726,7 +7726,7 @@
   "QL-shr-0b29726e06": {
    "digest": "61066fe12c262643",
    "by": "verify-session-duckdb",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 42
   },
@@ -7740,7 +7740,7 @@
   "QL-shr-5ad28a6b3e": {
    "digest": "a407a4afdbe93006",
    "by": "verify-session-duckdb",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 37
   },
@@ -7775,7 +7775,7 @@
   "QL-shr-cda3dea89c": {
    "digest": "081f5f74cd5564c1",
    "by": "verify-session-duckdb",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 17
   },
@@ -7859,7 +7859,7 @@
   "QL-ct-2a926dd306": {
    "digest": "63798b60fda5ebb1",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -7873,7 +7873,7 @@
   "QL-ct-3fc37547d0": {
    "digest": "635d5a8dea83ff57",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -7908,7 +7908,7 @@
   "QL-ct-5c43502d8a": {
    "digest": "9cbc77723ce908ea",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -8006,7 +8006,7 @@
   "QL-ct-8d3ae0e6f9": {
    "digest": "84a7272f0666a877",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 11
   },
@@ -8020,7 +8020,7 @@
   "QL-ct-9c9f209702": {
    "digest": "649cd0231b3813bf",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 5
   },
@@ -8055,7 +8055,7 @@
   "QL-ct-ad603f5854": {
    "digest": "dd2097a0d1be9339",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -8125,7 +8125,7 @@
   "QL-ct-cd9a53a332": {
    "digest": "2ec7480ab844a989",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 1
   },
@@ -8167,7 +8167,7 @@
   "QL-ct-f40a6163a1": {
    "digest": "635d5a8dea83ff57",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -8349,7 +8349,7 @@
   "QL-hist-93963c24fe": {
    "digest": "c50dc98731948273",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -8601,7 +8601,7 @@
   "QL-nibrs-49190e8d45": {
    "digest": "e76f5b0e6d3cc2dc",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
@@ -8846,7 +8846,7 @@
   "QL-ct-72ccc84873": {
    "digest": "071adaf59df76d72",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 3
   },
@@ -8895,14 +8895,14 @@
   "QL-ct-c05e016e6c": {
    "digest": "ca9b9e7286d413eb",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
   "QL-ct-c6d38d036d": {
    "digest": "35b41cd1d186e3cd",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 50
   },
@@ -8951,7 +8951,7 @@
   "QL-hist-c6d38d036d": {
    "digest": "35b41cd1d186e3cd",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 50
   },
@@ -8979,14 +8979,14 @@
   "QL-nibrs-c04e1f6e7d": {
    "digest": "f3d87fe00c59c135",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 10
   },
   "QL-nibrs-f6e7d8d3ae": {
    "digest": "84a7272f0666a877",
    "by": "runner-codex-blind",
-   "batch": "pr543-2026-11-26",
+   "batch": "pr544-2026-11-26",
    "date": "2026-11-26",
    "numbers": 11
   },
