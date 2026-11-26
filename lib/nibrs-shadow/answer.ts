@@ -980,18 +980,22 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // The ledger-built every-NIBRS-year choice (Jeff 2026-11-25: a NIBRS breakdown or comparison with no period covers every year the place has) is the
       // default only for such a reading; for any other ask it is one more button and the default stays as it was.
       const nibrsEvery = c.options.find((x: ShadowOption) => x.everyNibrsYear);
-      if (nibrsEvery && !isDeferred(nibrsEvery) && nibrsEvery.continuation && ANSWER_KINDS.includes(nibrsEvery.continuation.kind) && !sourceBlocks(nibrsEvery.continuation.kind, typedText) && nibrsBreakdownAsk(typedText)) {
+      // Only an ask the latest-year button answers from NIBRS: a homicide-report (SHR) or Crime Index answer is not re-asked as NIBRS (QL-nibrs-ab00976e92, 560d542b2d).
+      const latestOpt = c.options.find((x: ShadowOption) => /^The latest complete year/.test(x.label));
+      const latestIsNibrs = !latestOpt || isDeferred(latestOpt) || latestOpt.continuation?.kind === "answer";
+      if (latestIsNibrs && nibrsEvery && !isDeferred(nibrsEvery) && nibrsEvery.continuation && ANSWER_KINDS.includes(nibrsEvery.continuation.kind) && !sourceBlocks(nibrsEvery.continuation.kind, typedText) && nibrsBreakdownAsk(typedText)) {
         option = nibrsEvery;
         note = NIBRS_EVERY_NOTE;
       } else option = c.options.find((x: ShadowOption) => !x.everyNibrsYear && /^Every year available$/.test(x.label));
       // The reader can drop the NIBRS words from the ask's question (a clearance type), so no ledger button exists: the typed question itself is asked over the NIBRS years.
       let everyYearTried = false;
       const lcyBtn = /\((\d{4})\)/.exec(c.options.find((x: ShadowOption) => /^The latest complete year/.test(x.label))?.label ?? "");
-      if (!option && lcyBtn && !deps.shareAsked && nibrsBreakdownAsk(typedText) && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(question)) {
-        everyYearTried = true;
+      if (!option && lcyBtn && latestIsNibrs && !deps.shareAsked && nibrsBreakdownAsk(typedText) && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(question)) {
         defaultDepth++;
         try {
           const o = deferHeavy("Every year available", (d) => shadowAnswer(`${question.replace(/[?.!\s]+$/, "")} from 2017 to ${lcyBtn[1]}`, d), deps, { everyNibrsYear: true });
+          // A heavy (national) series is not run as a default: the latest-year default stands as before. Only a series that ran and could not answer keeps the ask.
+          if (!isDeferred(o)) everyYearTried = true;
           if (!isDeferred(o) && o.continuation && o.continuation.kind === "answer" && !sourceBlocks(o.continuation.kind, typedText)) { option = o; note = NIBRS_EVERY_NOTE; }
         } finally { defaultDepth--; }
       }

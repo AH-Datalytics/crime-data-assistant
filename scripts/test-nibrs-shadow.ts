@@ -3628,6 +3628,17 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const duiText = (dui as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
   assert.ok(dui.kind !== "clarify", JSON.stringify(dui).slice(0, 300));
   assert.ok(!(duiText.some((t) => /^No years were given/.test(t)) && duiText.some((t) => /^No year was given/.test(t))), JSON.stringify(duiText));
+  // A heavy national series is not run as the every-year default: the latest-year default stands as before (QL-nibrs-43401cd191, c74cec7689, c80f231f81).
+  for (const hq of ["DUI arrests by age group nationally", "robberies by time of day nationally"]) {
+    const heavy = applyDefaults(hq, ask0(hq), { ...live, deferChars: 1 } as unknown as ShadowDeps);
+    assert.notEqual(heavy.kind, "clarify", hq + " " + JSON.stringify(heavy).slice(0, 300));
+  }
+  // A homicide-report (SHR) answer is not re-asked as NIBRS over every year: the latest-year button answers as before (QL-nibrs-ab00976e92, 560d542b2d).
+  { const shrQ = "murders per year by race of victim";
+    const shrLatest = { kind: "shr", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: FBI Supplementary Homicide Reports."] } } as unknown as ShadowOutcome;
+    const o = applyDefaults(shrQ, ask("which period", shrQ, [{ label: "Every year available", everyNibrsYear: true, continuation: { kind: "answer", delivered: { table: { columns: [], rows: [["2017", 1], ["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } }, { label: "The latest complete year (2025)", continuation: shrLatest }, { label: "Another year", entry: "which year" }] as { label: string; continuation?: ShadowOutcome; entry?: string }[]), live);
+    assert.ok(!text(o).some((t) => /^NIBRS data covers/.test(t)), JSON.stringify(text(o)));
+  }
   // Stays an ask: the default is a decline, there is no default option, noDefaults is set.
   const decline = { kind: "decline", reason: "unsupported_capability", explanation: "x", alternative: null } as unknown as ShadowOutcome;
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: decline }]), live).kind, "clarify");
