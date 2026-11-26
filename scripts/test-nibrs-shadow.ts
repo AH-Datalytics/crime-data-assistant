@@ -3633,6 +3633,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     const heavy = applyDefaults(hq, ask0(hq), { ...live, deferChars: 1 } as unknown as ShadowDeps);
     assert.notEqual(heavy.kind, "clarify", hq + " " + JSON.stringify(heavy).slice(0, 300));
   }
+  // The reader dropped "by offender age" and a latest-year button answers: that button stands, the typed question is not re-asked over every year (QL-nibrs-8e3c298ac0).
+  { const jq = "show me violent crimes involving use of a firearm for jackson mississippi by offender age";
+    const jl = { kind: "answer", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } as unknown as ShadowOutcome;
+    const o = applyDefaults(jq, ask("which period", "show me violent crimes involving use of a firearm for jackson mississippi", [{ label: "The latest complete year (2025)", continuation: jl }, { label: "Another year", entry: "which year" }]), live);
+    assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
+    assert.ok(!text(o).some((t) => /^NIBRS data covers|Offender/.test(t)), JSON.stringify(text(o)));
+  }
   // A homicide-report (SHR) answer is not re-asked as NIBRS over every year: the latest-year button answers as before (QL-nibrs-ab00976e92, 560d542b2d).
   { const shrQ = "murders per year by race of victim";
     const shrLatest = { kind: "shr", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: FBI Supplementary Homicide Reports."] } } as unknown as ShadowOutcome;

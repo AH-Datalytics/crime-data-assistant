@@ -990,7 +990,9 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       // The reader can drop the NIBRS words from the ask's question (a clearance type), so no ledger button exists: the typed question itself is asked over the NIBRS years.
       let everyYearTried = false;
       const lcyBtn = /\((\d{4})\)/.exec(c.options.find((x: ShadowOption) => /^The latest complete year/.test(x.label))?.label ?? "");
-      if (!option && lcyBtn && latestIsNibrs && !deps.shareAsked && nibrsBreakdownAsk(typedText) && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(question)) {
+      // A latest-year button already answers and the reader dropped the typed breakdown (offender, victim, arrestee): the typed question would change the measure that button answers, so that button stands (QL-nibrs-8e3c298ac0).
+      const measureDropped = ["offender", "victim", "arrestee"].some((w) => new RegExp("\\b" + w, "i").test(question) && !new RegExp("\\b" + w, "i").test(c.question));
+      if (!option && lcyBtn && !measureDropped && latestIsNibrs && !deps.shareAsked && nibrsBreakdownAsk(typedText) && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(question)) {
         defaultDepth++;
         try {
           const o = deferHeavy("Every year available", (d) => shadowAnswer(`${question.replace(/[?.!\s]+$/, "")} from 2017 to ${lcyBtn[1]}`, d), deps, { everyNibrsYear: true });
