@@ -1813,17 +1813,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): violent crime clear, cities not named (P305)."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): violent crime clear, cities not named (P305). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -4240,17 +4241,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): Part I crime and period given, no place."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): Part I crime and period given, no place. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -8669,9 +8671,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -8679,7 +8681,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -8716,17 +8718,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crime named, no place."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crime named, no place. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -11024,17 +11027,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crime named, no place."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crime named, no place. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -14773,17 +14777,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crimes named, no place."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crimes named, no place. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -17118,9 +17123,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -17128,7 +17133,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -17372,17 +17377,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): Tulsa murders clear, the other place is missing."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): Tulsa murders clear, the other place is missing. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -29685,17 +29691,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): murder count 2025 clear, place missing."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): murder count 2025 clear, place missing. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -33460,9 +33467,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -33470,7 +33477,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -37618,9 +37625,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -37628,7 +37635,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -43392,9 +43399,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -43402,7 +43409,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -44415,17 +44422,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crime named, no place."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): crime named, no place. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -50194,17 +50202,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): murders is clear, the place is missing."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): murders is clear, the place is missing. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -50304,17 +50313,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
     "drafted_by": "jeff-2026-11-11-cases",
-    "reviewed_by": "full-check-2026-11-26",
-    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; motor vehicle theft offenses cleared by arrest | Full check 2026-11-26 (Fable + Codex): 11-25 two-way rule: session-less 'add ...' fragment names a crime (motor vehicle theft cleared by arrest) and lacks only the place (same as nibrs-89a2dbe129)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "Jeff 2026-11-11: 'cases' is the source's normal count; motor vehicle theft offenses cleared by arrest | Full check 2026-11-26 (Fable + Codex): 11-25 two-way rule: session-less 'add ...' fragment names a crime (motor vehicle theft cleared by arrest) and lacks only the place (same as nibrs-89a2dbe129) | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -55298,9 +55307,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -55308,7 +55317,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -59398,17 +59407,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); Codex check: Two-way rule: measure, year and cohort supplied; ask the place."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); Codex check: Two-way rule: measure, year and cohort supplied; ask the place. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -60728,9 +60738,9 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
@@ -60738,7 +60748,7 @@
     "rule": "X1",
     "drafted_by": "rules-v1",
     "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -79364,17 +79374,18 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "the place",
+    "source": null,
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): murder clearances is clear, the place is missing."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Request depends on missing prior context or is not a complete question. Family sweep (2026-11-25): two-way rule (Jeff 2026-11-25); two-way rule (1): murder clearances is clear, the place is missing. | Owner card 2026-11-26: a fragment that adds to or edits an unseen answer gets the generic line (full asks missing only the place keep asking for it)."
    }
   },
   {
@@ -91957,18 +91968,21 @@
    "expected": {
     "outcome": "answer",
     "source": "hate_crime",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "source_any": [
+     "hate_crime"
+    ],
+    "answer": "a lookup (coverage): number of agencies reporting hate crime data for each year on file",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "F1+R07",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: Both available turns refer to unspecified years."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "second labeler unclear: Both available turns refer to unspecified years. | Owner card 2026-11-26: no years are known: answer the coverage lookup for every year on file."
    }
   },
   {
@@ -96198,11 +96212,11 @@
     }
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The offered alternative is not present in the supplied context. Just what you can do: monthly New Orleans murders, Current Trends. (Jeff 2026-11-25 label choices page)"
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "second labeler unclear: The offered alternative is not present in the supplied context. Just what you can do: monthly New Orleans murders, Current Trends. (Jeff 2026-11-25 label choices page) | Owner card 2026-11-26: confirmed: this is Jeff's 2026-11-25 label choice."
    }
   },
   {
@@ -99195,20 +99209,19 @@
    "question": "now compare to violent crime in Oakland since 2008",
    "previous": "is this countywide or just the sheriff?",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: The previous question has no substantive comparison data to inherit."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "second labeler unclear: The previous question has no substantive comparison data to inherit. | Owner card 2026-11-26: compare to an unseen county answer: generic line."
    }
   },
   {
@@ -100191,20 +100204,19 @@
    "question": "now compare to violent crime in Oakland since 2008",
    "previous": "Countywide total",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "disputed",
+    "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "second labeler unclear: Countywide total alone supplies no comparison baseline."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "second labeler unclear: Countywide total alone supplies no comparison baseline. | Owner card 2026-11-26: compare to an unseen county answer: generic line."
    }
   },
   {
