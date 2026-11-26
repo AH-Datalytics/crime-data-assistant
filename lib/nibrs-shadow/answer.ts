@@ -51,7 +51,7 @@ import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/p
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, OFFENSES_NOT_VICTIMS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, MARIJUANA_LINE, MARIJUANA_WORDS, NIGHT_LINE, ALL_HOMICIDES_LINE, HOMICIDES_LINE, DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE, OFFENSES_NOT_VICTIMS_LINE, PERSON_CRIMES_LINE, PROPERTY_AGE_LINE, TIME_OF_DAY_LINE, measureWords, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyInState, agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateCodeOf, stateName, STATE_NAMES, type Agency, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsPeak, answerSrsSeveral, isSrsMeasure, SRS_YEARS, type SrsAnswer, type SrsPlace } from "./srs";
@@ -4251,7 +4251,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     ...(plan.measures.some((m) => /\.person_crimes$/.test(m.id)) ? [PERSON_CRIMES_LINE] : []),
     ...(plan.measures.some((m) => /\.against_property$/.test(m.id)) ? [PROPERTY_AGE_LINE] : []),
     // P10 (Jeff 2026-11-16): all homicides add justifiable homicide; the answer says what it counted.
-    ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE] : []),
+    // Jeff 2026-11-25: plain homicide is the same three codes and says so.
+    ...(plan.measures.some((m) => /\.homicide_all$/.test(m.id)) ? [ALL_HOMICIDES_LINE]
+      : plan.measures.some((m) => /\.homicide$/.test(m.id)) ? [HOMICIDES_LINE] : []),
     // P166 (Jeff 2026-11-19): a victim crime broken down by weapon is counted by offense, and says so.
     ...(plan.defaults.some((d) => d.reason.startsWith("P166")) ? [`Counts are ${MEASURE_LABEL[plan.measures[0].id.split(".")[1]] ?? "crime"} offenses by weapon, not victims.`] : []),
     // P280 (Jeff 2026-11-23): a person crime by location or hour is counted by offense, and says so.

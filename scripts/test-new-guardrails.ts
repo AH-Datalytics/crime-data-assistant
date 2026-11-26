@@ -2060,7 +2060,25 @@ console.log("\n=== wave-2 nibrs category guardrails ===\n");
   const sql = `SELECT year, SUM(victim_count) AS homicides FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','09B','09C') GROUP BY year`;
   const ctx = extractQueryContext(sql, "homicides in Pennsylvania", "nibrs");
   const r = runGuardrails(ctx);
-  assert("TP: NIBRS ordinary homicide with 09B/09C fires",
+  assert("FP: NIBRS ordinary homicide with 09A/09B/09C does not fire (Jeff 2026-11-25)",
+    !r.fired.includes("nibrs-homicide-code-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS homicides FROM summary_victim_state_monthly WHERE ucr_offense_code = '09A' GROUP BY year`;
+  const ctx = extractQueryContext(sql, "homicides in Pennsylvania", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS ordinary homicide with 09A only fires",
+    r.fired.includes("nibrs-homicide-code-drift"),
+    `fired: ${JSON.stringify(r.fired)}`);
+}
+
+{
+  const sql = `SELECT year, SUM(victim_count) AS murders FROM summary_victim_state_monthly WHERE ucr_offense_code IN ('09A','09B','09C') GROUP BY year`;
+  const ctx = extractQueryContext(sql, "murders in Pennsylvania", "nibrs");
+  const r = runGuardrails(ctx);
+  assert("TP: NIBRS murder with 09B/09C fires",
     r.fired.includes("nibrs-homicide-code-drift"),
     `fired: ${JSON.stringify(r.fired)}`);
 }

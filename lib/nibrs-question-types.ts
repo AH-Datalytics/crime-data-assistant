@@ -22,9 +22,10 @@ export type FamilyMeasure = "domestic_violence" | "hate_crime" | "carjacking" | 
 
 /** Offense measures and their NIBRS codes (the product's contract codes, lib/query-contract.ts). */
 export const MEASURE_CODES: Record<string, string[]> = {
-  // Jeff 2026-11-06 ("Include 09B"): homicide is murder and nonnegligent manslaughter (09A) and negligent manslaughter
-  // (09B); murder stays 09A.
-  murder: ["09A"], homicide: ["09A", "09B"], homicide_all: ["09A", "09B", "09C"], justifiable_homicide: ["09C"], rape: ["11A", "11B", "11C"], robbery: ["120"], aggravated_assault: ["13A"], simple_assault: ["13B"],
+  // Jeff 2026-11-25 ("NIBRS homicide offenses are 09A/B/C and should say so"): homicide is murder and nonnegligent
+  // manslaughter (09A), negligent manslaughter (09B) and justifiable homicide (09C); murder stays 09A. "All homicides" is
+  // the same set.
+  murder: ["09A"], homicide: ["09A", "09B", "09C"], homicide_all: ["09A", "09B", "09C"], justifiable_homicide: ["09C"], rape: ["11A", "11B", "11C"], robbery: ["120"], aggravated_assault: ["13A"], simple_assault: ["13B"],
   sex_offense: ["11A", "11B", "11C", "11D", "36A", "36B"], burglary: ["220"], theft_from_motor_vehicle: ["23F"], motor_vehicle_theft: ["240"],
   shoplifting: ["23C"], theft: ["23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H"], arson: ["200"], drug_possession: ["35A"], dui: ["90D"],
   // NIBRS crimes against persons (Jeff 2026-11-15: "violent crime" by an offender's or victim's age is these, not the four
