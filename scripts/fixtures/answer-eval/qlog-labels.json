@@ -806,18 +806,23 @@
    "question": "Show me national trends in violent crimes where the known or suspected offended was under age 18",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -3088,19 +3093,17 @@
    "question": "can you combine the year and month into a date (MMM-YY) on the table?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Jeff card 2026-11-26: a request to change a chart or table that isn't there gets the chart decline."
    }
   },
   {
@@ -17381,19 +17384,24 @@
    "question": "show me murders, robberies, and aggravated assaults rolling over 12 months nationally, from 2018 to present, with offenders under age 18",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26: robberies and aggravated assaults by offender age are national NIBRS-only detail over several years, so the cohort question (same as QL-nibrs-d75d599e33)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) To present, monthly or rolling: keep the monthly source, run to the latest month. (Jeff 2026-11-25 label choices page, general rule) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26: robberies and aggravated assaults by offender age are national NIBRS-only detail over several years, so the cohort question (same as QL-nibrs-d75d599e33). Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -33766,18 +33774,23 @@
    "question": "Show me the national trend of crimes committed by kids under the age of 18 in the last 10 years",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -36203,19 +36216,17 @@
    "question": "same prompt as previous but add to chart national murder rate for comparison",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Jeff card 2026-11-26: a request to change a chart or table that isn't there gets the chart decline."
    }
   },
   {
@@ -38818,18 +38829,23 @@
    "question": "give me domestic violence trends in kentucky from the last 5 years",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -39987,18 +40003,23 @@
    "question": "how many arrests per year in the United states?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -40065,19 +40086,17 @@
    "question": "same prompt as previous but add to chart new york city and chicago murder rates for comparisoon",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Jeff card 2026-11-26: a request to change a chart or table that isn't there gets the chart decline."
    }
   },
   {
@@ -43795,18 +43814,23 @@
    "question": "Show the national violent crime arrest trend by offense type since 2018",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "violent-arrests-by-offense-type",
     "drafted_by": "capability-2026-11-24",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "violent crime = murder, rape, robbery, aggravated assault; usual reported-agencies notes Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "violent crime = murder, rape, robbery, aggravated assault; usual reported-agencies notes Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -44015,18 +44039,23 @@
    "question": "A national estimate since 1991 of robbery offenders by race",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "spot-check-2026-11-25",
-    "notes": "The requested estimated national demographic total is unavailable. Spot check (2026-11-25): A multi-year national NIBRS series asks all agencies or consistent reporters (Jeff 2026-11-21); P285 then answers from 2017 naming the missing years."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "The requested estimated national demographic total is unavailable. Spot check (2026-11-25): A multi-year national NIBRS series asks all agencies or consistent reporters (Jeff 2026-11-21); P285 then answers from 2017 naming the missing years. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -44091,18 +44120,23 @@
    "question": "Domestic violence offenses in Idaho since 2015",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -44144,18 +44178,23 @@
    "question": "Please show me a national chart of aggravated assaults with a firearm used from 2021-2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -45478,19 +45517,23 @@
    "question": "How bad is aggravated assaults with a firearm in America? Is it getting better?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -45732,19 +45775,23 @@
    "question": "Give me drug possession arrest statistics.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -46250,18 +46297,23 @@
    "question": "Domestic violence arrests in Idaho since 2015",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -46547,19 +46599,23 @@
    "question": "what drugs are most common in drug arrests in Ohio?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -47513,19 +47569,23 @@
    "question": "Where do most robberies occur - residences, streets, or commercial buildings?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -47955,18 +48015,23 @@
    "question": "How has domestic violence trended in Kentucky",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D5 answers trends over all available years. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D5 answers trends over all available years. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -48158,9 +48223,9 @@
    "previous": null,
    "expected": {
     "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
+    "source": null,
+    "about": "which states",
     "about_any": [
-     "all agencies or consistent reporters",
      "which states"
     ]
    },
@@ -48168,8 +48233,8 @@
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state level: ask cohort; 'other states' unnamed so asking which states also passes (P305-style)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state level: ask cohort; 'other states' unnamed so asking which states also passes (P305-style). Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -48804,18 +48869,23 @@
    "question": "Drug offenses involving methamphetamine nationally 2022-2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -48938,19 +49008,23 @@
    "question": "Give me national drug possession statistics.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -49244,18 +49318,23 @@
    "question": "How many arrests each year in the united states?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -49562,18 +49641,23 @@
    "question": "How many carjackings were reported in California from 2019 to 2024?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -50436,7 +50520,8 @@
     "outcome": "answer",
     "source": "shr",
     "source_any": [
-     "shr"
+     "shr",
+     "nibrs"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -50448,8 +50533,8 @@
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "audit-2026-11-26b",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26: robbery and aggravated assault offender ages are NIBRS only, so NIBRS is accepted beside Homicide Reports."
    }
   },
   {
@@ -51233,19 +51318,23 @@
    "question": "robberies by time of day nationally",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -51395,17 +51484,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "all agencies or consistent reporters",
+    "about": "the whole question",
     "about_any": [
-     "all agencies or consistent reporters"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year. Jeff card 2026-11-26: a measure with no crime gets the generic line."
    }
   },
   {
@@ -51672,19 +51761,23 @@
    "question": "Show me the share of weapons law violations involving offenders in the following age groups: under 18; 18 to 24; 25 to 39; and 40 and older",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -53413,19 +53506,23 @@
    "question": "show me statewide violent crimes by offender age for california",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -53617,19 +53714,23 @@
    "question": "How has retail theft changed over the last 5 years?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -53990,18 +54091,23 @@
    "question": "Have carjackings decreased in Rhode Island in the past two years?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -54390,7 +54496,8 @@
     "outcome": "answer",
     "source": "shr",
     "source_any": [
-     "shr"
+     "shr",
+     "nibrs"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -54402,8 +54509,8 @@
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "audit-2026-11-26b",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26: robbery and aggravated assault offender ages are NIBRS only, so NIBRS is accepted beside Homicide Reports."
    }
   },
   {
@@ -55087,18 +55194,23 @@
    "question": "show me all arrestees ages 18 to 21 in vermont by year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -55140,19 +55252,23 @@
    "question": "marijuana possession arrests",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -55348,18 +55464,23 @@
    "question": "Looking for drug offenses in Colorado over the last 10 years",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -55479,17 +55600,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26. Jeff card 2026-11-26: a measure with no crime gets the generic line."
    }
   },
   {
@@ -55784,18 +55905,23 @@
    "question": "Compare drug offenses in Ohio and Pennsylvania since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -55884,19 +56010,23 @@
    "question": "show me crimes involving a firearm with an offender under age 18",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -56200,18 +56330,23 @@
    "question": "Show drug offense trends by drug type in Ohio",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -56416,18 +56551,23 @@
    "question": "Show me drug offense trends in Ohio from 2020 to 2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -58160,18 +58300,23 @@
    "question": "A chart of firearms arrests from 2021-2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -58578,18 +58723,23 @@
    "question": "Aggravated assault victims by weapon type in Texas 2022-2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -58657,18 +58807,23 @@
    "question": "Show me the national trend in DWI/DUI from 2000 to today",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -60956,18 +61111,23 @@
    "question": "what share of rapes were cleared by exceptional means in Virginia each year from 2022 to 2025?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R06>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "P203 (Jeff 2026-11-22: several years answer one row per year): the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year, from the clearance-by-type sums over the agencies that reported (P171). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22 Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "P203 (Jeff 2026-11-22: several years answer one row per year): the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year, from the clearance-by-type sums over the agencies that reported (P171). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22 Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -61296,18 +61456,23 @@
    "question": "show me violent crimes by offender age by year for vermont",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -61346,18 +61511,23 @@
    "question": "Violent Crime Offenders by Age Group for California Over time",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) P4: a NIBRS breakdown with no period covers every NIBRS year the place has (Jeff 2026-11-25 label review) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) P4: a NIBRS breakdown with no period covers every NIBRS year the place has (Jeff 2026-11-25 label review) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -62341,18 +62511,23 @@
    "question": "show me offenses by offenders age 18 to 21 by year in vermont",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -62441,18 +62616,23 @@
    "question": "Show me trends in disorderly conduct arrests in the 10 most populous states",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -63369,18 +63549,23 @@
    "question": "rape exceptional clearances by type in Virginia per year from 2022 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -63393,18 +63578,23 @@
    "question": "Can you produce a chart of firearms arrest from 2021-2025, that has breakdown by Hispanic and NonHispanic?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -63745,18 +63935,23 @@
    "question": "DUI arrests by age nationally, 2023 - 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -64756,18 +64951,23 @@
    "question": "A chart detailing number of Hispanic people arrested for firearms?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); Codex check: No period means all NIBRS years; national arrest detail requires cohort."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); Codex check: No period means all NIBRS years; national arrest detail requires cohort. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -65230,7 +65430,8 @@
     "outcome": "answer",
     "source": "shr",
     "source_any": [
-     "shr"
+     "shr",
+     "nibrs"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -65242,8 +65443,8 @@
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "audit-2026-11-26b",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26: robbery and aggravated assault offender ages are NIBRS only, so NIBRS is accepted beside Homicide Reports."
    }
   },
   {
@@ -65256,18 +65457,23 @@
    "question": "give me a 5 year history of domestic violence in kentucky",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -65495,18 +65701,23 @@
    "question": "national trend in DWI/DUI from 2000 to today",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -66201,18 +66412,23 @@
    "question": "Can you show a graph detailing arrests for gun possession from 2000-2025?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -66330,18 +66546,23 @@
    "question": "what share of rapes were cleared by exception each year from 2022 to 2025 in Virginia?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "P203 several years: the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year (P171 sums). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22 Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "P203 several years: the share of Virginia's rape offenses that were cleared by exceptional means, each year 2022 to 2025, one row per year (P171 sums). P18 no longer applies (P172). By rule from the question text; second labeler NIBRS Model 2026-11-22 Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -67605,19 +67826,24 @@
    "question": "show me murders, robberies, and aggravated assaults by offender age by year for 2017 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -67923,18 +68149,23 @@
    "question": "show me nationwide juvenile arrests 2005 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -70965,18 +71196,23 @@
    "question": "Arrests for domestic violence related incidents in Idaho since 2015",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -71126,18 +71362,23 @@
    "question": "marijuana possession arrests in Texas since 2020",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -74119,18 +74360,23 @@
    "question": "Can you provide a chart of gun possession arrests nationally over the last 25 years?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -74413,19 +74659,23 @@
    "question": "intimate partner female victims per month since 2010",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Victim relationship detail without an explicit homicide restriction uses NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Victim relationship detail without an explicit homicide restriction uses NIBRS. Audit 2026-11-26 (both checkers agree): cohort rule: state or national NIBRS-only detail over several years (or no period) asks all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -74438,18 +74688,23 @@
    "question": "Generate a graph of offender age, split by race and ethnicity, using data from 2022-2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -77892,19 +78147,23 @@
    "question": "show me rolling 12-month totals of offenders by age by month from December 1986 to December 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "rolling 12-month totals of offenders by age, all offenses, for the NIBRS years only, saying the earlier years aren't available",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "P89 leaves rolling breakdowns declined. Owner card 2026-11-26: offenders by age with no crime and no source named is all offenses (murder only when Homicide Reports is asked for; the tab is not a clue, tabs are gone), national NIBRS over many years, so the cohort question; then say years before NIBRS are not available."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "P89 leaves rolling breakdowns declined. Owner card 2026-11-26: offenders by age with no crime and no source named is all offenses (murder only when Homicide Reports is asked for; the tab is not a clue, tabs are gone), national NIBRS over many years, so the cohort question; then say years before NIBRS are not available. Jeff card 2026-11-26: the 11-25 all-offense offenders ruling wins over P89 here; NIBRS years only, earlier years not available, no cohort question."
    }
   },
   {
@@ -77968,23 +78227,17 @@
    "question": "fatal shootings in Houston from 1950 to 1970",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "source_any": [
-     "shr"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Fatal shooting data starts in 1985, so 1950 to 1970 isn't available.",
+    "wording": "Fatal shooting data starts in 1985, so 1950 to 1970 isn't available."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "audit-2026-11-26b",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26: Jeff's 11-25 spot-check card declines this exact question."
    }
   },
   {
@@ -78367,18 +78620,23 @@
    "question": "Can you provide a graph of arrests for gun possession from 2017-2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -78933,18 +79191,23 @@
    "question": "Show me the national DUI/DWI trend from 2000 to today",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "DUI/DWI arrests require NIBRS. To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "DUI/DWI arrests require NIBRS. To present: through 2025, say 2026 is not available. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -80855,18 +81118,23 @@
    "question": "Generate a graph of offender age by race and ethnicity",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); Codex check: No period means all NIBRS years; national offender detail requires cohort."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); Codex check: No period means all NIBRS years; national offender detail requires cohort. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -81666,18 +81934,23 @@
    "question": "Can you provide a chart of arrests for gun possession over the last 25 years?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS. Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): first-message reaction / chart restyle (Jeff 2026-11-25 cards); NIBRS-only detail, several years, national (no place = national): ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -81718,19 +81991,17 @@
    "question": "i said national not nyc",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26b",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26: a reaction to an unseen earlier answer gets the G158 decline (Jeff 11-25)."
    }
   },
   {
@@ -86320,18 +86591,23 @@
    "question": "Are juvenile victims of gun crimes increasing",
    "previous": "Are aggravated assaults going up",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal standalone follow-up; NIBRS-only detail (juvenile victims, firearm), several years, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal standalone follow-up; NIBRS-only detail (juvenile victims, firearm), several years, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -87298,18 +87574,23 @@
    "question": "show me intimidation offenses trends",
    "previous": "show me intimidation offenses trends",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); repeat of a full question; intimidation is a NIBRS-only offense, several years, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); repeat of a full question; intimidation is a NIBRS-only offense, several years, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -90051,19 +90332,23 @@
    "question": "how many property crime happened at hotels",
    "previous": "how many larceny reports at hotels in 2025",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up; year carried from previous; NIBRS-only detail (location type), one year, national. Owner card 2026-11-26: a follow-up that is a full new question stands alone; place and period do not carry over (no place = national)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up; year carried from previous; NIBRS-only detail (location type), one year, national. Owner card 2026-11-26: a follow-up that is a full new question stands alone; place and period do not carry over (no place = national). Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -96556,18 +96841,23 @@
    "question": "can you look at drug data?",
    "previous": "and property crime?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up; previous gives no place = national; drug crimes are NIBRS-only, several years."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up; previous gives no place = national; drug crimes are NIBRS-only, several years. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -100811,18 +101101,23 @@
    "question": "Please show me a national chart of aggravated assaults with a firearm used from 2021-2025",
    "previous": "Please show me a national chart of aggravated assaults with a firearm used from 2021-2025",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -100835,18 +101130,23 @@
    "question": "Aggravated assaults with a firearm nationwide from 2021 to 2025",
    "previous": "Please show me a national chart of aggravated assaults with a firearm used from 2021-2025",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -101221,18 +101521,23 @@
    "question": "now break down by year",
    "previous": "offender age breakdowns for each offense type separately",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up: offender age by offense type by year, national, several years, NIBRS-only detail; UNSURE because previous names no offenses."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up: offender age by offense type by year, national, several years, NIBRS-only detail; UNSURE because previous names no offenses. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -102210,9 +102515,9 @@
    "previous": "Arrests for domestic violence related incidents in Idaho versus other states since 2015",
    "expected": {
     "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
+    "source": null,
+    "about": "which states",
     "about_any": [
-     "all agencies or consistent reporters",
      "which states"
     ]
    },
@@ -102220,8 +102525,8 @@
     "status": "reviewed",
     "rule": "F3",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a follow-up to an answerable question Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); Codex check: Multi-year state NIBRS-only detail still needs cohort; good coverage does not specify one."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a follow-up to an answerable question Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); Codex check: Multi-year state NIBRS-only detail still needs cohort; good coverage does not specify one. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -102362,18 +102667,23 @@
    "question": "US aggravated assaults with a firearm data over past 10 years",
    "previous": "US aggravated assaults with a firearm data over past 10 years",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -102703,18 +103013,23 @@
    "question": "US aggravated assaults with a firearm data over past 10 years",
    "previous": "prince George county, aggravated assaults with firearm, whatever source works",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Last N years: full years ending 2025, say 2026 is not complete yet. (Jeff 2026-11-25 label choices page, general rule) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -103211,18 +103526,23 @@
    "question": "show a separate query for weapon law violations by age group",
    "previous": "now add weapons law violations",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); weapon law violations by age group, no place or period: NIBRS-only detail, national, every year; UNSURE because victim or offender age and the base question are not in previous."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); weapon law violations by age group, no place or period: NIBRS-only detail, national, every year; UNSURE because victim or offender age and the base question are not in previous. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -103343,18 +103663,23 @@
    "question": "show trends in Vehicle Parts/Accessories thefts over the last 5 years",
    "previous": "list the different types of stolen property",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); standalone question: theft of motor vehicle parts (NIBRS-only), national, 2021-2025."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); standalone question: theft of motor vehicle parts (NIBRS-only), national, 2021-2025. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -103916,18 +104241,23 @@
    "question": "This table is badly incorrect, the previous table included more than 500,000 offenders during this period, whereas this table has only 13. Please try again and create a table breaking down serious violent crime offenders in California from 2021-2025 by age group? Thank you",
    "previous": "can you create a chart from this showing the number of offenders by age for the full period (2021 to 2025)?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -104272,9 +104602,9 @@
    "previous": "Show carjacking trend by month/year",
    "expected": {
     "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
+    "source": null,
+    "about": "mean or median value",
     "about_any": [
-     "all agencies or consistent reporters",
      "mean or median value"
     ]
    },
@@ -104282,8 +104612,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); state NIBRS-only detail over all years asks the cohort (11-21)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); state NIBRS-only detail over all years asks the cohort (11-21). Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -104484,18 +104814,24 @@
    "question": "show this by year for 2023 to 2025",
    "previous": "show me murders, robberies, and aggravated assaults by offender age",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up read with previous: offender age (NIBRS-only), national, 2023-2025."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up read with previous: offender age (NIBRS-only), national, 2023-2025. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -104558,18 +104894,23 @@
    "question": "gender differences in violent offending",
    "previous": "gender differences in",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); completes the fragment into a full question: violent offenders by sex, national, no period so every NIBRS year; NIBRS-only detail over several years."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); completes the fragment into a full question: violent offenders by sex, national, no period so every NIBRS year; NIBRS-only detail over several years. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -104790,18 +105131,23 @@
    "question": "Show carjacking trend by month/year",
    "previous": "what is the typical dollar value of shoplifting offenses in california",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a reply; carjacking (NIBRS-only) trend over several years at state/national level."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a reply; carjacking (NIBRS-only) trend over several years at state/national level. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -104845,9 +105191,9 @@
    "previous": "what is the typical dollar value of shoplifting offenses in california",
    "expected": {
     "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
+    "source": null,
+    "about": "mean or median value",
     "about_any": [
-     "all agencies or consistent reporters",
      "mean or median value"
     ]
    },
@@ -104855,8 +105201,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); state NIBRS-only detail over all years asks the cohort (11-21)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); state NIBRS-only detail over all years asks the cohort (11-21). Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -105022,18 +105368,23 @@
    "question": "how many records mentioned gambling or betting",
    "previous": "by year how many incidents mentioned gambling or homicide",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: D4 retains by-year context; national NIBRS-only multi-year cohort rule."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: D4 retains by-year context; national NIBRS-only multi-year cohort rule. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -105226,18 +105577,23 @@
    "question": "assaults by location type in Florida",
    "previous": "Show drug offense trends by drug type in Ohio",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P280",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS breakdown with no period covers every NIBRS year, so several years at state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "P280 (Jeff 2026-11-23, Offenses with a note): a crime against a person by location or hour is counted by offense and says so. Unverified until the Runner recomputes. defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS breakdown with no period covers every NIBRS year, so several years at state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -106091,19 +106447,23 @@
    "question": "Drug crimes",
    "previous": "Drug possession",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "audit-2026-11-26",
-    "notes": "D4 (Jeff 2026-11-04): left out Owner card 2026-11-26: a full new question stands alone; national drug crimes are NIBRS-only, no period = every NIBRS year, so the cohort question."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Owner card 2026-11-26: a full new question stands alone; national drug crimes are NIBRS-only, no period = every NIBRS year, so the cohort question. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -106249,19 +106609,23 @@
    "question": "how many aggravated assault incidents involve multiple victims?",
    "previous": "robbery by weapon type in Philadelphia",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up, place carried from previous; NIBRS-only detail. Owner card 2026-11-26: a follow-up that is a full new question stands alone; place and period do not carry over (no place = national)."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up, place carried from previous; NIBRS-only detail. Owner card 2026-11-26: a follow-up that is a full new question stands alone; place and period do not carry over (no place = national). Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -106475,18 +106839,23 @@
    "question": "Show carjacking trend by month/year",
    "previous": "Carjackings per year",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a reply; carjacking (NIBRS-only) by month over several years, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a reply; carjacking (NIBRS-only) by month over several years, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -106598,18 +106967,23 @@
    "question": "Arrest trends for violent offenses broken out by offense type",
    "previous": "monthly arrest trends from 2018 to May 2026",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up: arrests for violent offenses by offense type (arrests are NIBRS-only), national, several years."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up: arrests for violent offenses by offense type (arrests are NIBRS-only), national, several years. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -106712,18 +107086,23 @@
    "question": "Can you show me the data tables on which this finding is based?",
    "previous": "what share of serious violent crimes in California are committed by youth under 18?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: State NIBRS age detail with no period spans all years; cohort unspecified."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: State NIBRS age detail with no period spans all years; cohort unspecified. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -106760,18 +107139,23 @@
    "question": "Show drug offense trends by drug type in Ohio",
    "previous": "juvenile arrests by race nationally",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS-only detail, several years, state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -107014,18 +107398,23 @@
    "question": "by year how many incidents mentioned gambling or homicide",
    "previous": "how many records mentioned gambling or betting",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a reply; gambling offenses by year, national, several years, NIBRS-only; UNSURE what 'mentioned gambling or homicide' should count."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); not a reply; gambling offenses by year, national, several years, NIBRS-only; UNSURE what 'mentioned gambling or homicide' should count. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -107120,18 +107509,23 @@
    "question": "marijuana arrests in Texas",
    "previous": "shootings in Chicago since 2015",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); Codex check: State NIBRS-only detail has multiple years by context/default; ask cohort."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); Codex check: State NIBRS-only detail has multiple years by context/default; ask cohort. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -107274,18 +107668,23 @@
    "question": "by clearance status!",
    "previous": "give me just vehicle burglaries!",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: D4: no hidden place/years; national NIBRS detail over default full span asks cohort."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: D4: no hidden place/years; national NIBRS detail over default full span asks cohort. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -107345,18 +107744,24 @@
    "question": "nationwide robbery, murder, and aggravated assault by age of offender from 2020 to 2024",
    "previous": "number homicides by year",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); offender age for robbery, murder and aggravated assault together is NIBRS-only (not Homicide Reports); several years, national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); offender age for robbery, murder and aggravated assault together is NIBRS-only (not Homicide Reports); several years, national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -108559,18 +108964,23 @@
    "question": "DUI arrests by age group nationally",
    "previous": "Show me the trends in misdemeanor arrests in the ten largest cities",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS breakdown with no period covers every NIBRS year, so several years at state/national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Requested offense or incident detail requires NIBRS; retain prior scope unless replaced. Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); NIBRS breakdown with no period covers every NIBRS year, so several years at state/national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -109531,18 +109941,23 @@
    "question": "what share of aggravated assaults are domestic violence over all available years?",
    "previous": "what share of aggravated assaults over the past 5 years are domestic violence incidents?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); full data question, not a reply; NIBRS-only detail, several years, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); full data question, not a reply; NIBRS-only detail, several years, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -109555,18 +109970,23 @@
    "question": "what are the other largest contributors in aggravated assault?",
    "previous": "what share of aggravated assaults over the past 5 years are domestic violence incidents?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up (aggravated assault by circumstance, past 5 years, national); NIBRS-only detail, several years, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up (aggravated assault by circumstance, past 5 years, national); NIBRS-only detail, several years, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -110151,18 +110571,23 @@
    "question": "what share of aggravated assaults over the past 5 years are domestic violence incidents?",
    "previous": "what share of aggravated assaults are domestic violence?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); full data question, not a reply; NIBRS-only detail (domestic violence share), 2021-2025, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); full data question, not a reply; NIBRS-only detail (domestic violence share), 2021-2025, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -110175,18 +110600,23 @@
    "question": "what share of aggravated assaults are domestic violence?",
    "previous": "what share of aggravated assaults are domestic violence?",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); repeat of a full data question, not a reply; NIBRS-only detail, national, no period = all years, so cohort question; unsure no-period counts as several years."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); repeat of a full data question, not a reply; NIBRS-only detail, national, no period = all years, so cohort question; unsure no-period counts as several years. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -110246,18 +110676,23 @@
    "question": "break out by each year",
    "previous": "from 2000 to 2025, what are the most common times of day a homicide is likely to occur",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up (homicides by time of day by year, 2000-2025, national); NIBRS-only detail, several years, national."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); normal follow-up (homicides by time of day by year, 2000-2025, national); NIBRS-only detail, several years, national. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
@@ -110354,18 +110789,24 @@
    "question": "nationwide robbery, murder, and aggravated assault by age of offender from 2020 to 2024",
    "previous": "compare murder trends in Houston, Dallas, and San Antonio from 2019 to 2024",
    "expected": {
-    "outcome": "clarify",
-    "about": "all agencies or consistent reporters",
-    "about_any": [
-     "all agencies or consistent reporters"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "source_any": [
+     "shr",
+     "nibrs"
+    ],
+    "answer": "the figures asked for, from all reporting agencies, with a note and a button for agencies reporting every year",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); offender age for robbery, murder and aggravated assault together is NIBRS-only (not Homicide Reports); several years, national: ask all agencies or consistent reporters."
+    "reviewed_by": "jeff-card-2026-11-26",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Family sweep (2026-11-25): state/national cohort rule (Jeff 2026-11-21, 2026-11-25); offender age for robbery, murder and aggravated assault together is NIBRS-only (not Homicide Reports); several years, national: ask all agencies or consistent reporters. Jeff card 2026-11-26: the cohort question is withdrawn (11-22 ruling stands); answer with all reporting agencies, a note, and a button for agencies reporting every year."
    }
   },
   {
