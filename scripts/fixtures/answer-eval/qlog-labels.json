@@ -1470,17 +1470,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Owner card 2026-11-26c: narrows an unseen earlier answer: generic line."
    }
   },
   {
@@ -33346,8 +33346,8 @@
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Owner card 2026-11-26c: keep the answer (top 15 cities by 2025 rate)."
    }
   },
   {
@@ -34369,17 +34369,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): a measure with no crime gets the generic line."
    }
   },
   {
@@ -34491,19 +34491,17 @@
    "question": "Show this in the same chart across these other cities",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): chart edit with nothing on screen gets the chart decline."
    }
   },
   {
@@ -39686,19 +39684,17 @@
    "question": "Now add Los Angeles to Philadelphia to the chart",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): add to chart with nothing on screen gets the chart decline."
    }
   },
   {
@@ -39875,19 +39871,17 @@
    "question": "Now add NYC to the chart",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): add to chart with nothing on screen gets the chart decline."
    }
   },
   {
@@ -53745,17 +53739,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26. Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): a measure with no crime gets the generic line."
    }
   },
   {
@@ -62014,19 +62008,17 @@
    "question": "add durango colorado to the graphic",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): add to graphic with nothing on screen gets the chart decline (sibling of nibrs-ad8eab2bca)."
    }
   },
   {
@@ -62325,19 +62317,17 @@
    "question": "show offense names instead of offense codes",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): table edit with nothing on screen gets the chart decline."
    }
   },
   {
@@ -63480,19 +63470,17 @@
    "question": "add Lawrence KS to the graphic",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Changing the chart isn't available here.",
+    "wording": "Changing the chart isn't available here."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): add to graphic with nothing on screen gets the chart decline."
    }
   },
   {
@@ -63805,17 +63793,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Owner card 2026-11-26c: \"same shares\" points at an unseen answer: generic line."
    }
   },
   {
@@ -67508,17 +67496,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "the place",
+    "about": "the whole question",
     "about_any": [
-     "the place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Codex second check 2026-11-26. Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): a measure with no crime gets the generic line."
    }
   },
   {
@@ -73791,23 +73779,17 @@
    "question": "firearm murders at the University of Houston since 2018",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "source_any": [
-     "shr"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Data for college campuses is not available.",
+    "wording": "Data for college campuses is not available."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
     "drafted_by": "jeff-2026-11-11-S1",
-    "reviewed_by": "jeff-2026-11-11-S1",
-    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "Jeff S1 (2026-11-11): murder details (weapon, relationship, circumstance, a victim's or offender's sex, race, ethnicity or age) come from Homicide Reports for every year from 1985, NIBRS's years included; NIBRS also answers it (option A, coordinator 2026-11-11) Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): college-campus questions are declined (11-25)."
    }
   },
   {
@@ -74452,7 +74434,7 @@
     "source_any": [
      "shr"
     ],
-    "answer": "the figures asked for",
+    "answer": "Share of female murder victims with known vs unknown relationship, by year, indexed to 1985 = 100, with a note that Homicide Reports start in 1985 so 1976 is not available.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -74462,8 +74444,8 @@
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Owner card 2026-11-26c: index to the first available year, 1985, with a note."
    }
   },
   {
@@ -80002,8 +79984,8 @@
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail. Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Owner card 2026-11-26c: felony-type vs argument circumstance is answered; the 11-22 decline is for charge level only."
    }
   },
   {
@@ -80261,19 +80243,17 @@
    "question": "That's murder, not shootings",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "I'm sorry, I didn't understand your question. Please try again.",
+    "wording": "I'm sorry, I didn't understand your question. Please try again."
    },
    "label": {
     "status": "reviewed",
     "rule": "X1",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "owner-cards-2026-11-26",
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored) Owner card 2026-11-26: session-less fragments are scored under the 11-25 two-way rule (replaces the 11-10 exclusion). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): remark on an unseen earlier result."
    }
   },
   {
@@ -84910,11 +84890,11 @@
    "previous": "philadelphia murder trend",
    "expected": {
     "outcome": "answer",
-    "source": "shr",
+    "source": "nibrs",
     "source_any": [
-     "shr"
+     "nibrs"
     ],
-    "answer": "the figures asked for",
+    "answer": "Philadelphia offenses involving a knife or cutting instrument, as a rate per 100,000.",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -84924,8 +84904,8 @@
     "status": "reviewed",
     "rule": "P180-P182",
     "drafted_by": "rules-v2",
-    "reviewed_by": "jeff-2026-11-21",
-    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail; retain prior scope unless replaced. Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "defaults P180-P182 (Jeff 2026-11-21): rules-v2 draft from the question text, second labeler Codex; no engine output. Homicide victim, offender, weapon or circumstance detail; retain prior scope unless replaced. Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Owner card 2026-11-26c: stabbings = NIBRS knife/cutting-instrument offenses; the follow-up stands alone."
    }
   },
   {
@@ -110920,22 +110900,22 @@
    "previous": "Show domestic homicide trends nationally since 2000",
    "expected": {
     "outcome": "answer",
-    "source": "shr",
-    "answer": "the figures asked for",
+    "source": "nibrs",
+    "source_any": [
+     "nibrs"
+    ],
+    "answer": "Texas victims of violent and property crimes by age, 2023.",
     "meaning": null,
     "values": {
      "status": "pending"
-    },
-    "source_any": [
-     "shr"
-    ]
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "F1+R14",
     "drafted_by": "rules-v1",
-    "reviewed_by": "spot-check-2026-11-25",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53) Spot check (2026-11-25): Follow-up to domestic homicide: murder victim detail comes from Homicide Reports (Jeff S1 2026-11-11). Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source)."
+    "reviewed_by": "audit-2026-11-26c",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53) Spot check (2026-11-25): Follow-up to domestic homicide: murder victim detail comes from Homicide Reports (Jeff S1 2026-11-11). Owner card 2026-11-26: murder victim/offender/weapon detail accepts Homicide Reports only (one source). Audit 2026-11-26c (Fable + Codex agree, owner card 2026-11-26): full new follow-up stands alone; victim age with no crime = violent plus property (11-22)."
    }
   },
   {
@@ -114404,8 +114384,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: D4: retain female victims as well as California."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); Codex check: D4: retain female victims as well as California. Owner card 2026-11-26c: felony-type vs argument circumstance is answered."
    }
   },
   {
@@ -116181,8 +116161,8 @@
     "status": "reviewed",
     "rule": "F4",
     "drafted_by": "rules-v1",
-    "reviewed_by": "family-sweep-2026-11-25",
-    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); full data question, not a reply."
+    "reviewed_by": "jeff-card-2026-11-26c",
+    "notes": "D4 (Jeff 2026-11-04): left out Family sweep (2026-11-25): follow-up after the old app's question relabeled (Jeff 2026-11-25 D4 card); full data question, not a reply. Owner card 2026-11-26c: felony-type vs argument circumstance is answered."
    }
   },
   {
