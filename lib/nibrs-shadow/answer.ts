@@ -935,6 +935,10 @@ const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 const SHR_NO_CRIME = /\b(?:(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b[^.?]*\b(?:victims?|killed|deaths?|dead)\b|\b(?:victims?|killed|deaths?|dead)\b[^.?]*\b(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b)|\b(?:intimate|partners?|spouses?|boyfriends?|girlfriends?|wife|husband|relationships?)\b/i;
 const OFFENDER_WORD = /\b(?:offenders?|perpetrators?|suspects?|killers?|attackers?)\b/i;
 let defaultDepth = 0;
+/** A source that cannot answer the question as typed (applyDefaults' final gates): Crime Index and friends have no breakdown by a person, and NIBRS named or a NIBRS-only offense is never answered from them. */
+function sourceBlocks(kind: string, typed: string): boolean {
+  return (["srs", "historical", "current", "hate"].includes(kind) && CRIME_INDEX_BLIND.test(typed)) || (["srs", "historical", "current"].includes(kind) && NIBRS_ONLY.test(typed));
+}
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
  * with the default instead, when the option that carries it answers now (not a heavy statement deferred, not a decline), and the chain of asks
@@ -947,6 +951,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
   let years = false;
+  const typedText = deps.guardText ? `${question}\n${deps.guardText}` : question;
   for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
     const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
@@ -971,10 +976,22 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
           if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
+      // The every-year series can land in a source that cannot answer this question (Crime Index or Current Trends for an offender-age or NIBRS-only
+      // ask): the final gate below would then leave the ask standing, so that series is passed over for the latest-year button, but only when
+      // that button is itself an answer now (never past a decline or another ask).
+      if (option && !isDeferred(option) && option.continuation && !find(/^Every year available$/) && sourceBlocks(option.continuation.kind, typedText)) {
+        const latestBtn = find(/^The latest complete year \((\d{4})\)$/);
+        if (latestBtn && !isDeferred(latestBtn) && latestBtn.continuation && ANSWER_KINDS.includes(latestBtn.continuation.kind) && !sourceBlocks(latestBtn.continuation.kind, typedText)) option = undefined;
+      }
       // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
       if (!option) {
         const latest = find(/^The latest complete year \((\d{4})\)$/);
         if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
+        else {
+          // A period ask whose buttons are bare years ("2025", "Other years"): the newest year offered is the latest complete year.
+          const bare = c.options.filter((x: ShadowOption) => /^\d{4}$/.test(x.label)).sort((x: ShadowOption, y: ShadowOption) => Number(y.label) - Number(x.label))[0];
+          if (bare) { option = bare; note = `No year was given, so the latest complete year, ${bare.label}, is shown.`; }
+        }
       }
       years = true;
       more.push({ label: "Another year", entry: "which year" });
@@ -1005,7 +1022,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     cur = option.continuation;
   }
   if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
-  const typed = deps.guardText ? `${question}\n${deps.guardText}` : question;
+  const typed = typedText;
   // A Crime Index (or hate crime) figure has no breakdown by a person's age, race, sex or by weapon: a default that lands there for a question that asks
   // one would answer without it, which is a wrong answer, so such a question stays an ask.
   if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(typed)) {
