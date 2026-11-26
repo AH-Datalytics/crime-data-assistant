@@ -85043,22 +85043,22 @@
    "previous": "San Francisco aggravated assaults per month",
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
-    "answer": "San Francisco aggravated assaults by month, 2018 on",
+    "source": "historical",
+    "answer": "San Francisco aggravated assaults by year, 2018 on",
     "meaning": null,
     "values": {
      "status": "pending"
     },
     "source_any": [
-     "rtci"
+     "historical"
     ]
    },
    "label": {
     "status": "reviewed",
     "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
-    "reviewed_by": "spot-check-2026-11-25",
-    "notes": "This stands alone and does not inherit monthly frequency. Spot check (2026-11-25): Follow-up to a monthly San Francisco question keeps the monthly reading; a recent city figure comes from Current Trends only (one-source rule, Jeff 2026-11-25)."
+    "reviewed_by": "owner-cards-2026-11-26",
+    "notes": "This stands alone and does not inherit monthly frequency. Spot check (2026-11-25): Follow-up to a monthly San Francisco question keeps the monthly reading; a recent city figure comes from Current Trends only (one-source rule, Jeff 2026-11-25). Owner card (2026-11-26): a follow-up that restates place and crime with a new period stands alone; yearly from Crime Index yearly, the earlier 'per month' does not carry over."
    }
   },
   {
