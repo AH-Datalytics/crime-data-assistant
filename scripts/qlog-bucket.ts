@@ -143,6 +143,9 @@ export function bucket(l: Label, g: Got | null): Bucket {
     const okSource = (x: string | null) => x === e.source || (!!x && (e.source_any ?? []).includes(x));
     // Verified (every shown number matched independent values, at this digest): correct.
     if (kind === "answer") {
+      // A coverage reply (data coverage, sources, definitions) fits only a label that expects methodology or nibrs, and no check
+      // of its numbers exists: always unverified. Any other label source is a wrong answer.
+      if (g.source === "coverage") return e.source === "methodology" || e.source === "nibrs" || (e.source_any ?? []).some((x) => x === "methodology" || x === "nibrs") ? "unverified" : miss("wrong answer");
       if (!okSource(g.source)) return miss("wrong answer");
       // The right numbers for the wrong period, or too many places, are a wrong answer.
       const shape = shapeCheck(e, g);

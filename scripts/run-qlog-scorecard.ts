@@ -226,16 +226,16 @@ const deps: ShadowDeps = {
 export { tableDigest };
 
 /** What the engine did, in the label's terms. */
-function got(o: { kind: string } & Record<string, unknown>, ms: number, labelSource: string | null = null): Got {
+function got(o: { kind: string } & Record<string, unknown>, ms: number): Got {
   const table = (o.delivered as { table?: Table } | undefined)?.table;
   const answer = (source: string): Got => ({ kind: "answer", source, ms, digest: tableDigest(table?.rows), ...tableShape(table, deps.release.lastMonth) });
   switch (o.kind) {
-    // A data coverage answer (coverage.ts) describes the data in general, not one tab's source: it fits the source the label names,
-    // and stays unverified (its numbers have no independent check yet).
+    // A data coverage answer (coverage.ts) describes the data in general, not one tab's source: it records source "coverage",
+    // which the bucket accepts only for labels that expect methodology or nibrs, and always leaves unverified.
     case "answer": return answer("nibrs");
     case "srs": case "historical": return answer("historical");
     case "current": return answer("rtci");
-    case "coverage": return answer(labelSource ?? "nibrs");
+    case "coverage": return answer("coverage");
     case "hate": return answer("hate_crime");
     case "shr": return answer("shr");
     case "route": return { kind: "route", source: String(o.source), ms };
@@ -355,7 +355,7 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
         else via = `gemini refused: ${v.reason}`;
       }
     }
-    g = { ...got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t, l.expected.source), ...(via ? { via } : {}), ...(read ? { read } : {}) };
+    g = { ...got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t), ...(via ? { via } : {}), ...(read ? { read } : {}) };
   } catch (e) {
     // A process that can't be ended stops the run (incomplete, so not judged): the next one must never run beside it.
     if (/duckdb executor:/.test(String(e))) throw e;
