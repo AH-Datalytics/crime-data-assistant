@@ -49,6 +49,10 @@ const byType = ok(compilePlan({ ...X.N2, groupings: [{ dimension: "offense.clear
 assert.deepEqual(byType.columns, ["offense.clearance_type", n2as, `${n2as}_status`, "inc", "inc_status", "left_out"]);
 for (const s of ["cleared_exceptionally", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num)) AS ni", 'sum(ni) END AS "inc"']) assert.ok(byType.sql.includes(s), s);
 assert.deepEqual(byType.statements, ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
+// Family 5 (ruling 67): a clearance measure is placed by its clearance date (exceptional date, earliest arrest date); the share
+// denominators stay on the incident month; a plain measure keeps incident placement.
+for (const s of ["scoped_c AS", "exceptional_clearance_date", "min(nullif(arrest_date, ''))", "AS cym"]) assert.ok(byType.sql.includes(s), s);
+assert.ok(!ok(compilePlan(X.N2, year(2024), t)).sql.includes("scoped_c"));
 // A selection by status says P64 only; by arrest, P67 too.
 const sel = (dimension: string, v: string) => ok(compilePlan({ ...X.N2, filters: [...X.N2.filters, { kind: "attribute", dimension, op: "in", values: [v] }] }, year(2024), t)).statements;
 assert.deepEqual(sel("offense.clearance_status", "cleared"), ["property_not_attributed", "clearance_as_of_file"]);

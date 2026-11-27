@@ -463,6 +463,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (timeDims.length > 1 || timeDims.some((g) => !["time.month", "time.quarter", "time.year"].includes(g.dimension))) return no("v0 groups time by month, quarter or year, once");
   if (timeDims.some((g) => g.bins || g.multiValue)) return no("v0 groups time without bins");
   if (timeDims.length && plan.groupings[0] !== timeDims[0]) return no("v0 puts the time grouping first");
+  // Family 5 (ruling 67): a clearance measure (a clearance grouping or selection) places each unit by its CLEARANCE date: an exceptional
+  // clearance by incident.exceptional_clearance_date, a clearance by arrest by the incident's earliest arrest date (blank: the incident's
+  // own month), an uncleared unit by its incident month. Share denominators stay on the incident's month (data year). Only clearance
+  // measures: every other unit keeps its incident-date placement. A single agency's month grain stays on the incident month.
+  const clearBasis = !isArrest && clearanceDims(plan).length > 0 && (!!grid || timeDims[0]?.dimension !== "time.month");
   const groupCols: string[] = [];
   const joins: ((read: Read) => string)[] = [];
   for (const g of attrDims) {
@@ -589,7 +594,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const inYears = (col: string) => (yearSet ? ` AND substr(${col}, 1, 4) IN (${list(yearSet.map(String))})` : "");
   const from = span.from.replace("-", ""), to = span.to.replace("-", "");
   const firstYear = Number(span.from.slice(0, 4));
-  const years = isArrest ? (t.arrestYears ?? t.builtYears) : t.builtYears.filter((y) => y >= firstYear);
+  // A clearance placed by its own date can come from a data year before the period: every built year is scanned.
+  const years = isArrest ? (t.arrestYears ?? t.builtYears) : clearBasis ? t.builtYears : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   // The agency-month status is the month's own (an arrest month counts whatever its status), so it stays on the built years.
   const read = (table: string) => `read_parquet([${(table === "agency_month_status" && isArrest ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
@@ -607,7 +613,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
   // (carjacking, domestic violence, any later one) is never answered from the cube row of the group whose code list it happens to share.
-  const cubeCfg = cubeWanted && !m.id.endsWith(".armed_firearm") && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
+  const cubeCfg = cubeWanted && !clearBasis && !m.id.endsWith(".armed_firearm") && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;
@@ -656,6 +662,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const nUnits = cube ? "CAST(SUM(u.w) AS BIGINT)" : `COUNT(DISTINCT ${key})`;
   const nIncidents = cube ? "CAST(SUM(u.wi) AS BIGINT)" : `COUNT(DISTINCT ${ikey})`;
   const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
+  // The clearance basis counts by the placement month `cym`; the denominators (month_total) keep the incident month.
+  const inScopeC = clearBasis ? `${oriIs("u.ori")} AND u.cym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.cym")}` : inScope;
+  const cymCol = `CASE WHEN ce.data_year IS NOT NULL THEN coalesce(nullif(substr(ce.ad, 1, 6), ''), u0.ym)
+      WHEN ci.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN coalesce(nullif(substr(ci.exceptional_clearance_date, 1, 6), ''), u0.ym) ELSE u0.ym END`;
   // Speed (job AR6): every arrest with no condition already counts every arrest, so a month with any arrest is a month
   // with a count and the any-arrest scan (a second read of every arrest table) adds nothing.
   const anyArrest = isArrest && !(m.id === "arrests.all_crime" && !plan.filters.length && !m.filters?.length);
@@ -663,8 +673,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const O = grid ? "ori, " : "";
   const parts = [
     ...(bigGrid ? [`${GRID} AS (SELECT ${oriRows(grid!)} AS ori)`] : []),
-    `units AS (${cube ? cube.sql : units.sql})`,
+    ...(clearBasis ? [`units0 AS (${units.sql})`,
+      `units AS (SELECT u0.*, ${cymCol} AS cym FROM units0 u0
+        LEFT JOIN (SELECT data_year, ori, incident_num, cleared_exceptionally, exceptional_clearance_date FROM ${read("incident")} WHERE ${oriIs("ori")}) ci ON ci.data_year = u0.data_year AND ci.ori = u0.ori AND ci.incident_num = u0.incident_num
+        LEFT JOIN (SELECT data_year, ori, incident_num, min(nullif(arrest_date, '')) AS ad FROM ${read("arrestee")} WHERE ${oriIs("ori")} GROUP BY data_year, ori, incident_num) ce ON ce.data_year = u0.data_year AND ce.ori = u0.ori AND ce.incident_num = u0.incident_num)`] : [`units AS (${cube ? cube.sql : units.sql})`]),
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
+    ...(clearBasis ? [`scoped_c AS (SELECT * FROM units u WHERE ${inScopeC})`] : []),
     // Overlapping categories (a weapon grouping from the cube): the month's total counts each offense once, from the cube's own total rows.
     ...(cube?.totalSql ? [`totals AS (${cube.totalSql})`, `scoped_t AS (SELECT * FROM totals u WHERE ${inScope})`] : []),
     // Every month of the period, so a month with no rows still gets a status.
@@ -703,15 +717,22 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // would otherwise drop every agency-month and its status; the state sum reads coverage from it and skips it in sums.
     // P192: a clearance-type table lists every type even when none occurred (one agency too), so its months keep their statuses.
     const placeholder = grid || (attrDims.length === 1 && attrDims[0].dimension === "offense.clearance_type");
-    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${placeholder ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
+    const sc = clearBasis ? "scoped_c" : "scoped";
+    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM ${sc}${placeholder ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM ${sc})` : ""})`);
     // In grid mode (a state's or the nation's agencies, state-sum.ts) each agency's categories are its own: the agency is
     // carried through and joined on (coordinator 2026-11-04: a state or national sum by category).
-    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped u GROUP BY ALL)`);
+    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.${clearBasis ? "cym AS ym" : "ym"}${g.map((x) => `, u.${x}`).join("")}, ${nUnits} AS n, ${nIncidents} AS ni FROM ${sc} u GROUP BY ALL)`);
     parts.push(`cells AS (SELECT ${grid ? "mc.ori, " : ""}mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni,
       mc.month_cell AS cell
       FROM month_cells mc CROSS JOIN cats c
       LEFT JOIN counted k ON k.ym = mc.ym${grid ? " AND k.ori = mc.ori" : ""}${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
   } else {
+    if (clearBasis) {
+      // A clearance selection with no grouping: the count is by placement month, the month's status from the incident month.
+      parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.cym AS ym, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped_c u GROUP BY ALL)`);
+      parts.push(`cells AS (SELECT ${grid ? "mc.ori, " : ""}mc.ym, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni, mc.month_cell AS cell
+        FROM month_cells mc LEFT JOIN counted k ON k.ym = mc.ym${grid ? " AND k.ori = mc.ori" : ""})`);
+    } else
     parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, deni AS ni, month_cell AS cell FROM month_cells)`);
   }
 
