@@ -286,6 +286,10 @@ if (ra.kind === "shr") {
 }
 const rby = answerShr({ ...rq, grain: "year", from: "2022-01", to: "2023-12" }, build, rateStub, hist);
 assert.ok(rby.kind === "shr" && JSON.stringify(rby.delivered.table.rows) === '[["2022",20],["2023",5]]', JSON.stringify(rby));
+// The numerator keeps only agencies with a population row; the rest are named in a line, not left in the rate (Jeff 2026-11-26).
+const matchStub = (s2: string) => (/shr_agency_year/.test(s2) || /sum\(population\)/.test(s2) ? rateStub(s2) : /ac\.population IS NOT NULL/.test(s2) ? [[100]] : [[130]]);
+const rm = answerShr(rq, build, matchStub, hist);
+assert.ok(rm.kind === "shr" && rm.delivered.table.rows[0][0] === 5 && rm.delivered.text.includes("30 victims from state police and other agencies with no population are not in the rate."), JSON.stringify(rm));
 // Without Crime Index's population there is no rate, never a count in its place.
 const noPop = answerShr(rq, build, rateStub);
 assert.ok(noPop.kind === "shr" && noPop.delivered.table.rows[0][0] === null, JSON.stringify(noPop));
