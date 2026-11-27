@@ -112,6 +112,8 @@ export type ShrQuestion = {
   notes?: string[];
   /** A rolling window: each month shows the total of that month and the months before it (shared helper rolling.ts). */
   rolling?: { months: number };
+  /** Jeff 2026-11-22: "ratio of male to female victims": the victims by sex shown as the male count, the female count and the ratio (per one of the other sex). Set by the caller on a by-sex breakdown. */
+  sexRatio?: "male_to_female" | "female_to_male";
 };
 export type ShrAnswer = {
   kind: "shr"; question: ShrQuestion; period: { from: string; to: string };
@@ -420,7 +422,20 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
     : sq.grain === "month" ? [{ binding: { kind: "grouping" as const, dimension: "time.month" }, header: "Month" }] : [];
   const rows: (string | number | null)[][] = [];
   const columns: ResultTable["columns"] = [...timeCols];
-  if (sq.breakdown && sq.breakdown2) {
+  const ratioDir = sq.sexRatio && sq.breakdown?.dim === "victim.sex" && !sq.breakdown2 && !sq.share ? sq.sexRatio : null;
+  const noRatio: number[] = [];
+  if (ratioDir) {
+    // One row per period: the male count, the female count, and the first sex's count per one of the other (Jeff 2026-11-22).
+    const [top, bottom] = ratioDir === "male_to_female" ? ["Male", "Female"] : ["Female", "Male"];
+    columns.push({ binding: { kind: "statistic", as: "count_male" }, header: "Male" }, { binding: { kind: "statistic", as: "count_female" }, header: "Female" },
+      { binding: { kind: "statistic", as: "ratio" }, header: `${top} per ${bottom.toLowerCase()}` });
+    for (const p of periods) {
+      const m = valueOf(p, "M"), f = valueOf(p, "F");
+      const [n, d] = ratioDir === "male_to_female" ? [m, f] : [f, m];
+      if (n !== null && d !== null && !d) noRatio.push(p.year);
+      rows.push([...(p.label ? [p.label] : []), m, f, n === null || !d ? null : Math.round((n * 100) / d) / 100]);
+    }
+  } else if (sq.breakdown && sq.breakdown2) {
     // The first breakdown down the side, the second across (a column for each of its categories).
     columns.push({ binding: { kind: "grouping", dimension: `shr.${sq.breakdown.dim}` }, header: DIM_HEADER[sq.breakdown.dim] });
     for (const c2 of cats2) columns.push({ binding: { kind: "statistic", as: `count_${c2.code || "unknown"}` }, header: c2.label });
@@ -455,7 +470,12 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const lone = !sq.breakdown && sq.grain !== "year" && sq.grain !== "month" && rows.length === 1 && typeof rows[0][rows[0].length - 1] === "number" ? (rows[0][rows[0].length - 1] as number) : null;
   const subject = sq.place.kind === "agency" ? agencySubject(sq.place.label, sq.place.ori).text : where;
   const groupBy = [sq.grain === "year" ? "year" : sq.grain === "month" ? "month" : null, sq.breakdown ? DIM_WORDS[sq.breakdown.dim] : null, sq.breakdown2 ? DIM_WORDS[sq.breakdown2.dim] : null].filter(Boolean).join(" and ");
-  const text = [lone !== null ? (sq.rate ? `${subject} had ${lone} ${what} per 100,000 people in ${span}.` : `${subject} had ${fmt(lone)} ${what} in ${span}.`)
+  const [rTop, rBottom] = ratioDir === "female_to_male" ? ["female", "male"] : ["male", "female"];
+  const text = ratioDir ? [seriesTitle(span, `ratio of ${rTop} to ${rBottom} ${what} (${rTop} victims per ${rBottom} victim)`, sq.grain === "total" ? "Period" : sq.grain, where),
+      `Ratio = ${rTop} victims per one ${rBottom} victim. Victims of unknown sex are not in the ratio.`,
+      ...(noRatio.length ? [`A year with no ${rBottom} victims has no ratio: ${noRatio.join(", ")}.`] : []),
+      "Counts are the homicides agencies reported to the FBI, each victim counted."]
+    : [lone !== null ? (sq.rate ? `${subject} had ${lone} ${what} per 100,000 people in ${span}.` : `${subject} had ${fmt(lone)} ${what} in ${span}.`)
       : seriesTitle(span, `${what}${sq.rate ? " per 100,000 people" : ""}`, groupBy || "Period", where),
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
     ...(sq.rate && unmatchedVictims > 0 ? [`${fmt(unmatchedVictims)} victims from state police and other agencies with no population are not in the rate.`] : []),
