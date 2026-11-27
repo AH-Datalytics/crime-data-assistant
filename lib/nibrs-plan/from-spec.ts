@@ -245,6 +245,9 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       // The Property button on a victim-age question: victims of NIBRS crimes against property by their age (Jeff 2026-11-15).
       const propertyAge = !whose && spec.measure === "property_crime" && (!spec.unit || spec.unit === "victims") && (spec.dim === "age" || spec.dim === "victim-age");
       if (propertyAge) spec = { ...spec, measure: "against_property", unit: "victims" };
+      // Arrests for "violent crime" by age: NIBRS violent = Crimes Against Persons, no robbery (owner ruling 2026-11-26).
+      const arrestViolent = !whose && spec.measure === "violent_crime" && spec.unit === "arrests";
+      if (arrestViolent) spec = { ...spec, measure: "person_crimes" };
       const unit = spec.dim === "victim-offender-race" ? "victim_offender" : clearanceDim ? "offense" : unitFor(spec.measure, spec.unit, asksPerson(spec));
       if (unit === "fbi_standard" && !["location", "hour", "offense"].includes(spec.dim)) {
         return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by ${spec.dim}: a mixed-unit composite has no single counted person` };
@@ -254,6 +257,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       addMeasure(spec.measure, unit, spec.measure);
       if (whose) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       if (propertyAge) measurePath.set("property_crime", measurePath.get("against_property")!);
+      if (arrestViolent) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
       if (spec.places && spec.places.length > 1) {

@@ -4343,7 +4343,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     return decline("unsupported_capability", `This isn't available: property crime in the United States broken down by victim age takes too long to count here. Ask for one state, for example "property crimes by victim age in Texas in 2024", or for one agency.`);
   // The same for violent crime by a person's age, nationally over several years (BD3: 2017-2025 by victim age ran DuckDB out of
   // memory): the arrest sentence's pattern, one year offered in words, never run in advance.
-  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.person_crimes$/.test(m.id))
+  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /^(?:victims|offenders|offenses)\.person_crimes$/.test(m.id))
     && checked.groupings.some((g) => !g.dimension.startsWith("time.")) && period.from.slice(0, 4) !== period.to.slice(0, 4)) {
     const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
     const who = checked.measures[0].unit === "offender" ? "offender" : "victim";
