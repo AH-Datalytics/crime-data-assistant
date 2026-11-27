@@ -2896,6 +2896,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "D1 period grammar: number word with repeated digits, all-years wordings, until-as-to; 4 labeled questions reach the route; stub DuckDB step, checked-in place index."
+    },
+    {
+      "id": "test-table-pivot",
+      "tier": "F",
+      "script": "scripts/test-table-pivot.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Table presentation pivot (ruling 7): a Year + one category + values table becomes a column per year, and the CSV matches the shown table. Offline."
     }
   ]
 }
