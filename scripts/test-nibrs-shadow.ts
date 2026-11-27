@@ -300,12 +300,12 @@ assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer")
     assert.notEqual(ask(q).kind === "clarify" && (ask(q) as { about?: string }).about, "which Kings County", q);
   }
 }
-// Coordinator 2026-11-24 (ruling A, QL-nibrs-b2f415c823): one category over several years, not by year, is the category's table summed over the years.
+// Ruling 7 (supersedes 2026-11-24 ruling A): one category over several years = one table with a year dimension (column per year).
 {
-  for (const [q, title] of [["DUI arrests by age nationally, 2023 - 2025", "United States DUI Arrests by Arrestee Age Group, 2023-2025"], ["burglary arrests by age in Texas, 2022 - 2024", "Texas Burglary Arrests by Arrestee Age Group, 2022-2024"]] as const) {
+  for (const [q, title] of [["DUI arrests by age nationally, 2023 - 2025", "United States DUI Arrests by Year and Arrestee Age Group, 2023-2025"], ["burglary arrests by age in Texas, 2022 - 2024", "Texas Burglary Arrests by Year and Arrestee Age Group, 2022-2024"]] as const) {
     const a = as(ask(q), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[] } } };
     assert.equal(a.delivered.text[0], title, q);
-    assert.ok(!a.delivered.table.columns.some((c) => /^(Year|Period)$/i.test(c.header)), "one table over the years, no year column");
+    assert.ok(a.delivered.table.columns.some((c) => /^(Year|Period)$/i.test(c.header)), "ruling 7: one table, a year dimension (pivoted per year)");
     assert.ok(a.delivered.text.includes("Includes all agencies."), q);
   }
 }
@@ -3992,7 +3992,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 }
 // P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
 {
-  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
   assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
   const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
@@ -4033,7 +4033,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(!o.delivered.text.includes(SENTENCE), q);
   }
   // Weapon stays with its own wording (P166); a second grouping is not converted.
-  assert.ok(!(as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as P280).delivered.text.includes(SENTENCE));
+  assert.ok(!(as(ask("Aggravated assault victims by weapon type in Houston 2024"), "answer") as unknown as P280).delivered.text.includes(SENTENCE));
   assert.equal(ask("Aggravated assaults by hour of day by victim age in Houston in 2024").kind, "decline");
 }
 // P193 (census 2026-11-21): "in these cities: A, B, C" names the places in the list; "per year and clearance type" is the clearance type by year.

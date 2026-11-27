@@ -271,7 +271,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
         places = [p];
       }
       periodValue = periodOf(spec.period, false);
-      if (spec.byYear) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
+      // Owner ruling 7: a breakdown over several years is one table with a column per year, even when "by year" is not said.
+      const spansYears = (spec.period.form === "range" && spec.period.from !== spec.period.to) || (spec.period.form === "years" && spec.period.list.length > 1);
+      const yearCols = spec.byYear || (spansYears && !spec.byMonth);
+      if (yearCols) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
       if (spec.byMonth) groupings.push({ dimension: "time.month", unknown: "visible", absent: "show" });
       // By bias is a hate crime breakdown (the hate crime data), never NIBRS's offense bias records for another crime.
       if (spec.dim === "bias" && spec.measure !== "hate_crime") return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by bias: bias is answered for hate crimes only, from the hate crime data` };
@@ -279,7 +282,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       if (!g) return { kind: "unmapped", reason: `breakdown ${spec.dim} has no plan form` };
       groupings.push(g);
       statistics.push({ kind: "count", as: "count", measure: spec.measure });
-      statistics.push({ kind: "share", as: "share", measure: spec.measure, within: spec.byYear ? ["time.year"] : spec.byMonth ? ["time.month"] : [] });
+      statistics.push({ kind: "share", as: "share", measure: spec.measure, within: yearCols ? ["time.year"] : spec.byMonth ? ["time.month"] : [] });
       break;
     }
     case "share": {
