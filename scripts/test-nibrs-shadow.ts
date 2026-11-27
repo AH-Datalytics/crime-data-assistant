@@ -1427,8 +1427,8 @@ const v = as(ask("How many shoplifting victims were there in Memphis in 2024?"),
 assert.equal(v.plan.measures[0].unit, "offense");
 // P86: carried, not shown (the title says "offenses").
 assert.equal(v.delivered.text.at(-2), "Property crimes are counted by offense, not by victim.", "P86: shown, since victims were asked for");
-// Person crimes stay by victim (D18); carjacking is counted by offense (D18).
-assert.equal(as(ask("How many simple assaults were there in Detroit in 2023?"), "answer").plan.measures[0].id, "victims.simple_assault");
+// Ruling 1 (2026-11-26) supersedes D18: person crimes are offenses unless victims are asked; carjacking is counted by offense (D18).
+assert.equal(as(ask("How many simple assaults were there in Detroit in 2023?"), "answer").plan.measures[0].id, "offenses.simple_assault");
 const cj = as(ask("carjackings in Memphis TN by month in 2025"), "answer");
 assert.deepEqual([cj.plan.measures[0].id, cj.plan.measures[0].unit], ["offenses.carjacking", "offense"]);
 
@@ -1771,12 +1771,12 @@ assert.equal(as(ask("Robbery offenders in Detroit by sex in 2023"), "answer").pl
 assert.match(as(ask("Murders by strangers in Detroit in 2023"), "answer").delivered.text[0], /murder victims by a stranger in 2023/);
 // P31: gun crime and stabbings, each crime in its unit with the weapon, and the total; gun violence and shooters declined.
 const gun = as(ask("Gun crime in Detroit in 2023"), "answer");
-assert.deepEqual(gun.plan.measures.map((m) => `${m.id}:${(m.filters?.[0] as { scope: string }).scope}`), ["victims.murder:victim", "offenses.robbery:offense", "victims.aggravated_assault:victim"]);
-assert.deepEqual(gun.delivered.table.columns.map((c) => c.header), ["Murder victims with a firearm", "Robbery offenses with a firearm", "Aggravated assault victims with a firearm"]);
+assert.deepEqual(gun.plan.measures.map((m) => `${m.id}:${(m.filters?.[0] as { scope: string }).scope}`), ["victims.murder:victim", "offenses.robbery:offense", "offenses.aggravated_assault:offense"]);
+assert.deepEqual(gun.delivered.table.columns.map((c) => c.header), ["Murder victims with a firearm", "Robbery offenses with a firearm", "Aggravated assault offenses with a firearm"]);
 assert.ok(gun.delivered.text.includes("Together: 252 gun crimes in 2023."));
 assert.ok(sqls.slice(-3).every((q) => q.includes("w2.weapon IN ('11', '12', '13', '14', '15')")));
 const stab = as(ask("Stabbings in Detroit in 2023"), "answer");
-assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument."]);
+assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault offenses with a knife or cutting instrument."]);
 assert.match(as(ask("Gun violence in Detroit in 2023"), "decline").explanation, /non-fatal shootings/);
 assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "decline").explanation, /not who fired a gun, so "shooters" can.t be counted/);
 // P46, P48, P50: arrests by arrest date, counted once each; "people arrested for" is arrests; "charged" is declined with

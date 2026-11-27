@@ -3699,7 +3699,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       } else if (w.who === "victim") {
         // P120 (Jeff 2026-11-16): a question that says victims and gives their age counts the crime's victims (robbery victims
         // under 18), the unit a victim's age belongs to; a crime counted by offense with no victim word stays declined.
-        if (unit === "offense" && /^offenses\.[a-z_]+$/.test(plan.measures[0].id) && /\bvictims?\b/i.test(ledger0.question)) plan.measures[0] = { ...plan.measures[0], id: plan.measures[0].id.replace(/^offenses\./, "victims."), unit: "victim" };
+        if (unit === "offense" && /^offenses\.[a-z_]+$/.test(plan.measures[0].id)) plan.measures[0] = { ...plan.measures[0], id: plan.measures[0].id.replace(/^offenses\./, "victims."), unit: "victim" };
         if (plan.measures[0].unit !== "victim") return decline("unsupported_capability", "This isn't available: a victim's age for crimes counted by offense.");
         plan.filters.push(between("victim.age", w.range));
       } else if (w.who === "arrestee") {
@@ -3877,7 +3877,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // connects a victim, or on the robbery offense itself.
   const composite = flags(ledger0).composite;
   if (composite) {
-    const want = composite === "firearm" ? ["victims.murder", "offenses.robbery", "victims.aggravated_assault"] : ["victims.murder", "victims.aggravated_assault"];
+    const want = composite === "firearm" ? ["victims.murder", "offenses.robbery", "offenses.aggravated_assault"] : ["victims.murder", "offenses.aggravated_assault"];
     // Only the composite's own crimes: a crime asked beside it ("gun crimes and murders") would be absorbed into the
     // composite's weapon-filtered part, so that form is declined (Codex review 02).
     if (JSON.stringify(plan.measures.map((m) => m.id)) !== JSON.stringify(want) || clause0("measure").length !== want.length)
@@ -3885,8 +3885,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     plan.measures = plan.measures.map((m) => ({ ...m, filters: [{ kind: "exists", scope: m.unit === "victim" ? "victim" : "offense", entity: "offense_weapon",
       where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: WEAPON_CODES[composite] }] } as Filter] }));
     combined = composite === "firearm"
-      ? { label: "gun crimes", definition: "Gun crime here is murder victims, robbery offenses and aggravated assault victims with a firearm." }
-      : { label: "stabbings", definition: "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument." };
+      ? { label: "gun crimes", definition: "Gun crime here is murder victims, robbery offenses and aggravated assault offenses with a firearm." }
+      : { label: "stabbings", definition: "Stabbings here are murder victims and aggravated assault offenses with a knife or cutting instrument." };
   }
   // P29/P49: "by men and women" -> the crimes by the sexes of their incidents' offenders (each crime once under each sex
   // present), with each category's share. Only the victim-sex filters the reader made from those words are dropped and
