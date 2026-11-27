@@ -38,6 +38,7 @@ import { ALL_CITIES_N, COUNTYWIDE_RE, COURT_TEXT, FORECAST_TEXT, GANG, readQuest
 import { deterministicRewriter, JUDGEMENT, JUDGEMENT_SENTENCE, judgementOffer, pointsBack, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, MEASURE_LABEL, PERSON_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
+import { parseStaffSet, answerStaffSet } from "./staffing-set";
 import { answerStaffing, STAFF_MIXED_TEXT, staffingBesideWords, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
 const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
@@ -2840,6 +2841,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     const runnable = options.filter(optionRuns);
     if (runnable.length) return { kind: "clarify", about: "which rolling window", question: ledger0.question, options: [...runnable, { label: "Another length", entry: "how many months" }] };
     return options[0].continuation!;
+  }
+  // Staffing for sets of cities (Jeff 2026-11-23, rankings PR 2): four closed forms read from the question's own words,
+  // from Crime Index's staffing tables only; any other staffing question keeps its decline below.
+  const staffSet = deps.historical && !clause0("place").length ? parseStaffSet(ledger0.question) : null;
+  if (staffSet && deps.historical) {
+    const r = answerStaffSet(staffSet, deps.historical, deps.execute);
+    if (r.kind === "historical") return r;
+    return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
   }
   if (!clause0("place").length) {
     // "Big cities" or "the N largest cities" with no place named are the whole country's, said (Jeff 2026-11-11: "yes",

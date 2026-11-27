@@ -2619,6 +2619,15 @@
       "note": "The shadow's DuckDB executor: one persistent Python process answering synchronously, cached by SQL, the same rows as the one-process-per-query reference. Uses the harness Python's duckdb (requirements-harness.in); skipped with none."
     },
     {
+      "id": "test-nibrs-staffing-set",
+      "tier": "F",
+      "script": "scripts/test-nibrs-staffing-set.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Police staffing for sets of cities (rankings PR 2, 2026-11-23): rank, list, share and scatter-table forms read from the question, answered from the Crime Index staffing tables; a stub executor stands in for DuckDB"
+    },
+    {
       "id": "test-nibrs-historical",
       "tier": "F",
       "script": "scripts/test-nibrs-historical.ts",
