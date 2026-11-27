@@ -36,4 +36,6 @@ assert.equal(pivotYearTable(["period", "g", "h", "v"], [{ period: "2023", g: "A"
 assert.equal(pivotYearTable(["period", "g", "v", "status"], [{ period: "2023", g: "A", v: 1, status: "VALUE" }, { period: "2024", g: "A", v: 2, status: "VALUE" }]), null);
 assert.equal(pivotYearTable(["period", "v"], [{ period: "2023", v: 1 }, { period: "2024", v: 2 }]), null);
 assert.equal(pivotYearTable(["period", "g", "v"], [{ period: "2023", g: "A", v: 1 }, { period: "2023", g: "A", v: 2 }, { period: "2024", g: "A", v: 3 }]), null);
+// One category value for every row (the place is in the title): stays long.
+assert.equal(pivotYearTable(["period", "g", "v"], [{ period: "2023", g: "A", v: 1 }, { period: "2024", g: "A", v: 2 }]), null);
 console.log("table-pivot: ok");

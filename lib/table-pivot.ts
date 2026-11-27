@@ -39,6 +39,8 @@ export function pivotYearTable(
   // Any other text column (a status, a note) is not a category: the table is left as it is, never half-pivoted.
   if (cats.length !== 1 || values.length < 1 || others.length !== cats.length + values.length) return null;
   const cat = cats[0];
+  // One place for every row (a single-place share series): the place is in the title and the table stays Year down the side, never a one-row grid.
+  if (new Set(rows.map((r) => String(r[cat] ?? ""))).size < 2) return null;
 
   const order: string[] = [];
   const byCat = new Map<string, Record<string, unknown>>();
