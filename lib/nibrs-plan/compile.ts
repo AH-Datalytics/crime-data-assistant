@@ -262,16 +262,18 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   // M left out (P68) and the FBI's identical Group B repeats left out. Not offense 520 (weapon law violations).
   if (measureId === "arrests.armed_firearm") {
     if (unit !== "arrest") return { error: `"${measureId}" counts arrests` };
-    const armed = (a: string) => ` AND (${a}.arrestee_weapon_1 IN (${list(FIREARM_WEAPONS)}) OR ${a}.arrestee_weapon_2 IN (${list(FIREARM_WEAPONS)}))`;
+    // The weapons live in the child tables arrestee_weapon (Group A) and group_b_arrest_weapon (Group B), one row per recorded weapon slot.
+    const armedA = (a: string) => ` AND EXISTS (SELECT 1 FROM ${read("arrestee_weapon")} w WHERE w.data_year = ${a}.data_year AND w.ori = ${a}.ori AND w.incident_num = ${a}.incident_num AND w.arrestee_seq = ${a}.arrestee_seq AND w.key_occurrence = ${a}.key_occurrence AND w.arrestee_weapon IN (${list(FIREARM_WEAPONS)}))`;
+    const armedB = (a: string) => ` AND EXISTS (SELECT 1 FROM ${read("group_b_arrest_weapon")} w WHERE w.data_year = ${a}.data_year AND w.ori = ${a}.ori AND w.arrest_transaction_num = ${a}.arrest_transaction_num AND w.arrestee_seq = ${a}.arrestee_seq AND w.occurrence = ${a}.occurrence AND w.arrestee_weapon IN (${list(FIREARM_WEAPONS)}))`;
     const cond = incidentFilter("a");
     const groupA = `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${armed("a")}${cond}`;
+      FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${armedA("a")}${cond}`;
     if (parts.rest("a")) return { entity: "arrestee", sql: groupA };
     if (joins.trim()) return { error: "v0 groups gun arrests by the arrestee's own columns only" };
     return { entity: "arrestee", sql: `${groupA}
       UNION ALL
       SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${armed("a")}${parts.own("a")}` };
+      FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${armedB("a")}${parts.own("a")}` };
   }
   // Job AR6: arrests for a Group B offense (DUI, disorderly conduct, trespass ...) are standalone Group B arrest reports,
   // one per arrestee line, the FBI's identical repeats left out (as in every arrest, increment 7). They have no incident:
