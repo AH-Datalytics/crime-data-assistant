@@ -14,6 +14,7 @@
  *                month weighting); the button's view: per 100,000 residents of the agencies that reported every month
  *   button       one fixed set of agencies that reported every month of the whole period (P03, P61)
  */
+import fs from "node:fs";
 import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan, NO_CATEGORY } from "../nibrs-plan/compile";
@@ -200,8 +201,17 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // The button's set: reported crimes (VALUE) in every month of the whole period, with a header in every year (one fixed set).
   // Jeff (2026-11-16): a month reported as zero crimes is NOT reported (it is not a month with crimes), so an agency with one is out
   // of the set for a span holding it; zero of one crime while other crimes were reported is a VALUE month, not missing.
-  const everySet = oris.filter((o) => years.every((y) => inYear.get(y)!.has(o)) && keptYears.some((y) => of(o, y))
-    && keptYears.every((y) => { const a = of(o, y); return !a || a.val === a.months; }));
+  // Coordinator 2026-11-26 (Jeff's rule, run against the Runner's recount): the set is read from the agency-month status itself, not
+  // from the grid's cell statuses (which also call a month with rows, or an arrest, a VALUE whatever its flag): an agency with
+  // REPORTED_CRIMES (only; REPORTED_ZERO is not) in every month of the span, every year in it.
+  const spanMonths = years.flatMap((y) => Array.from({ length: 12 }, (_, i) => y * 100 + i + 1))
+    .filter((ym) => ym >= Number(period.from.replace("-", "")) && ym <= Number(period.to.replace("-", "")));
+  const crimeMonths = new Set(deps.execute(`SELECT ori FROM read_parquet('${root.replace(/'/g, "''")}/agency_month_status/data_year=*/data.parquet', hive_partitioning = true)
+    WHERE status = 'REPORTED_CRIMES' AND data_year * 100 + month IN (${spanMonths.join(", ")}) AND ${oriIn("ori", oris)}
+    GROUP BY ori HAVING count(DISTINCT data_year * 100 + month) = ${spanMonths.length}`).map((r) => String(r[0])));
+  const everySet = oris.filter((o) => crimeMonths.has(o));
+  if (process.env.NIBRS_EVERYSET_LOG) fs.appendFileSync(process.env.NIBRS_EVERYSET_LOG, `${JSON.stringify({ period, years, n: everySet.length, oris: everySet })}
+`);
   const sumsFromGrid = (rows: unknown[][]) => categorySumsFromGrid(rows, everySet, arrests ? inYear : null);
   const byYear: StateSumYear[] = years.map((y) => {
     let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0, rateSum = 0, rateAgencies = 0, left = 0;

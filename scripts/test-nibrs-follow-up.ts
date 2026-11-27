@@ -34,6 +34,8 @@ asked(rw("Murders in Memphis in 2024", "exclude Memphis but include Knoxville"))
 // P72: a population column goes with a rate; agencies reporting with a state or national total.
 assert.equal(q(rw("Shoplifting rate in Wichita in 2024", "add a column for population")), "Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate");
 assert.equal(q(rw("Shoplifting in Kansas in 2024", "how many agencies reported")), "Shoplifting in Kansas in 2024, with the number of agencies reporting");
+// QL-nibrs-6d7c1e8aa9 (Jeff 2026-11-26): the previous question's own place and "and population": the previous scope kept, a population column added, never a rate.
+assert.equal(q(rw("Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size", "Durham, North Carolina and population")), "Larceny - from motor vehicle incidents per month from 2022-2025 durham compared to other cities of a similar size, with a column showing the population of each city");
 assert.match(asked(rw(P, "add a column for population")).why, /goes with a rate/);
 assert.match(asked(rw(P, "how many agencies reported")).why, /state or national total/);
 

@@ -281,8 +281,8 @@ export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): Pl
     if (s.kind === "rate" && sm(s.measure) && !sm(s.measure)!.additive.acrossAgencies) add("S12", `statistics[${i}]`, "a rate needs a measure that adds across agencies");
     const unit = s.kind === "incidents" ? plan.measures.find((m) => m.as === s.measure)?.unit : null;
     if (s.kind === "incidents" && unit !== "offense" && unit !== "victim") add("S12", `statistics[${i}]`, "the incidents of a measure count offenses' or victims' incidents");
-    // P72: a population belongs to a rate of the plan; agencies reporting to a state or national total.
-    if (s.kind === "population" && !plan.statistics.some((r) => r.kind === "rate" && r.as === s.of)) add("S12", `statistics[${i}]`, "a population column belongs to a rate statistic of the plan");
+    // P72: a population belongs to a rate of the plan (or, when the question asks for it, a plain count); agencies reporting to a state or national total.
+    if (s.kind === "population" && !plan.statistics.some((r) => (r.kind === "rate" || r.kind === "count") && r.as === s.of)) add("S12", `statistics[${i}]`, "a population column belongs to a rate or count statistic of the plan");
     if (s.kind === "agencies" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "agencies reporting go with a state or national total");
     if (s.kind === "coverage" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "population covered goes with a state or national total");
   });

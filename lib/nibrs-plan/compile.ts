@@ -284,8 +284,13 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
     if (!gbCodes.length || !gbCodes.every((c) => GROUP_B.has(c))) return { error: `"${measureId}" has no Group B offense codes` };
     if (unit !== "group_b_arrest" && unit !== "arrest") return { error: `"${measureId}" counts arrests` };
     if (joins.trim() || parts.rest("a").trim()) return { error: "Group B arrests have no incident report: only the arrestee's own sex, race, ethnicity and age apply" };
+    // The arrest offense is recorded on Group A arrestee segments too (a Group A incident's arrestee charged with DUI): those arrests count with the standalone Group B ones
+    // (Runner recount 11-26, QL-nibrs-8431458c95 / c80f231f81: Group A + Group B; the engine read Group B only and was 3 to 4 percent low in every cell). M left out (P68).
     return { entity: "group_b_arrest", sql: `SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("group_b_arrest")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND a.identical_to_line_no IS NULL${parts.own("a")}` };
+      FROM ${read("group_b_arrest")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND a.identical_to_line_no IS NULL${parts.own("a")}
+      UNION ALL
+      SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND coalesce(a.multiple_arrestee_indicator, '') <> 'M'${parts.own("a")}` };
   }
   // Exactly <kind>.<measure>, with a measure whose codes are known.
   const m = measureId.match(/^(offenses|incidents|victims|offenders|arrests)\.([a-z_]+)$/);
@@ -568,6 +573,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       else if (on === "property_drug property_drug.drug_type incident arrestee")
         // Marijuana and the like: an arrest on an incident whose property records the drug (the drug is the incident's, not the arrestee's).
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("property_drug")} d2 WHERE ${sameIncident("d2", "a")} AND d2.drug_type IN (${list(values)}))`);
+      else if (on === "property_drug property_drug.drug_type incident offense")
+        // Marijuana drug offenses (ruling 27): an offense segment whose incident's property records the drug; the count stays offenses (ruling 1).
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("property_drug")} d2 WHERE ${sameIncident("d2", "o")} AND d2.drug_type IN (${list(values)}))`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
       else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")

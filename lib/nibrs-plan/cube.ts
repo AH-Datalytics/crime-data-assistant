@@ -40,7 +40,7 @@ export const CUBE_GROUPS: Record<string, string[]> = {
   // Group cube v2 (Model ce9e942) composites: each is ONE group of its codes, so a victim or offender linked to two of the codes counts once.
   // They overlap the groups above and each other: cells are never added across groups.
   homicide: ["09A", "09B"],
-  rape: ["11A", "11B", "11C"],
+  rape: ["11A"],
   sex_offense: ["11A", "11B", "11C", "11D", "36A", "36B"],
   assault_offenses: ["13A", "13B", "13C"],
 };

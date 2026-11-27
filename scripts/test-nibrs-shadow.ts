@@ -81,6 +81,8 @@ function stub0(sql: string): unknown[][] {
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
+  // Consistent reporters (REPORTED_CRIMES in every month of the span): every quoted agency except those the grid stub treats as unknown.
+  if (/agency_month_status[\s\S]*HAVING count/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7,})'/g)].map((m) => m[1]).filter((o) => o !== "NC0410200" && o !== "TX2270100" && ![CONFLICT, ZERO].some((x) => x && (x.ori === "*" || x.ori === o) && sql.includes(String(x.ym).replace("-", "")))).map((o) => [o]);
   if (sql.includes("agency/data.parquet")) return popRows(sql);
   // P171: a state's clearance by type, read once (state-sum.ts, "grid once"): each agency-year's coverage row ('c') and its sums by type ('s'):
   // half the year's units cleared by arrest (one incident fewer than units), the rest not cleared.
@@ -1494,6 +1496,9 @@ assert.deepEqual(drugsYears.delivered.contractProblems, []);
 const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
 assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
 assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
+// QL-nibrs-85dec90bb8: marijuana drug offenses nationally, no period: every year, never a "which period" ask.
+const weedNat = as(shadowAnswer("marijuana drug offenses nationally", { ...deps, noDefaults: false }), "answer");
+assert.ok(/"property_drug"/.test(JSON.stringify(weedNat.plan)) && weedNat.plan.period.kind === "absolute", "marijuana filter and every year");
 // Drug possession arrests: NIBRS has no possession/sale split for arrests, so the answer says all drug/narcotic violation arrests are counted; the marijuana form is unchanged.
 const POSSESS_LINE = "NIBRS records an arrest by the drug violation and does not separate possession from sale, so all drug/narcotic and drug equipment violation arrests are counted.";
 const possess = as(ask("drug possession arrests in Detroit in 2023"), "answer");
@@ -2743,6 +2748,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(scoreShadow(wichitaLabel, pa, r, ctx, popFile(15)).result!.values, "mismatch");
   assert.equal(as(ask("Shoplifting in Wichita in 2024, with a column showing the population used to calculate the rate"), "decline").explanation,
     "A population column goes with a rate; this answer has no rate.");
+  // Engine 2.0 (QL-nibrs-6d7c1e8aa9): asked for in its own right, the population stands beside a plain count of several cities.
+  const popCount = as(ask("Shoplifting in Memphis, Houston and Dallas in 2024, with a column showing the population of each city"), "answer");
+  assert.deepEqual(popCount.delivered.table.columns.map((c) => c.header).slice(-1), ["Population"]);
+  assert.ok(popCount.plan.statistics.some((s) => s.kind === "population" && popCount.plan.statistics.some((c) => c.kind === "count" && c.as === s.of)));
   // P72: the agencies reporting beside a state total, the answer's own cohort; never beside an agency.
   const ka = as(ask("Shoplifting in Kansas in 2024, with the number of agencies reporting"), "answer");
   // Asked for (P87): the agencies and the population they cover, once each, in both views.

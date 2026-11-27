@@ -60,6 +60,7 @@ function grid(sql: string): [string, string, number | null, string][] {
 }
 function stateSum(sql: string): unknown[][] | null {
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], m[1] === "NE0000002" ? null : 4_100_000]).filter((r) => r[1] !== null);
+  if (/agency_month_status[\s\S]*HAVING count/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]).filter((o) => !/^[A-Z]{2}0000002$/.test(o)).map((o) => [o]);
   if (sql.includes("agency/data.parquet")) {
     const years = /data_year IN \(([\d, ]+)\)/.exec(sql)![1].split(", ").map(Number);
     const hdr = /u\.state_abbr IN \(([^)]*)\)/.exec(sql);

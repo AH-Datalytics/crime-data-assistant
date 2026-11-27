@@ -230,4 +230,11 @@ assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024])
   // The new measures of the other capability PRs need their own cube-on check on a real agency (runner): justifiable homicide and the weapon forms read the cube only as their own cell.
 }
 
+// DUI (Runner recount 11-26): Group B arrests plus the Group A arrestee segments charged with 90D, M left out.
+const dui = ok(compilePlan(plan("group_b_arrests.dui", "arrest", [], [], "arrest_date"), year(2024), t));
+assert.ok(dui.sql.includes("FROM read_parquet") && dui.sql.includes("UNION ALL") && dui.sql.includes("a.arrest_offense IN ('90D')") && dui.sql.includes("<> 'M'") && dui.sql.includes("identical_to_line_no IS NULL"), "DUI reads Group B and Group A");
+// Marijuana drug offenses (ruling 27): the drug filter at offense level keeps the count in offenses (ruling 1).
+const marijuana = ok(compilePlan(plan("offenses.drug_crimes", "offense", [], [{ kind: "exists", scope: "incident", entity: "property_drug", where: [{ kind: "attribute", dimension: "property_drug.drug_type", op: "in", values: ["E"] }] }]), year(2024), t));
+assert.ok(marijuana.sql.includes("FROM read_parquet") && marijuana.sql.includes("d2.drug_type IN ('E')") && marijuana.sql.includes("d2.incident_num = o.incident_num"), "marijuana offense filter");
+assert.ok(marijuana.sql.includes("COUNT(DISTINCT (u.data_year, u.ori, u.incident_num, u.sub))"), "counted as offense units");
 console.log("nibrs compile v0: agency-level forms compile; the rest refuse with a reason");

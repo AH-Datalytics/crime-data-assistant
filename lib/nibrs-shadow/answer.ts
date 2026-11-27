@@ -1007,7 +1007,9 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         defaultDepth++;
         try {
           // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
-          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
+          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps,
+            // A marijuana drug-offense count over every year runs in under a second nationally (Runner timing 11-26, QL-nibrs-85dec90bb8): not deferred.
+            /\b(?:marijuana|cannabis)\b/i.test(question) ? { everyNibrsYear: true } : {});
           if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
@@ -4251,7 +4253,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const column = flags(ledger0).column;
   if (column === "both") return decline("unsupported_capability", "This isn't available: the population and the agencies reporting together; ask for one of them.");
   if (column === "population") {
-    const r = checked.statistics.find((s) => s.kind === "rate");
+    // Engine 2.0 (coordinator 2026-11-26, QL-nibrs-6d7c1e8aa9): beside a rate, or, when the question asks for the population, beside a plain count.
+    const r = checked.statistics.find((s) => s.kind === "rate") ?? (flags(ledger0).popOfPlaces ? checked.statistics.find((s) => s.kind === "count") : undefined);
     if (!r) return decline("unsupported_capability", "A population column goes with a rate; this answer has no rate.");
     checked = { ...checked, statistics: [...checked.statistics, { kind: "population", as: "population", of: r.as }] };
   } else if (column === "agencies") {
