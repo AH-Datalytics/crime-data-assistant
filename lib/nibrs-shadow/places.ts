@@ -60,7 +60,14 @@ export const PLACE_NAMES: Record<string, string> = {
 export const AGENCY_NAMES: Record<string, string> = {
   CA0190000: "Los Angeles County Sheriff's Department",
 };
-const EXTRA_ALIASES: Record<string, string[]> = { KY0340200: ["LFUCPD", "Lexington Police Department", "Lexington-Fayette Urban County Police Department"] };
+const EXTRA_ALIASES: Record<string, string[]> = { KY0340200: ["LFUCPD", "Lexington Police Department", "Lexington-Fayette Urban County Police Department"], CA0019700: ["UC Berkeley"] };
+/**
+ * Campus police the city/county index has no row for: found by name only, never by the city's name ("Berkeley" stays
+ * Berkeley, CA0010300). Population 0: a campus has no resident population of its own, so it is never a "large" candidate.
+ */
+const CAMPUS_AGENCIES: Agency[] = [
+  { ori: "CA0019700", kind: "city", name: "University of California Berkeley", state: "CA", population: 0, year: 2026, aliases: [], sources: ["nibrs"] },
+];
 export const PLACE_ALIASES: Record<string, string> = {
   MT0470000: "Butte",   // B1: "Butte, MT" is Butte-Silver Bow County (the consolidated city-county; its own FBI name is the Sheriff's Office)
   NJ0040800: "Camden",   // B1: "Camden, NJ" is the Camden County Police Department (the city's police), not the county Sheriff's Office
@@ -81,6 +88,7 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   const returnA = new Set(namesFile.return_a ?? []);
   // An index row with no name (", Indiana", ", Illinois") cannot be named in an answer: never found, not even by its alias (Engine 2.0 review item 4).
   const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.filter((a: Agency) => (a.name ?? "").trim() !== "").map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
+  for (const c of CAMPUS_AGENCIES) if (!agencies.some((a) => a.ori === c.ori)) agencies.push(c);
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }

@@ -459,6 +459,19 @@ function recordCountySheriffs(ledger: RequestLedger): void {
 }
 
 /**
+ * The University of California, Berkeley police (CA0019700): "University of California Berkeley", "UC Berkeley" and their
+ * misspellings. One campus agency place; the shared geo resolver would read the state and then the city of Berkeley
+ * (CA0010300), which is another agency. A bare "Berkeley" stays the city.
+ */
+function recordCampuses(ledger: RequestLedger): void {
+  const re = /\b(?:u?niversity\s+of\s+california|UC)\s*,?\s*berk(?:e)?l(?:e)?y\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(ledger.question))) {
+    ledger.record({ concept: "place", value: "city:University of California Berkeley:CA", span: [m.index, m.index + m[0].length], rule: "place:campus" });
+  }
+}
+
+/**
  * "<Name> County[, <State>]" and "<Name> Parish" after a place word ("in tarrant county, texas"): one county place. The
  * shared geo resolver knows few counties and reads "Tarrant" as Tarrant, Alabama (coordinator 2026-11-05). The name is
  * the one to three words between the place word and "County"; the shadow engine finds it in its own place index, and a
@@ -641,6 +654,7 @@ function buildNibrsLedger(question: string): RequestLedger {
   recordCounties(ledger);
   recordShortVirginiaCounties(ledger);
   recordCountySheriffs(ledger);
+  recordCampuses(ledger);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm) => ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });
   for (const rule of RULES.filter((r) => !early.includes(r))) recordAll(ledger, rule);
