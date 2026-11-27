@@ -127,6 +127,13 @@ for (const [q, code] of [["robberies in the Northeast by month in 2026", "noe"],
   // Codex review 01.5: real places named like a region.
   ["Midwest City murders in 2024", null], ["Murders in North East, Maryland in 2024", null]] as [string, string | null][])
   assert.equal(readQuestion(q, 2026).region, code, q);
+// "midwest cities" is the region with its cities word taken out (QL-ct-12630d4d8a); "Midwest City" stays the place.
+for (const q of ["Robbery trends in midwest cities", "robberies in northeast cities in 2024"]) {
+  const r = readQuestion(q, 2026);
+  assert.ok(r.region, q);
+  assert.doesNotMatch(r.text, /\bcit(?:y|ies)\b/i, q);
+}
+assert.equal(readQuestion("Midwest City murders in 2024", 2026).region, null);
 // "NY" for a place is New York (P26 asks city or state); after a place it qualifies, it stays; "NY city" is the city.
 assert.match(readQuestion("NY murders in 2023", 2026).text, /^New York murders/);
 assert.match(readQuestion("homicides in ny city in 2023", 2026).text, /in New York City in 2023/);

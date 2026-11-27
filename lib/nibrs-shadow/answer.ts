@@ -1227,12 +1227,23 @@ const UP_DOWN_SPAN = /\b(?:past|last)\s+(?:two|three|four|five|2|3|4|5)\s+years?
 const SINGLE_YEAR_CHANGE = /\b((?:percent(?:age)?\s+)?change\s+in\s+[^.?!]+?)\s+in\s+((?:19|20)\d{2})\b(?!\s*(?:to|through|-|vs\.?|versus|and)\s*(?:19|20)\d{2})/i;
 /** P304: one calendar day named with its month and year: "on May 24, 2025", "on 24 May 2025". */
 const SINGLE_DAY_G = new RegExp(String.raw`\bon\s+(?:(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+((?:19|20)\d{2})|\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.?,?\s+((?:19|20)\d{2}))\b`, "gi");
+/** "Midwest cities" with no ranking word is read as the whole region (the reader drops "cities"): whichever route answers, it says so once. */
+const REGION_CITIES = /\b(?:north[\s-]?east|mid[\s-]?west)(?:ern)?\s+cities\b/i;
+const REGION_CITIES_RANK = /\b(?:which|what|top|most|least|highest|lowest|largest|biggest|rank\w*|list|number\s+of)\b/i;
+export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+  const o = shadowAnswerCore(question, depsIn);
+  if ((o.kind === "answer" || o.kind === "historical") && REGION_CITIES.test(question) && !REGION_CITIES_RANK.test(question)) {
+    const text = o.delivered.text as string[];
+    if (!text.some((t) => /not only its cities/.test(t))) text.splice(1, 0, "These are the whole region's figures, not only its cities.");
+  }
+  return o;
+}
 /** A polite request opener ("can i get data on ...", "could I see ...") says nothing about the question; the question is what follows. */
 const YOY_MONTHLY = /\b(?:year[- ]over[- ]year|yoy)\s+(?:%|percent(?:age)?)\s+change\s+(?:in|of)\s+([a-z ]+?)\s+by\s+month(\s+(?:for|in)\s+[^.,?]+)?/i;
 const YOY_ROLLING = /\b(\d+)[- ]month\s+rolling\s+(?:%|percent(?:age)?)\s+change\s+in\s+([a-z ]+?)(\s+(?:in|for)\s+[^.,?]+?)?\s+(?:relative\s+to|vs\.?|versus|compared\s+(?:to|with))\s+(?:the\s+)?same\s+\d+\s+months?\s+(?:of\s+)?the\s+(?:previous|prior|last)\s+year/i;
 const REQUEST_OPENER = /^\s*(?:(?:hi|hello|hey)[,!]?\s+)?(?:please\s+)?(?:can|could|may|might|would)\s+(?:i|we|you)\s+(?:please\s+)?(?:get|see|have|find|pull|view|look\s+at|show\s+me|give\s+me)\s+(?:(?:me|us)\s+)?(?:(?:some|any|the|all\s+(?:the|of\s+the))\s+)?(?:(?:data|numbers|stats|statistics|figures|info|information)\s+(?:on|about|for|regarding|of)\s+)?/i;
 
-export function shadowAnswer(question: string, depsIn: ShadowDeps): ShadowOutcome {
+function shadowAnswerCore(question: string, depsIn: ShadowDeps): ShadowOutcome {
   const unopened = question.replace(REQUEST_OPENER, "");
   if (unopened !== question && unopened.trim().length >= 8) return shadowAnswer(unopened, depsIn);
   const ud = UP_DOWN_YES_NO.exec(question);
@@ -3298,10 +3309,14 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     if (sp.type === "series" && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && (sp.statistic === "count" || sp.statistic === "rate")
       && sp.places.length === 1 && sp.places[0].kind === "national" && !sp.filters.length && !sp.window && (sp.grain === "year" || sp.grain === "total")
       && historicalUnitFits(sp.measures[0], sp.unit) && !toDate) {
-      const yrs = yearSpan({ period: sp.period, grain: sp.grain }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
+      // A region is its states' sums, which start in 1960: no years named starts there, not at the file's first year.
+      const yrs = yearSpan({ period: sp.period, grain: sp.grain }, Number(release.lastMonth.slice(0, 4)), Math.max(1960, hb.firstYear));
       if (yrs && yrs[1] <= hb.lastYear) {
         const r = answerHistoricalRegion({ measure: sp.measures[0], region, from: yrs[0], to: yrs[1], statistic: sp.statistic === "rate" ? "rate" : "count", byYear: sp.grain === "year" }, hb, deps.execute);
-        if (r.kind === "historical") return r;
+        if (r.kind === "historical") {
+          // "Midwest cities": the figures are for the whole region (every agency), and the answer says so.
+          return r;
+        }
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
       }
     }

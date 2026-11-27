@@ -760,6 +760,18 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const ytd = shadowAnswer("Which Texas cities had the most murders so far in 2025?", base as never);
   assert.ok(ytd.kind !== "historical" && !xsql.some((x) => /agency_crime\.parquet'\) WHERE state = 'TX' AND \(type = 'city' OR ori IN \('FL0160000'\)\) AND ori NOT IN \('FL0160200', 'MO0956800', 'KY0560200'\) AND year = 2025/.test(x)), JSON.stringify(ytd).slice(0, 200));
 }
+// QL-ct-12630d4d8a: "midwest cities" is the Midwest region (said: the whole region, not only its cities); no years named starts
+// at 1960, where the states' sums start, not at the file's first year.
+{
+  const mwRows = (sql: string): unknown[][] => (/state_crime\.parquet/.test(sql) ? Array.from({ length: build.lastYear - 1960 + 1 }, (_, i) => [1960 + i, 100, 1_000_000, 12, 12, 12]) : []);
+  const mwBase = { noDefaults: true, places: loadPlaceIndex(), release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: mwRows, historical: build };
+  for (const q of ["Robbery trends in midwest cities", "robberies in the Midwest by year"]) {
+    const o = shadowAnswer(q, mwBase as never) as unknown as { kind: string; delivered?: { text: string[] }; explanation?: string };
+    assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    assert.match(o.delivered!.text[0], /^1960 through /, q);
+    assert.equal(o.delivered!.text.some((t) => /not only its cities/.test(t)), /cities/.test(q), q);
+  }
+}
 // Jeff 2026-11-10: the Jacksonville Sheriff's Office is the city of Jacksonville; empty duplicate city rows are dropped.
 {
   const jsql: string[] = [];
