@@ -124,6 +124,8 @@ export type ShadowOption = {
   otherSource?: string;
   /** P74: a complete question, shown on the button and run as a new question only when chosen (never before). */
   question?: string;
+  /** The ledger-built every-NIBRS-year choice on a period ask: applyDefaults takes it only for a NIBRS breakdown or comparison with no period. */
+  everyNibrsYear?: boolean;
   /**
    * The answer contract (lib/answer-contract): what the button is for, and the source it runs on, when its creator
    * knows them; otherwise taken from its shape and its continuation (presentation.ts).
@@ -930,11 +932,24 @@ const NIBRS_ONLY = /\bnibrs\b|\bfrom (?:a )?motor vehicles?\b|\bcarjack\w*|\bsho
 /** A question that points back at an answer that isn't there: never answered in part by a default. */
 const POINTS_BACK = /\bother\s+(?:large\s+|big\s+|similar\s+|comparable\s+)?(?:cities|agencies|places|states|counties|departments)\b|^\s*(?:compare[ds]?|comparison)\s+(?:it\s+|that\s+|this\s+)?(?:to|with|against)\b|^\s*(?:vs\.?|versus)\b/i;
 const CRIME_INDEX_BLIND = /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\b(?:offenders?|victims?|arrestees?|juvenile|teen\w*|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?|domestic|intimate)\b/i;
+/** A NIBRS breakdown or comparison (Jeff 2026-11-25: with no period it covers every year the place has): a split by a person or weapon, NIBRS named, or the clearance types. */
+// A percentage or share with no year keeps the latest complete year, and says so (Jeff 2026-11-26); only count breakdowns cover every NIBRS year.
+const shareAsk = (typed: string): boolean => /\b(?:percent(?:age)?s?|shares?|proportions?|ratios?)\b|%/i.test(typed);
+const nibrsBreakdownAsk = (typed: string): boolean => !shareAsk(typed) && /\b(?:by|per)\s+(?:the\s+)?(?:offender|victim|arrestee|age|race|sex|gender|weapon|location|relationship|circumstance|ethnicity|hour|time\s+of\s+day)|\bnibrs\b|\bexceptional\b|\bweapons?\b/i.test(typed);
+/** The builders' side of the same test: the reader's trimmed question can lose the words (NIBRS, a clearance type), so its parts and flags are read too. */
+function nibrsEveryAsk(l: RequestLedger, deps: ShadowDeps): boolean {
+  return nibrsBreakdownAsk(`${l.question}\n${deps.guardText ?? ""}`) || !!flags(l).nibrsAsked || l.parts.some((p) => p.clause === 0 && /\bexceptional\b/i.test(p.text));
+}
 const ANSWER_KINDS = ["answer", "srs", "historical", "current", "shr", "hate"];
 /** E: a victim sex, a victim-offender relationship or a weapon, beside a word for the victims (or a relationship alone): a Homicide Reports question that names no crime. */
 const SHR_NO_CRIME = /\b(?:(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b[^.?]*\b(?:victims?|killed|deaths?|dead)\b|\b(?:victims?|killed|deaths?|dead)\b[^.?]*\b(?:female|male|women|woman|men|man|girls?|boys?|firearms?|guns?|knife|knives|handguns?|rifles?|shotguns?)\b)|\b(?:intimate|partners?|spouses?|boyfriends?|girlfriends?|wife|husband|relationships?)\b/i;
 const OFFENDER_WORD = /\b(?:offenders?|perpetrators?|suspects?|killers?|attackers?)\b/i;
 let defaultDepth = 0;
+const NIBRS_EVERY_NOTE = "@nibrs-every-year";
+/** A source that cannot answer the question as typed (applyDefaults' final gates): Crime Index and friends have no breakdown by a person, and NIBRS named or a NIBRS-only offense is never answered from them. */
+function sourceBlocks(kind: string, typed: string): boolean {
+  return (["srs", "historical", "current", "hate"].includes(kind) && CRIME_INDEX_BLIND.test(typed)) || (["srs", "historical", "current"].includes(kind) && NIBRS_ONLY.test(typed));
+}
 /**
  * P180 to P182 (Jeff 2026-11-21), at every ask site at once: a question asked back about its place, its period or its kind of crime is answered
  * with the default instead, when the option that carries it answers now (not a heavy statement deferred, not a decline), and the chain of asks
@@ -947,6 +962,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const buttons: ShadowOption[] = [];
   let cur: ShadowOutcome = o0;
   let years = false;
+  const typedText = deps.guardText ? `${question}\n${deps.guardText}` : question;
   for (let i = 0; i < 4 && cur.kind === "clarify"; i++) {
     const c = cur as Extract<ShadowOutcome, { kind: "clarify" }>;
     const find = (re: RegExp): ShadowOption | undefined => c.options.find((x: ShadowOption) => re.test(x.label));
@@ -961,7 +977,30 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
       note = byStateRows ? "" : "No place was named, so the United States is shown.";
       if (!byStateRows) more.push({ label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" });
     } else if (/^which (?:period|range of years|years)$/.test(c.about)) {
-      option = find(/^Every year available$/);
+      // The ledger-built every-NIBRS-year choice (Jeff 2026-11-25: a NIBRS breakdown or comparison with no period covers every year the place has) is the
+      // default only for such a reading; for any other ask it is one more button and the default stays as it was.
+      const nibrsEvery = c.options.find((x: ShadowOption) => x.everyNibrsYear);
+      // Only an ask the latest-year button answers from NIBRS: a homicide-report (SHR) or Crime Index answer is not re-asked as NIBRS (QL-nibrs-ab00976e92, 560d542b2d).
+      const latestOpt = c.options.find((x: ShadowOption) => /^The latest complete year/.test(x.label));
+      const latestIsNibrs = !latestOpt || isDeferred(latestOpt) || latestOpt.continuation?.kind === "answer";
+      if (latestIsNibrs && nibrsEvery && !isDeferred(nibrsEvery) && nibrsEvery.continuation && ANSWER_KINDS.includes(nibrsEvery.continuation.kind) && !sourceBlocks(nibrsEvery.continuation.kind, typedText) && nibrsBreakdownAsk(typedText)) {
+        option = nibrsEvery;
+        note = NIBRS_EVERY_NOTE;
+      } else option = c.options.find((x: ShadowOption) => !x.everyNibrsYear && /^Every year available$/.test(x.label));
+      // The reader can drop the NIBRS words from the ask's question (a clearance type), so no ledger button exists: the typed question itself is asked over the NIBRS years.
+      let everyYearTried = false;
+      const lcyBtn = /\((\d{4})\)/.exec(c.options.find((x: ShadowOption) => /^The latest complete year/.test(x.label))?.label ?? "");
+      // A latest-year button already answers and the reader dropped the typed breakdown (offender, victim, arrestee): the typed question would change the measure that button answers, so that button stands (QL-nibrs-8e3c298ac0).
+      const measureDropped = ["offender", "victim", "arrestee"].some((w) => new RegExp("\\b" + w, "i").test(question) && !new RegExp("\\b" + w, "i").test(c.question));
+      if (!option && lcyBtn && !measureDropped && latestIsNibrs && !deps.shareAsked && nibrsBreakdownAsk(typedText) && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(question)) {
+        defaultDepth++;
+        try {
+          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${question.replace(/[?.!\s]+$/, "")} from 2017 to ${lcyBtn[1]}`, d), deps, { everyNibrsYear: true });
+          // A heavy (national) series is not run as a default: the latest-year default stands as before. Only a series that ran and could not answer keeps the ask.
+          if (!isDeferred(o)) everyYearTried = true;
+          if (!isDeferred(o) && o.continuation && o.continuation.kind === "answer" && !sourceBlocks(o.continuation.kind, typedText)) { option = o; note = NIBRS_EVERY_NOTE; }
+        } finally { defaultDepth--; }
+      }
       // No every-year button: the same question asked by year, as the user would type it (not for a ranking, which has one year).
       if (!option && !deps.shareAsked && !/\b(?:top|bottom|highest|lowest|most|fewest|rank\w*|worst|best)\b/i.test(c.question)) {
         defaultDepth++;
@@ -971,10 +1010,23 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
           if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
+      // The every-year series can land in a source that cannot answer this question (Crime Index or Current Trends for an offender-age or NIBRS-only
+      // ask): the final gate below would then leave the ask standing, so that series is passed over for the latest-year button, but only when
+      // that button is itself an answer now (never past a decline or another ask).
+      if (option && !isDeferred(option) && option.continuation && !option.everyNibrsYear && !find(/^Every year available$/) && sourceBlocks(option.continuation.kind, typedText)) {
+        const latestBtn = find(/^The latest complete year \((\d{4})\)$/);
+        if (latestBtn && !isDeferred(latestBtn) && latestBtn.continuation && ANSWER_KINDS.includes(latestBtn.continuation.kind) && !sourceBlocks(latestBtn.continuation.kind, typedText)) option = undefined;
+      }
       // A ranking has one year (Jeff 2026-11-21): the latest complete year, said, with a button for another year.
-      if (!option) {
+      // The typed question could not run over every year (several agencies by year): the ask stands, never a latest-year answer to a count breakdown.
+      if (!option && !everyYearTried) {
         const latest = find(/^The latest complete year \((\d{4})\)$/);
         if (latest) { option = latest; note = `No year was given, so the latest complete year, ${/\((\d{4})\)/.exec(latest.label)![1]}, is shown.`; }
+        else {
+          // A period ask whose buttons are bare years ("2025", "Other years"): the newest year offered is the latest complete year.
+          const bare = c.options.filter((x: ShadowOption) => /^\d{4}$/.test(x.label)).sort((x: ShadowOption, y: ShadowOption) => Number(y.label) - Number(x.label))[0];
+          if (bare) { option = bare; note = `No year was given, so the latest complete year, ${bare.label}, is shown.`; }
+        }
       }
       years = true;
       more.push({ label: "Another year", entry: "which year" });
@@ -1005,7 +1057,7 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
     cur = option.continuation;
   }
   if (cur === o0 || !ANSWER_KINDS.includes(cur.kind)) { DEFAULT_MISSES.push({ site: "chain", why: cur.kind }); return o0; }
-  const typed = deps.guardText ? `${question}\n${deps.guardText}` : question;
+  const typed = typedText;
   // A Crime Index (or hate crime) figure has no breakdown by a person's age, race, sex or by weapon: a default that lands there for a question that asks
   // one would answer without it, which is a wrong answer, so such a question stays an ask.
   if (["srs", "historical", "current", "hate"].includes(cur.kind) && CRIME_INDEX_BLIND.test(typed)) {
@@ -1026,7 +1078,10 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
   const span = /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `: ${first.slice(0, 4)} through ${last.slice(0, 4)}` : "";
   // A latest-year default ("No year was given, so the latest complete year, 2025, is shown.") means the answer is one year, so an earlier every-year default in the same chain is not said.
   const latestYear = [...notes, ...x.delivered.text].some((n) => /^No year was given, so the latest complete year/.test(n));
-  const say = notes.filter((n) => n || !latestYear).map((n) => (n ? n : `No years were given, so every year in the data is shown${span}.`));
+  // The years come from the title's span ("..., 2017-2025"), since a breakdown's first column is not always the year.
+  const titleSpan = /(?:^|, )(\d{4})-(\d{4})$/.exec(String(x.delivered.text[0] ?? ""));
+  const nibrsYears = titleSpan && titleSpan[1] !== titleSpan[2] ? `NIBRS data covers ${titleSpan[1]} to ${titleSpan[2]}, so every year is shown.` : /^\d{4}/.test(first) && /^\d{4}/.test(last) && first !== last ? `NIBRS data covers ${first.slice(0, 4)} to ${last.slice(0, 4)}, so every year is shown.` : "";
+  const say = notes.filter((n) => n || !latestYear).map((n) => (n === NIBRS_EVERY_NOTE ? nibrsYears : n ? n : `No years were given, so every year in the data is shown${span}.`)).filter((n) => n);
   // A sentence the answer already carries is not said twice (a series built "by year" says its own "No years were given").
   const text = [x.delivered.text[0], ...say.filter((s) => !x.delivered.text.some((t) => t === s || (/^No years were given/.test(s) && /^No years were given/.test(t)))), ...x.delivered.text.slice(1).filter((t) => !(latestYear && /^No years were given/.test(t)))];
   void years;
@@ -3480,6 +3535,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
         return r;
       }
       return { kind: "clarify", about: "which period", question: ledger0.question, options: [
+        ...(nibrsEveryAsk(ledger0, deps) ? [{ label: "Every year available", everyNibrsYear: true, continuation: fromLedger(filled(ledger, "period", `range:${release.firstMonth.slice(0, 4)}:${lcy}`, "every year available"), deps, pins) }] : []),
         { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps, pins) },
         { label: "Another year", entry: "which year" }] };
@@ -4078,7 +4134,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       ? [deferHeavy("The last 10 complete years", (d) => fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), d, pins), deps),
          deferHeavy("Every year available", (d) => fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), d, pins), deps),
          { label: "Another range", entry: "which range of years" }]
-      : [deferHeavy(`The latest complete year (${lcy})`, (d) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d, pins),
+      : [...(nibrsEveryAsk(ledger0, deps) ? [deferHeavy("Every year available", (d) => fromLedger(filled(ledger, "period", `range:${release.firstMonth.slice(0, 4)}:${lcy}`, "every year available"), d, pins), deps, { everyNibrsYear: true })] : []),
+         deferHeavy(`The latest complete year (${lcy})`, (d) => fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), d, pins),
            deps.shareAsked ? { ...deps, deferChars: Number.MAX_SAFE_INTEGER } : deps),
          deferHeavy("This year so far", (d) => fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), d, pins), deps),
          { label: "Another year", entry: "which year" }];

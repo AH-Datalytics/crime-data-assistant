@@ -3628,10 +3628,61 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const duiText = (dui as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
   assert.ok(dui.kind !== "clarify", JSON.stringify(dui).slice(0, 300));
   assert.ok(!(duiText.some((t) => /^No years were given/.test(t)) && duiText.some((t) => /^No year was given/.test(t))), JSON.stringify(duiText));
+  // A heavy national series is not run as the every-year default: the latest-year default stands as before (QL-nibrs-43401cd191, c74cec7689, c80f231f81).
+  for (const hq of ["DUI arrests by age group nationally", "robberies by time of day nationally"]) {
+    const heavy = applyDefaults(hq, ask0(hq), { ...live, deferChars: 1 } as unknown as ShadowDeps);
+    assert.notEqual(heavy.kind, "clarify", hq + " " + JSON.stringify(heavy).slice(0, 300));
+  }
+  // The reader dropped "by offender age" and a latest-year button answers: that button stands, the typed question is not re-asked over every year (QL-nibrs-8e3c298ac0).
+  { const jq = "show me violent crimes involving use of a firearm for jackson mississippi by offender age";
+    const jl = { kind: "answer", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } as unknown as ShadowOutcome;
+    const o = applyDefaults(jq, ask("which period", "show me violent crimes involving use of a firearm for jackson mississippi", [{ label: "The latest complete year (2025)", continuation: jl }, { label: "Another year", entry: "which year" }]), live);
+    assert.equal(o.kind, "answer", JSON.stringify(o).slice(0, 300));
+    assert.ok(!text(o).some((t) => /^NIBRS data covers|Offender/.test(t)), JSON.stringify(text(o)));
+  }
+  // A homicide-report (SHR) answer is not re-asked as NIBRS over every year: the latest-year button answers as before (QL-nibrs-ab00976e92, 560d542b2d).
+  { const shrQ = "murders per year by race of victim";
+    const shrLatest = { kind: "shr", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: FBI Supplementary Homicide Reports."] } } as unknown as ShadowOutcome;
+    const o = applyDefaults(shrQ, ask("which period", shrQ, [{ label: "Every year available", everyNibrsYear: true, continuation: { kind: "answer", delivered: { table: { columns: [], rows: [["2017", 1], ["2025", 1]] }, text: ["Title", "Source: NIBRS."] } } }, { label: "The latest complete year (2025)", continuation: shrLatest }, { label: "Another year", entry: "which year" }] as { label: string; continuation?: ShadowOutcome; entry?: string }[]), live);
+    assert.ok(!text(o).some((t) => /^NIBRS data covers/.test(t)), JSON.stringify(text(o)));
+  }
   // Stays an ask: the default is a decline, there is no default option, noDefaults is set.
   const decline = { kind: "decline", reason: "unsupported_capability", explanation: "x", alternative: null } as unknown as ShadowOutcome;
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: decline }]), live).kind, "clarify");
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "A state", entry: "which state" }]), live).kind, "clarify");
+  // Period default pilot (2026-11-26). Cause 1: the by-year ask is blocked by a source guard (a by-offender-age breakdown cannot come from
+  // Crime Index data), so the latest-year button is used when it answers from a source the question allows, and said.
+  const nibrsOf = (): ShadowOutcome => ({ kind: "answer", delivered: { table: { columns: [], rows: [["2025", 1]] }, text: ["Title", "Source: NIBRS."] } }) as unknown as ShadowOutcome;
+  // The every-year series lands in Crime Index data for the plain question; guardText carries the by-offender-age part that Crime Index cannot answer.
+  const blindQ = "murders in Vermont";
+  const blind = { ...live, guardText: "by offender age" };
+  const nibrsMany = (): ShadowOutcome => ({ kind: "answer", delivered: { table: { columns: [], rows: [["2017", 1], ["2021", 1], ["2025", 1]] }, text: ["Title", "Source: NIBRS."] } }) as unknown as ShadowOutcome;
+  const everyBtn = { label: "Every year available", everyNibrsYear: true, continuation: nibrsMany() };
+  const latestBtn = { label: "The latest complete year (2025)", continuation: nibrsOf() };
+  // Update (Jeff 2026-11-25): a NIBRS breakdown with no period covers every year the place has, said from the years returned.
+  const viaEvery = applyDefaults(blindQ, ask("which period", blindQ, [everyBtn, latestBtn, { label: "Another year", entry: "which year" }]), blind);
+  assert.equal(text(viaEvery)[1], "NIBRS data covers 2017 to 2025, so every year is shown.");
+  assert.ok(!text(viaEvery).some((t) => /^No years? w/.test(t)), JSON.stringify(text(viaEvery)));
+  // Any other no-period ask keeps its default: the every-NIBRS-year button is one more choice there.
+  const plainQ = "murders in Vermont";
+  const plainWith = applyDefaults(plainQ, ask("which period", plainQ, [everyBtn, latestBtn, { label: "Another year", entry: "which year" }]), live);
+  const plainWithout = applyDefaults(plainQ, ask("which period", plainQ, [latestBtn, { label: "Another year", entry: "which year" }]), live);
+  assert.deepEqual(text(plainWith), text(plainWithout));
+  // A NIBRS count breakdown that cannot run over every year keeps its ask: never a latest-year answer (Coordinator 2026-11-26).
+  const viaLatest = applyDefaults(blindQ, ask("which period", blindQ, [{ label: "The latest complete year (2025)", continuation: nibrsOf() }, { label: "Another year", entry: "which year" }]), blind);
+  assert.equal(viaLatest.kind, "clarify");
+  const e2e = applyDefaults("Compare murders in Houston and Dallas in NIBRS", ask0("Compare murders in Houston and Dallas in NIBRS"), live);
+  assert.equal(e2e.kind, "clarify"); // several agencies by year is declined by the engine: the comparison keeps its period ask, never a latest-year answer (known gap)
+  // The guard blocks the fallback too (the latest-year button is Crime Index data): the ask stays.
+  assert.equal(applyDefaults(blindQ, ask("which period", blindQ, [{ label: "The latest complete year (2025)", continuation: answerOf(["2025"]) }, { label: "Another year", entry: "which year" }]), blind).kind, "clarify");
+  // The fallback never goes past a decline.
+  assert.equal(applyDefaults(blindQ, ask("which period", blindQ, [{ label: "The latest complete year (2025)", continuation: { kind: "decline", reason: "unsupported_capability", explanation: "x", alternative: null } as unknown as ShadowOutcome }, { label: "Another year", entry: "which year" }]), blind).kind, "clarify");
+  // Cause 2: a bare year label on a period ask is the newest year offered, said; the same bare labels on another ask are not read as a period.
+  const shrOf = (): ShadowOutcome => ({ kind: "shr", delivered: { table: { columns: [], rows: [["2024", 1]] }, text: ["Title", "Source: SHR."] } }) as unknown as ShadowOutcome;
+  const bare = applyDefaults("Big cities with the highest % of teenage homicide victims", ask("which period", "Big cities with the highest % of teenage homicide victims", [{ label: "2023", continuation: shrOf() }, { label: "2024", continuation: shrOf() }, { label: "Another year", entry: "which year" }]), live);
+  assert.equal(bare.kind, "shr");
+  assert.equal(text(bare)[1], "No year was given, so the latest complete year, 2024, is shown.");
+  assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "2024", continuation: shrOf() }]), live).kind, "clarify");
   assert.equal(applyDefaults("q", ask("which place", "q", [{ label: "The United States", continuation: answerOf(["2024"]) }]), { ...deps, noDefaults: true }).kind, "clarify");
 }
 // P190 (Jeff 2026-11-21, reader class): small words and slips read as the question they are, never "I didn't understand".
@@ -3828,9 +3879,13 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(Math.abs(arrPct.reduce((a, b) => a + b, 0) - 100) < 0.7, arrPct.join(","));
   // Exempt from the heavy-statement deferral, like the other national clearance share.
   assert.equal(shadowAnswer(arrQ, { ...deps, noDefaults: false, deferChars: 1 }).kind, "answer");
-  // Narrow: a count of the same clearance types with no year, and an ordinary national count with no year, are not defaulted to a year by this.
+  // Narrow: a count of the same clearance types with no year is not turned into the share table by this. Period default pilot (2026-11-26): its
+  // every-year series is Crime Index data that cannot split clearance types, so the latest-year NIBRS answer is given, with the year said.
   const arrCount = liveAsk("how many murders were cleared by arrest vs exceptional nationally") as unknown as Partial<Out>;
-  assert.ok(!(arrCount.delivered ? cols(arrCount as Out) : []).some((c) => /^Share of/.test(c.header)) && !(arrCount.delivered?.text ?? []).some((t) => /No year was given/.test(t)), JSON.stringify(arrCount.delivered?.text));
+  assert.ok(!(arrCount.delivered ? cols(arrCount as Out) : []).some((c) => /^Share of/.test(c.header)) && !(arrCount.delivered?.text ?? []).some((t) => /^No year was given/.test(t)) && arrCount.kind === "answer", JSON.stringify(arrCount.delivered?.text));
+  // A percentage with no year keeps the latest complete year (Jeff 2026-11-26, QL-nibrs-9aed2136c4): the every-year default is for count breakdowns only.
+  const arrPctNoYear = liveAsk("What percentage of murders are cleared by arrest vs exceptional nationally?") as unknown as Partial<Out> & { options?: { label: string; everyNibrsYear?: boolean }[] };
+  assert.ok(!(arrPctNoYear.delivered?.text ?? []).some((t) => /^NIBRS data covers/.test(t)) && !(arrPctNoYear.delivered?.table?.rows ?? []).some((r) => /^20\d\d$/.test(String(r[0])) && String(r[0]) !== "2025"), JSON.stringify(arrPctNoYear.delivered?.text));
   const arrYear = as(liveAsk("What percentage of murders are cleared by arrest vs exceptional nationally in 2024?"), "answer") as unknown as Out;
   assert.ok(!arrYear.delivered.text.some((t) => /No year was given/.test(t)) && /Clearance Type, 2024$/.test(arrYear.delivered.text[0]), arrYear.delivered.text.join(" | "));
   const noPlaceStates = as(liveAsk("give me the share of all murder clearances that were prosecution declined in 2025 by state"), "answer") as unknown as Out & { buttons?: { label: string }[] };
