@@ -3635,7 +3635,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const duiText = (dui as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
   assert.ok(dui.kind !== "clarify", JSON.stringify(dui).slice(0, 300));
   assert.ok(!(duiText.some((t) => /^No years were given/.test(t)) && duiText.some((t) => /^No year was given/.test(t))), JSON.stringify(duiText));
-  // A heavy national series is not run as the every-year default: the latest-year default stands as before (QL-nibrs-43401cd191, c74cec7689, c80f231f81).
+  // A national NIBRS breakdown with no period runs every year even when the deferral limit is tiny: the every-year button is never deferred (QL-nibrs-43401cd191, c74cec7689, c80f231f81, f089decff0).
   for (const hq of ["DUI arrests by age group nationally", "robberies by time of day nationally"]) {
     const heavy = applyDefaults(hq, ask0(hq), { ...live, deferChars: 1 } as unknown as ShadowDeps);
     assert.notEqual(heavy.kind, "clarify", hq + " " + JSON.stringify(heavy).slice(0, 300));

@@ -421,7 +421,8 @@ class HeavyStatement extends Error {}
 export const statementChars = (sql: string): number => { const s = splitShadow(sql); return s ? Math.max(s.raw.length, s.cube.length) : withoutShadowComment(sql).length; };
 function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
   let heavy = false;
-  const limit = deps.deferChars ?? HEAVY_STATEMENT;
+  // The every-NIBRS-year button is the default for a breakdown with no period (Jeff 2026-11-25): its national statements run in 4 to 7 s, so it is never deferred (QL-nibrs-43401cd191, c74cec7689, c80f231f81, f089decff0).
+  const limit = extra.everyNibrsYear ? Number.MAX_SAFE_INTEGER : deps.deferChars ?? HEAVY_STATEMENT;
   const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (statementChars(sql) > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
   let first: ShadowOutcome | null = null;
   try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
