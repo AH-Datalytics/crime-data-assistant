@@ -308,8 +308,11 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
         AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "dv")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))) dvq
       ON dvq.data_year = ${a}.data_year AND dvq.ori = ${a}.ori AND dvq.incident_num = ${a}.incident_num`;
   if (kind === "offenses" && unit === "offense" && m[2] === "domestic_violence")
-    return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o ${dvJoin("o")} ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+    // Rulings 1 and 29: each offense connected to a victim whose relationship to an offender is a ruling-29 domestic one, counted once (every connected offense, not a fixed code list).
+    return { entity: "offense", sql: `SELECT DISTINCT vo.data_year, vo.ori, vo.incident_num, vo.connected_offense || ':' || vo.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
+        ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num AND vo.victim_seq = v.victim_seq AND vo.key_occurrence = v.key_occurrence ${joins}
+      WHERE EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "v")} AND r9.offender_relationship IN (${list(DV_RULING_29)}))${incidentFilter("v")}` };
   if (kind === "arrests" && (unit === "arrest" || unit === "arrestee") && m[2] === "domestic_violence")
     return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
       FROM ${read("arrestee")} a ${dvJoin("a")} ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${incidentFilter("a")}` };
@@ -390,6 +393,7 @@ const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_cr
 /** P82 and D20: the relationships of domestic violence, intimate partner and family or household (the Model's correctness/slice_dv.py sets). */
 /** NIBRS arrestee weapon codes for a firearm: handgun, firearm, rifle, shotgun, other firearm (the automatic flag is its own column). */
 const FIREARM_WEAPONS = ["11", "12", "13", "14", "15"];
+const DV_RULING_29 = ["SE", "CS", "XS", "BG", "PA", "CH", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "SS"];
 const DOMESTIC_RELATIONSHIPS = ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"];
 
 /**

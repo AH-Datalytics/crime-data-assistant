@@ -320,11 +320,11 @@ assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer")
 }
 // P170 (P82, Jeff 2026-11-19): domestic violence is the victims of the P82 crimes with an intimate partner or a family or household relationship to any offender, for one agency first.
 {
-  const dv = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  const dv = as(ask("Domestic violence victims in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(dv.plan.measures[0].id, "victims.domestic_violence");
   assert.ok(dv.delivered.text.some((t) => /^Domestic violence counts each victim of murder or manslaughter, a sex offense, assault, kidnapping, incest, statutory rape or human trafficking whose offender/.test(t)), JSON.stringify(dv.delivered.text));
   const n0 = sqls.length;
-  as(ask("Domestic violence in Houston in 2024"), "answer");
+  as(ask("Domestic violence victims in Houston in 2024"), "answer");
   const dvSql = sqls.slice(n0).find((s) => /o9\.offense_code = vo\.connected_offense/.test(s)) ?? "";
   assert.ok(/vo\.connected_offense IN \('09A', '09B', '11A', '11B', '11C', '11D', '13A', '13B', '13C', '100', '36A', '36B', '64A', '64B'\)/.test(dvSql), "the 14 P82 crimes");
   assert.ok(/r9\.offender_relationship IN \('SE', 'CS', 'BG', 'XS', 'XR', 'HR', 'CH', 'PA', 'SB', 'OF', 'SC', 'SP', 'GP', 'GC', 'IL', 'CF', 'BE', 'SS', 'FP', 'FC', 'CO'\)/.test(dvSql), "any pair to any offender, intimate partner or family or household");
@@ -339,11 +339,14 @@ assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer")
   const n2 = sqls.length;
   const off = as(ask("domestic violence offenses in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(off.plan.measures[0].id, "offenses.domestic_violence");
-  assert.ok(off.delivered.text.includes("Offenses are the offenses of those crimes in incidents that had a domestic violence victim."), JSON.stringify(off.delivered.text));
+  assert.ok(off.delivered.text.some((t) => /^Domestic violence counts each offense committed against a victim whose offender/.test(t)), JSON.stringify(off.delivered.text));
+  const bare = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } };
+  assert.equal(bare.plan.measures[0].id, "offenses.domestic_violence", "ruling 1: offenses by default");
   const arr = as(ask("domestic violence arrests in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(arr.plan.measures[0].id, "arrests.domestic_violence");
   assert.ok(arr.delivered.text.includes("Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders."), JSON.stringify(arr.delivered.text));
-  assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
+  assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 1, "the arrests ask the incident for a qualifying victim");
+  assert.ok(sqls.slice(n2).some((s) => /r9\.offender_relationship IN \('SE', 'CS', 'XS', 'BG', 'PA', 'CH', 'SB', 'OF', 'SC', 'SP', 'GP', 'GC', 'IL', 'SS'\)/.test(s) && !/vo\.connected_offense IN/.test(s)), "ruling 29: every connected offense of a victim with a domestic relationship");
   for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
     assert.equal(ask(q).kind, "answer", q); // Coordinator 2026-11-24: the state and national gate is gone, the definition is unchanged
   // Coordinator 2026-11-24: drug offenses in a state or the nation are one composite count (35A + 35B), alone, by year, and for several states.

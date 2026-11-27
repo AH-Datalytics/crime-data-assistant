@@ -52,7 +52,7 @@ const COMPOSITES: Record<string, { id: string; unit: CountingUnit }> = {
   all_crime: { id: "all_crime.offenses", unit: "offense" },
 };
 const FAMILY_DEFAULT_UNIT: Record<string, CountingUnit> = {
-  carjacking: "incident", domestic_violence: "victim", hate_crime: "offense",
+  carjacking: "incident", domestic_violence: "offense", hate_crime: "offense",
   motor_vehicle_property: "dollars", property_value: "dollars",
 };
 const UNIT_OF: Record<string, CountingUnit> = { victims: "victim", offenders: "offender", arrests: "arrest", offenses: "offense", incidents: "incident", pairs: "victim_offender", dollars: "dollars" };
@@ -63,10 +63,12 @@ const ENTITY: Record<string, string> = { group_b_arrest: "group_b_arrest", victi
 /** A Group B offense (DUI ...) is recorded only as Group B arrests, counted by arrest date. */
 export const isGroupB = (measure: string) => (MEASURE_CODES[measure] ?? []).length > 0 && MEASURE_CODES[measure].every((c) => GROUP_B.has(c));
 
-export function unitFor(measure: string, unit: string | null): CountingUnit {
+/** relFilter: the question narrows by the victim's relationship to the offender, which only a victim count can carry, so the family default stays victims there. */
+export function unitFor(measure: string, unit: string | null, relFilter = false): CountingUnit {
   if (isGroupB(measure)) return "group_b_arrest";
   if (unit) return UNIT_OF[unit] ?? "offense";
   if (COMPOSITES[measure]) return COMPOSITES[measure].unit;
+  if (measure === "domestic_violence" && relFilter) return "victim";
   if (FAMILY_DEFAULT_UNIT[measure]) return FAMILY_DEFAULT_UNIT[measure];
   const codes = MEASURE_CODES[measure] ?? [];
   return codes.length && codes.every((c) => PERSON_CODES.has(c)) ? "victim" : "offense";
@@ -193,9 +195,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       const clearedWording = ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance" && (p.value === "cleared" || p.value === "clearances"));
       const clearance = spec.statistic === "clearance_rate" || clearedWording || spec.filters.some((f) => f.startsWith("clearance:"));
       const names = [...new Set(spec.measures)];
-      const unit0 = clearance ? "offense" : unitFor(names[0], spec.unit);
+      const relF = spec.filters.some((f) => f.startsWith("dv:") || f.startsWith("relationship:"));
+      const unit0 = clearance ? "offense" : unitFor(names[0], spec.unit, relF);
       for (const m of names) {
-        const u = clearance ? "offense" : unitFor(m, spec.unit);
+        const u = clearance ? "offense" : unitFor(m, spec.unit, relF);
         if (spec.statistic === "clearance_rate") {
           addMeasure(m, u, m);
           addMeasure(`${m}_cleared`, u, `${m}_cleared`);

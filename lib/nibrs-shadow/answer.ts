@@ -4323,7 +4323,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),
-    ...(plan.measures.some((m) => /^offenses\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE] : []),
+    ...(plan.measures.some((m) => /^offenses\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_OFFENSES_LINE] : []),
     ...(plan.measures.some((m) => /^arrests\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE] : []),
     // Time of day (Jeff 2026-11-15): the buckets, one line under the table.
     ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE, NIGHT_LINE] : [])];
