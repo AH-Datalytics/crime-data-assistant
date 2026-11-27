@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { BIG_LIST, oriIn, oriRows } from "../lib/nibrs-plan/ori-rows";
 import { cubeServesMeasure } from "../lib/nibrs-plan/compile";
-import { ageFilterBins, ageMapping, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, WEAPON_FILE_SHA256_V1, WEAPON_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
+import { ageFilterBins, ageMapping, cubeAnyArrestMonths, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, CODE_FILE_SHA256_V2, CODE_VERSION_V2, CUBE_GROUPS, GROUPS_FILE_SHA256, GROUPS_FILE_SHA256_V4, GROUPS_VERSION, GROUPS_VERSION_V4, OFFENSE_FILE_SHA256_V1, OFFENSE_VERSION_V1, WEAPON_FILE_SHA256_V1, WEAPON_VERSION_V1, listSha256, runShadow, shadowSql, splitShadow, type CubeAsk, type CubeConfig } from "../lib/nibrs-plan/cube";
 import { categorySumsFromGrid, unordered } from "../lib/nibrs-shadow/state-sum";
 
 console.log("nibrs cube: the cube serves exactly its cell families; every other plan keeps the raw statements");
@@ -175,6 +175,14 @@ const base: CubeAsk = { cfg, kind: "offenders", codes: CUBE_GROUPS.person_crimes
   assert.equal(cubeUnits({ ...base, cfg: cfgV4, kind: "offenders", attribute: { dimension: "offender.relationship" } }), null, "any other attribute stays raw");
   assert.equal(cubeUnits({ ...base, cfg, kind: "victims", attribute: { dimension: "victim.ethnicity" } }), null, "a v2 group cube has no ethnicity: raw");
   assert.match(cubeUnits({ ...base, cfg: cfgV4, kind: "arrests", codes: null, allCrimeArrests: true, attribute: { dimension: "arrestee.race" } })!.sql, /crime_group = 'all_crime'[\s\S]*attribute = 'race'|source IN \('A', 'B'\)/, "all-crime arrests by race: Group A and B rows");
+  // The any-arrest month test reads the all-offense arrestee row (sources A and B summed only for yes/no), or stays on the raw scan.
+  const aa = cubeAnyArrestMonths(cfgV4, cfgV4.years.slice(0, 1))!;
+  assert.ok(aa, "a group v4 cube holding the year serves the any-arrest months");
+  assert.match(aa.sql, /unit = 'arrestee' AND source IN \('A', 'B'\) AND crime_group = 'all_crime' AND attribute = 'none'/);
+  assert.match(aa.sql, /GROUP BY ori, month_key HAVING SUM\(n_distinct_units\) > 0/);
+  assert.equal(cubeAnyArrestMonths(cfg, cfgV4.years.slice(0, 1)), null, "no group v4 cube: raw scan");
+  assert.equal(cubeAnyArrestMonths(cfgV4, [...cfgV4.years, 1900]), null, "a year the cube lacks: raw scan");
+  assert.equal(cubeAnyArrestMonths(cfgV4, []), null, "no years: raw scan");
   const rape = cubeUnits({ ...one, kind: "arrests", codes: ["11A", "11B"], attribute: { dimension: "arrestee.age", bins } })!;
   assert.ok(rape, "arrests add exactly across codes");
   assert.match(rape.sql, /offense_code IN \('11A', '11B'\)/);

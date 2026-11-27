@@ -45,7 +45,7 @@
  * Measure definitions are an executable draft for the canonical tables, until the shared semantic layer (nibrs-model
  * D7/D8) lands; they are in `unitsSql` below.
  */
-import { cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
+import { cubeAnyArrestMonths, cubeFromEnv, cubeOffenseUnits, cubeUnits, cubeWeaponUnits, shadowSql, type CubeConfig } from "./cube";
 import { BIG_LIST, oriRows } from "./ori-rows";
 import { FAMILIES, GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import cubeMeasures from "./cube-measures.json";
@@ -715,7 +715,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // Arrests (job AR3, following Jeff's "Yes, count them"): a month with any arrest (Group A not M, or a standalone Group
   // B arrest) is a reported month for every arrest question, whatever its status, so an agency that sent arrests in a
   // month with no crime report has a known 0 for arrests of another kind, not a blank.
-  if (anyArrest) parts.splice(parts.length - 1, 0, `any_arrest AS (SELECT DISTINCT ${O}ym FROM (
+  // With the arrests cube loaded for every year, the month test reads its one all-offense row per agency-month instead of scanning the raw arrest tables nationwide.
+  const anyArrestCube = anyArrest && cubeWanted ? cubeAnyArrestMonths(cubeWanted, years) : null;
+  if (anyArrest) parts.splice(parts.length - 1, 0, anyArrestCube
+    ? `any_arrest AS (SELECT DISTINCT ${O}ym FROM (${anyArrestCube.sql}) WHERE ${oriIs("ori")} AND ym BETWEEN ${q(from)} AND ${q(to)})`
+    : `any_arrest AS (SELECT DISTINCT ${O}ym FROM (
       SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("arrestee")} WHERE coalesce(multiple_arrestee_indicator, '') <> 'M'
       UNION ALL SELECT ori, substr(arrest_date, 1, 6) AS ym FROM ${read("group_b_arrest")} WHERE identical_to_line_no IS NULL)
       WHERE ${oriIs("ori")} AND ym BETWEEN ${q(from)} AND ${q(to)})`);
