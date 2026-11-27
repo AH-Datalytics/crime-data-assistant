@@ -25,7 +25,7 @@ export function configFromEnv(env: Record<string, string | undefined> = process.
   return { tabs, memoryLimit: env.ENGINE_DUCKDB_MEMORY ?? "2GB", threads: Number.isInteger(threads) && threads >= 1 ? threads : 1, timeoutMs: Number(env.ENGINE_TIMEOUT_MS ?? "120000") };
 }
 
-export type Core = { answer(req: EngineRequest): EngineResult; info(): Record<string, unknown>; close(): void };
+export type Core = { answer(req: EngineRequest): EngineResult; info(): Record<string, unknown>; warm(): void; close(): void };
 /** Test seam: replaces the engine call (an outcome for the question) so the adapter can be tested without data. */
 export type CoreHooks = { answerOutcome?: (req: EngineRequest, deps: ShadowDeps) => ShadowOutcome | null };
 
@@ -72,6 +72,25 @@ export function createCore(cfg: CoreConfig, hooks: CoreHooks = {}): Core {
         return { ok: true, response: toPreview(at, req.path, b.deps.places, req.question), ms: 0, release: b.release, sql: at.kind === "answer" ? at.sql : null, asked };
       } catch (e) {
         return { ok: false, kind: "error", message: `The engine failed: ${e instanceof Error ? e.message : String(e)}` };
+      }
+    },
+    // Slow-list (f): at worker start, build the release deps (starts the DuckDB process) and read each cube file's footer with a count, so the first question
+    // does not pay for the cube manifest check, the DuckDB start or the cold first read of the cube files. Never fails the worker: a cube that cannot be read is
+    // left to the raw statements as before.
+    warm() {
+      for (const tab of Object.keys(cfg.tabs)) {
+        try {
+          const b = depsFor(tab);
+          if (!b) continue;
+          b.deps.execute("SELECT 1");
+          const cube = cubeFromEnv(process.env, cfg.tabs[tab].root);
+          const products = [cube?.years.length ? { root: cube.root, years: cube.years } : null, cube?.code, cube?.offense, cube?.weapon];
+          for (const p of products) {
+            if (!p?.root || !p.years.length) continue;
+            const files = p.years.map((y) => `'${`${p.root}/canonical/cube/data_year=${y}/data.parquet`.replace(/'/g, "''")}'`).join(", ");
+            b.deps.execute(`SELECT count(*) FROM read_parquet([${files}], hive_partitioning = true)`);
+          }
+        } catch { /* warming is only a head start */ }
       }
     },
     info() {

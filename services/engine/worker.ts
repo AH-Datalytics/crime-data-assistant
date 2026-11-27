@@ -12,4 +12,5 @@ process.on("message", (m: { id: number; req: EngineRequest }) => {
   process.send?.({ id: m.id, result, info: core.info() }); // the info follows each answer: the release a source loaded is known only once it has answered
 });
 process.on("disconnect", () => { core.close(); process.exit(0); });
+core.warm(); // the cube and DuckDB start, before the first question (slow-list f)
 process.send?.({ ready: true, info: core.info() });
