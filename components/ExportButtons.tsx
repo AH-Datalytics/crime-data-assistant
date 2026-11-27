@@ -2,6 +2,7 @@
 
 import { useCallback, useState, type RefObject } from "react";
 import { projectAnswer } from "@/lib/answer-columns";
+import { pivotYearTable } from "@/lib/table-pivot";
 
 interface EmbedData {
   tab: string;
@@ -46,8 +47,13 @@ function downloadCsv(
 ) {
   // The answer contract (lib/answer-columns.ts): every column of the answer, in order, constant ones included, and no
   // annotation column -- also for an answer stored before the contract (a restored chat history).
-  const { columns, rows: data } = projectAnswer(answerColumns, answerRows);
-  const header = columns.join(",");
+  const projected = projectAnswer(answerColumns, answerRows);
+  // Ruling 7: the download matches what the table shows: a column per year when the table is pivoted.
+  const pivot = pivotYearTable(projected.columns, projected.rows);
+  const columns = pivot ? pivot.columns : projected.columns;
+  const data = pivot ? pivot.rows : projected.rows;
+  const csvHead = (c: string) => { const h = pivot?.labels[c] ?? c; return /[",]/.test(h) ? `"${h.replace(/"/g, '""')}"` : h; };
+  const header = columns.map(csvHead).join(",");
   const rows = data.map((row) =>
     columns
       .map((c) => {
