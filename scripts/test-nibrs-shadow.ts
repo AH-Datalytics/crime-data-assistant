@@ -1492,10 +1492,14 @@ const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
 assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
 assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
 // Drug possession arrests: NIBRS has no possession/sale split for arrests, so the answer says all drug/narcotic violation arrests are counted; the marijuana form is unchanged.
-const POSSESS_LINE = "NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted.";
+const POSSESS_LINE = "NIBRS records an arrest by the drug violation and does not separate possession from sale, so all drug/narcotic and drug equipment violation arrests are counted.";
 const possess = as(ask("drug possession arrests in Detroit in 2023"), "answer");
 assert.ok(possess.delivered.text.includes(POSSESS_LINE), JSON.stringify(possess.delivered.text));
 assert.ok(!weed.delivered.text.includes(POSSESS_LINE));
+// Gun arrests (rulings 34, 62): arrestees armed with a firearm, never offense 520 weapon-law arrests; "weapon law violation arrests" stay 520.
+const gunArr = as(ask("gun possession arrests in Detroit in 2023"), "answer");
+assert.equal(gunArr.plan.measures[0].id, "arrests.armed_firearm", JSON.stringify(gunArr.plan.measures));
+assert.equal(as(ask("weapon law violation arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.weapon_law");
 // Violent crime by age (Jeff 2026-11-15): NIBRS crimes against persons for the victim or the offender, with the line saying so.
 for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "victims"], ["violent crimes by offender age in Detroit in 2023", "offenders"]] as const) {
   const raw = ask(q);
@@ -1787,15 +1791,15 @@ assert.ok(/DUI arrests/i.test(dui.delivered.text[0]), dui.delivered.text[0]);
 // Job AR6: gun possession is a weapon law violation (520), never drug possession; a gun as a weapon stays a condition;
 // a leading "Please" keeps the every-arrest reading.
 for (const q of ["gun possession arrests in Detroit in 2023", "possession of a firearm arrests in Detroit in 2023"])
-  assert.equal(as(ask(q), "answer").plan.measures[0].id, "arrests.weapon_law", q);
-assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_possession");
+  assert.equal(as(ask(q), "answer").plan.measures[0].id, "arrests.armed_firearm", q); // rulings 34, 62
+assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_crimes");
 assert.equal(as(ask("robberies with a gun in Detroit in 2023"), "answer").plan.filters[0].kind, "exists");
 assert.equal(as(ask("Please show me the number of arrests of people under age 18 by year in Detroit from 2020 through 2023."), "answer").plan.measures[0].id, "arrests.all_crime");
 // Codex arrests review 06: a charge is never an offense count; Group B arrests are counted alone; handgun possession is
 // a weapon law violation; a person's condition or breakdown on Group B arrests uses their own columns.
 assert.notEqual(ask("How many gun charges in Detroit in 2023?").kind, "answer");
 assert.notEqual(ask("DUI arrests involving robbery in Detroit in 2023").kind, "answer");
-assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.weapon_law");
+assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.armed_firearm");
 const juvDui = as(ask("juvenile DUI arrests in Detroit in 2023"), "answer");
 assert.deepEqual([juvDui.plan.measures[0].id, juvDui.plan.filters[0]], ["group_b_arrests.dui", { kind: "attribute", dimension: "group_b_arrest.age", op: "between", values: [1, 17] }]);
 assert.equal(as(ask("DUI arrests by age in Detroit in 2023"), "answer").plan.groupings.at(-1)!.dimension, "group_b_arrest.age");

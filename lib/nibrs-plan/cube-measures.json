@@ -273,6 +273,7 @@
     }
   },
   "raw": {
+    "armed_firearm": "its definition is the arrestee's weapon, not an arrest offense code (rulings 34, 62)",
     "all_other_offenses": "no question form reaches a cube (the cube holds nothing for it, or its forms are not in the reader): it runs from the raw statements",
     "bad_checks": "no question form reaches a cube (the cube holds nothing for it, or its forms are not in the reader): it runs from the raw statements",
     "carjacking": "its definition is more than its codes (a stolen vehicle on the incident)",

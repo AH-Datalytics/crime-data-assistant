@@ -3791,6 +3791,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // D19: "drug crimes" are drug/narcotic plus drug equipment violations: both measures, and their total. Today's reader
   // reads them as drug possession alone ("drug possession" itself stays one measure).
   const drugAny = clause0("measure").find((p) => p.value === "drug_possession");
+  // Rulings 34 and 62: gun possession arrests are arrestees armed with a firearm (weapon codes 11-15), not offense 520 (weapon law violations).
+  const gunArrestPart = clause0("measure").find((p) => p.value === "weapon_law" && /\bguns?\b|\bfirearms?\b|\bhandguns?\b/i.test(p.text));
+  if (gunArrestPart && plan.measures.length === 1 && plan.measures[0].id === "arrests.weapon_law") plan.measures[0] = { ...plan.measures[0], id: "arrests.armed_firearm" };
   const drugPart = drugAny && !/possess/i.test(drugAny.text) ? drugAny : undefined;
   // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
   if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "This isn't available: drug crimes (drug and narcotic offenses plus drug equipment violations) beside other crimes.");
@@ -3800,6 +3803,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // Coordinator 2026-11-24: a state or national sum counts the one composite measure (35A + 35B), so it is a single column.
     plan.measures[0] = { ...plan.measures[0], id: "offenses.drug_crimes" };
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  } else if (drugAny && plan.measures.length === 1 && plan.measures[0].id === "arrests.drug_possession" && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)) {
+    // Rulings 24 and 16: drug arrests are 35A and 35B together (an agency, a state or the nation); marijuana arrests stay 35A.
+    plan.measures[0] = { ...plan.measures[0], id: "arrests.drug_crimes" };
   } else if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
@@ -4299,8 +4305,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
     // "Drug possession arrests": NIBRS records an arrest by the drug/narcotic violation, with no split between possessing and selling, so the whole
     // violation is counted and the answer says so (wording drafted by the Engine session, awaiting Jeff's yes).
-    ...(/\bpossess/i.test(ledger0.question) && plan.measures.length === 1 && plan.measures[0].id === "arrests.drug_possession" && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)
-      ? ["NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted."] : []),
+    ...(/\bpossess/i.test(ledger0.question) && plan.measures.length === 1 && (plan.measures[0].id === "arrests.drug_crimes" || plan.measures[0].id === "arrests.drug_possession") && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)
+      ? ["NIBRS records an arrest by the drug violation and does not separate possession from sale, so all drug/narcotic and drug equipment violation arrests are counted."] : []),
     // P168: a person counted by a weapon of the incident's crime (the data does not link a person to one offense), one agency.
     ...([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_weapon" && (f.scope === "offender" || f.scope === "arrestee"))
       ? ["A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."] : []),

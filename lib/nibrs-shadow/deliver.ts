@@ -162,6 +162,8 @@ export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): st
   // Increment 7: with no condition on the incident, every arrest (standalone Group B arrests included).
   if (m.id === "arrests.all_crime") return [peopleFacts(plan).throughIncident ? "arrests on incidents" : "arrests", ...filters].join(" ");
   if (name === "drug_possession" && m.unit === "arrest" && filters.includes(MARIJUANA_WORDS)) return ["marijuana possession arrests", ...filters.filter((x) => x !== MARIJUANA_WORDS)].join(" ");
+  if (m.id === "arrests.armed_firearm") return ["arrests of people armed with a firearm", ...filters].join(" ");
+  if (m.id === "arrests.drug_crimes") return ["drug/narcotic and drug equipment violation arrests", ...filters].join(" ");
   if (m.id === "offenses.drug_crimes") return ["drug crimes", ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }

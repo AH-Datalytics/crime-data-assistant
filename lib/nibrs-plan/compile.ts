@@ -258,6 +258,21 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
       FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${parts.own("a")}` };
   }
+  // Gun arrests (rulings 34, 62): an arrestee armed with a firearm (weapon codes 11-15 in either weapon slot), whatever the arrest offense, Group A and Group B,
+  // M left out (P68) and the FBI's identical Group B repeats left out. Not offense 520 (weapon law violations).
+  if (measureId === "arrests.armed_firearm") {
+    if (unit !== "arrest") return { error: `"${measureId}" counts arrests` };
+    const armed = (a: string) => ` AND (${a}.arrestee_weapon_1 IN (${list(FIREARM_WEAPONS)}) OR ${a}.arrestee_weapon_2 IN (${list(FIREARM_WEAPONS)}))`;
+    const cond = incidentFilter("a");
+    const groupA = `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${armed("a")}${cond}`;
+    if (parts.rest("a")) return { entity: "arrestee", sql: groupA };
+    if (joins.trim()) return { error: "v0 groups gun arrests by the arrestee's own columns only" };
+    return { entity: "arrestee", sql: `${groupA}
+      UNION ALL
+      SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${armed("a")}${parts.own("a")}` };
+  }
   // Job AR6: arrests for a Group B offense (DUI, disorderly conduct, trespass ...) are standalone Group B arrest reports,
   // one per arrestee line, the FBI's identical repeats left out (as in every arrest, increment 7). They have no incident:
   // a condition on an incident, or a grouping beyond the arrestee's own columns, has nothing to apply to.
@@ -367,12 +382,14 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
 const CUBE_APPROVED = new Set(Object.keys(cubeMeasures.approved));
 export const cubeServesMeasure = (id: string): boolean => CUBE_APPROVED.has(id.split(".")[1] ?? "");
 /** Every measure name the vocabulary knows (the codes of MEASURE_CODES and EXTRA_CODES, the special families and all_crime), for the guard test: each must be classified in cube-measures.json. */
-export const knownMeasureNames = (): string[] => [...new Set([...Object.keys(MEASURE_CODES), ...Object.keys(EXTRA_CODES), ...FAMILIES, "all_crime"])].sort();
+export const knownMeasureNames = (): string[] => [...new Set([...Object.keys(MEASURE_CODES), ...Object.keys(EXTRA_CODES), ...FAMILIES, "all_crime", "armed_firearm"])].sort();
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"],
   // P82 (decided 2026-11-01): the crimes of domestic violence, counted by victim.
   domestic_violence: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"] };
 /** P82 and D20: the relationships of domestic violence, intimate partner and family or household (the Model's correctness/slice_dv.py sets). */
+/** NIBRS arrestee weapon codes for a firearm: handgun, firearm, rifle, shotgun, other firearm (the automatic flag is its own column). */
+const FIREARM_WEAPONS = ["11", "12", "13", "14", "15"];
 const DOMESTIC_RELATIONSHIPS = ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"];
 
 /**
@@ -584,7 +601,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
   // (carjacking, domestic violence, any later one) is never answered from the cube row of the group whose code list it happens to share.
-  const cubeCfg = cubeWanted && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
+  const cubeCfg = cubeWanted && !m.id.endsWith(".armed_firearm") && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;
