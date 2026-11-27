@@ -1493,15 +1493,31 @@ function shadowAnswerWithDeadButtons(question: string, deps: ShadowDeps): Shadow
 }
 
 /** A question about the data itself (coverage.ts), answered; null when the question is something else. */
-function coverageOf(question: string, deps: ShadowDeps): CoverageAnswer | null {
+function coverageOf(question: string, deps: ShadowDeps): ShadowOutcome | null {
   const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized");
   const hasMeasure = own.some((p) => p.concept === "measure");
   const hasPlace = own.some((p) => p.concept === "place" && !/^state:|^national/.test(String(p.value)));
   const cq = readCoverage(question, hasMeasure, hasPlace);
   if (!cq) return null;
-  return answerCoverage(cq, { root: deps.target.root, release: deps.release, execute: deps.execute,
-    crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null, places: deps.places, crimeIndexRoot: deps.historical?.root ?? null });
+  const cd = { root: deps.target.root, release: deps.release, execute: deps.execute,
+    crimeIndexYears: deps.historical ? { first: deps.historical.firstYear, last: deps.historical.lastYear } : null, places: deps.places, crimeIndexRoot: deps.historical?.root ?? null };
+  // An agency lookup is by city (Jeff 2026-11-25): the place resolver picks the city and its state (the existing rules), and the agencies are those whose agency-table city it is.
+  const lk = cq.lookup;
+  const pp = lk?.kind === "agency" && deps.places ? own.find((p) => p.concept === "place" && /^(?:city|ambiguous):/.test(String(p.value))) : undefined;
+  if (lk && pp && deps.places) {
+    const r = resolvePlace(deps.places, pp.value!, pp.text);
+    if (r.kind === "agency" && r.agency.kind === "city") return answerCoverage({ ...cq, lookup: { ...lk, name: r.agency.name, city: r.agency.name, state: r.agency.state } }, cd);
+    if (r.kind === "ask") {
+      const cities = r.candidates.flatMap((c) => (c.kind === "agency" && c.agency.kind === "city" ? [c.agency] : []));
+      if (cities.length > 1) {
+        const options: ShadowOption[] = r.candidates.flatMap((c): ShadowOption[] => c.kind === "agency" && c.agency.kind === "city"
+          ? [{ label: candidateLabel(c, r.candidates, deps.places), continuation: answerCoverage({ ...cq, lookup: { ...lk, name: c.agency.name, city: c.agency.name, state: c.agency.state } }, cd) as unknown as ShadowOutcome }] : []);
+        return { kind: "clarify", about: `which ${r.name}`, question, options };
+      }
+    }
+  }
+  return answerCoverage(cq, cd);
 }
 
 /** P153 (Jeff 2026-11-18): a line, an annotation or a marker at a date on a chart ("with a line at August 2025", "add some kind of marker to show May 2020"). */
