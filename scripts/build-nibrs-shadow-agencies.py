@@ -29,14 +29,17 @@ ap.add_argument("--release", required=True)  # the canonical release id, recorde
 ap.add_argument("--first-year", type=int, default=2017, help="the engine's first year (release.json first_year): an agency with no row since then is not a place (a build that reaches back to 2013 carries ORIs that stopped reporting in 2016, e.g. a second 'Essex County' beside the current one)")
 ap.add_argument("--crosswalk")   # nibrs-model's agency crosswalk release dir (aliases, place names)
 ap.add_argument("--crimeindex")  # the Crime Index build dir (agencies NIBRS does not have)
+ap.add_argument("--agency-names")  # nibrs-model's reference/agency-names/agency-names.csv: a city with no city name in any year is named from its FBI agency name
 a = ap.parse_args()
 OUT = os.path.join(os.path.dirname(__file__), "fixtures", "nibrs-shadow", "agencies.json")
 
 rows = duckdb.connect().execute(f"""
   WITH y AS (SELECT ori, u.data_year, trim(u.city) AS city, u.state_abbr AS state, u.agency_indicator AS ind, u.population
              FROM read_parquet('{a.root}/agency/data.parquet'), unnest(by_year) AS t(u))
-  SELECT ori, arg_max(city, data_year), arg_max(state, data_year), arg_max(ind, data_year), arg_max(population, data_year), max(data_year)
+  SELECT ori, coalesce(arg_max(city, data_year) FILTER (WHERE city <> ''), ''), arg_max(state, data_year), arg_max(ind, data_year), arg_max(population, data_year), max(data_year)
   FROM y GROUP BY ori HAVING max(data_year) >= {a.first_year} ORDER BY 3, 2, 5 DESC""").fetchall()
+# The city is the latest year's that is not blank (coordinator 2026-11-22: Pontiac, Michigan's latest rows carry a blank city, and 115
+# agencies had an empty name, so a question naming them could not find them).
 names = sqlite3.connect(f"file:{a.names}?mode=ro", uri=True)
 hist = {o: (n, t) for o, n, t in names.execute("SELECT ori, agency, type FROM historical_agency WHERE type IN ('city', 'county')")}
 out = []
@@ -46,6 +49,32 @@ for o, c, s, ind, p, y in rows:
         out.append({"ori": o, "kind": "city", "name": name if kind == "city" and name else c.title(), "state": s, "population": p or 0, "year": y})
     elif kind == "county" and name and name.endswith(" County"):
         out.append({"ori": o, "kind": "county", "name": name, "state": s, "population": p or 0, "year": y})
+
+# A city whose city field is blank in every year (92 in canon2-20261118-host: Menifee, San Ramon, Deltona ...) is named from its FBI agency
+# name with the police words taken off ("Pontiac Police Department" -> "Pontiac"); a county after a comma stays, as the index's other
+# same-name townships have it ("Lancaster Township Police Department, Lancaster County" -> "Lancaster Township, Lancaster County"), so
+# "lancaster township" still reaches every one. One with no name anywhere cannot be asked about by name, so it is left out, listed.
+if a.agency_names:
+    import csv
+    with open(a.agency_names, encoding="utf-8") as f:
+        fbi = {r["ori"]: r["agency_name"].strip() for r in csv.DictReader(f)}
+    def place_of(agency):
+        head, _, tail = agency.partition(",")
+        head = re.sub(r"\s+(?:Police Department|Department of Public Safety|Public Safety Department|Police)$", "", head.strip()).strip()
+        tail = tail.strip()
+        return f"{head}, {tail}" if head and re.fullmatch(r"[A-Z][\w .'-]* County", tail) else head
+    named, nameless = 0, []
+    for r in out:
+        if r["name"].strip():
+            continue
+        n = place_of(fbi.get(r["ori"], ""))
+        if n:
+            r["name"] = n
+            named += 1
+        else:
+            nameless.append(r["ori"])
+    out = [r for r in out if r["name"].strip()]
+    print(named, "cities named from their FBI agency name;", len(nameless), "with no name anywhere left out:", ", ".join(nameless))
 
 # The shared place index (coordinator 2026-11-02): NIBRS's agencies and the Crime Index's, one reader for every source.
 # The crosswalk (nibrs-model's agency crosswalk, --crosswalk) gives each ORI's place names (its "city" and "county"

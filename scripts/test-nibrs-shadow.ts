@@ -62,6 +62,14 @@ assert.equal(plainMeanings("denver coloradocrime data for the last three years b
 assert.equal(titleCase("drug/narcotic violation offenses"), "Drug/Narcotic Violation Offenses");
 
 const places = loadPlaceIndex();
+// Every agency in the place index has a name (coordinator 2026-11-22: 115 had none, Pontiac, Michigan among them, so a question naming them
+// could not find them); the builder names a city with no city field from its FBI agency name and leaves out one with no name anywhere.
+{
+  const index = JSON.parse(fs.readFileSync("scripts/fixtures/nibrs-shadow/agencies.json", "utf8")).agencies as { ori: string; name: string }[];
+  const blank = index.filter((a) => !a.name.trim()).map((a) => a.ori);
+  assert.deepEqual(blank, [], `agencies with no name: ${blank.join(", ")}`);
+  assert.ok((places.byName.get("pontiac") ?? []).some((a) => a.ori === "MI631900X"), "Pontiac, Michigan is found by its name");
+}
 const sqls: string[] = [];
 /** Rows for the compiled query: every month (or year) of the period, 7 each, March 2024 unknown. */
 /** One agency's month reported as zero crimes (AZERO, "2024-07"): the stub marks it NOT_REPORTED, as the compiler does for one agency. */
