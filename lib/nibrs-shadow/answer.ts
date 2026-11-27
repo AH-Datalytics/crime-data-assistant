@@ -421,7 +421,8 @@ class HeavyStatement extends Error {}
 export const statementChars = (sql: string): number => { const s = splitShadow(sql); return s ? Math.max(s.raw.length, s.cube.length) : withoutShadowComment(sql).length; };
 function deferHeavy(label: string, build: (d: ShadowDeps) => ShadowOutcome, deps: ShadowDeps, extra: Partial<ShadowOption> = {}): ShadowOption {
   let heavy = false;
-  const limit = deps.deferChars ?? HEAVY_STATEMENT;
+  // The every-NIBRS-year button is the default for a breakdown with no period (Jeff 2026-11-25): its national statements run in 4 to 7 s, so it is never deferred (QL-nibrs-43401cd191, c74cec7689, c80f231f81, f089decff0).
+  const limit = extra.everyNibrsYear ? Number.MAX_SAFE_INTEGER : deps.deferChars ?? HEAVY_STATEMENT;
   const probe: ShadowDeps = { ...deps, execute: (sql: string) => { if (statementChars(sql) > limit) { heavy = true; throw new HeavyStatement(); } return deps.execute(sql); } };
   let first: ShadowOutcome | null = null;
   try { first = build(probe); } catch (e) { if (!(e instanceof HeavyStatement)) throw e; }
@@ -1006,7 +1007,9 @@ export function applyDefaults(question: string, o0: ShadowOutcome, deps: ShadowD
         defaultDepth++;
         try {
           // Built against the heavy-statement probe: a national series that takes minutes is not run as a default (the ask stays).
-          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps);
+          const o = deferHeavy("Every year available", (d) => shadowAnswer(`${c.question.replace(/[?.!\s]+$/, "")} by year`, d), deps,
+            // A marijuana drug-offense count over every year runs in under a second nationally (Runner timing 11-26, QL-nibrs-85dec90bb8): not deferred.
+            /\b(?:marijuana|cannabis)\b/i.test(question) ? { everyNibrsYear: true } : {});
           if (!isDeferred(o) && o.continuation && ANSWER_KINDS.includes(o.continuation.kind)) option = o;
         } finally { defaultDepth--; }
       }
@@ -3699,7 +3702,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
       } else if (w.who === "victim") {
         // P120 (Jeff 2026-11-16): a question that says victims and gives their age counts the crime's victims (robbery victims
         // under 18), the unit a victim's age belongs to; a crime counted by offense with no victim word stays declined.
-        if (unit === "offense" && /^offenses\.[a-z_]+$/.test(plan.measures[0].id) && /\bvictims?\b/i.test(ledger0.question)) plan.measures[0] = { ...plan.measures[0], id: plan.measures[0].id.replace(/^offenses\./, "victims."), unit: "victim" };
+        if (unit === "offense" && /^offenses\.[a-z_]+$/.test(plan.measures[0].id)) plan.measures[0] = { ...plan.measures[0], id: plan.measures[0].id.replace(/^offenses\./, "victims."), unit: "victim" };
         if (plan.measures[0].unit !== "victim") return decline("unsupported_capability", "This isn't available: a victim's age for crimes counted by offense.");
         plan.filters.push(between("victim.age", w.range));
       } else if (w.who === "arrestee") {
@@ -3791,6 +3794,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // D19: "drug crimes" are drug/narcotic plus drug equipment violations: both measures, and their total. Today's reader
   // reads them as drug possession alone ("drug possession" itself stays one measure).
   const drugAny = clause0("measure").find((p) => p.value === "drug_possession");
+  // Rulings 34 and 62: gun possession arrests are arrestees armed with a firearm (weapon codes 11-15), not offense 520 (weapon law violations).
+  const gunArrestPart = clause0("measure").find((p) => p.value === "weapon_law" && /\bguns?\b|\bfirearms?\b|\bhandguns?\b/i.test(p.text));
+  if (gunArrestPart && plan.measures.length === 1 && plan.measures[0].id === "arrests.weapon_law") plan.measures[0] = { ...plan.measures[0], id: "arrests.armed_firearm" };
   const drugPart = drugAny && !/possess/i.test(drugAny.text) ? drugAny : undefined;
   // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
   if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "This isn't available: drug crimes (drug and narcotic offenses plus drug equipment violations) beside other crimes.");
@@ -3800,6 +3806,9 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // Coordinator 2026-11-24: a state or national sum counts the one composite measure (35A + 35B), so it is a single column.
     plan.measures[0] = { ...plan.measures[0], id: "offenses.drug_crimes" };
     combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  } else if (drugAny && plan.measures.length === 1 && plan.measures[0].id === "arrests.drug_possession" && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)) {
+    // Rulings 24 and 16: drug arrests are 35A and 35B together (an agency, a state or the nation); marijuana arrests stay 35A.
+    plan.measures[0] = { ...plan.measures[0], id: "arrests.drug_crimes" };
   } else if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
     plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
     plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
@@ -3871,7 +3880,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   // connects a victim, or on the robbery offense itself.
   const composite = flags(ledger0).composite;
   if (composite) {
-    const want = composite === "firearm" ? ["victims.murder", "offenses.robbery", "victims.aggravated_assault"] : ["victims.murder", "victims.aggravated_assault"];
+    const want = composite === "firearm" ? ["victims.murder", "offenses.robbery", "offenses.aggravated_assault"] : ["victims.murder", "offenses.aggravated_assault"];
     // Only the composite's own crimes: a crime asked beside it ("gun crimes and murders") would be absorbed into the
     // composite's weapon-filtered part, so that form is declined (Codex review 02).
     if (JSON.stringify(plan.measures.map((m) => m.id)) !== JSON.stringify(want) || clause0("measure").length !== want.length)
@@ -3879,8 +3888,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     plan.measures = plan.measures.map((m) => ({ ...m, filters: [{ kind: "exists", scope: m.unit === "victim" ? "victim" : "offense", entity: "offense_weapon",
       where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: WEAPON_CODES[composite] }] } as Filter] }));
     combined = composite === "firearm"
-      ? { label: "gun crimes", definition: "Gun crime here is murder victims, robbery offenses and aggravated assault victims with a firearm." }
-      : { label: "stabbings", definition: "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument." };
+      ? { label: "gun crimes", definition: "Gun crime here is murder victims, robbery offenses and aggravated assault offenses with a firearm." }
+      : { label: "stabbings", definition: "Stabbings here are murder victims and aggravated assault offenses with a knife or cutting instrument." };
   }
   // P29/P49: "by men and women" -> the crimes by the sexes of their incidents' offenders (each crime once under each sex
   // present), with each category's share. Only the victim-sex filters the reader made from those words are dropped and
@@ -4244,7 +4253,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
   const column = flags(ledger0).column;
   if (column === "both") return decline("unsupported_capability", "This isn't available: the population and the agencies reporting together; ask for one of them.");
   if (column === "population") {
-    const r = checked.statistics.find((s) => s.kind === "rate");
+    // Engine 2.0 (coordinator 2026-11-26, QL-nibrs-6d7c1e8aa9): beside a rate, or, when the question asks for the population, beside a plain count.
+    const r = checked.statistics.find((s) => s.kind === "rate") ?? (flags(ledger0).popOfPlaces ? checked.statistics.find((s) => s.kind === "count") : undefined);
     if (!r) return decline("unsupported_capability", "A population column goes with a rate; this answer has no rate.");
     checked = { ...checked, statistics: [...checked.statistics, { kind: "population", as: "population", of: r.as }] };
   } else if (column === "agencies") {
@@ -4299,8 +4309,8 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     ...(plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS) ? [MARIJUANA_LINE] : []),
     // "Drug possession arrests": NIBRS records an arrest by the drug/narcotic violation, with no split between possessing and selling, so the whole
     // violation is counted and the answer says so (wording drafted by the Engine session, awaiting Jeff's yes).
-    ...(/\bpossess/i.test(ledger0.question) && plan.measures.length === 1 && plan.measures[0].id === "arrests.drug_possession" && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)
-      ? ["NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted."] : []),
+    ...(/\bpossess/i.test(ledger0.question) && plan.measures.length === 1 && (plan.measures[0].id === "arrests.drug_crimes" || plan.measures[0].id === "arrests.drug_possession") && !plan.filters.some((f) => filterWords(f) === MARIJUANA_WORDS)
+      ? ["NIBRS records an arrest by the drug violation and does not separate possession from sale, so all drug/narcotic and drug equipment violation arrests are counted."] : []),
     // P168: a person counted by a weapon of the incident's crime (the data does not link a person to one offense), one agency.
     ...([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "offense_weapon" && (f.scope === "offender" || f.scope === "arrestee"))
       ? ["A person is counted when the incident's crime involved the weapon; the data does not link a person to one offense."] : []),
@@ -4317,7 +4327,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     // P82: what domestic violence counts, one plain note.
     ...(plan.measures.some((m) => /^victims\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE] : []),
     ...(plan.measures.some((m) => /^incidents\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_INCIDENTS_LINE] : []),
-    ...(plan.measures.some((m) => /^offenses\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_OFFENSES_LINE] : []),
+    ...(plan.measures.some((m) => /^offenses\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_OFFENSES_LINE] : []),
     ...(plan.measures.some((m) => /^arrests\.domestic_violence$/.test(m.id)) ? [DOMESTIC_VIOLENCE_LINE, DOMESTIC_VIOLENCE_ARRESTS_LINE] : []),
     // Time of day (Jeff 2026-11-15): the buckets, one line under the table.
     ...(plan.groupings.some((g) => g.dimension === "incident.hour") ? [TIME_OF_DAY_LINE, NIGHT_LINE] : [])];
@@ -4336,7 +4346,7 @@ function fromLedger(ledgerIn: RequestLedger, deps: ShadowDeps, pins = new Map<nu
     return decline("unsupported_capability", `This isn't available: property crime in the United States broken down by victim age takes too long to count here. Ask for one state, for example "property crimes by victim age in Texas in 2024", or for one agency.`);
   // The same for violent crime by a person's age, nationally over several years (BD3: 2017-2025 by victim age ran DuckDB out of
   // memory): the arrest sentence's pattern, one year offered in words, never run in advance.
-  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /\.person_crimes$/.test(m.id))
+  if (stateMode && checked.geography.places.some((p) => p.kind === "national") && checked.measures.some((m) => /^(?:victims|offenders|offenses)\.person_crimes$/.test(m.id))
     && checked.groupings.some((g) => !g.dimension.startsWith("time.")) && period.from.slice(0, 4) !== period.to.slice(0, 4)) {
     const lastYear = release.lastMonth.slice(5) === "12" ? release.lastMonth.slice(0, 4) : Number(release.lastMonth.slice(0, 4)) - 1;
     const who = checked.measures[0].unit === "offender" ? "offender" : "victim";

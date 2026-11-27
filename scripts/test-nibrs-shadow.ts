@@ -81,6 +81,8 @@ function stub0(sql: string): unknown[][] {
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
   // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
   if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
+  // Consistent reporters (REPORTED_CRIMES in every month of the span): every quoted agency except those the grid stub treats as unknown.
+  if (/agency_month_status[\s\S]*HAVING count/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7,})'/g)].map((m) => m[1]).filter((o) => o !== "NC0410200" && o !== "TX2270100" && ![CONFLICT, ZERO].some((x) => x && (x.ori === "*" || x.ori === o) && sql.includes(String(x.ym).replace("-", "")))).map((o) => [o]);
   if (sql.includes("agency/data.parquet")) return popRows(sql);
   // P171: a state's clearance by type, read once (state-sum.ts, "grid once"): each agency-year's coverage row ('c') and its sums by type ('s'):
   // half the year's units cleared by arrest (one incident fewer than units), the rest not cleared.
@@ -300,12 +302,12 @@ assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer")
     assert.notEqual(ask(q).kind === "clarify" && (ask(q) as { about?: string }).about, "which Kings County", q);
   }
 }
-// Coordinator 2026-11-24 (ruling A, QL-nibrs-b2f415c823): one category over several years, not by year, is the category's table summed over the years.
+// Ruling 7 (supersedes 2026-11-24 ruling A): one category over several years = one table with a year dimension (column per year).
 {
-  for (const [q, title] of [["DUI arrests by age nationally, 2023 - 2025", "United States DUI Arrests by Arrestee Age Group, 2023-2025"], ["burglary arrests by age in Texas, 2022 - 2024", "Texas Burglary Arrests by Arrestee Age Group, 2022-2024"]] as const) {
+  for (const [q, title] of [["DUI arrests by age nationally, 2023 - 2025", "United States DUI Arrests by Year and Arrestee Age Group, 2023-2025"], ["burglary arrests by age in Texas, 2022 - 2024", "Texas Burglary Arrests by Year and Arrestee Age Group, 2022-2024"]] as const) {
     const a = as(ask(q), "answer") as unknown as { delivered: { text: string[]; table: { columns: { header: string }[] } } };
     assert.equal(a.delivered.text[0], title, q);
-    assert.ok(!a.delivered.table.columns.some((c) => /^(Year|Period)$/i.test(c.header)), "one table over the years, no year column");
+    assert.ok(a.delivered.table.columns.some((c) => /^(Year|Period)$/i.test(c.header)), "ruling 7: one table, a year dimension (pivoted per year)");
     assert.ok(a.delivered.text.includes("Includes all agencies."), q);
   }
 }
@@ -320,11 +322,11 @@ assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer")
 }
 // P170 (P82, Jeff 2026-11-19): domestic violence is the victims of the P82 crimes with an intimate partner or a family or household relationship to any offender, for one agency first.
 {
-  const dv = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  const dv = as(ask("Domestic violence victims in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(dv.plan.measures[0].id, "victims.domestic_violence");
   assert.ok(dv.delivered.text.some((t) => /^Domestic violence counts each victim of murder or manslaughter, a sex offense, assault, kidnapping, incest, statutory rape or human trafficking whose offender/.test(t)), JSON.stringify(dv.delivered.text));
   const n0 = sqls.length;
-  as(ask("Domestic violence in Houston in 2024"), "answer");
+  as(ask("Domestic violence victims in Houston in 2024"), "answer");
   const dvSql = sqls.slice(n0).find((s) => /o9\.offense_code = vo\.connected_offense/.test(s)) ?? "";
   assert.ok(/vo\.connected_offense IN \('09A', '09B', '11A', '11B', '11C', '11D', '13A', '13B', '13C', '100', '36A', '36B', '64A', '64B'\)/.test(dvSql), "the 14 P82 crimes");
   assert.ok(/r9\.offender_relationship IN \('SE', 'CS', 'BG', 'XS', 'XR', 'HR', 'CH', 'PA', 'SB', 'OF', 'SC', 'SP', 'GP', 'GC', 'IL', 'CF', 'BE', 'SS', 'FP', 'FC', 'CO'\)/.test(dvSql), "any pair to any offender, intimate partner or family or household");
@@ -339,11 +341,14 @@ assert.equal(as(ask("Shoplifting in Detroit in 2023"), "answer").kind, "answer")
   const n2 = sqls.length;
   const off = as(ask("domestic violence offenses in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(off.plan.measures[0].id, "offenses.domestic_violence");
-  assert.ok(off.delivered.text.includes("Offenses are the offenses of those crimes in incidents that had a domestic violence victim."), JSON.stringify(off.delivered.text));
+  assert.ok(off.delivered.text.some((t) => /^Domestic violence counts each offense committed against a victim whose offender/.test(t)), JSON.stringify(off.delivered.text));
+  const bare = as(ask("Domestic violence in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] } };
+  assert.equal(bare.plan.measures[0].id, "offenses.domestic_violence", "ruling 1: offenses by default");
   const arr = as(ask("domestic violence arrests in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(arr.plan.measures[0].id, "arrests.domestic_violence");
   assert.ok(arr.delivered.text.includes("Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders."), JSON.stringify(arr.delivered.text));
-  assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 2, "both ask the incident for a qualifying victim");
+  assert.ok(sqls.slice(n2).filter((s) => /dvo\.connected_offense/.test(s)).length >= 1, "the arrests ask the incident for a qualifying victim");
+  assert.ok(sqls.slice(n2).some((s) => /r9\.offender_relationship IN \('SE', 'CS', 'XS', 'BG', 'PA', 'CH', 'SB', 'OF', 'SC', 'SP', 'GP', 'GC', 'IL', 'SS'\)/.test(s) && !/vo\.connected_offense IN/.test(s)), "ruling 29: every connected offense of a victim with a domestic relationship");
   for (const q of ["Domestic violence in Texas in 2024", "domestic violence nationally in 2024", "domestic violence arrests in Texas in 2024", "domestic violence offenses nationally in 2024", "domestic violence incidents in Texas in 2024"])
     assert.equal(ask(q).kind, "answer", q); // Coordinator 2026-11-24: the state and national gate is gone, the definition is unchanged
   // Coordinator 2026-11-24: drug offenses in a state or the nation are one composite count (35A + 35B), alone, by year, and for several states.
@@ -1424,8 +1429,8 @@ const v = as(ask("How many shoplifting victims were there in Memphis in 2024?"),
 assert.equal(v.plan.measures[0].unit, "offense");
 // P86: carried, not shown (the title says "offenses").
 assert.equal(v.delivered.text.at(-2), "Property crimes are counted by offense, not by victim.", "P86: shown, since victims were asked for");
-// Person crimes stay by victim (D18); carjacking is counted by offense (D18).
-assert.equal(as(ask("How many simple assaults were there in Detroit in 2023?"), "answer").plan.measures[0].id, "victims.simple_assault");
+// Ruling 1 (2026-11-26) supersedes D18: person crimes are offenses unless victims are asked; carjacking is counted by offense (D18).
+assert.equal(as(ask("How many simple assaults were there in Detroit in 2023?"), "answer").plan.measures[0].id, "offenses.simple_assault");
 const cj = as(ask("carjackings in Memphis TN by month in 2025"), "answer");
 assert.deepEqual([cj.plan.measures[0].id, cj.plan.measures[0].unit], ["offenses.carjacking", "offense"]);
 
@@ -1491,11 +1496,18 @@ assert.deepEqual(drugsYears.delivered.contractProblems, []);
 const weed = as(ask("marijuana possession arrests in Texas in 2024"), "answer");
 assert.deepEqual(weed.delivered.table.columns.map((c) => c.header), ["Marijuana possession arrests"]);
 assert.ok(weed.delivered.text.includes("Counts arrests on incidents where marijuana was recorded among the drugs."));
+// QL-nibrs-85dec90bb8: marijuana drug offenses nationally, no period: every year, never a "which period" ask.
+const weedNat = as(shadowAnswer("marijuana drug offenses nationally", { ...deps, noDefaults: false }), "answer");
+assert.ok(/"property_drug"/.test(JSON.stringify(weedNat.plan)) && weedNat.plan.period.kind === "absolute", "marijuana filter and every year");
 // Drug possession arrests: NIBRS has no possession/sale split for arrests, so the answer says all drug/narcotic violation arrests are counted; the marijuana form is unchanged.
-const POSSESS_LINE = "NIBRS records an arrest by the drug/narcotic violation and does not separate possession from sale, so all drug/narcotic violation arrests are counted.";
+const POSSESS_LINE = "NIBRS records an arrest by the drug violation and does not separate possession from sale, so all drug/narcotic and drug equipment violation arrests are counted.";
 const possess = as(ask("drug possession arrests in Detroit in 2023"), "answer");
 assert.ok(possess.delivered.text.includes(POSSESS_LINE), JSON.stringify(possess.delivered.text));
 assert.ok(!weed.delivered.text.includes(POSSESS_LINE));
+// Gun arrests (rulings 34, 62): arrestees armed with a firearm, never offense 520 weapon-law arrests; "weapon law violation arrests" stay 520.
+const gunArr = as(ask("gun possession arrests in Detroit in 2023"), "answer");
+assert.equal(gunArr.plan.measures[0].id, "arrests.armed_firearm", JSON.stringify(gunArr.plan.measures));
+assert.equal(as(ask("weapon law violation arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.weapon_law");
 // Violent crime by age (Jeff 2026-11-15): NIBRS crimes against persons for the victim or the offender, with the line saying so.
 for (const [q, who] of [["violent crimes by victim age in Detroit in 2023", "victims"], ["violent crimes by offender age in Detroit in 2023", "offenders"]] as const) {
   const raw = ask(q);
@@ -1764,12 +1776,12 @@ assert.equal(as(ask("Robbery offenders in Detroit by sex in 2023"), "answer").pl
 assert.match(as(ask("Murders by strangers in Detroit in 2023"), "answer").delivered.text[0], /murder victims by a stranger in 2023/);
 // P31: gun crime and stabbings, each crime in its unit with the weapon, and the total; gun violence and shooters declined.
 const gun = as(ask("Gun crime in Detroit in 2023"), "answer");
-assert.deepEqual(gun.plan.measures.map((m) => `${m.id}:${(m.filters?.[0] as { scope: string }).scope}`), ["victims.murder:victim", "offenses.robbery:offense", "victims.aggravated_assault:victim"]);
-assert.deepEqual(gun.delivered.table.columns.map((c) => c.header), ["Murder victims with a firearm", "Robbery offenses with a firearm", "Aggravated assault victims with a firearm"]);
+assert.deepEqual(gun.plan.measures.map((m) => `${m.id}:${(m.filters?.[0] as { scope: string }).scope}`), ["victims.murder:victim", "offenses.robbery:offense", "offenses.aggravated_assault:offense"]);
+assert.deepEqual(gun.delivered.table.columns.map((c) => c.header), ["Murder victims with a firearm", "Robbery offenses with a firearm", "Aggravated assault offenses with a firearm"]);
 assert.ok(gun.delivered.text.includes("Together: 252 gun crimes in 2023."));
 assert.ok(sqls.slice(-3).every((q) => q.includes("w2.weapon IN ('11', '12', '13', '14', '15')")));
 const stab = as(ask("Stabbings in Detroit in 2023"), "answer");
-assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument."]);
+assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault offenses with a knife or cutting instrument."]);
 assert.match(as(ask("Gun violence in Detroit in 2023"), "decline").explanation, /non-fatal shootings/);
 assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "decline").explanation, /not who fired a gun, so "shooters" can.t be counted/);
 // P46, P48, P50: arrests by arrest date, counted once each; "people arrested for" is arrests; "charged" is declined with
@@ -1787,15 +1799,15 @@ assert.ok(/DUI arrests/i.test(dui.delivered.text[0]), dui.delivered.text[0]);
 // Job AR6: gun possession is a weapon law violation (520), never drug possession; a gun as a weapon stays a condition;
 // a leading "Please" keeps the every-arrest reading.
 for (const q of ["gun possession arrests in Detroit in 2023", "possession of a firearm arrests in Detroit in 2023"])
-  assert.equal(as(ask(q), "answer").plan.measures[0].id, "arrests.weapon_law", q);
-assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_possession");
+  assert.equal(as(ask(q), "answer").plan.measures[0].id, "arrests.armed_firearm", q); // rulings 34, 62
+assert.equal(as(ask("drug possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.drug_crimes");
 assert.equal(as(ask("robberies with a gun in Detroit in 2023"), "answer").plan.filters[0].kind, "exists");
 assert.equal(as(ask("Please show me the number of arrests of people under age 18 by year in Detroit from 2020 through 2023."), "answer").plan.measures[0].id, "arrests.all_crime");
 // Codex arrests review 06: a charge is never an offense count; Group B arrests are counted alone; handgun possession is
 // a weapon law violation; a person's condition or breakdown on Group B arrests uses their own columns.
 assert.notEqual(ask("How many gun charges in Detroit in 2023?").kind, "answer");
 assert.notEqual(ask("DUI arrests involving robbery in Detroit in 2023").kind, "answer");
-assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.weapon_law");
+assert.equal(as(ask("handgun possession arrests in Detroit in 2023"), "answer").plan.measures[0].id, "arrests.armed_firearm");
 const juvDui = as(ask("juvenile DUI arrests in Detroit in 2023"), "answer");
 assert.deepEqual([juvDui.plan.measures[0].id, juvDui.plan.filters[0]], ["group_b_arrests.dui", { kind: "attribute", dimension: "group_b_arrest.age", op: "between", values: [1, 17] }]);
 assert.equal(as(ask("DUI arrests by age in Detroit in 2023"), "answer").plan.groupings.at(-1)!.dimension, "group_b_arrest.age");
@@ -2736,6 +2748,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(scoreShadow(wichitaLabel, pa, r, ctx, popFile(15)).result!.values, "mismatch");
   assert.equal(as(ask("Shoplifting in Wichita in 2024, with a column showing the population used to calculate the rate"), "decline").explanation,
     "A population column goes with a rate; this answer has no rate.");
+  // Engine 2.0 (QL-nibrs-6d7c1e8aa9): asked for in its own right, the population stands beside a plain count of several cities.
+  const popCount = as(ask("Shoplifting in Memphis, Houston and Dallas in 2024, with a column showing the population of each city"), "answer");
+  assert.deepEqual(popCount.delivered.table.columns.map((c) => c.header).slice(-1), ["Population"]);
+  assert.ok(popCount.plan.statistics.some((s) => s.kind === "population" && popCount.plan.statistics.some((c) => c.kind === "count" && c.as === s.of)));
   // P72: the agencies reporting beside a state total, the answer's own cohort; never beside an agency.
   const ka = as(ask("Shoplifting in Kansas in 2024, with the number of agencies reporting"), "answer");
   // Asked for (P87): the agencies and the population they cover, once each, in both views.
@@ -3628,7 +3644,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   const duiText = (dui as unknown as { delivered?: { text: string[] } }).delivered?.text ?? [];
   assert.ok(dui.kind !== "clarify", JSON.stringify(dui).slice(0, 300));
   assert.ok(!(duiText.some((t) => /^No years were given/.test(t)) && duiText.some((t) => /^No year was given/.test(t))), JSON.stringify(duiText));
-  // A heavy national series is not run as the every-year default: the latest-year default stands as before (QL-nibrs-43401cd191, c74cec7689, c80f231f81).
+  // A national NIBRS breakdown with no period runs every year even when the deferral limit is tiny: the every-year button is never deferred (QL-nibrs-43401cd191, c74cec7689, c80f231f81, f089decff0).
   for (const hq of ["DUI arrests by age group nationally", "robberies by time of day nationally"]) {
     const heavy = applyDefaults(hq, ask0(hq), { ...live, deferChars: 1 } as unknown as ShadowDeps);
     assert.notEqual(heavy.kind, "clarify", hq + " " + JSON.stringify(heavy).slice(0, 300));
@@ -3985,7 +4001,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
 }
 // P166 and P167 (Jeff 2026-11-19): a victim crime by weapon is counted by offense and says so; "violent crime with a firearm" is crimes against persons.
 {
-  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
+  const byWeapon = as(ask("Aggravated assault victims by weapon type in Houston 2024"), "answer") as unknown as { plan: { measures: { id: string }[] }; delivered: { text: string[] } };
   assert.equal(byWeapon.plan.measures[0].id, "offenses.aggravated_assault");
   assert.ok(byWeapon.delivered.text.includes("Counts are aggravated assault offenses by weapon, not victims."), JSON.stringify(byWeapon.delivered.text));
   const gunViolent = as(ask("violent crime with a firearm in Houston in 2024"), "answer") as unknown as { plan: { measures: { id: string }[]; filters: { kind: string; entity?: string; scope?: string }[] }; delivered: { text: string[] } };
@@ -4026,7 +4042,7 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
     assert.ok(!o.delivered.text.includes(SENTENCE), q);
   }
   // Weapon stays with its own wording (P166); a second grouping is not converted.
-  assert.ok(!(as(ask("Aggravated assault victims by weapon type in Houston 2022-2024"), "answer") as unknown as P280).delivered.text.includes(SENTENCE));
+  assert.ok(!(as(ask("Aggravated assault victims by weapon type in Houston 2024"), "answer") as unknown as P280).delivered.text.includes(SENTENCE));
   assert.equal(ask("Aggravated assaults by hour of day by victim age in Houston in 2024").kind, "decline");
 }
 // P193 (census 2026-11-21): "in these cities: A, B, C" names the places in the list; "per year and clearance type" is the clearance type by year.

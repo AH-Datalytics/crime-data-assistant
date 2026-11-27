@@ -360,6 +360,13 @@ export const deterministicRewriter: FollowUpRewriter = {
     // The reader's own column flag, whatever the punctuation (Codex 7b-04 re-check 4).
     if ((popCol || agCol) && (readQuestion(prev, 2026).ledger as { column?: string | null }).column)
       return ask("The previous answer already has a supporting column; both together are not built (P72).");
+    // Engine 2.0 (Jeff 2026-11-26, QL-nibrs-6d7c1e8aa9): "Durham, North Carolina and population" restates the previous question's own place and asks
+    // for its population: the previous question with a population column, the scope kept, never a rate.
+    const popOfPlace = /^(.+?)\s+(?:and|with)\s+(?:the\s+)?population$/.exec(fl);
+    if (popOfPlace && !popCol && prevParts.places.length) {
+      const head = popOfPlace[1].split(",")[0].trim();
+      if (head && prev.toLowerCase().includes(head)) return ok(`${prev.replace(/[?.]\s*$/, "")}, with a column showing the population of each city`, "P72: the population of the places, scope kept");
+    }
     if (popCol)
       return /\brate\b/i.test(prev) ? ok(`${prev.replace(/[?.]\s*$/, "")}, with a column showing the population used to calculate the rate`, "P72: the population used for the rate")
         : ask("A population column goes with a rate (P72); the previous answer has no rate.");

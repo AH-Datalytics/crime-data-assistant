@@ -52,7 +52,7 @@ const COMPOSITES: Record<string, { id: string; unit: CountingUnit }> = {
   all_crime: { id: "all_crime.offenses", unit: "offense" },
 };
 const FAMILY_DEFAULT_UNIT: Record<string, CountingUnit> = {
-  carjacking: "incident", domestic_violence: "victim", hate_crime: "offense",
+  carjacking: "incident", domestic_violence: "offense", hate_crime: "offense",
   motor_vehicle_property: "dollars", property_value: "dollars",
 };
 const UNIT_OF: Record<string, CountingUnit> = { victims: "victim", offenders: "offender", arrests: "arrest", offenses: "offense", incidents: "incident", pairs: "victim_offender", dollars: "dollars" };
@@ -63,13 +63,22 @@ const ENTITY: Record<string, string> = { group_b_arrest: "group_b_arrest", victi
 /** A Group B offense (DUI ...) is recorded only as Group B arrests, counted by arrest date. */
 export const isGroupB = (measure: string) => (MEASURE_CODES[measure] ?? []).length > 0 && MEASURE_CODES[measure].every((c) => GROUP_B.has(c));
 
-export function unitFor(measure: string, unit: string | null): CountingUnit {
+const PERSON_DIMS = /^(?:age|sex|race|ethnicity|(?:victim|offender|arrestee)-.+|relationship|circumstance|victim-offender-race)$/;
+const PERSON_FILTERS = /^(?:sex|race|ethnicity|age|dv|relationship|circumstance):/;
+/** A question that breaks down or narrows by a person's own attribute (age, sex, race, relationship ...): only a person count can carry it. */
+export const asksPerson = (spec: { dim?: string; filters?: string[] }) => (!!spec.dim && PERSON_DIMS.test(spec.dim)) || (spec.filters ?? []).some((f) => PERSON_FILTERS.test(f));
+/** person: the question narrows by a person's attribute, so the default unit stays the person crimes' victims (ruling 1 gives offenses to the rest). */
+export function unitFor(measure: string, unit: string | null, person = false): CountingUnit {
   if (isGroupB(measure)) return "group_b_arrest";
   if (unit) return UNIT_OF[unit] ?? "offense";
   if (COMPOSITES[measure]) return COMPOSITES[measure].unit;
+  if (measure === "domestic_violence" && person) return "victim";
   if (FAMILY_DEFAULT_UNIT[measure]) return FAMILY_DEFAULT_UNIT[measure];
+  // Ruling 1 (Jeff 2026-11-26): no unit named = offenses, for a person crime too (victims only when asked).
+  // Murder and manslaughter stay counted as victims: the homicide count is the people killed (SRS/SHR convention, homicide = murder).
   const codes = MEASURE_CODES[measure] ?? [];
-  return codes.length && codes.every((c) => PERSON_CODES.has(c)) ? "victim" : "offense";
+  if (codes.length && codes.every((c) => c === "09A" || c === "09B" || c === "09C")) return "victim";
+  return person && codes.length && codes.every((c) => PERSON_CODES.has(c)) ? "victim" : "offense";
 }
 
 export function measureId(measure: string, unit: CountingUnit): string {
@@ -193,9 +202,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       const clearedWording = ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance" && (p.value === "cleared" || p.value === "clearances"));
       const clearance = spec.statistic === "clearance_rate" || clearedWording || spec.filters.some((f) => f.startsWith("clearance:"));
       const names = [...new Set(spec.measures)];
-      const unit0 = clearance ? "offense" : unitFor(names[0], spec.unit);
+      const relF = asksPerson(spec as { dim?: string; filters?: string[] });
+      const unit0 = clearance ? "offense" : unitFor(names[0], spec.unit, relF);
       for (const m of names) {
-        const u = clearance ? "offense" : unitFor(m, spec.unit);
+        const u = clearance ? "offense" : unitFor(m, spec.unit, relF);
         if (spec.statistic === "clearance_rate") {
           addMeasure(m, u, m);
           addMeasure(`${m}_cleared`, u, `${m}_cleared`);
@@ -235,7 +245,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       // The Property button on a victim-age question: victims of NIBRS crimes against property by their age (Jeff 2026-11-15).
       const propertyAge = !whose && spec.measure === "property_crime" && (!spec.unit || spec.unit === "victims") && (spec.dim === "age" || spec.dim === "victim-age");
       if (propertyAge) spec = { ...spec, measure: "against_property", unit: "victims" };
-      const unit = spec.dim === "victim-offender-race" ? "victim_offender" : clearanceDim ? "offense" : unitFor(spec.measure, spec.unit);
+      // Arrests for "violent crime" by age: NIBRS violent = Crimes Against Persons, no robbery (owner ruling 2026-11-26).
+      const arrestViolent = !whose && spec.measure === "violent_crime" && spec.unit === "arrests";
+      if (arrestViolent) spec = { ...spec, measure: "person_crimes" };
+      const unit = spec.dim === "victim-offender-race" ? "victim_offender" : clearanceDim ? "offense" : unitFor(spec.measure, spec.unit, asksPerson(spec));
       if (unit === "fbi_standard" && !["location", "hour", "offense"].includes(spec.dim)) {
         return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by ${spec.dim}: a mixed-unit composite has no single counted person` };
       }
@@ -244,6 +257,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       addMeasure(spec.measure, unit, spec.measure);
       if (whose) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       if (propertyAge) measurePath.set("property_crime", measurePath.get("against_property")!);
+      if (arrestViolent) measurePath.set("violent_crime", measurePath.get("person_crimes")!);
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
       if (spec.places && spec.places.length > 1) {
@@ -257,7 +271,10 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
         places = [p];
       }
       periodValue = periodOf(spec.period, false);
-      if (spec.byYear) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
+      // Owner ruling 7: a breakdown over several years is one table with a column per year, even when "by year" is not said.
+      const spansYears = (spec.period.form === "range" && spec.period.from !== spec.period.to) || (spec.period.form === "years" && spec.period.list.length > 1);
+      const yearCols = spec.byYear || (spansYears && !spec.byMonth);
+      if (yearCols) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
       if (spec.byMonth) groupings.push({ dimension: "time.month", unknown: "visible", absent: "show" });
       // By bias is a hate crime breakdown (the hate crime data), never NIBRS's offense bias records for another crime.
       if (spec.dim === "bias" && spec.measure !== "hate_crime") return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by bias: bias is answered for hate crimes only, from the hate crime data` };
@@ -265,11 +282,11 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       if (!g) return { kind: "unmapped", reason: `breakdown ${spec.dim} has no plan form` };
       groupings.push(g);
       statistics.push({ kind: "count", as: "count", measure: spec.measure });
-      statistics.push({ kind: "share", as: "share", measure: spec.measure, within: spec.byYear ? ["time.year"] : spec.byMonth ? ["time.month"] : [] });
+      statistics.push({ kind: "share", as: "share", measure: spec.measure, within: yearCols ? ["time.year"] : spec.byMonth ? ["time.month"] : [] });
       break;
     }
     case "share": {
-      const unit = unitFor(spec.measure, spec.unit);
+      const unit = unitFor(spec.measure, spec.unit, asksPerson({ filters: [...spec.population, ...spec.subset] }));
       const clearedSubset = spec.subset.some((f) => f.startsWith("clearance:"));
       const popName = spec.denominator === "clearances" ? `${spec.measure}_cleared` : spec.measure;
       const popUnit = spec.denominator === "clearances" || clearedSubset ? "offense" : unit;
@@ -320,7 +337,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       break;
     }
     case "change": {
-      const unit = unitFor(spec.measure, spec.unit);
+      const unit = unitFor(spec.measure, spec.unit, false);
       addMeasure(spec.measure, unit, spec.measure);
       const p = resolve(spec.place);
       if (!p) return { kind: "unmapped", reason: "the place did not resolve" };

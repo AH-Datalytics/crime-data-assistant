@@ -258,6 +258,23 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
       FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${parts.own("a")}` };
   }
+  // Gun arrests (rulings 34, 62): an arrestee armed with a firearm (weapon codes 11-15 in either weapon slot), whatever the arrest offense, Group A and Group B,
+  // M left out (P68) and the FBI's identical Group B repeats left out. Not offense 520 (weapon law violations).
+  if (measureId === "arrests.armed_firearm") {
+    if (unit !== "arrest") return { error: `"${measureId}" counts arrests` };
+    // The weapons live in the child tables arrestee_weapon (Group A) and group_b_arrest_weapon (Group B), one row per recorded weapon slot.
+    const armedA = (a: string) => ` AND EXISTS (SELECT 1 FROM ${read("arrestee_weapon")} w WHERE w.data_year = ${a}.data_year AND w.ori = ${a}.ori AND w.incident_num = ${a}.incident_num AND w.arrestee_seq = ${a}.arrestee_seq AND w.key_occurrence = ${a}.key_occurrence AND w.arrestee_weapon IN (${list(FIREARM_WEAPONS)}))`;
+    const armedB = (a: string) => ` AND EXISTS (SELECT 1 FROM ${read("group_b_arrest_weapon")} w WHERE w.data_year = ${a}.data_year AND w.ori = ${a}.ori AND w.arrest_transaction_num = ${a}.arrest_transaction_num AND w.arrestee_seq = ${a}.arrestee_seq AND w.occurrence = ${a}.occurrence AND w.arrestee_weapon IN (${list(FIREARM_WEAPONS)}))`;
+    const cond = incidentFilter("a");
+    const groupA = `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${armedA("a")}${cond}`;
+    if (parts.rest("a")) return { entity: "arrestee", sql: groupA };
+    if (joins.trim()) return { error: "v0 groups gun arrests by the arrestee's own columns only" };
+    return { entity: "arrestee", sql: `${groupA}
+      UNION ALL
+      SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${armedB("a")}${parts.own("a")}` };
+  }
   // Job AR6: arrests for a Group B offense (DUI, disorderly conduct, trespass ...) are standalone Group B arrest reports,
   // one per arrestee line, the FBI's identical repeats left out (as in every arrest, increment 7). They have no incident:
   // a condition on an incident, or a grouping beyond the arrestee's own columns, has nothing to apply to.
@@ -267,8 +284,13 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
     if (!gbCodes.length || !gbCodes.every((c) => GROUP_B.has(c))) return { error: `"${measureId}" has no Group B offense codes` };
     if (unit !== "group_b_arrest" && unit !== "arrest") return { error: `"${measureId}" counts arrests` };
     if (joins.trim() || parts.rest("a").trim()) return { error: "Group B arrests have no incident report: only the arrestee's own sex, race, ethnicity and age apply" };
+    // The arrest offense is recorded on Group A arrestee segments too (a Group A incident's arrestee charged with DUI): those arrests count with the standalone Group B ones
+    // (Runner recount 11-26, QL-nibrs-8431458c95 / c80f231f81: Group A + Group B; the engine read Group B only and was 3 to 4 percent low in every cell). M left out (P68).
     return { entity: "group_b_arrest", sql: `SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("group_b_arrest")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND a.identical_to_line_no IS NULL${parts.own("a")}` };
+      FROM ${read("group_b_arrest")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND a.identical_to_line_no IS NULL${parts.own("a")}
+      UNION ALL
+      SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a WHERE a.arrest_offense IN (${list(gbCodes)}) AND coalesce(a.multiple_arrestee_indicator, '') <> 'M'${parts.own("a")}` };
   }
   // Exactly <kind>.<measure>, with a measure whose codes are known.
   const m = measureId.match(/^(offenses|incidents|victims|offenders|arrests)\.([a-z_]+)$/);
@@ -293,8 +315,11 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
         AND EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "dv")} AND r9.offender_relationship IN (${list(DOMESTIC_RELATIONSHIPS)}))) dvq
       ON dvq.data_year = ${a}.data_year AND dvq.ori = ${a}.ori AND dvq.incident_num = ${a}.incident_num`;
   if (kind === "offenses" && unit === "offense" && m[2] === "domestic_violence")
-    return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o ${dvJoin("o")} ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+    // Rulings 1 and 29: each offense connected to a victim whose relationship to an offender is a ruling-29 domestic one, counted once (every connected offense, not a fixed code list).
+    return { entity: "offense", sql: `SELECT DISTINCT vo.data_year, vo.ori, vo.incident_num, vo.connected_offense || ':' || vo.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
+        ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num AND vo.victim_seq = v.victim_seq AND vo.key_occurrence = v.key_occurrence ${joins}
+      WHERE EXISTS (SELECT 1 FROM ${read("victim_offender")} r9 WHERE ${sameVictim("r9", "v")} AND r9.offender_relationship IN (${list(DV_RULING_29)}))${incidentFilter("v")}` };
   if (kind === "arrests" && (unit === "arrest" || unit === "arrestee") && m[2] === "domestic_violence")
     return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
       FROM ${read("arrestee")} a ${dvJoin("a")} ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${incidentFilter("a")}` };
@@ -367,12 +392,15 @@ function personCond(x: string, f: { dimension: string; op: string; values?: (str
 const CUBE_APPROVED = new Set(Object.keys(cubeMeasures.approved));
 export const cubeServesMeasure = (id: string): boolean => CUBE_APPROVED.has(id.split(".")[1] ?? "");
 /** Every measure name the vocabulary knows (the codes of MEASURE_CODES and EXTRA_CODES, the special families and all_crime), for the guard test: each must be classified in cube-measures.json. */
-export const knownMeasureNames = (): string[] => [...new Set([...Object.keys(MEASURE_CODES), ...Object.keys(EXTRA_CODES), ...FAMILIES, "all_crime"])].sort();
+export const knownMeasureNames = (): string[] => [...new Set([...Object.keys(MEASURE_CODES), ...Object.keys(EXTRA_CODES), ...FAMILIES, "all_crime", "armed_firearm"])].sort();
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"], drug_crimes: ["35A", "35B"],
   // P82 (decided 2026-11-01): the crimes of domestic violence, counted by victim.
   domestic_violence: ["09A", "09B", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"] };
 /** P82 and D20: the relationships of domestic violence, intimate partner and family or household (the Model's correctness/slice_dv.py sets). */
+/** NIBRS arrestee weapon codes for a firearm: handgun, firearm, rifle, shotgun, other firearm (the automatic flag is its own column). */
+const FIREARM_WEAPONS = ["11", "12", "13", "14", "15"];
+const DV_RULING_29 = ["SE", "CS", "XS", "BG", "PA", "CH", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "SS"];
 const DOMESTIC_RELATIONSHIPS = ["SE", "CS", "BG", "XS", "XR", "HR", "CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE", "SS", "FP", "FC", "CO"];
 
 /**
@@ -440,6 +468,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (timeDims.length > 1 || timeDims.some((g) => !["time.month", "time.quarter", "time.year"].includes(g.dimension))) return no("v0 groups time by month, quarter or year, once");
   if (timeDims.some((g) => g.bins || g.multiValue)) return no("v0 groups time without bins");
   if (timeDims.length && plan.groupings[0] !== timeDims[0]) return no("v0 puts the time grouping first");
+  // Family 5 (ruling 67): a clearance measure (a clearance grouping or selection) places each unit by its CLEARANCE date: an exceptional
+  // clearance by incident.exceptional_clearance_date, a clearance by arrest by the incident's earliest arrest date (blank: the incident's
+  // own month), an uncleared unit by its incident month. Share denominators stay on the incident's month (data year). Only clearance
+  // measures: every other unit keeps its incident-date placement. A single agency's month grain stays on the incident month.
+  const clearBasis = !isArrest && clearanceDims(plan).length > 0 && (!!grid || timeDims[0]?.dimension !== "time.month");
   const groupCols: string[] = [];
   const joins: ((read: Read) => string)[] = [];
   for (const g of attrDims) {
@@ -540,6 +573,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       else if (on === "property_drug property_drug.drug_type incident arrestee")
         // Marijuana and the like: an arrest on an incident whose property records the drug (the drug is the incident's, not the arrestee's).
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("property_drug")} d2 WHERE ${sameIncident("d2", "a")} AND d2.drug_type IN (${list(values)}))`);
+      else if (on === "property_drug property_drug.drug_type incident offense")
+        // Marijuana drug offenses (ruling 27): an offense segment whose incident's property records the drug; the count stays offenses (ruling 1).
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("property_drug")} d2 WHERE ${sameIncident("d2", "o")} AND d2.drug_type IN (${list(values)}))`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
       else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")
@@ -566,7 +602,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const inYears = (col: string) => (yearSet ? ` AND substr(${col}, 1, 4) IN (${list(yearSet.map(String))})` : "");
   const from = span.from.replace("-", ""), to = span.to.replace("-", "");
   const firstYear = Number(span.from.slice(0, 4));
-  const years = isArrest ? (t.arrestYears ?? t.builtYears) : t.builtYears.filter((y) => y >= firstYear);
+  // A clearance placed by its own date can come from a data year before the period: every built year is scanned.
+  const years = isArrest ? (t.arrestYears ?? t.builtYears) : clearBasis ? t.builtYears : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   // The agency-month status is the month's own (an arrest month counts whatever its status), so it stays on the built years.
   const read = (table: string) => `read_parquet([${(table === "agency_month_status" && isArrest ? t.builtYears : years).map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
@@ -584,7 +621,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   // The cube read side (flag-gated, off by default): a plan that is exactly one cube cell family is counted from the cube.
   // Only a measure whose whole definition is "the units of these offense codes" may be read from a cube (cubeServesMeasure): a measure with more in its statement than its codes
   // (carjacking, domestic violence, any later one) is never answered from the cube row of the group whose code list it happens to share.
-  const cubeCfg = cubeWanted && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
+  const cubeCfg = cubeWanted && !clearBasis && !m.id.endsWith(".armed_firearm") && (t.cubeAllMeasures || cubeServesMeasure(m.id)) ? cubeWanted : null;
   // The one condition a cube can hold: the counted person's age between two years, with nothing else conditioning the count (cube.ts ageFilter).
   const af = plan.filters.length === 1 && !m.filters?.length && ownConds.length === 1 && incidentConds.length === 0 && unitConds.length === 0 && clearanceConds.length === 0 && joins.length === 0
     ? plan.filters[0] : null;
@@ -633,6 +670,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const nUnits = cube ? "CAST(SUM(u.w) AS BIGINT)" : `COUNT(DISTINCT ${key})`;
   const nIncidents = cube ? "CAST(SUM(u.wi) AS BIGINT)" : `COUNT(DISTINCT ${ikey})`;
   const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
+  // The clearance basis counts by the placement month `cym`; the denominators (month_total) keep the incident month.
+  const inScopeC = clearBasis ? `${oriIs("u.ori")} AND u.cym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.cym")}` : inScope;
+  const cymCol = `CASE WHEN ce.data_year IS NOT NULL THEN coalesce(nullif(substr(ce.ad, 1, 6), ''), u0.ym)
+      WHEN ci.cleared_exceptionally IN ('A', 'B', 'C', 'D', 'E') THEN coalesce(nullif(substr(ci.exceptional_clearance_date, 1, 6), ''), u0.ym) ELSE u0.ym END`;
   // Speed (job AR6): every arrest with no condition already counts every arrest, so a month with any arrest is a month
   // with a count and the any-arrest scan (a second read of every arrest table) adds nothing.
   const anyArrest = isArrest && !(m.id === "arrests.all_crime" && !plan.filters.length && !m.filters?.length);
@@ -640,8 +681,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const O = grid ? "ori, " : "";
   const parts = [
     ...(bigGrid ? [`${GRID} AS (SELECT ${oriRows(grid!)} AS ori)`] : []),
-    `units AS (${cube ? cube.sql : units.sql})`,
+    ...(clearBasis ? [`units0 AS (${units.sql})`,
+      `units AS (SELECT u0.*, ${cymCol} AS cym FROM units0 u0
+        LEFT JOIN (SELECT data_year, ori, incident_num, cleared_exceptionally, exceptional_clearance_date FROM ${read("incident")} WHERE ${oriIs("ori")}) ci ON ci.data_year = u0.data_year AND ci.ori = u0.ori AND ci.incident_num = u0.incident_num
+        LEFT JOIN (SELECT data_year, ori, incident_num, min(nullif(arrest_date, '')) AS ad FROM ${read("arrestee")} WHERE ${oriIs("ori")} GROUP BY data_year, ori, incident_num) ce ON ce.data_year = u0.data_year AND ce.ori = u0.ori AND ce.incident_num = u0.incident_num)`] : [`units AS (${cube ? cube.sql : units.sql})`]),
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
+    ...(clearBasis ? [`scoped_c AS (SELECT * FROM units u WHERE ${inScopeC})`] : []),
     // Overlapping categories (a weapon grouping from the cube): the month's total counts each offense once, from the cube's own total rows.
     ...(cube?.totalSql ? [`totals AS (${cube.totalSql})`, `scoped_t AS (SELECT * FROM totals u WHERE ${inScope})`] : []),
     // Every month of the period, so a month with no rows still gets a status.
@@ -680,15 +725,22 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // would otherwise drop every agency-month and its status; the state sum reads coverage from it and skips it in sums.
     // P192: a clearance-type table lists every type even when none occurred (one agency too), so its months keep their statuses.
     const placeholder = grid || (attrDims.length === 1 && attrDims[0].dimension === "offense.clearance_type");
-    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${placeholder ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
+    const sc = clearBasis ? "scoped_c" : "scoped";
+    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM ${sc}${placeholder ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM ${sc})` : ""})`);
     // In grid mode (a state's or the nation's agencies, state-sum.ts) each agency's categories are its own: the agency is
     // carried through and joined on (coordinator 2026-11-04: a state or national sum by category).
-    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped u GROUP BY ALL)`);
+    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.${clearBasis ? "cym AS ym" : "ym"}${g.map((x) => `, u.${x}`).join("")}, ${nUnits} AS n, ${nIncidents} AS ni FROM ${sc} u GROUP BY ALL)`);
     parts.push(`cells AS (SELECT ${grid ? "mc.ori, " : ""}mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni,
       mc.month_cell AS cell
       FROM month_cells mc CROSS JOIN cats c
       LEFT JOIN counted k ON k.ym = mc.ym${grid ? " AND k.ori = mc.ori" : ""}${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
   } else {
+    if (clearBasis) {
+      // A clearance selection with no grouping: the count is by placement month, the month's status from the incident month.
+      parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.cym AS ym, ${nUnits} AS n, ${nIncidents} AS ni FROM scoped_c u GROUP BY ALL)`);
+      parts.push(`cells AS (SELECT ${grid ? "mc.ori, " : ""}mc.ym, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni, mc.month_cell AS cell
+        FROM month_cells mc LEFT JOIN counted k ON k.ym = mc.ym${grid ? " AND k.ori = mc.ori" : ""})`);
+    } else
     parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, deni AS ni, month_cell AS cell FROM month_cells)`);
   }
 

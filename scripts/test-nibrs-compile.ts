@@ -49,6 +49,10 @@ const byType = ok(compilePlan({ ...X.N2, groupings: [{ dimension: "offense.clear
 assert.deepEqual(byType.columns, ["offense.clearance_type", n2as, `${n2as}_status`, "inc", "inc_status", "left_out"]);
 for (const s of ["cleared_exceptionally", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num)) AS ni", 'sum(ni) END AS "inc"']) assert.ok(byType.sql.includes(s), s);
 assert.deepEqual(byType.statements, ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
+// Family 5 (ruling 67): a clearance measure is placed by its clearance date (exceptional date, earliest arrest date); the share
+// denominators stay on the incident month; a plain measure keeps incident placement.
+for (const s of ["scoped_c AS", "exceptional_clearance_date", "min(nullif(arrest_date, ''))", "AS cym"]) assert.ok(byType.sql.includes(s), s);
+assert.ok(!ok(compilePlan(X.N2, year(2024), t)).sql.includes("scoped_c"));
 // A selection by status says P64 only; by arrest, P67 too.
 const sel = (dimension: string, v: string) => ok(compilePlan({ ...X.N2, filters: [...X.N2.filters, { kind: "attribute", dimension, op: "in", values: [v] }] }, year(2024), t)).statements;
 assert.deepEqual(sel("offense.clearance_status", "cleared"), ["property_not_attributed", "clearance_as_of_file"]);
@@ -226,4 +230,11 @@ assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024])
   // The new measures of the other capability PRs need their own cube-on check on a real agency (runner): justifiable homicide and the weapon forms read the cube only as their own cell.
 }
 
+// DUI (Runner recount 11-26): Group B arrests plus the Group A arrestee segments charged with 90D, M left out.
+const dui = ok(compilePlan(plan("group_b_arrests.dui", "arrest", [], [], "arrest_date"), year(2024), t));
+assert.ok(dui.sql.includes("FROM read_parquet") && dui.sql.includes("UNION ALL") && dui.sql.includes("a.arrest_offense IN ('90D')") && dui.sql.includes("<> 'M'") && dui.sql.includes("identical_to_line_no IS NULL"), "DUI reads Group B and Group A");
+// Marijuana drug offenses (ruling 27): the drug filter at offense level keeps the count in offenses (ruling 1).
+const marijuana = ok(compilePlan(plan("offenses.drug_crimes", "offense", [], [{ kind: "exists", scope: "incident", entity: "property_drug", where: [{ kind: "attribute", dimension: "property_drug.drug_type", op: "in", values: ["E"] }] }]), year(2024), t));
+assert.ok(marijuana.sql.includes("FROM read_parquet") && marijuana.sql.includes("d2.drug_type IN ('E')") && marijuana.sql.includes("d2.incident_num = o.incident_num"), "marijuana offense filter");
+assert.ok(marijuana.sql.includes("COUNT(DISTINCT (u.data_year, u.ori, u.incident_num, u.sub))"), "counted as offense units");
 console.log("nibrs compile v0: agency-level forms compile; the rest refuse with a reason");

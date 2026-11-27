@@ -94,7 +94,9 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   /** Increment 7b (P71): "by quarter", "quarterly": monthly counts summed into quarters by the shadow. */
   quarter: boolean;
   /** Increment 7b (P72): a supporting column beside the answer, the population a rate divides by or the agencies reporting. */
-  column: "population" | "agencies" | "both" | null };
+  column: "population" | "agencies" | "both" | null;
+  /** Engine 2.0 (2026-11-26): the population is asked for in its own right ("with a column showing the population of each city"), so a plain count may carry it. */
+  popOfPlaces?: boolean };
 /** A person's attribute a question names. */
 export type PersonAttr = "sex" | "race" | "ethnicity" | "age";
 /**
@@ -898,14 +900,16 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // Both columns together are not built: "both" is declined, never one of them dropped (Codex 7b-04.4).
   let column: Flags["column"] = null;
   const col = (c: "population" | "agencies") => { column = column && column !== c ? "both" : c; return ""; };
-  text = text.replace(/,?\s*with a column showing the population used to calculate the rate\b/gi, () => col("population"))
+  let popOfPlaces = false;
+  text = text.replace(/,?\s*with a column showing the population of each city\b/gi, () => { popOfPlaces = true; return col("population"); })
+    .replace(/,?\s*with a column showing the population used to calculate the rate\b/gi, () => col("population"))
     .replace(/,?\s*with the number of agencies reporting\b/gi, () => col("agencies"))
     // The same request in other words (coordinator 2026-11-02): "how many agencies reported carjackings in ...",
     // "agencies reporting carjackings in ...", "..., with coverage": the agencies reporting and the population covered.
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, allCities, largestSet, topAsLargest, countywide, region, circumstance, nibrsAsked, shrAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, allCities, largestSet, topAsLargest, countywide, region, circumstance, nibrsAsked, shrAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column, popOfPlaces };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || shrAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }

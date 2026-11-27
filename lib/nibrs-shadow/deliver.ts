@@ -133,7 +133,7 @@ export const PERSON_CRIMES_LINE = "Counts NIBRS crimes against persons: homicide
 /** "All homicides" (Jeff 2026-11-16): what NIBRS counted. */
 /** Domestic violence (P82): what NIBRS counted, one line. */
 export const DOMESTIC_VIOLENCE_LINE = "Domestic violence counts each victim of murder or manslaughter, a sex offense, assault, kidnapping, incest, statutory rape or human trafficking whose offender, or one of the offenders, was the victim's intimate partner or a family or household member.";
-export const DOMESTIC_VIOLENCE_OFFENSES_LINE = "Offenses are the offenses of those crimes in incidents that had a domestic violence victim.";
+export const DOMESTIC_VIOLENCE_OFFENSES_LINE = "Domestic violence counts each offense committed against a victim whose offender, or one of the offenders, was the victim's intimate partner or a family or household member; an offense is counted once.";
 export const DOMESTIC_VIOLENCE_ARRESTS_LINE = "Arrests are the people arrested on incidents that had a domestic violence victim; the data does not link an arrest to the victim, so this is not arrests of domestic violence offenders.";
 export const DOMESTIC_VIOLENCE_INCIDENTS_LINE ="An incident is counted once when at least one of its victims is counted as a domestic violence victim.";
 export const ALL_HOMICIDES_LINE = "All homicides are murder and nonnegligent manslaughter, negligent manslaughter and justifiable homicide.";
@@ -162,6 +162,8 @@ export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): st
   // Increment 7: with no condition on the incident, every arrest (standalone Group B arrests included).
   if (m.id === "arrests.all_crime") return [peopleFacts(plan).throughIncident ? "arrests on incidents" : "arrests", ...filters].join(" ");
   if (name === "drug_possession" && m.unit === "arrest" && filters.includes(MARIJUANA_WORDS)) return ["marijuana possession arrests", ...filters.filter((x) => x !== MARIJUANA_WORDS)].join(" ");
+  if (m.id === "arrests.armed_firearm") return ["arrests of people armed with a firearm", ...filters].join(" ");
+  if (m.id === "arrests.drug_crimes") return ["drug/narcotic and drug equipment violation arrests", ...filters].join(" ");
   if (m.id === "offenses.drug_crimes") return ["drug crimes", ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }

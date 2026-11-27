@@ -281,8 +281,8 @@ export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): Pl
     if (s.kind === "rate" && sm(s.measure) && !sm(s.measure)!.additive.acrossAgencies) add("S12", `statistics[${i}]`, "a rate needs a measure that adds across agencies");
     const unit = s.kind === "incidents" ? plan.measures.find((m) => m.as === s.measure)?.unit : null;
     if (s.kind === "incidents" && unit !== "offense" && unit !== "victim") add("S12", `statistics[${i}]`, "the incidents of a measure count offenses' or victims' incidents");
-    // P72: a population belongs to a rate of the plan; agencies reporting to a state or national total.
-    if (s.kind === "population" && !plan.statistics.some((r) => r.kind === "rate" && r.as === s.of)) add("S12", `statistics[${i}]`, "a population column belongs to a rate statistic of the plan");
+    // P72: a population belongs to a rate of the plan (or, when the question asks for it, a plain count); agencies reporting to a state or national total.
+    if (s.kind === "population" && !plan.statistics.some((r) => (r.kind === "rate" || r.kind === "count") && r.as === s.of)) add("S12", `statistics[${i}]`, "a population column belongs to a rate or count statistic of the plan");
     if (s.kind === "agencies" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "agencies reporting go with a state or national total");
     if (s.kind === "coverage" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "population covered goes with a state or national total");
   });
@@ -361,7 +361,7 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
         // A cleared-offense measure applies its offense ("rape clearances": offenses.rape_cleared), but only when the
         // question asks about clearances; otherwise it would answer a subset of what was asked.
         const last = parts[parts.length - 1];
-        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v || (v === "violent_crime" && last === "person_crimes") || (v === "property_crime" && last === "against_property") || (v === "drug_possession" && last === "drug_crimes") ? null : `the measure at ${path} is not "${v}"`;
+        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v || (v === "violent_crime" && last === "person_crimes") || (v === "property_crime" && last === "against_property") || (v === "drug_possession" && last === "drug_crimes") || (v === "weapon_law" && last === "armed_firearm") ? null : `the measure at ${path} is not "${v}"`;
       }
     case "unit":
       if (!/^measures\[\d+\]\.unit$/.test(path)) return "a unit binds to measures[i].unit";

@@ -322,12 +322,15 @@ function categorySql(sq: ShrQuestion, a: string, which: 1 | 2 = 1): string {
   return `CASE ${b.bins.map(([lo, hi], i) => `WHEN ${ageCol} BETWEEN ${lo} AND ${hi} THEN '${i}'`).join(" ")} END`;
 }
 
-export function shrSql(sq: ShrQuestion, build: ShrBuild): string {
+/** A rate's numerator keeps only victims of agencies that have a population row that year (the denominator's set, Jeff 2026-11-26). */
+export type PopulationMatch = { root: string; lastYear: number };
+export function shrSql(sq: ShrQuestion, build: ShrBuild, match?: PopulationMatch): string {
   const person = sq.unit === "victims" ? "shr_victim" : "shr_offender";
   const other = sq.unit === "victims" ? "shr_offender" : "shr_victim";
   const own = sq.filters.filter((f) => RECORD_DIMS.has(f.dim) || f.dim.startsWith(sq.unit === "victims" ? "victim." : "offender."));
   const theirs = sq.filters.filter((f) => !own.includes(f));
-  const where = [`r.counted`, measureWhere(sq), placeWhere(sq.place), `r.data_year * 100 + r.offense_month BETWEEN ${ym(sq.from)} AND ${ym(sq.to)}`,
+  const matched = match ? [`EXISTS (SELECT 1 FROM read_parquet(${q(`${match.root}/agency_crime.parquet`)}) ac WHERE ac.year = LEAST(r.data_year, ${match.lastYear}) AND 'ori9:' || ac.ori = r.agency_key AND ac.population IS NOT NULL)`] : [];
+  const where = [`r.counted`, measureWhere(sq), placeWhere(sq.place), ...matched, `r.data_year * 100 + r.offense_month BETWEEN ${ym(sq.from)} AND ${ym(sq.to)}`,
     ...own.map((f) => condition(f, "p")),
     ...(sq.breakdown?.groups && !sq.share && !sq.pct && !sq.breakdown.groups.some((g) => g.rest) ? [`${RECORD_DIMS.has(sq.breakdown.dim) ? "r" : "p"}.${DIM_COLUMN[sq.breakdown.dim]} IN (${sq.breakdown.groups.flatMap((g) => g.codes).map(q).join(", ")})`] : []),
     // A detail of the other person: any one of the record's (an offender's sex for victims: "killed by women"); the
@@ -364,7 +367,10 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const where = sq.place.kind === "agency" ? sq.place.label : sq.place.kind === "state" ? stateName(sq.place.code) : "The United States";
   if (!Array.from({ length: toY - fromY + 1 }, (_, i) => fromY + i).some(counted))
     return { kind: "shr-decline", explanation: `${where === "The United States" ? "No agency" : where} filed no Homicide Reports for ${periodWords(sq.from, sq.to)}${sq.place.kind === "agency" ? "" : " in this place"}.` };
-  const got = execute(shrSql(sq, build));
+  // A rate counts the victims of the agencies in its denominator only: filers with a population row (Jeff 2026-11-26).
+  const rateMatch = sq.rate && hist && sq.place.kind !== "agency" ? { root: hist.root, lastYear: hist.lastYear } : undefined;
+  const got = execute(shrSql(sq, build, rateMatch));
+  const unmatchedVictims = rateMatch ? execute(shrSql(sq, build)).reduce((t, r) => t + Number(r[r.length - 1]), 0) - got.reduce((t, r) => t + Number(r[r.length - 1]), 0) : 0;
   const nk = got[0] ? got[0].length - 1 : 0;
   const cell = new Map<string, number>(got.map((r) => [r.slice(0, nk).map((x) => (x === null ? "" : String(x))).join("|"), Number(r[nk])]));
   // The periods shown: each year or month of the span, or one total.
@@ -452,6 +458,7 @@ export function answerShr(sq: ShrQuestion, build: ShrBuild, execute: (sql: strin
   const text = [lone !== null ? (sq.rate ? `${subject} had ${lone} ${what} per 100,000 people in ${span}.` : `${subject} had ${fmt(lone)} ${what} in ${span}.`)
       : seriesTitle(span, `${what}${sq.rate ? " per 100,000 people" : ""}`, groupBy || "Period", where),
     ...(sq.rate ? ["Rate per 100,000 people in the agencies that reported."] : []),
+    ...(sq.rate && unmatchedVictims > 0 ? [`${fmt(unmatchedVictims)} victims from state police and other agencies with no population are not in the rate.`] : []),
     "Counts are the homicides agencies reported to the FBI, each victim counted."];
   // P165: the weapons of one period with their shares also say the firearms together (handgun, rifle, shotgun, other gun, type not stated).
   if (sq.breakdown?.dim === "weapon" && sq.share && sq.grain === "total" && lone === null && !blankPeriod(periods[0])) {

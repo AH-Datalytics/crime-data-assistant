@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { formatNumber, formatDate } from "@/lib/utils";
 import { monthLabel, tableDisplay } from "@/lib/table-display";
 import { isAnswerAnnotation } from "@/lib/answer-columns";
+import { pivotYearTable } from "@/lib/table-pivot";
 
 /**
  * Round 1 W2 (owner threshold 2): plain-word headers for internal column names. "Rate per 100k" is the owner's choice.
@@ -73,7 +74,15 @@ interface DataTableProps {
   periodColumn?: string;
 }
 
-export default function DataTable({ columns: rawColumns, rows, truncated, fillHeight, title, heading, columnLabels, partialPeriods, periodColumn }: DataTableProps) {
+export default function DataTable({ columns: givenColumns, rows: givenRows, truncated, fillHeight, title, heading, columnLabels: givenLabels, partialPeriods, periodColumn }: DataTableProps) {
+  // Ruling 7: a long table with a Year column and one category is shown with a column per year (the answer itself stays long).
+  const pivot = useMemo(
+    () => pivotYearTable(givenColumns.filter((c) => !isAnswerAnnotation(c)), givenRows, (c) => givenLabels?.[c] ?? formatHeader(c), new Set((partialPeriods ?? []).map((p) => String(p.x)))),
+    [givenColumns, givenRows, givenLabels, partialPeriods],
+  );
+  const rawColumns = pivot ? pivot.columns : givenColumns;
+  const rows = pivot ? pivot.rows : givenRows;
+  const columnLabels = useMemo(() => (pivot ? { ...(givenLabels ?? {}), ...pivot.labels } : givenLabels), [pivot, givenLabels]);
   // Round 1 W2: an ori column is hidden unless it is needed to tell rows apart.
   // The answer contract (lib/answer-columns.ts): no annotation column, also for an answer stored before it.
   const allColumns = useMemo(
