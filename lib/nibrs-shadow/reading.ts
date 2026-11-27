@@ -204,6 +204,9 @@ const PHRASES: [RegExp, string][] = [
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
   // C1 crime vocabulary: "willful murder" is the legal name of the murder the data counts; "show data on X" is "show me X".
   [/\bwillful\s+murders?\b/gi, "murders"],
+  // "Felony assault" is aggravated assault (the felony-level assault); "simply assaults" is a slip for "simple assaults".
+  [/\bfelony\s+assaults?\b/gi, (m: string) => (/s$/i.test(m) ? "aggravated assaults" : "aggravated assault")] as unknown as [RegExp, string],
+  [/\bsimply\s+assaults?\b/gi, (m: string) => (/s$/i.test(m) ? "simple assaults" : "simple assault")] as unknown as [RegExp, string],
   // "Willful homicide" is the UCR name for murder and non-negligent manslaughter (09A), not the broader "homicide" (which adds negligent manslaughter).
   [/\bwillful\s+homicides?\b/gi, "murders"],
   [/^\s*show\s+(?:me\s+)?(?:the\s+)?data\s+(?:on|for|about)\s+/i, "show me "],

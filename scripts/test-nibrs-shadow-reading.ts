@@ -250,6 +250,9 @@ assert.equal(rq("murders in Orleans Parish, Louisiana State in 2022").text, "mur
 // C1 crime vocabulary: "willful murder" is the murder the data counts, and "show data on" is "show me" (bad-decline id QL-nibrs-7f3cf299f8; QL-nibrs-6e0f23927b says "armed", which waits on the robbery-by-weapon decision).
 assert.equal(rq("show me willful murders in salem oregon since 1991").text, "show me murders in salem oregon since 1991");
 assert.equal(rq("willful homicides in Salem Oregon in 2024").text, "murders in Salem Oregon in 2024", "willful homicide is murder (09A), never negligent manslaughter (Codex 447 P1)");
+// C1: "felony assault" is aggravated assault; "simply assaults" is a slip for simple assaults (QL-ct-c605731327).
+assert.equal(rq("felony assaults and simply assaults in Denver in 2024").text, "aggravated assaults and simple assaults in Denver in 2024");
+assert.equal(rq("felony assault in Denver in 2024").text, "aggravated assault in Denver in 2024");
 assert.equal(rq("show data on robberies in new orleans").text, "show me robberies in new orleans");
 assert.equal(rq("the data on robberies in new orleans").text, "the data on robberies in new orleans", "only a leading 'show data on' is the opener");
 
