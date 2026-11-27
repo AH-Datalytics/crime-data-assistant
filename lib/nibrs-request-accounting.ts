@@ -181,7 +181,7 @@ const BREAKDOWNS: Rule[] = [
   // "<dimension> breakdown" ("offender age breakdown for robberies"): the unit word before it stays its own part.
   { concept: "breakdown", value: (m) => ({ gender: "sex", "age group": "age" } as Record<string, string>)[m[1].toLowerCase()] ?? m[1].toLowerCase(), pattern: R(String.raw`\b(age group|age|sex|gender|race|ethnicity)\s+breakdown\b`) },
   // Option 3 batch 1 (P139): "into different categories" asks for the offenses within the family.
-  { concept: "breakdown", value: () => "offense", pattern: R(String.raw`\b(?:in\s*to|into)\s+(?:(?:its|the|different|separate)\s+)?(?:categories|types|offenses|offense\s+types|crimes)\b|\bby\s+(?:offense|crime)(?:\s+type)?\b`) },
+  { concept: "breakdown", value: () => "offense", pattern: R(String.raw`\b(?:in\s*to|into)\s+(?:(?:its|the|different|separate)\s+)?(?:categories|types|offenses|offense\s+types|crimes)\b|\bby\s+(?:offense|crime)(?:\s+type)?\b|\b(?:with|by|and)\s+(?:the\s+)?(?:crime|offense)\s+type(?:\s+description)?\b`) },
   { concept: "breakdown", value: () => "sex", pattern: R(String.raw`\bby\s+(?:sex|gender)\b`) },
   { concept: "breakdown", value: () => "race", pattern: R(String.raw`\bby\s+race\b`) },
   { concept: "breakdown", value: () => "ethnicity", pattern: R(String.raw`\bby\s+ethnicity\b`) },
@@ -359,7 +359,7 @@ const RULES: Rule[] = [
   { concept: "period", value: (m) => `last:${m[1]}`, pattern: R(String.raw`\b(?:an?\s+)?(\d{1,2})[-\s]year\s+history\b`) },
   // Every year the source has (D5, Jeff 2026-11-04: "show every year we have"): "as far back as you can", "for as many
   // years as possible", "all available years", "the full history of", "historical(ly)", "from the beginning of the data".
-  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:from\s+)?as\s+far\s+back\s+as\s+(?:you\s+can|possible|available|(?:there\s+is|we\s+have)\s+data|(?:the\s+)?data\s+(?:goes|exists|allows)|it\s+goes)\b|\bfor\s+as\s+many\s+years\s+as\s+(?:possible|available|you\s+(?:can|have))\b|\b(?:for\s+)?all\s+(?:available\s+)?years\b|\bevery\s+year\s+available\b|\b(?:from\s+)?(?:the\s+)?beginning\s+of\s+(?:the\s+)?(?:data|records)(?:\s+(?:until|to|through)\s+(?:the\s+)?present)?\b|\b(?:the\s+)?full\s+history(?:\s+of)?\b|\bhistorical(?:ly)?\b|\bsince\s+(?:records|data)\s+(?:began|start(?:ed)?)\b`) },
+  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:from\s+)?as\s+far\s+back\s+as\s+(?:you\s+can|possible|available|(?:there\s+is|we\s+have)\s+data|(?:the\s+)?data\s+(?:goes|exists|allows)|it\s+goes)\b|\bfor\s+as\s+many\s+years\s+as\s+(?:possible|available|you\s+(?:can|have))\b|\b(?:for\s+)?all\s+(?:available\s+)?years\b|\bevery\s+year\s+available\b|\b(?:from\s+)?(?:the\s+)?beginning\s+of\s+(?:the\s+)?(?:data|records)(?:\s+(?:until|to|through)\s+(?:the\s+)?present)?\b|\b(?:the\s+)?full\s+history(?:\s+of)?\b|\bhistorical(?:ly)?(?:\s+(?:to|through|until|till)\s+(?:the\s+)?(?:present(?:\s+day)?|now|today|date))?\b|\bsince\s+(?:records|data)\s+(?:began|start(?:ed)?)\b`) },
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|—|to|through|thru)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `last:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s+(?:(?:full|complete|calendar)\s+)?years\b`) },
   { concept: "period", value: () => "lastyear", pattern: R(String.raw`\b(?:in\s+)?last\s+year\b`) },

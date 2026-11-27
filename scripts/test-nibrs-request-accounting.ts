@@ -39,6 +39,11 @@ for (const q of [
 // ---- paired readings: units are parts, never dropped or swapped ----
 check(has("robbery offenders in Fort Worth, Texas in 2025", "unit", "offenders") && has("robbery offenders in Fort Worth, Texas in 2025", "measure", "robbery"), "\"robbery offenders\" keeps the offender unit");
 check(has("robbery arrests in Fort Worth, Texas in 2025", "unit", "arrests"), "\"robbery arrests\" keeps the arrest unit");
+{
+  const q = "Give me NIBRS crime data for Denver, CO with crime type description historical to present";
+  check(has(q, "grain", "year") && has(q, "breakdown", "offense"), "\"historical to present\" is every year; \"with crime type description\" is a by-offense breakdown");
+  check(accountNibrsRequest(q).parts.every((p) => p.state !== "not-interpreted"), "that question leaves no words unread");
+}
 check(!has("robberies in Fort Worth, Texas in 2025", "unit"), "a plain offense names no unit");
 check(has("domestic violence arrests in Fort Worth, Texas in 2025", "measure", "domestic_violence") && has("domestic violence arrests in Fort Worth, Texas in 2025", "unit", "arrests"), "a family keeps its unit word");
 check(has("female robbery offenders under 18 in Fort Worth, Texas in 2025", "filter", "sex:F") && has("female robbery offenders under 18 in Fort Worth, Texas in 2025", "filter", "age:Under 18"), "two filters are two parts");
